@@ -13,99 +13,99 @@
   <!-- ══════════════════ LOGIN ══════════════════ -->
   <div id="login-screen">
 
-    <!-- Top bar — Garuda at left, backend config at right -->
-    <div class="login-topbar">
-      <div class="login-topbar-brand">Garuda</div>
-      <div class="login-topbar-right">
-        <div id="backend-status">
-          <div class="bk-dot" id="bk-dot"></div>
-          <span id="bk-label">No backend</span>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="G.openBackendConfig()">Configure</button>
-      </div>
-    </div>
-
-    <!-- Scrollable center area -->
+    <!-- Centered content — Apple-style: hero wordmark + profiles -->
     <div class="login-center">
 
-    <!-- Subtitle only — brand name is in topbar -->
-    <div class="login-brand">
-      <div class="brand-sub">AI Security System</div>
-    </div>
-
-    <!-- Profile selection -->
-    <div id="profile-cards"></div>
-
-    <!-- Login panel (shown after profile click) -->
-    <div id="login-panel" class="hidden">
-      <div class="login-panel-header">
-        <div id="lp-avatar" class="lp-avatar"></div>
-        <h2 id="lp-title"></h2>
-        <p id="lp-sub"></p>
+      <!-- Hero wordmark -->
+      <div class="login-hero">
+        <div class="login-wordmark">Garuda</div>
+        <div class="login-subtitle">AI Security System</div>
       </div>
-      <div class="login-fields">
-        <div class="input-group">
+
+      <!-- Profile selection -->
+      <div id="profile-cards"></div>
+      <p id="login-prompt" class="login-prompt">Select your profile to continue</p>
+
+      <!-- Login panel (shown after profile click) -->
+      <div id="login-panel" class="hidden">
+        <div class="login-panel-header">
+          <div id="lp-avatar" class="lp-avatar"></div>
+          <h2 id="lp-title"></h2>
+          <p id="lp-sub"></p>
+        </div>
+        <div class="login-fields">
+          <div class="input-group">
+            <span class="input-label">Username</span>
+            <input id="li-user" class="input" type="text" autocomplete="username"/>
+          </div>
+          <div class="input-group">
+            <span class="input-label">Password</span>
+            <input id="li-pass" class="input" type="password" autocomplete="current-password"/>
+          </div>
+        </div>
+        <div id="li-err" class="msg err hidden" style="margin-top:10px"></div>
+        <div class="login-actions">
+          <button class="btn btn-primary" style="width:100%" onclick="G.submitLogin()">Continue</button>
+        </div>
+        <div class="login-back">
+          <button class="btn btn-link" onclick="G.showProfiles()">All accounts</button>
+          <button id="forgot-btn" class="btn btn-link hidden" onclick="G.goForgot()">Forgot password?</button>
+        </div>
+      </div>
+
+      <!-- Admin OTP -->
+      <div id="admin-otp-screen" class="hidden">
+        <div class="otp-header">
+          <h2>Two-Factor Verification</h2>
+          <p>A 6-digit code was sent to your alert email.</p>
+        </div>
+        <div class="otp-input-group">
+          <input id="otp-in" class="input otp-input" type="text" maxlength="6" placeholder="000000"/>
+        </div>
+        <div id="otp-err" class="msg err hidden"></div>
+        <div class="flex gap-8" style="width:100%">
+          <button class="btn btn-ghost grow" onclick="G.showProfiles()">Cancel</button>
+          <button class="btn btn-primary grow" onclick="G.verifyOTP()">Verify</button>
+        </div>
+      </div>
+
+      <!-- Forgot password -->
+      <div id="forgot-screen" class="hidden">
+        <div style="margin-bottom:20px;text-align:center">
+          <h2>Reset Password</h2>
+          <p style="color:var(--t3);font-size:13px;margin-top:6px">Enter your username to receive a reset OTP.</p>
+        </div>
+        <div class="input-group" style="text-align:left;width:100%">
           <span class="input-label">Username</span>
-          <input id="li-user" class="input" type="text" autocomplete="username"/>
+          <input id="fp-user" class="input" type="text"/>
         </div>
-        <div class="input-group">
-          <span class="input-label">Password</span>
-          <input id="li-pass" class="input" type="password" autocomplete="current-password"/>
+        <button class="btn btn-ghost" style="width:100%" onclick="G.sendForgotOTP()">Send OTP</button>
+        <div id="fp-otp-block" class="hidden flex col gap-12" style="text-align:left;width:100%">
+          <div class="input-group">
+            <span class="input-label">OTP</span>
+            <input id="fp-otp" class="input" type="text" maxlength="6"/>
+          </div>
+          <div class="input-group">
+            <span class="input-label">New Password</span>
+            <input id="fp-newpass" class="input" type="password"/>
+          </div>
+          <button class="btn btn-primary" style="width:100%" onclick="G.doReset()">Reset Password</button>
         </div>
+        <div id="fp-msg" class="msg hidden"></div>
+        <button class="btn btn-link" onclick="G.showProfiles()">Back to login</button>
       </div>
-      <div id="li-err" class="msg err hidden" style="margin-top:10px"></div>
-      <div class="login-actions">
-        <button class="btn btn-primary" onclick="G.submitLogin()">Continue</button>
-      </div>
-      <div class="login-back">
-        <button class="btn btn-link" onclick="G.showProfiles()">All accounts</button>
-        <button id="forgot-btn" class="btn btn-link hidden" onclick="G.goForgot()">Forgot password?</button>
-      </div>
-    </div>
-
-    <!-- Admin OTP -->
-    <div id="admin-otp-screen" class="hidden">
-      <div class="otp-header">
-        <h2>Verification</h2>
-        <p>A 6-digit code was sent to your alert email.</p>
-      </div>
-      <div class="otp-input-group">
-        <input id="otp-in" class="input otp-input" type="text" maxlength="6" placeholder="000000"/>
-      </div>
-      <div id="otp-err" class="msg err hidden"></div>
-      <div class="flex gap-8" style="width:100%">
-        <button class="btn btn-ghost grow" onclick="G.showProfiles()">Cancel</button>
-        <button class="btn btn-primary grow" onclick="G.verifyOTP()">Verify</button>
-      </div>
-    </div>
-
-    <!-- Forgot password -->
-    <div id="forgot-screen" class="hidden">
-      <div style="margin-bottom:20px">
-        <h2>Reset Password</h2>
-        <p style="color:var(--t3);font-size:13px;margin-top:6px">Enter your username to receive a reset OTP.</p>
-      </div>
-      <div class="input-group" style="text-align:left;width:100%">
-        <span class="input-label">Username</span>
-        <input id="fp-user" class="input" type="text"/>
-      </div>
-      <button class="btn btn-ghost" style="width:100%" onclick="G.sendForgotOTP()">Send OTP</button>
-      <div id="fp-otp-block" class="hidden flex col gap-12" style="text-align:left;width:100%">
-        <div class="input-group">
-          <span class="input-label">OTP</span>
-          <input id="fp-otp" class="input" type="text" maxlength="6"/>
-        </div>
-        <div class="input-group">
-          <span class="input-label">New Password</span>
-          <input id="fp-newpass" class="input" type="password"/>
-        </div>
-        <button class="btn btn-primary" style="width:100%" onclick="G.doReset()">Reset Password</button>
-      </div>
-      <div id="fp-msg" class="msg hidden"></div>
-      <button class="btn btn-link" onclick="G.showProfiles()">Back to login</button>
-    </div>
 
     </div><!-- /login-center -->
+
+    <!-- Floating backend config — bottom-right corner -->
+    <div class="login-corner">
+      <div id="backend-status">
+        <div class="bk-dot" id="bk-dot"></div>
+        <span id="bk-label">No backend</span>
+      </div>
+      <button class="btn btn-link btn-sm" onclick="G.openBackendConfig()">Configure</button>
+    </div>
+
   </div><!-- /login-screen -->
 
   <!-- ══════════════════ APP SHELL ══════════════════ -->
@@ -217,6 +217,11 @@
                 <h3 class="section-title">Responses</h3>
                 <div id="narada-resp" class="narada-log"></div>
               </div>
+            </div>
+
+            <div class="section-card" style="margin-bottom:20px">
+              <h3 class="section-title">System Console</h3>
+              <div id="narada-console" class="console" style="height:100px;margin-top:8px"></div>
             </div>
 
             <div class="section-card">

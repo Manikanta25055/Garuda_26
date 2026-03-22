@@ -686,7 +686,7 @@ Set mode values to true/false to change, null to leave unchanged."""
         "format": "json"
     }
     try:
-        res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=15)
+        res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=5)
         res.raise_for_status()
         llm_response = res.json().get("response", "{}")
         try:
@@ -698,11 +698,9 @@ Set mode values to true/false to change, null to leave unchanged."""
             except json.JSONDecodeError:
                 return None
         return parsed
-    except requests.exceptions.ConnectionError:
-        log_system_update("Ollama unavailable. Using rule-based fallback.")
-        return None
-    except Exception as e:
-        log_system_update(f"LLM error: {e}")
+    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
+        return None  # Ollama unavailable — silent fallback to rule-based
+    except Exception:
         return None
 
 
@@ -964,6 +962,17 @@ async def login(data: LoginRequest, response: Response):
             "token": token,   # for cross-origin clients that can't use cookies
         }
     raise HTTPException(401, "Invalid username or password.")
+
+@fastapi_app.get("/api/session")
+async def session_info(session=Depends(require_session)):
+    """Return current session user info — used to restore session on page refresh."""
+    u = session["username"]
+    return {
+        "role": session["role"],
+        "username": u,
+        "display_name": USERS.get(u, {}).get("display_name", u),
+        "box_color": USERS.get(u, {}).get("box_color", "#1565c0"),
+    }
 
 @fastapi_app.post("/api/logout")
 async def logout(request: Request, response: Response):

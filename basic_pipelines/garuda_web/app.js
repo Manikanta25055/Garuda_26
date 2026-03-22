@@ -77,10 +77,26 @@ const G = (() => {
     buildSwatches('m-swatches');
     const backend = getBackend();
     updateBackendStatus(backend);
-    // Restore cross-origin token if available
+    const isLocal = ['localhost','127.0.0.1'].includes(location.hostname);
     if (backend) _token = localStorage.getItem('garuda_token') || null;
-    if (!backend && !['localhost','127.0.0.1'].includes(location.hostname)) {
-      // Non-local origin without configured backend — prompt
+
+    // Try to restore session from previous visit
+    // Same-origin: cookie persists automatically; cross-origin: need stored token
+    const canRestore = isLocal || !!_token;
+    if (canRestore) {
+      try {
+        const session = await api('GET', '/api/session');
+        _session = session;
+        afterLogin();
+        return;
+      } catch(e) {
+        // Session expired or invalid — clear stored token, fall through to login
+        localStorage.removeItem('garuda_token');
+        _token = null;
+      }
+    }
+
+    if (!backend && !isLocal) {
       openBackendConfig();
     }
     await loadProfiles();
@@ -112,11 +128,11 @@ const G = (() => {
 
   function showProfiles() {
     hide('login-panel'); hide('admin-otp-screen'); hide('forgot-screen');
-    show('profile-cards');
+    show('profile-cards'); show('login-prompt');
   }
 
   function openLoginPanel(uname, dname, color, isAdmin) {
-    hide('profile-cards'); hide('admin-otp-screen'); hide('forgot-screen');
+    hide('profile-cards'); hide('admin-otp-screen'); hide('forgot-screen'); hide('login-prompt');
     show('login-panel');
 
     const av = $('lp-avatar');
@@ -313,13 +329,15 @@ const G = (() => {
     // Detection feed
     setText('det-feed', s.detection_info||'No detections.');
 
-    // Console
-    const con = $('sys-console');
-    if (con) {
+    // Console (dashboard + narada)
+    const logText = (s.system_log||[]).join('\n');
+    ['sys-console','narada-console'].forEach(id => {
+      const con = $(id);
+      if (!con) return;
       const atBot = con.scrollTop+con.clientHeight >= con.scrollHeight-8;
-      con.textContent = (s.system_log||[]).join('\n');
+      con.textContent = logText;
       if (atBot) con.scrollTop = con.scrollHeight;
-    }
+    });
 
     // Narada
     renderLog('narada-vlog',  s.voice_log||[],       false);

@@ -245,22 +245,54 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
-/* Login top bar — brand lives here */
-.login-topbar {
-  width: 100%;
-  height: 52px;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border-2);
+/* Full-screen centered content — Apple style */
+.login-center {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 20px 80px;
+  overflow-y: auto;
+  gap: 0;
 }
-.login-topbar-brand {
-  font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
+
+/* Hero wordmark — large product-style type */
+.login-hero {
+  text-align: center;
+  margin-bottom: 52px;
+}
+.login-wordmark {
+  font-size: 72px;
+  font-weight: 700;
+  letter-spacing: -3px;
+  line-height: 1;
   color: var(--t1);
 }
-.login-topbar-right { display: flex; align-items: center; gap: 8px; }
+.login-subtitle {
+  font-size: 17px;
+  color: var(--t3);
+  margin-top: 14px;
+  font-weight: 400;
+  letter-spacing: 0.1px;
+}
+
+/* Prompt text below profiles */
+.login-prompt {
+  margin-top: 32px;
+  font-size: 13px;
+  color: var(--t4);
+  text-align: center;
+}
+
+/* Backend config — floating bottom-right corner */
+.login-corner {
+  position: absolute;
+  bottom: 24px; right: 24px;
+  display: flex; align-items: center; gap: 6px;
+  z-index: 10;
+}
 #backend-status {
   font-size: 11px; color: var(--t3);
   display: flex; align-items: center; gap: 5px;
@@ -271,43 +303,26 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 }
 #backend-status .bk-dot.ok { background: var(--success); }
 
-/* Login center — scrollable content below topbar */
-.login-center {
-  flex: 1;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  gap: 0; padding: 40px 20px;
-  overflow-y: auto;
-}
-
-.login-brand {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 8px;
-  margin-bottom: 44px;
-  text-align: center;
-}
-.login-brand .brand-sub { color: var(--t3); font-size: 15px; letter-spacing: 0.2px; }
-
 /* Profile circles */
 #profile-cards {
   display: flex; flex-wrap: wrap;
-  justify-content: center; gap: 28px;
-  max-width: 640px;
+  justify-content: center; gap: 36px;
+  max-width: 720px;
 }
 
 .profile-card {
   display: flex; flex-direction: column;
-  align-items: center; gap: 10px;
+  align-items: center; gap: 12px;
   cursor: pointer;
   transition: transform var(--trans), opacity var(--trans);
 }
-.profile-card:hover { transform: translateY(-4px); }
-.profile-card:hover .profile-avatar { box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.profile-card:hover { transform: translateY(-5px); }
+.profile-card:hover .profile-avatar { box-shadow: 0 12px 40px rgba(0,0,0,0.6); }
 
 .profile-avatar {
-  width: 72px; height: 72px; border-radius: 50%;
+  width: 80px; height: 80px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; font-weight: 700; color: #fff;
+  font-size: 30px; font-weight: 700; color: #fff;
   transition: box-shadow var(--trans), transform var(--trans);
   flex-shrink: 0;
 }
@@ -315,7 +330,7 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
   background: rgba(255,255,255,0.06);
   border: 1px solid var(--border);
   color: var(--t3);
-  font-size: 22px;
+  font-size: 24px;
 }
 .profile-card .profile-name {
   font-size: 13px; font-weight: 500; color: var(--t2);
