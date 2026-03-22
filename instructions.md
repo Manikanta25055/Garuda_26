@@ -170,6 +170,20 @@ sudo systemctl start cloudflared
 **Startup script** at `/home/manikanta/start_garuda.sh`:
 ```bash
 #!/bin/bash
+
+# Wait for WiFi/internet before starting
+echo "[Garuda] Waiting for network connection..."
+ATTEMPT=0
+while true; do
+    if ping -c 1 -W 3 8.8.8.8 &>/dev/null; then
+        echo "[Garuda] Network connected."
+        break
+    fi
+    ATTEMPT=$((ATTEMPT + 1))
+    echo "[Garuda] No network (attempt $ATTEMPT). Retrying in 15 seconds..."
+    sleep 15
+done
+
 cd /home/manikanta/Projects/hailo-rpi5-examples
 source setup_env.sh
 python3 basic_pipelines/Garuda_web.py --input rpi
