@@ -38,6 +38,18 @@ import threading
 from pathlib import Path
 
 import speech_recognition as sr
+import ctypes
+
+# Silence ALSA/Jack error spam when PortAudio probes audio devices
+try:
+    _asound = ctypes.cdll.LoadLibrary('libasound.so.2')
+    _asound.snd_lib_error_set_handler(
+        ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int,
+                         ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)(
+            lambda *_: None)
+    )
+except Exception:
+    pass
 
 try:
     import psutil
