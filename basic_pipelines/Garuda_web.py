@@ -1167,5 +1167,12 @@ def run_web_app(args):
 
 if __name__ == "__main__":
     parser = get_default_parser()
+    parser.add_argument("--network", default="yolov8s",
+                        choices=["yolov8s", "yolov6n", "yolox_s_leaky"],
+                        help="Detection network to use")
+    parser.add_argument("--hef-path", dest="hef_path", default=None,
+                        help="Path to custom HEF file")
+    parser.add_argument("--labels-json", dest="labels_json", default=None,
+                        help="Path to custom labels JSON")
     args = parser.parse_args()
     run_web_app(args)
