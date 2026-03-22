@@ -40,14 +40,19 @@ from pathlib import Path
 import speech_recognition as sr
 import ctypes
 
-# Silence ALSA/Jack error spam when PortAudio probes audio devices
+# Silence ALSA/Jack error spam when PortAudio probes audio devices.
+# IMPORTANT: keep _ALSA_ERROR_CB at module level — if it is a local/temporary
+# variable the Python GC will free it and the dangling C pointer causes a
+# segfault when ALSA later calls the (now-freed) handler.
+_ALSA_ERROR_CB = None
 try:
     _asound = ctypes.cdll.LoadLibrary('libasound.so.2')
-    _asound.snd_lib_error_set_handler(
-        ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int,
-                         ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p)(
-            lambda *_: None)
-    )
+    _ALSA_ERROR_CB = ctypes.CFUNCTYPE(
+        None,
+        ctypes.c_char_p, ctypes.c_int,
+        ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p
+    )(lambda *_: None)
+    _asound.snd_lib_error_set_handler(_ALSA_ERROR_CB)
 except Exception:
     pass
 
@@ -1205,25 +1210,32 @@ def run_web_app(args):
     global app_gst
 
     user_data = user_app_callback_class()
-    user_data.use_frame = True  # Need frames for MJPEG
 
     app_gst = GStreamerDetectionApp(args, user_data)
 
-    # Start voice thread
+    # Start voice assistant thread
     threading.Thread(
         target=voice_assistant_loop,
         args=(_voice_stop_event,),
         daemon=True
     ).start()
 
-    # Run GStreamer pipeline in background thread
-    threading.Thread(target=app_gst.run, daemon=True).start()
+    # Run uvicorn in a background thread.
+    # GLib/GStreamer main loop MUST stay on the main thread (libcamera requirement).
+    def _start_server():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        uvicorn.run(fastapi_app, host="0.0.0.0", port=8080, log_level="warning")
+
+    server_thread = threading.Thread(target=_start_server, daemon=True)
+    server_thread.start()
 
     print("\n" + "="*60)
     print("  Garuda Web UI is running at http://localhost:8080")
     print("="*60 + "\n")
 
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8080, log_level="warning")
+    # Run GStreamer on the MAIN thread — required by GLib/libcamera
+    app_gst.run()
 
 
 if __name__ == "__main__":
