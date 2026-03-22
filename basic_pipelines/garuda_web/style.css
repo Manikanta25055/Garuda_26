@@ -729,62 +729,85 @@ input[type=range]::-webkit-slider-thumb {
 /* ── Mobile responsive ─────────────────────────────────── */
 @media (max-width: 768px) {
 
-  /* Login */
-  .login-wordmark { font-size: 48px; letter-spacing: -2px; }
-  .login-hero { margin-bottom: 36px; }
-  #profile-cards { gap: 20px; }
-  .profile-avatar { width: 64px; height: 64px; font-size: 22px; }
-  .profile-card .profile-name { font-size: 12px; }
-  .login-center { padding: 40px 16px 72px; }
-  .login-corner { bottom: 16px; right: 16px; }
-  .login-subtitle { font-size: 15px; }
+  /* ── App shell: unlock fixed layout, allow scrolling ── */
+  #app           { height: auto; min-height: 100vh; overflow: visible; }
+  #app-shell     { overflow: visible; }
+  #body          { overflow: visible; flex-direction: column; }
+  #main          { overflow: visible; }
+  .page          { height: auto; }
+  #page-dashboard { overflow: visible; height: auto; }
 
-  /* Login panel */
+  /* ── Login ── */
+  .login-wordmark  { font-size: 44px; letter-spacing: -1.5px; }
+  .login-subtitle  { font-size: 15px; }
+  .login-hero      { margin-bottom: 32px; }
+  .login-center    { padding: 40px 20px 80px; justify-content: flex-start; padding-top: 80px; }
+  #profile-cards   { gap: 20px; max-width: 100%; }
+  .profile-avatar  { width: 64px; height: 64px; font-size: 22px; }
+  .profile-card .profile-name { font-size: 12px; }
+  .login-corner    { bottom: 16px; right: 16px; }
   #login-panel, #admin-otp-screen, #forgot-screen { max-width: 100%; }
 
-  /* Header */
-  #menu-btn { display: flex; }
-  #header { padding: 0 14px; gap: 10px; }
+  /* ── Header ── */
+  #menu-btn    { display: flex; }
+  #header      { padding: 0 14px; gap: 10px; }
   #header-pills { display: none; }
-  .hdr-user { display: none; }
+  .hdr-user    { display: none; }
 
-  /* Sidebar — slide-in drawer on mobile */
+  /* ── Sidebar — slide-in drawer ── */
   #sidebar {
     position: fixed;
-    top: 0; left: 0; height: 100%;
+    top: 0; left: 0; height: 100vh;
     z-index: 100;
     transform: translateX(-100%);
     transition: transform 0.25s ease;
     width: 220px;
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    overflow-y: auto;
   }
   #sidebar.open { transform: translateX(0); }
 
-  /* Dashboard — stack vertically */
+  /* ── Dashboard — fully scrollable stacked layout ── */
   .dash-top {
     grid-template-columns: 1fr;
-    overflow-y: auto;
+    overflow: visible;
     flex: none;
+    min-height: 0;
   }
   .camera-pane {
-    height: 220px;
+    height: 240px;
     border-right: none;
     border-bottom: 1px solid var(--border-2);
+    position: relative;
   }
-  .info-pane { max-height: 260px; }
-  .dash-modes { flex-wrap: wrap; }
-  .console { height: 70px; }
+  .info-pane {
+    overflow: visible;
+    flex: none;
+    max-height: none;
+  }
+  .info-section:last-child { overflow: visible; flex: none; }
+  .det-feed { max-height: 120px; overflow-y: auto; }
+  .dash-modes  { flex-wrap: wrap; padding: 10px 14px; }
+  .console     { height: 120px; }
+  .dash-console { flex-shrink: 0; }
 
-  /* Pages */
-  .page-inner { padding: 18px 16px; }
-  .two-col { grid-template-columns: 1fr; }
-  .admin-page { padding: 18px 16px; }
-  .form-stack { max-width: 100%; }
+  /* ── Narada / Admin pages ── */
+  .page-inner  { padding: 18px 16px; flex: none; overflow: visible; }
+  .two-col     { grid-template-columns: 1fr; }
+  .admin-page  { padding: 18px 16px; flex: none; overflow: visible; }
+  .form-stack  { max-width: 100%; }
+  .narada-log  { height: 180px; }
 
-  /* Modals */
-  .modal { width: 95vw; padding: 20px; }
+  /* ── Modals ── */
+  .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; }
 
-  /* Tables — allow horizontal scroll */
+  /* ── Tables ── */
   .t-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table { min-width: 480px; }
+  table   { min-width: 480px; }
+
+  /* ── Touch targets — min 44px ── */
+  .btn     { min-height: 44px; }
+  .btn-sm  { min-height: 36px; }
+  .nav-item { padding: 11px 10px; }
+  .input   { padding: 12px 14px; font-size: 16px; } /* 16px prevents iOS zoom */
 }
