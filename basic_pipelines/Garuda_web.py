@@ -41,10 +41,12 @@ import speech_recognition as sr
 import ctypes
 
 # Silence ALSA/Jack error spam when PortAudio probes audio devices.
-# IMPORTANT: keep _ALSA_ERROR_CB at module level — if it is a local/temporary
-# variable the Python GC will free it and the dangling C pointer causes a
-# segfault when ALSA later calls the (now-freed) handler.
+# IMPORTANT: keep callbacks at module level — temporary CFUNCTYPE objects get
+# garbage-collected and the dangling C pointer causes a segfault.
 _ALSA_ERROR_CB = None
+_JACK_ERROR_CB = None
+_JACK_INFO_CB  = None
+
 try:
     _asound = ctypes.cdll.LoadLibrary('libasound.so.2')
     _ALSA_ERROR_CB = ctypes.CFUNCTYPE(
@@ -53,6 +55,16 @@ try:
         ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p
     )(lambda *_: None)
     _asound.snd_lib_error_set_handler(_ALSA_ERROR_CB)
+except Exception:
+    pass
+
+try:
+    _libjack = ctypes.cdll.LoadLibrary('libjack.so.0')
+    _JACK_CB_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+    _JACK_ERROR_CB = _JACK_CB_TYPE(lambda *_: None)
+    _JACK_INFO_CB  = _JACK_CB_TYPE(lambda *_: None)
+    _libjack.jack_set_error_function(_JACK_ERROR_CB)
+    _libjack.jack_set_info_function(_JACK_INFO_CB)
 except Exception:
     pass
 
