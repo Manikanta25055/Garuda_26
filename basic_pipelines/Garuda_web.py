@@ -1184,13 +1184,15 @@ async def emergency_stop(session=Depends(require_session)):
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
 @fastapi_app.get("/stream")
 async def mjpeg_stream(request: Request):
-    def generate():
+    async def generate():
         while True:
+            if await request.is_disconnected():
+                break
             with _frame_lock:
                 frame = _frame_buffer
             if frame:
                 yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
-            time.sleep(0.033)
+            await asyncio.sleep(0.033)
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame"
@@ -1221,9 +1223,22 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
 def run_web_app(args):
     global app_gst
 
-    user_data = user_app_callback_class()
-
-    app_gst = GStreamerDetectionApp(args, user_data)
+    # ── Start uvicorn on the MAIN thread via its own event loop ──────────────
+    # The server must outlive any pipeline restarts, so we spin the GStreamer
+    # pipeline in a background thread and keep the main thread for the server.
+    def _run_pipeline():
+        global app_gst
+        retry_delay = 5
+        while True:
+            try:
+                user_data = user_app_callback_class()
+                app_gst = GStreamerDetectionApp(args, user_data)
+                log_system_update("Pipeline started.")
+                app_gst.run()
+                log_system_update("Pipeline stopped. Restarting in 5s...")
+            except Exception as e:
+                log_system_update(f"Pipeline error: {e}. Restarting in {retry_delay}s...")
+            time.sleep(retry_delay)
 
     # Start voice assistant thread
     threading.Thread(
@@ -1232,22 +1247,15 @@ def run_web_app(args):
         daemon=True
     ).start()
 
-    # Run uvicorn in a background thread.
-    # GLib/GStreamer main loop MUST stay on the main thread (libcamera requirement).
-    def _start_server():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        uvicorn.run(fastapi_app, host="0.0.0.0", port=8080, log_level="warning")
-
-    server_thread = threading.Thread(target=_start_server, daemon=True)
-    server_thread.start()
+    # Start pipeline thread (restarts automatically on failure)
+    threading.Thread(target=_run_pipeline, daemon=True).start()
 
     print("\n" + "="*60)
     print("  Garuda Web UI is running at http://localhost:8080")
     print("="*60 + "\n")
 
-    # Run GStreamer on the MAIN thread — required by GLib/libcamera
-    app_gst.run()
+    # Run uvicorn on the MAIN thread so the process stays alive
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8080, log_level="warning")
 
 
 if __name__ == "__main__":
