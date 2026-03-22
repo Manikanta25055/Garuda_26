@@ -5,6 +5,7 @@ const G = (() => {
 
   // ── State ────────────────────────────────────────────────
   let _session = null;   // { role, username, display_name }
+  let _token  = null;   // session token for cross-origin auth (stored in localStorage)
   let _ws = null;
   let _pendingAdmin = null;  // { username } during OTP
   let _privacyOn = true;
@@ -25,9 +26,63 @@ const G = (() => {
     { key:'privacy',   label:'Privacy',   cls:'blue' },
   ];
 
+  // ── Backend URL config ───────────────────────────────────
+  function getBackend() {
+    const h = location.hostname;
+    const isLocal = h === 'localhost' || h === '127.0.0.1'
+                 || h.startsWith('192.168.') || h.startsWith('10.')
+                 || h.startsWith('172.');
+    if (isLocal) return '';
+    return localStorage.getItem('garuda_backend') || '';
+  }
+
+  function openBackendConfig() {
+    $('m-bk-url').value = localStorage.getItem('garuda_backend') || '';
+    $('m-bk-msg').classList.add('hidden');
+    show('m-backend');
+  }
+
+  async function saveBackendConfig() {
+    let url = ($('m-bk-url').value || '').trim().replace(/\/$/, '');
+    if (!url) { showEl('m-bk-msg', 'Enter a backend URL.', false); return; }
+    if (!/^https?:\/\//.test(url)) url = 'http://' + url;
+    showEl('m-bk-msg', 'Testing connection…', true);
+    try {
+      const r = await fetch(url + '/api/users-public', { signal: AbortSignal.timeout(5000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      localStorage.setItem('garuda_backend', url);
+      updateBackendStatus(url);
+      closeModal('m-backend');
+      loadProfiles();
+    } catch(e) {
+      showEl('m-bk-msg', 'Cannot reach backend: ' + (e.message || 'timeout'), false);
+    }
+  }
+
+  function updateBackendStatus(url) {
+    const dot = $('bk-dot'), lbl = $('bk-label');
+    if (!dot) return;
+    if (url) {
+      dot.className = 'bk-dot ok';
+      try { lbl.textContent = new URL(url).hostname; } catch(_){ lbl.textContent = url; }
+    } else {
+      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      dot.className = 'bk-dot' + (isLocal ? ' ok' : '');
+      lbl.textContent = isLocal ? 'localhost' : 'No backend';
+    }
+  }
+
   // ── Boot ─────────────────────────────────────────────────
   async function init() {
     buildSwatches('m-swatches');
+    const backend = getBackend();
+    updateBackendStatus(backend);
+    // Restore cross-origin token if available
+    if (backend) _token = localStorage.getItem('garuda_token') || null;
+    if (!backend && !['localhost','127.0.0.1'].includes(location.hostname)) {
+      // Non-local origin without configured backend — prompt
+      openBackendConfig();
+    }
     await loadProfiles();
   }
 
@@ -50,7 +105,7 @@ const G = (() => {
     }
     // Admin card
     const adm = mk('div','profile-card');
-    adm.innerHTML = `<div class="profile-avatar admin-av">🔐</div><div class="profile-name">Admin</div>`;
+    adm.innerHTML = `<div class="profile-avatar admin-av">AD</div><div class="profile-name">Admin</div>`;
     adm.onclick = () => openLoginPanel('','Admin','',true);
     el.appendChild(adm);
   }
@@ -109,7 +164,13 @@ const G = (() => {
       } catch(e) { showMsg(errEl, e.detail||'Invalid credentials.',false); }
     } else {
       try {
-        _session = await api('POST','/api/login',{username:un,password:pw});
+        const res = await api('POST','/api/login',{username:un,password:pw});
+        _session = res;
+        if (res.token && getBackend()) {
+          // Cross-origin: store token for header-based auth
+          _token = res.token;
+          localStorage.setItem('garuda_token', _token);
+        }
         afterLogin();
       } catch(e) { showMsg(errEl, e.detail||'Incorrect username or password.',false); }
     }
@@ -120,8 +181,13 @@ const G = (() => {
     const errEl = $('otp-err');
     if (!otp || !_pendingAdmin) { showMsg(errEl,'Enter the OTP.',false); return; }
     try {
-      _session = await api('POST','/api/admin/verify-otp',
+      const res = await api('POST','/api/admin/verify-otp',
                             {username:_pendingAdmin.username, otp});
+      _session = res;
+      if (res.token && getBackend()) {
+        _token = res.token;
+        localStorage.setItem('garuda_token', _token);
+      }
       _pendingAdmin = null;
       afterLogin();
     } catch(e) { showMsg(errEl, e.detail||'Invalid OTP.',false); }
@@ -131,6 +197,9 @@ const G = (() => {
     $('app').classList.add('logged-in');
     $('hdr-user').textContent = _session.display_name || _session.username;
     if (_session.role === 'admin') show('admin-nav');
+    // Set camera stream URL using backend base
+    const base = getBackend();
+    $('cam-img').src = (base || '') + '/stream';
     nav('dashboard', document.querySelector('[data-page="dashboard"]'));
     connectWS();
     if (_session.role === 'admin') loadCfg();
@@ -139,6 +208,8 @@ const G = (() => {
   async function logout() {
     try { await api('POST','/api/logout',{}); } catch(_){}
     _session = null;
+    _token = null;
+    localStorage.removeItem('garuda_token');
     if (_ws) { _ws.close(); _ws = null; }
     $('app').classList.remove('logged-in');
     hide('admin-nav');
@@ -194,8 +265,16 @@ const G = (() => {
   // ── WebSocket ─────────────────────────────────────────────
   function connectWS() {
     if (_ws) _ws.close();
-    const proto = location.protocol==='https:'?'wss':'ws';
-    _ws = new WebSocket(`${proto}://${location.host}/ws`);
+    const base = getBackend();
+    let wsUrl;
+    const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
+    if (base) {
+      wsUrl = base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws' + (tok ? `?token=${tok}` : '');
+    } else {
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      wsUrl = `${proto}://${location.host}/ws`;
+    }
+    _ws = new WebSocket(wsUrl);
     _ws.onmessage = e => tick(JSON.parse(e.data));
     _ws.onclose   = () => setTimeout(connectWS, 3000);
   }
@@ -507,9 +586,15 @@ const G = (() => {
   }
 
   async function api(method, url, body){
-    const opts = { method, headers:{'Content-Type':'application/json'} };
-    if(body!==undefined) opts.body=JSON.stringify(body);
-    const r = await fetch(url, opts);
+    const base = getBackend();
+    const fullUrl = base ? base.replace(/\/$/, '') + url : url;
+    const headers = {'Content-Type': 'application/json'};
+    // For cross-origin: send stored token as header (cookies won't work without HTTPS)
+    const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
+    if (tok) headers['X-Garuda-Token'] = tok;
+    const opts = { method, headers, credentials: 'include' };
+    if(body !== undefined) opts.body = JSON.stringify(body);
+    const r = await fetch(fullUrl, opts);
     const d = await r.json();
     if(!r.ok) throw d;
     return d;
@@ -520,6 +605,7 @@ const G = (() => {
     init, showProfiles, submitLogin, verifyOTP, logout,
     goForgot, sendForgotOTP, doReset,
     nav, toggleMode, emergencyStop,
+    openBackendConfig, saveBackendConfig,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,

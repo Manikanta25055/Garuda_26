@@ -59,6 +59,7 @@ except ImportError:
 from fastapi import FastAPI, WebSocket, HTTPException, Request, Response, Depends
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
@@ -780,7 +781,8 @@ def get_session(token):
     return None
 
 def require_session(request: Request):
-    token = request.cookies.get("garuda_session")
+    # Accept token from cookie (same-origin) or X-Garuda-Token header (cross-origin)
+    token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token")
     session = get_session(token)
     if not session:
         raise HTTPException(401, "Not authenticated")
@@ -832,6 +834,15 @@ def get_state_dict():
 # FASTAPI APP
 ##############################################################################
 fastapi_app = FastAPI(title="Garuda Security System")
+
+# CORS — allow any origin so Vercel-hosted frontend can reach the RPi5 backend
+fastapi_app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Serve static files from garuda_web/
 _static_dir = Path(__file__).parent / "garuda_web"
@@ -933,6 +944,7 @@ async def login(data: LoginRequest, response: Response):
             "username": u,
             "display_name": USERS[u].get("display_name", u),
             "box_color": USERS[u].get("box_color", "#1565c0"),
+            "token": token,   # for cross-origin clients that can't use cookies
         }
     raise HTTPException(401, "Invalid username or password.")
 
@@ -974,6 +986,7 @@ async def admin_verify_otp(data: VerifyOTPRequest, response: Response):
         "role": "admin",
         "username": data.username,
         "display_name": USERS[data.username].get("display_name", data.username),
+        "token": token,   # for cross-origin clients
     }
 
 @fastapi_app.post("/api/forgot/send-otp")
@@ -1168,8 +1181,9 @@ async def mjpeg_stream(request: Request):
 
 # ── WebSocket ─────────────────────────────────────────────────────────────────
 @fastapi_app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    token = websocket.cookies.get("garuda_session")
+async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
+    # Accept token from cookie (same-origin) or query param (cross-origin)
+    token = websocket.cookies.get("garuda_session") or token
     if not get_session(token):
         await websocket.close(code=4001)
         return

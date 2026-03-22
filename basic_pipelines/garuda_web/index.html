@@ -13,17 +13,30 @@
   <!-- ══════════════════ LOGIN ══════════════════ -->
   <div id="login-screen">
 
-    <!-- Brand -->
+    <!-- Top bar — Garuda at left, backend config at right -->
+    <div class="login-topbar">
+      <div class="login-topbar-brand">Garuda</div>
+      <div class="login-topbar-right">
+        <div id="backend-status">
+          <div class="bk-dot" id="bk-dot"></div>
+          <span id="bk-label">No backend</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="G.openBackendConfig()">Configure</button>
+      </div>
+    </div>
+
+    <!-- Scrollable center area -->
+    <div class="login-center">
+
+    <!-- Subtitle only — brand name is in topbar -->
     <div class="login-brand">
-      <div class="brand-icon">🦅</div>
-      <div class="brand-name">Garuda</div>
       <div class="brand-sub">AI Security System</div>
     </div>
 
     <!-- Profile selection -->
     <div id="profile-cards"></div>
 
-    <!-- Login panel (after profile click) -->
+    <!-- Login panel (shown after profile click) -->
     <div id="login-panel" class="hidden">
       <div class="login-panel-header">
         <div id="lp-avatar" class="lp-avatar"></div>
@@ -45,24 +58,22 @@
         <button class="btn btn-primary" onclick="G.submitLogin()">Continue</button>
       </div>
       <div class="login-back">
-        <button class="btn btn-link" onclick="G.showProfiles()">← All accounts</button>
+        <button class="btn btn-link" onclick="G.showProfiles()">All accounts</button>
         <button id="forgot-btn" class="btn btn-link hidden" onclick="G.goForgot()">Forgot password?</button>
       </div>
     </div>
 
     <!-- Admin OTP -->
     <div id="admin-otp-screen" class="hidden">
-      <div class="otp-icon">🔐</div>
-      <div>
-        <h2>Verification Required</h2>
-        <p style="color:var(--t3);font-size:13px;margin-top:4px">A 6-digit code was sent to your alert email.</p>
+      <div class="otp-header">
+        <h2>Verification</h2>
+        <p>A 6-digit code was sent to your alert email.</p>
       </div>
       <div class="otp-input-group">
-        <input id="otp-in" class="input" type="text" maxlength="6" placeholder="000000"
-               style="text-align:center;letter-spacing:10px;font-size:28px;font-family:var(--mono);padding:14px"/>
+        <input id="otp-in" class="input otp-input" type="text" maxlength="6" placeholder="000000"/>
       </div>
       <div id="otp-err" class="msg err hidden"></div>
-      <div style="display:flex;gap:8px;width:100%">
+      <div class="flex gap-8" style="width:100%">
         <button class="btn btn-ghost grow" onclick="G.showProfiles()">Cancel</button>
         <button class="btn btn-primary grow" onclick="G.verifyOTP()">Verify</button>
       </div>
@@ -70,14 +81,16 @@
 
     <!-- Forgot password -->
     <div id="forgot-screen" class="hidden">
-      <h2>Reset Password</h2>
-      <p style="color:var(--t3);font-size:13px">Enter your username to receive a reset OTP.</p>
-      <div class="input-group" style="text-align:left">
+      <div style="margin-bottom:20px">
+        <h2>Reset Password</h2>
+        <p style="color:var(--t3);font-size:13px;margin-top:6px">Enter your username to receive a reset OTP.</p>
+      </div>
+      <div class="input-group" style="text-align:left;width:100%">
         <span class="input-label">Username</span>
         <input id="fp-user" class="input" type="text"/>
       </div>
-      <button class="btn btn-ghost" onclick="G.sendForgotOTP()">Send OTP</button>
-      <div id="fp-otp-block" class="hidden flex col gap-12" style="text-align:left">
+      <button class="btn btn-ghost" style="width:100%" onclick="G.sendForgotOTP()">Send OTP</button>
+      <div id="fp-otp-block" class="hidden flex col gap-12" style="text-align:left;width:100%">
         <div class="input-group">
           <span class="input-label">OTP</span>
           <input id="fp-otp" class="input" type="text" maxlength="6"/>
@@ -86,26 +99,24 @@
           <span class="input-label">New Password</span>
           <input id="fp-newpass" class="input" type="password"/>
         </div>
-        <button class="btn btn-primary" onclick="G.doReset()">Reset Password</button>
+        <button class="btn btn-primary" style="width:100%" onclick="G.doReset()">Reset Password</button>
       </div>
       <div id="fp-msg" class="msg hidden"></div>
-      <button class="btn btn-link" onclick="G.showProfiles()">← Back to login</button>
+      <button class="btn btn-link" onclick="G.showProfiles()">Back to login</button>
     </div>
 
+    </div><!-- /login-center -->
   </div><!-- /login-screen -->
 
   <!-- ══════════════════ APP SHELL ══════════════════ -->
   <div id="app-shell">
 
-    <!-- Alert banner -->
-    <div id="alert-banner">⚠ DANGER DETECTED — CHECK CAMERA FEED</div>
+    <!-- Alert banner — no emoji, bold type -->
+    <div id="alert-banner">DANGER DETECTED — CHECK CAMERA FEED</div>
 
-    <!-- Header -->
+    <!-- Header — wordmark only, no icon box -->
     <header id="header">
-      <div class="header-brand">
-        <div class="hb-dot">🦅</div>
-        Garuda
-      </div>
+      <div class="header-brand">Garuda</div>
       <div id="header-pills"></div>
       <div id="header-right">
         <div class="hdr-status">
@@ -120,40 +131,24 @@
     <!-- Body -->
     <div id="body">
 
-      <!-- Sidebar -->
+      <!-- Sidebar — text only, no emoji icons -->
       <nav id="sidebar">
         <div class="nav-section">
           <div class="nav-section-label">Monitor</div>
-          <div class="nav-item active" data-page="dashboard" onclick="G.nav('dashboard',this)">
-            <span class="nav-icon">📹</span> Dashboard
-          </div>
-          <div class="nav-item" data-page="narada" onclick="G.nav('narada',this)">
-            <span class="nav-icon">🎤</span> Narada
-          </div>
+          <div class="nav-item active" data-page="dashboard" onclick="G.nav('dashboard',this)">Dashboard</div>
+          <div class="nav-item" data-page="narada" onclick="G.nav('narada',this)">Narada</div>
         </div>
         <div id="admin-nav" class="nav-section hidden">
           <div class="nav-section-label">Admin</div>
-          <div class="nav-item" data-page="a-users" onclick="G.nav('a-users',this)">
-            <span class="nav-icon">👥</span> Users
-          </div>
-          <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">
-            <span class="nav-icon">📧</span> Email
-          </div>
-          <div class="nav-item" data-page="a-settings" onclick="G.nav('a-settings',this)">
-            <span class="nav-icon">⚙️</span> System
-          </div>
-          <div class="nav-item" data-page="a-logs" onclick="G.nav('a-logs',this)">
-            <span class="nav-icon">📋</span> Logs
-          </div>
-          <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">
-            <span class="nav-icon">💬</span> Commands
-          </div>
+          <div class="nav-item" data-page="a-users" onclick="G.nav('a-users',this)">Users</div>
+          <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">Email</div>
+          <div class="nav-item" data-page="a-settings" onclick="G.nav('a-settings',this)">System</div>
+          <div class="nav-item" data-page="a-logs" onclick="G.nav('a-logs',this)">Logs</div>
+          <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">Commands</div>
         </div>
         <div id="sidebar-spacer"></div>
         <div class="nav-section">
-          <div class="nav-item" style="color:var(--danger)" onclick="G.emergencyStop()">
-            <span class="nav-icon">🛑</span> Emergency Stop
-          </div>
+          <div class="nav-item nav-danger" onclick="G.emergencyStop()">Emergency Stop</div>
         </div>
       </nav>
 
@@ -169,19 +164,17 @@
               <div class="camera-label">
                 <div class="cam-live-dot"></div> Live
               </div>
-              <img id="cam-img" src="/stream" alt="Camera Feed"
+              <img id="cam-img" src="" alt="Camera Feed"
                    onerror="document.getElementById('cam-pane').innerHTML=
-                     '<div class=cam-offline><div class=cam-icon>📷</div><span>Camera feed unavailable</span></div>'"/>
+                     '<div class=cam-offline><span>Camera feed unavailable</span></div>'"/>
             </div>
 
             <!-- Right info panel -->
             <div class="info-pane">
-              <!-- Detections -->
               <div class="info-section">
                 <div class="overline">Detections</div>
                 <div id="det-feed" class="det-feed">Waiting for pipeline...</div>
               </div>
-              <!-- Stats -->
               <div class="info-section">
                 <div class="overline">Stats</div>
                 <div style="margin-top:2px">
@@ -202,7 +195,7 @@
 
           <!-- Console -->
           <div class="dash-console">
-            <div class="console-header" style="padding-top:8px">System Console</div>
+            <div class="console-header">System Console</div>
             <div id="sys-console" class="console"></div>
           </div>
         </div>
@@ -219,7 +212,7 @@
                 <div id="narada-vlog" class="narada-log"></div>
               </div>
               <div class="section-card">
-                <h3 class="section-title">Narada Responses</h3>
+                <h3 class="section-title">Responses</h3>
                 <div id="narada-resp" class="narada-log"></div>
               </div>
             </div>
@@ -251,7 +244,7 @@
           <div class="admin-page">
             <div class="admin-page-header">
               <h2>Users</h2>
-              <button class="btn btn-primary btn-sm" onclick="G.openAddUser()">+ Add User</button>
+              <button class="btn btn-primary btn-sm" onclick="G.openAddUser()">Add User</button>
             </div>
             <div class="t-wrap">
               <table>
@@ -342,7 +335,7 @@
                 <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export</button>
               </div>
             </div>
-            <div style="margin-bottom:16px">
+            <div style="margin-bottom:24px">
               <div class="overline" style="margin-bottom:8px">System Updates</div>
               <div id="a-syslog" class="console" style="height:220px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
             </div>
@@ -358,9 +351,9 @@
           <div class="admin-page">
             <div class="admin-page-header">
               <h2>Custom Commands</h2>
-              <button class="btn btn-primary btn-sm" onclick="G.openAddCmd()">+ Add Command</button>
+              <button class="btn btn-primary btn-sm" onclick="G.openAddCmd()">Add Command</button>
             </div>
-            <p style="color:var(--t3);font-size:13px;margin-bottom:20px">
+            <p style="color:var(--t3);font-size:13px;margin-bottom:24px">
               Teach Narada new phrases. Say the phrase and she responds with your custom message.
             </p>
             <div class="t-wrap">
@@ -373,7 +366,7 @@
         </div>
 
       </main>
-    </div><!-- /body -->
+    </div>
   </div><!-- /app-shell -->
 </div><!-- /app -->
 
@@ -398,7 +391,7 @@
       <span class="input-label">Profile Color</span>
       <div id="m-swatches" class="swatch-row"></div>
       <input id="m-color" type="color" value="#2997ff"
-             style="margin-top:8px;width:100%;height:36px;border:1px solid var(--border);
+             style="margin-top:8px;width:100%;height:34px;border:1px solid var(--border);
                     border-radius:var(--r-sm);background:none;cursor:pointer;padding:2px 6px"/>
     </div>
     <div>
@@ -431,7 +424,7 @@
     <div>
       <span class="input-label">Profile Color</span>
       <input id="m-edit-col" type="color"
-             style="width:100%;height:36px;border:1px solid var(--border);
+             style="width:100%;height:34px;border:1px solid var(--border);
                     border-radius:var(--r-sm);background:none;cursor:pointer;padding:2px 6px"/>
     </div>
     <div id="m-edit-err" class="msg err hidden"></div>
@@ -456,6 +449,28 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="G.closeModal('m-add-cmd')">Cancel</button>
       <button class="btn btn-primary" onclick="G.addCmd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Backend Config Modal -->
+<div id="m-backend" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Connect to Backend</h2>
+    <p style="color:var(--t3);font-size:13px;margin-top:-8px">
+      The Garuda backend runs on your Raspberry Pi. Enter its address below
+      (e.g. <code style="font-family:var(--mono);color:var(--accent)">http://192.168.1.100:8080</code>
+      or a Cloudflare Tunnel URL).
+    </p>
+    <div class="input-group">
+      <span class="input-label">Backend URL</span>
+      <input id="m-bk-url" class="input" type="url"
+             placeholder="http://192.168.x.x:8080"/>
+    </div>
+    <div id="m-bk-msg" class="msg hidden"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="G.closeModal('m-backend')">Cancel</button>
+      <button class="btn btn-primary" onclick="G.saveBackendConfig()">Connect</button>
     </div>
   </div>
 </div>
