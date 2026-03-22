@@ -18,6 +18,16 @@
 
 ---
 
+## LED status indicators (ACT green LED on RPi5)
+
+| LED state | Meaning |
+|-----------|---------|
+| Blinking (heartbeat) | Booted, waiting for WiFi |
+| Solid green | WiFi connected, Garuda running |
+| Normal activity blink | Garuda exited / restarting |
+
+---
+
 ## Daily use — everything auto-starts on boot
 
 Both services start automatically when RPi5 powers on. Just open:
