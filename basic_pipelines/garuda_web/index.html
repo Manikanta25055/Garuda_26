@@ -161,12 +161,14 @@
 
             <!-- Camera -->
             <div class="camera-pane" id="cam-pane">
-              <div class="camera-label">
+              <div class="camera-label" id="cam-label">
                 <div class="cam-live-dot"></div> Live
               </div>
-              <img id="cam-img" src="" alt="Camera Feed"
-                   onerror="document.getElementById('cam-pane').innerHTML=
-                     '<div class=cam-offline><span>Camera feed unavailable</span></div>'"/>
+              <!-- No src here — set dynamically after login to avoid onerror before DOM is ready -->
+              <img id="cam-img" alt="Camera Feed" style="display:none"/>
+              <div id="cam-offline" class="cam-offline">
+                <span>Camera feed unavailable</span>
+              </div>
             </div>
 
             <!-- Right info panel -->

@@ -197,9 +197,18 @@ const G = (() => {
     $('app').classList.add('logged-in');
     $('hdr-user').textContent = _session.display_name || _session.username;
     if (_session.role === 'admin') show('admin-nav');
-    // Set camera stream URL using backend base
+
+    // Connect camera stream — do this before nav() so the element exists
     const base = getBackend();
-    $('cam-img').src = (base || '') + '/stream';
+    const streamUrl = (base || '') + '/stream';
+    const camImg    = $('cam-img');
+    const camOffline = $('cam-offline');
+    if (camImg) {
+      camImg.onload  = () => { camImg.style.display = 'block'; if (camOffline) camOffline.style.display = 'none'; };
+      camImg.onerror = () => { camImg.style.display = 'none';  if (camOffline) camOffline.style.display = 'flex'; };
+      camImg.src = streamUrl;
+    }
+
     nav('dashboard', document.querySelector('[data-page="dashboard"]'));
     connectWS();
     if (_session.role === 'admin') loadCfg();

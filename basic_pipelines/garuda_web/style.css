@@ -477,10 +477,11 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 .camera-pane img {
   width: 100%; height: 100%;
   object-fit: contain;
-  display: block;
 }
+/* cam-offline: shown by default, hidden once stream loads */
 .camera-pane .cam-offline {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
   color: var(--t4); font-size: 13px;
 }
 .cam-offline .cam-icon { font-size: 32px; opacity: 0.3; }
