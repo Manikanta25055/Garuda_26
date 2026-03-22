@@ -116,6 +116,9 @@
 
     <!-- Header — wordmark only, no icon box -->
     <header id="header">
+      <button id="menu-btn" onclick="G.toggleMenu()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
       <div class="header-brand">Garuda</div>
       <div id="header-pills"></div>
       <div id="header-right">
@@ -130,6 +133,9 @@
 
     <!-- Body -->
     <div id="body">
+
+      <!-- Sidebar overlay (mobile tap-outside to close) -->
+      <div id="sidebar-overlay" onclick="G.toggleMenu()"></div>
 
       <!-- Sidebar — text only, no emoji icons -->
       <nav id="sidebar">

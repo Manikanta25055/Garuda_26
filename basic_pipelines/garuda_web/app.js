@@ -279,12 +279,27 @@ const G = (() => {
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     const pg = $('page-'+pageId); if (pg) pg.classList.add('active');
     if (navEl) navEl.classList.add('active');
+    // Close sidebar on mobile after navigation
+    closeMobileMenu();
     // Lazy-load admin data
     if (pageId==='a-users')    loadUsers();
     if (pageId==='a-email')    loadEmailCfg();
     if (pageId==='a-settings') loadSysCfg();
     if (pageId==='a-logs')     renderLogs();
     if (pageId==='a-cmds')     loadCmds();
+  }
+
+  // ── Mobile sidebar ────────────────────────────────────────
+  function toggleMenu() {
+    const sidebar  = $('sidebar');
+    const overlay  = $('sidebar-overlay');
+    const isOpen   = sidebar.classList.contains('open');
+    sidebar.classList.toggle('open', !isOpen);
+    overlay.classList.toggle('visible', !isOpen);
+  }
+  function closeMobileMenu() {
+    $('sidebar')?.classList.remove('open');
+    $('sidebar-overlay')?.classList.remove('visible');
   }
 
   // ── WebSocket ─────────────────────────────────────────────
@@ -633,6 +648,7 @@ const G = (() => {
     goForgot, sendForgotOTP, doReset,
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
+    toggleMenu, closeMobileMenu,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,

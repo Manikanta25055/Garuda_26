@@ -702,3 +702,89 @@ input[type=range]::-webkit-slider-thumb {
   transition: transform var(--trans), border-color var(--trans);
 }
 .swatch:hover { transform: scale(1.2); border-color: rgba(255,255,255,0.4); }
+
+/* ── Hamburger button (mobile only) ────────────────────── */
+#menu-btn {
+  display: none;
+  flex-direction: column; gap: 5px;
+  background: none; border: none; cursor: pointer;
+  padding: 4px; flex-shrink: 0;
+}
+#menu-btn span {
+  display: block; width: 20px; height: 2px;
+  background: var(--t2); border-radius: 2px;
+  transition: all 0.2s;
+}
+
+/* Sidebar overlay (mobile) */
+#sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+}
+#sidebar-overlay.visible { display: block; }
+
+/* ── Mobile responsive ─────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Login */
+  .login-wordmark { font-size: 48px; letter-spacing: -2px; }
+  .login-hero { margin-bottom: 36px; }
+  #profile-cards { gap: 20px; }
+  .profile-avatar { width: 64px; height: 64px; font-size: 22px; }
+  .profile-card .profile-name { font-size: 12px; }
+  .login-center { padding: 40px 16px 72px; }
+  .login-corner { bottom: 16px; right: 16px; }
+  .login-subtitle { font-size: 15px; }
+
+  /* Login panel */
+  #login-panel, #admin-otp-screen, #forgot-screen { max-width: 100%; }
+
+  /* Header */
+  #menu-btn { display: flex; }
+  #header { padding: 0 14px; gap: 10px; }
+  #header-pills { display: none; }
+  .hdr-user { display: none; }
+
+  /* Sidebar — slide-in drawer on mobile */
+  #sidebar {
+    position: fixed;
+    top: 0; left: 0; height: 100%;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    width: 220px;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+  }
+  #sidebar.open { transform: translateX(0); }
+
+  /* Dashboard — stack vertically */
+  .dash-top {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+    flex: none;
+  }
+  .camera-pane {
+    height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-2);
+  }
+  .info-pane { max-height: 260px; }
+  .dash-modes { flex-wrap: wrap; }
+  .console { height: 70px; }
+
+  /* Pages */
+  .page-inner { padding: 18px 16px; }
+  .two-col { grid-template-columns: 1fr; }
+  .admin-page { padding: 18px 16px; }
+  .form-stack { max-width: 100%; }
+
+  /* Modals */
+  .modal { width: 95vw; padding: 20px; }
+
+  /* Tables — allow horizontal scroll */
+  .t-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { min-width: 480px; }
+}
