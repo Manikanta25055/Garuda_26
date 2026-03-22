@@ -347,13 +347,18 @@ class user_app_callback_class(app_callback_class):
         super().__init__()
         self.person_detected = False
         self.danger_label = "scissors"
-        self.latest_frame = None
+        # Override with a threading-safe lock-based store
+        # (base class uses multiprocessing.Queue which breaks across threads)
+        self._frame = None
+        self._flock = threading.Lock()
 
     def set_frame(self, frame):
-        self.latest_frame = frame
+        with self._flock:
+            self._frame = frame
 
     def get_frame(self):
-        return self.latest_frame
+        with self._flock:
+            return self._frame
 
 
 def app_callback(pad, info, user_data):
@@ -431,6 +436,9 @@ def app_callback(pad, info, user_data):
 
 class GStreamerDetectionApp(GStreamerApp):
     def __init__(self, args, user_data):
+        # Force frame capture for MJPEG stream; suppress display
+        args.use_frame = True
+        args.show_fps = False
         super().__init__(args, user_data)
         self.batch_size = 2
         self.network_width = 640
@@ -471,7 +479,35 @@ class GStreamerDetectionApp(GStreamerApp):
             f"output-format-type=HAILO_FORMAT_TYPE_FLOAT32"
         )
         setproctitle.setproctitle("Garuda Web App")
+        # Use fakesink — no display needed, frames captured via MJPEG callback
+        self.video_sink = "fakesink"
         self.create_pipeline()
+
+    def run(self):
+        """Override base run() to skip cv2 display subprocess (web mode uses MJPEG)."""
+        from hailo_rpi_common import disable_qos
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect("message", self.bus_call, self.loop)
+
+        identity = self.pipeline.get_by_name("identity_callback")
+        if identity:
+            identity_pad = identity.get_static_pad("src")
+            identity_pad.add_probe(Gst.PadProbeType.BUFFER, self.app_callback, self.user_data)
+
+        disable_qos(self.pipeline)
+        self.pipeline.set_state(Gst.State.PLAYING)
+
+        if self.options_menu.dump_dot:
+            GLib.timeout_add_seconds(3, self.dump_dot_file)
+
+        try:
+            self.loop.run()
+        except Exception:
+            pass
+
+        self.user_data.running = False
+        self.pipeline.set_state(Gst.State.NULL)
 
     def get_pipeline_string(self):
         if self.source_type == "rpi":
@@ -529,8 +565,7 @@ class GStreamerDetectionApp(GStreamerApp):
             + QUEUE("queue_videoconvert")
             + "videoconvert n-threads=3 qos=false ! "
             + QUEUE("queue_hailo_display")
-            + f"fpsdisplaysink video-sink={self.video_sink} name=hailo_display sync={self.sync} "
-            f"text-overlay={self.options_menu.show_fps} signal-fps-measurements=true "
+            + "fakesink name=hailo_display sync=false "
         )
         return pipeline_string
 
