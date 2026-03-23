@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=13"/>
+  <link rel="stylesheet" href="/static/style.css?v=14"/>
 </head>
 <body>
 <div id="app">
@@ -47,6 +47,11 @@
         </div>
 
         <div id="li-err" class="lc-err hidden"></div>
+
+        <label class="remember-row">
+          <input type="checkbox" id="li-remember" class="remember-chk"/>
+          <span class="remember-lbl">Remember me for 5 days</span>
+        </label>
 
         <button id="lc-signin-btn" class="lc-signin" onclick="G.submitLogin()">
           <span class="lc-arrow">→</span>
@@ -747,6 +752,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=7"></script>
+<script src="/static/app.js?v=8"></script>
 </body>
 </html>

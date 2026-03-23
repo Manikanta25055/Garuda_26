@@ -782,12 +782,12 @@ def voice_assistant_loop(stop_event, current_user=None):
 ##############################################################################
 # SESSION MANAGEMENT
 ##############################################################################
-def create_session(username):
+def create_session(username, duration=3600):
     token = secrets.token_hex(32)
     _sessions[token] = {
         "username": username,
         "role": USERS[username]["role"],
-        "expires": time.time() + 3600
+        "expires": time.time() + duration
     }
     return token
 
@@ -896,6 +896,7 @@ if _static_dir.exists():
 class LoginRequest(BaseModel):
     username: str
     password: str
+    remember_me: bool = False
 
 class ModeRequest(BaseModel):
     mode: str   # "dnd","email_off","idle","night","emergency","privacy"
@@ -977,8 +978,9 @@ async def login(data: LoginRequest, response: Response):
     if u in USERS and USERS[u].get("role") == "admin":
         raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
     if u in USERS and USERS[u]["password"] == p:
-        token = create_session(u)
-        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
+        duration = 5 * 24 * 3600 if data.remember_me else 3600
+        token = create_session(u, duration)
+        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=duration)
         log_system_update(f"Login: {u}")
         if u in USERS:
             USERS[u]["history"]["logins"].append(

@@ -89,7 +89,26 @@ const G = (() => {
     const isLocal = ['localhost','127.0.0.1'].includes(location.hostname);
     if (backend) _token = localStorage.getItem('garuda_token') || null;
 
-    // Try to restore session from previous visit
+    // Check remember-me token (user-only, 5-day device token)
+    const remRaw = localStorage.getItem('garuda_remember');
+    if (remRaw) {
+      try {
+        const rem = JSON.parse(remRaw);
+        if (rem.expires > Date.now() && rem.token) {
+          _token = rem.token;
+          const session = await api('GET', '/api/session');
+          if (session && session.role !== 'admin') {
+            _session = session;
+            afterLogin();
+            return;
+          }
+        }
+      } catch(_) {}
+      localStorage.removeItem('garuda_remember');
+      _token = null;
+    }
+
+    // Try to restore session from previous visit (cookie / garuda_token)
     const canRestore = isLocal || !!_token;
     if (canRestore) {
       try {
@@ -177,15 +196,23 @@ const G = (() => {
   async function submitLogin() {
     const un = ($('li-user')?.value || '').trim();
     const pw = $('li-pass')?.value || '';
+    const remember = !!$('li-remember')?.checked;
     const errEl = $('li-err');
     errEl?.classList.add('hidden');
     if (!un || !pw) { showLoginErr(errEl, 'Enter username and password.'); return; }
     try {
-      const res = await api('POST', '/api/login', { username: un, password: pw });
+      const res = await api('POST', '/api/login', { username: un, password: pw, remember_me: remember });
       _session = res;
       if (res.token && getBackend()) {
         _token = res.token;
         localStorage.setItem('garuda_token', _token);
+      }
+      // Store 5-day device token (user only, only if checkbox was ticked)
+      if (remember && res.role === 'user' && res.token) {
+        localStorage.setItem('garuda_remember', JSON.stringify({
+          token: res.token,
+          expires: Date.now() + 5 * 24 * 60 * 60 * 1000
+        }));
       }
       afterLogin();
     } catch(e) {
@@ -208,6 +235,7 @@ const G = (() => {
     _session = null; _token = null;
     _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
     localStorage.removeItem('garuda_token');
+    localStorage.removeItem('garuda_remember');
     if (_ws) { _ws.close(); _ws = null; }
     $('app').classList.remove('logged-in');
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
