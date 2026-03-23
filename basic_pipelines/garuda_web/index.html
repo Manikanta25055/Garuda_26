@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=3"/>
+  <link rel="stylesheet" href="/static/style.css?v=4"/>
 </head>
 <body>
 <div id="app">
@@ -135,9 +135,6 @@
 
   <!-- Header -->
   <header id="header">
-    <button id="menu-btn" onclick="G.toggleMenu()" aria-label="Menu">
-      <span></span><span></span><span></span>
-    </button>
     <div class="header-brand">GARUDA</div>
     <div id="header-pills"></div>
     <div id="header-right">
@@ -152,29 +149,6 @@
 
   <!-- Body -->
   <div id="body">
-
-    <!-- Sidebar overlay (mobile) -->
-    <div id="sidebar-overlay" onclick="G.toggleMenu()"></div>
-
-    <!-- Sidebar -->
-    <nav id="sidebar">
-      <div class="nav-section">
-        <div class="nav-section-label">Monitor</div>
-        <div class="nav-item active" data-page="dashboard" onclick="G.nav('dashboard',this)">Dashboard</div>
-        <div class="nav-item" data-page="narada" onclick="G.nav('narada',this)">Narada</div>
-      </div>
-      <div id="admin-nav" class="nav-section hidden">
-        <div class="nav-section-label">Admin</div>
-        <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">Email Alerts</div>
-        <div class="nav-item" data-page="a-settings" onclick="G.nav('a-settings',this)">System</div>
-        <div class="nav-item" data-page="a-logs" onclick="G.nav('a-logs',this)">Logs</div>
-        <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">Voice Commands</div>
-      </div>
-      <div id="sidebar-spacer"></div>
-      <div class="nav-section">
-        <div class="nav-item nav-danger" onclick="G.emergencyStop()">Emergency Stop</div>
-      </div>
-    </nav>
 
     <!-- Main content -->
     <main id="main">
@@ -201,6 +175,57 @@
               </div>
             </div>
 
+            <!-- Heatmap + Hardware side by side -->
+            <div class="hm-hw-row">
+
+              <!-- Alert Activity heatmap (natural-size) -->
+              <div class="dash-card hm-card">
+                <div class="dash-card-hdr">
+                  <div>
+                    <div class="dash-card-title">Alert Activity</div>
+                    <div class="dash-card-meta">13 weeks · local</div>
+                  </div>
+                  <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">Camera</button>
+                </div>
+                <div id="heatmap"></div>
+                <div class="hm-legend">
+                  <div class="hm-swatch hm-0"></div>
+                  <div class="hm-swatch hm-1"></div>
+                  <div class="hm-swatch hm-2"></div>
+                  <div class="hm-swatch hm-3"></div>
+                  <div class="hm-swatch hm-4"></div>
+                  <span class="hm-legend-lbl" style="margin-left:4px">Fewer</span>
+                  <span class="hm-legend-lbl" style="margin-left:auto">More</span>
+                </div>
+              </div>
+
+              <!-- Hardware Health (moved from sidebar) -->
+              <div class="dash-card">
+                <div class="dash-card-hdr">
+                  <div class="dash-card-title">Hardware</div>
+                  <div class="dash-card-meta" id="hw-fps">— fps</div>
+                </div>
+                <div class="hw-rows">
+                  <div class="hw-row">
+                    <span class="hw-lbl">CPU</span>
+                    <div class="hw-bar-wrap"><div id="hw-cpu-bar" class="hw-bar" style="width:0%"></div></div>
+                    <span class="hw-val" id="hw-cpu">—</span>
+                  </div>
+                  <div class="hw-row">
+                    <span class="hw-lbl">RAM</span>
+                    <div class="hw-bar-wrap"><div id="hw-ram-bar" class="hw-bar" style="width:0%"></div></div>
+                    <span class="hw-val" id="hw-ram">—</span>
+                  </div>
+                  <div class="hw-row">
+                    <span class="hw-lbl">Temp</span>
+                    <div class="hw-bar-wrap"><div id="hw-temp-bar" class="hw-bar hw-bar-temp" style="width:0%"></div></div>
+                    <span class="hw-val" id="hw-temp">—</span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
             <!-- Detection Breakdown -->
             <div class="dash-card" id="breakdown-card" style="display:none">
               <div class="dash-card-hdr">
@@ -208,29 +233,6 @@
                 <div class="dash-card-meta">By object class</div>
               </div>
               <div id="class-breakdown" class="class-breakdown"></div>
-            </div>
-
-            <!-- Alert Activity heatmap -->
-            <div class="dash-card">
-              <div class="dash-card-hdr">
-                <div>
-                  <div class="dash-card-title">Alert Activity</div>
-                  <div class="dash-card-meta">Last 13 weeks · stored locally</div>
-                </div>
-                <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">
-                  Camera
-                </button>
-              </div>
-              <div id="heatmap"></div>
-              <div class="hm-legend">
-                <div class="hm-swatch hm-0"></div>
-                <div class="hm-swatch hm-1"></div>
-                <div class="hm-swatch hm-2"></div>
-                <div class="hm-swatch hm-3"></div>
-                <div class="hm-swatch hm-4"></div>
-                <span class="hm-legend-lbl" style="margin-left:4px">Fewer</span>
-                <span class="hm-legend-lbl" style="margin-left:auto">More</span>
-              </div>
             </div>
 
             <!-- Recent detections -->
@@ -290,31 +292,6 @@
                 <div class="dash-card-title">System Modes</div>
               </div>
               <div id="modes-pills" class="modes-list"></div>
-            </div>
-
-            <!-- Hardware Health -->
-            <div class="dash-card">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Hardware</div>
-                <div class="dash-card-meta" id="hw-fps">— fps</div>
-              </div>
-              <div class="hw-rows">
-                <div class="hw-row">
-                  <span class="hw-lbl">CPU</span>
-                  <div class="hw-bar-wrap"><div id="hw-cpu-bar" class="hw-bar" style="width:0%"></div></div>
-                  <span class="hw-val" id="hw-cpu">—</span>
-                </div>
-                <div class="hw-row">
-                  <span class="hw-lbl">RAM</span>
-                  <div class="hw-bar-wrap"><div id="hw-ram-bar" class="hw-bar" style="width:0%"></div></div>
-                  <span class="hw-val" id="hw-ram">—</span>
-                </div>
-                <div class="hw-row">
-                  <span class="hw-lbl">Temp</span>
-                  <div class="hw-bar-wrap"><div id="hw-temp-bar" class="hw-bar hw-bar-temp" style="width:0%"></div></div>
-                  <span class="hw-val" id="hw-temp">—</span>
-                </div>
-              </div>
             </div>
 
           </div><!-- /dash-side -->
@@ -513,8 +490,13 @@
       </div>
 
     </main>
+
   </div><!-- /body -->
 </div><!-- /app-shell -->
+
+<!-- iOS 26 Bottom Navigation — outside app-shell to avoid overflow:hidden clipping -->
+<nav id="ios-nav"><div id="ios-pill"></div></nav>
+
 </div><!-- /app -->
 
 <!-- ══════════════ MODALS ══════════════ -->
@@ -756,6 +738,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=3"></script>
+<script src="/static/app.js?v=4"></script>
 </body>
 </html>
