@@ -1315,7 +1315,7 @@ input[type=range]::-webkit-slider-thumb {
   flex: 1; display: flex; align-items: center; justify-content: center;
   overflow: hidden; position: relative; background: #000;
 }
-.cam-ov-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cam-ov-body img, .cam-ov-body video { max-width: 100%; max-height: 100%; object-fit: contain; }
 .cam-ov-body .cam-offline {
   position: absolute; inset: 0;
   display: flex; flex-direction: column;

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=18"/>
+  <link rel="stylesheet" href="/static/style.css?v=19"/>
 </head>
 <body>
 <div id="app">
@@ -311,6 +311,7 @@
             <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">Close</button>
           </div>
           <div class="cam-ov-body">
+            <video id="cam-video" autoplay playsinline muted style="display:none"></video>
             <img id="cam-img" alt="Camera Feed" style="display:none"/>
             <div id="cam-offline" class="cam-offline">
               <div class="cam-icon">◯</div>
@@ -696,7 +697,7 @@
           <div class="docs-row"><span class="docs-term">Security Status</span><span class="docs-def">ALL CLEAR or ALERT — live indicator updated on every WebSocket tick.</span></div>
           <div class="docs-row"><span class="docs-term">Alert Activity</span><span class="docs-def">12-week heatmap stored in browser local storage. Persists across sessions.</span></div>
           <div class="docs-row"><span class="docs-term">Recent Detections</span><span class="docs-def">Timestamped log of detected objects. Clears on sign-out.</span></div>
-          <div class="docs-row"><span class="docs-term">Camera</span><span class="docs-def">MJPEG stream from Pi camera. Off by default — tap Camera to open overlay.</span></div>
+          <div class="docs-row"><span class="docs-term">Camera</span><span class="docs-def">Live feed: WebRTC (H.264, low-latency) → WS binary JPEG (CF Tunnel) → MJPEG fallback. Off by default — tap Camera to open overlay.</span></div>
           <div class="docs-row"><span class="docs-term">Console</span><span class="docs-def">Raw pipeline log. Useful for debugging threshold and detection issues.</span></div>
         </div>
       </div>
@@ -740,6 +741,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=14"></script>
+<script src="/static/app.js?v=15"></script>
 </body>
 </html>

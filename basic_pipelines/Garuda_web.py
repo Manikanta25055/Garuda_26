@@ -81,6 +81,14 @@ from pydantic import BaseModel
 from typing import Optional, List
 import uvicorn
 
+try:
+    from aiortc import RTCPeerConnection, RTCSessionDescription
+    from aiortc.mediastreams import VideoStreamTrack
+    import av
+    _WEBRTC_AVAILABLE = True
+except ImportError:
+    _WEBRTC_AVAILABLE = False
+
 from hailo_rpi_common import (
     get_default_parser,
     QUEUE,
@@ -159,10 +167,18 @@ USERS = {
     }
 }
 
-# MJPEG frame buffer
+# MJPEG / WebRTC frame buffer
 _frame_buffer = None
+_frame_raw    = None       # raw numpy BGR for WebRTC track
 _frame_lock   = threading.Lock()
 _frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
+
+# WebRTC peer connections
+_pc_set: set = set()
+
+# Event-driven WS broadcaster
+_event_loop  = None        # asyncio loop ref (set in lifespan)
+_ws_trigger  = None        # asyncio.Event — set to push WS immediately
 
 # Session store: token → {username, role, expires}
 _sessions = {}
@@ -312,6 +328,34 @@ def send_otp_via_email(email, otp_code):
         return False, err
 
 ##############################################################################
+# WEBRTC VIDEO TRACK
+##############################################################################
+if _WEBRTC_AVAILABLE:
+    class GarudaVideoTrack(VideoStreamTrack):
+        """Serves the latest BGR frame from the Hailo pipeline as an H.264 track."""
+        kind = "video"
+
+        async def recv(self):
+            pts, time_base = await self.next_timestamp()
+            with _frame_lock:
+                raw = _frame_raw
+            if raw is not None:
+                vf = av.VideoFrame.from_ndarray(raw, format="bgr24")
+            else:
+                vf = av.VideoFrame(width=1280, height=720, format="yuv420p")
+            vf.pts = pts
+            vf.time_base = time_base
+            return vf
+
+##############################################################################
+# EVENT-DRIVEN WS HELPER
+##############################################################################
+def push_urgent_ws():
+    """Signal the WS broadcaster to push state immediately (cross-thread safe)."""
+    if _event_loop and _ws_trigger:
+        _event_loop.call_soon_threadsafe(_ws_trigger.set)
+
+##############################################################################
 # ALERTS
 ##############################################################################
 def trigger_software_alert():
@@ -333,6 +377,7 @@ def trigger_software_alert():
     _alert_flash_count = 10
     _last_alert_time = datetime.datetime.now()
     log_system_update("Alert triggered.")
+    push_urgent_ws()
     try:
         os.system("aplay /usr/share/sounds/alsa/Front_Center.wav &")
     except Exception:
@@ -472,8 +517,9 @@ def app_callback(pad, info, user_data):
         frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         _, jpeg = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 75])
         with _frame_lock:
-            global _frame_seq
+            global _frame_seq, _frame_raw
             _frame_buffer = jpeg.tobytes()
+            _frame_raw    = frame_bgr
             _frame_seq += 1
         user_data.set_frame(frame_bgr)
 
@@ -918,8 +964,15 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def _lifespan(app):
+    global _event_loop, _ws_trigger
+    _event_loop = asyncio.get_event_loop()
+    _ws_trigger = asyncio.Event()
     asyncio.ensure_future(_ws_broadcaster())
     yield
+    # Close any open WebRTC peer connections on shutdown
+    if _pc_set:
+        await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)
+        _pc_set.clear()
 
 fastapi_app = FastAPI(title="Garuda Security System", lifespan=_lifespan)
 
@@ -993,6 +1046,10 @@ class ForgotPasswordRequest(BaseModel):
 
 class SendForgotOTPRequest(BaseModel):
     username: str
+
+class WebRTCOfferRequest(BaseModel):
+    sdp: str
+    type: str
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -1141,6 +1198,7 @@ async def set_mode(data: ModeRequest, session=Depends(require_session)):
         if MODE_NIGHT:
             MODE_DND = False
     log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
+    push_urgent_ws()
     return {"ok": True, "modes": get_state_dict()["modes"]}
 
 @fastapi_app.get("/api/users")
@@ -1291,16 +1349,69 @@ async def mjpeg_stream(request: Request):
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
-# ── WebSocket broadcaster (single task → all clients) ────────────────────────
-# Compute state ONCE per tick and fan it out to every connected client in
-# parallel via asyncio.gather.  This is O(1) in CPU regardless of how many
-# clients are connected (vs the old per-client loop which was O(N)).
-_ws_state_queue: asyncio.Queue = None  # created in startup event
+# ── WebRTC offer/answer ───────────────────────────────────────────────────────
+@fastapi_app.post("/webrtc/offer")
+async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session)):
+    if not _WEBRTC_AVAILABLE:
+        raise HTTPException(501, "aiortc not installed")
+    pc = RTCPeerConnection()
+    _pc_set.add(pc)
+
+    @pc.on("connectionstatechange")
+    async def _on_state():
+        if pc.connectionState in ("failed", "closed", "disconnected"):
+            await pc.close()
+            _pc_set.discard(pc)
+
+    pc.addTrack(GarudaVideoTrack())
+    offer = RTCSessionDescription(sdp=data.sdp, type=data.type)
+    await pc.setRemoteDescription(offer)
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    # Wait for ICE gathering to complete
+    while pc.iceGatheringState != "complete":
+        await asyncio.sleep(0.1)
+
+    return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+
+# ── WebSocket binary JPEG stream (CF Tunnel fallback) ────────────────────────
+@fastapi_app.websocket("/ws/stream")
+async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
+    """Streams JPEG frames as binary WebSocket messages (~same as MJPEG but WS).
+    Works through Cloudflare Tunnel (unlike raw UDP WebRTC)."""
+    token = websocket.cookies.get("garuda_session") or token
+    if not get_session(token):
+        await websocket.close(code=4001)
+        return
+    await websocket.accept()
+    last_seq = -1
+    try:
+        while True:
+            with _frame_lock:
+                seq   = _frame_seq
+                frame = _frame_buffer if seq != last_seq else None
+            if frame is not None:
+                last_seq = seq
+                await websocket.send_bytes(frame)
+            else:
+                await asyncio.sleep(0.005)
+    except Exception:
+        pass
+
+# ── WebSocket broadcaster (event-driven) ─────────────────────────────────────
+# Waits on _ws_trigger asyncio.Event with a 2s timeout (heartbeat).
+# push_urgent_ws() sets the event from any thread → immediate broadcast.
+# Compute state ONCE per tick and fan-out via asyncio.gather — O(1) in CPU.
 
 async def _ws_broadcaster():
-    """Background task: compute state once per 500 ms and push to all clients."""
+    """Background task: push state immediately on events, or every 2s as heartbeat."""
     while True:
-        await asyncio.sleep(0.5)
+        try:
+            await asyncio.wait_for(_ws_trigger.wait(), timeout=2.0)
+        except asyncio.TimeoutError:
+            pass
+        _ws_trigger.clear()
         if not _ws_clients:
             continue
         payload = get_state_dict()

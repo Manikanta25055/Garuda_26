@@ -247,11 +247,10 @@ const G = (() => {
     if (_ws) { _ws.close(); _ws = null; }
     $('app').classList.remove('logged-in');
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
-    // Stop camera
+    // Stop all camera streams (WebRTC / WS / MJPEG)
+    stopCameraStream();
     const camOv = $('camera-overlay');
     if (camOv) camOv.classList.add('hidden');
-    const camImg = $('cam-img');
-    if (camImg) { camImg.src = ''; camImg.style.display = 'none'; }
     // Reset login card
     if ($('li-user')) $('li-user').value = '';
     if ($('li-pass')) $('li-pass').value = '';
@@ -300,35 +299,143 @@ const G = (() => {
   }
 
   // ── Camera overlay ────────────────────────────────────────
+  // Priority: WebRTC (H.264, lowest latency) → WS binary JPEG (CF Tunnel)
+  //            → MJPEG (universal fallback)
+  let _activePc = null;   // RTCPeerConnection when WebRTC is active
+  let _wsStream = null;   // WebSocket when WS-JPEG stream is active
+
+  function _camSetStatus(txt) {
+    const el = $('cam-status-txt');
+    if (el) el.textContent = txt;
+  }
+
+  function stopCameraStream() {
+    const camImg   = $('cam-img');
+    const camVideo = $('cam-video');
+    if (camImg)   { camImg.src = ''; camImg.style.display = 'none'; }
+    if (camVideo) { camVideo.srcObject = null; camVideo.style.display = 'none'; }
+    if (_activePc) { _activePc.close(); _activePc = null; }
+    if (_wsStream) { _wsStream.close(); _wsStream = null; }
+  }
+
+  async function startWebRTC() {
+    const backend = getBackend() || '';
+    const camVideo = $('cam-video');
+    const camOffline = $('cam-offline');
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      _activePc = pc;
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.ontrack = (ev) => {
+        if (camVideo && ev.streams[0]) {
+          camVideo.srcObject = ev.streams[0];
+          camVideo.style.display = 'block';
+          if (camOffline) camOffline.style.display = 'none';
+          _camSetStatus('Live · WebRTC');
+        }
+      };
+      pc.onconnectionstatechange = () => {
+        if (['failed','disconnected','closed'].includes(pc.connectionState)) {
+          _camSetStatus('WebRTC lost — retrying WS…');
+          pc.close(); _activePc = null;
+          startWsStream();
+        }
+      };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      const token = _token || '';
+      const resp = await fetch(backend + '/webrtc/offer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Garuda-Token': token } : {}) },
+        body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }),
+        credentials: 'include',
+      });
+      if (!resp.ok) throw new Error('WebRTC offer rejected: ' + resp.status);
+      const answer = await resp.json();
+      await pc.setRemoteDescription(new RTCSessionDescription(answer));
+    } catch(e) {
+      console.warn('WebRTC failed, falling back to WS stream:', e);
+      if (_activePc) { _activePc.close(); _activePc = null; }
+      startWsStream();
+    }
+  }
+
+  function startWsStream() {
+    const backend  = getBackend() || '';
+    const camImg   = $('cam-img');
+    const camOffline = $('cam-offline');
+    const wsBase   = backend.replace(/^http/, 'ws');
+    const token    = _token ? `?token=${encodeURIComponent(_token)}` : '';
+    const ws       = new WebSocket(wsBase + '/ws/stream' + token);
+    ws.binaryType  = 'arraybuffer';
+    _wsStream      = ws;
+    let connected  = false;
+    ws.onopen = () => { _camSetStatus('Connecting…'); };
+    ws.onmessage = (ev) => {
+      if (!camImg) return;
+      const blob = new Blob([ev.data], { type: 'image/jpeg' });
+      const url  = URL.createObjectURL(blob);
+      const old  = camImg.src;
+      camImg.onload = () => {
+        URL.revokeObjectURL(old);
+        if (!connected) {
+          connected = true;
+          camImg.style.display = 'block';
+          if (camOffline) camOffline.style.display = 'none';
+          _camSetStatus('Live · WS');
+        }
+      };
+      camImg.src = url;
+    };
+    ws.onerror = () => {
+      _camSetStatus('WS stream error — falling back to MJPEG');
+      ws.close();
+    };
+    ws.onclose = () => {
+      if (_wsStream === ws) { _wsStream = null; startMjpeg(); }
+    };
+  }
+
+  function startMjpeg() {
+    const backend  = getBackend() || '';
+    const camImg   = $('cam-img');
+    const camOffline = $('cam-offline');
+    if (!camImg) return;
+    camImg.style.display = 'none';
+    if (camOffline) camOffline.style.display = 'flex';
+    _camSetStatus('Connecting…');
+    camImg.onload = () => {
+      camImg.style.display = 'block';
+      if (camOffline) camOffline.style.display = 'none';
+      _camSetStatus('Live · MJPEG');
+    };
+    camImg.onerror = () => {
+      camImg.style.display = 'none';
+      if (camOffline) camOffline.style.display = 'flex';
+      _camSetStatus('Unavailable');
+    };
+    camImg.src = backend + '/stream?t=' + Date.now();
+  }
+
   function toggleCamera() {
     const overlay = $('camera-overlay');
     if (!overlay) return;
     const isHidden = overlay.classList.contains('hidden');
-    const camImg    = $('cam-img');
-    const camOffline = $('cam-offline');
-    const camStatus  = $('cam-status-txt');
     if (isHidden) {
-      // Start MJPEG stream
-      if (camImg) {
-        camImg.style.display = 'none';
-        if (camOffline) camOffline.style.display = 'flex';
-        if (camStatus) camStatus.textContent = 'Connecting...';
-        camImg.onload = () => {
-          camImg.style.display = 'block';
-          if (camOffline) camOffline.style.display = 'none';
-          if (camStatus) camStatus.textContent = 'Live';
-        };
-        camImg.onerror = () => {
-          camImg.style.display = 'none';
-          if (camOffline) camOffline.style.display = 'flex';
-          if (camStatus) camStatus.textContent = 'Unavailable';
-        };
-        camImg.src = (getBackend() || '') + '/stream?t=' + Date.now();
-      }
       overlay.classList.remove('hidden');
+      const camOffline = $('cam-offline');
+      if (camOffline) camOffline.style.display = 'flex';
+      _camSetStatus('Connecting…');
+      // Try WebRTC first if available
+      if (typeof RTCPeerConnection !== 'undefined') {
+        startWebRTC();
+      } else {
+        startWsStream();
+      }
     } else {
-      // Stop stream
-      if (camImg) { camImg.src = ''; camImg.style.display = 'none'; }
+      stopCameraStream();
       overlay.classList.add('hidden');
     }
   }
