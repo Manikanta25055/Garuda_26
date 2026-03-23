@@ -196,8 +196,8 @@ const G = (() => {
   function afterLogin() {
     $('app').classList.add('logged-in');
     $('hdr-user').textContent = _session.display_name || _session.username;
-    if (_session.role === 'admin') show('admin-nav');
-    nav('dashboard', document.querySelector('[data-page="dashboard"]'));
+    buildNav(_session.role);
+    nav('dashboard');
     renderHeatmap();
     connectWS();
     if (_session.role === 'admin') loadCfg();
@@ -210,7 +210,7 @@ const G = (() => {
     localStorage.removeItem('garuda_token');
     if (_ws) { _ws.close(); _ws = null; }
     $('app').classList.remove('logged-in');
-    hide('admin-nav');
+    $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
     // Stop camera
     const camOv = $('camera-overlay');
     if (camOv) camOv.classList.add('hidden');
@@ -428,13 +428,85 @@ const G = (() => {
     });
   }
 
+  // ── iOS Bottom Navigation ─────────────────────────────────
+  const _NAV_ICONS = {
+    dashboard: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1.5"/><rect x="10.5" y="1.5" width="6" height="6" rx="1.5"/><rect x="1.5" y="10.5" width="6" height="6" rx="1.5"/><rect x="10.5" y="10.5" width="6" height="6" rx="1.5"/></svg>`,
+    narada:    `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0v-5a3 3 0 0 1 3-3z"/><path d="M3.75 8.25a5.25 5.25 0 0 0 10.5 0"/><line x1="9" y1="13.5" x2="9" y2="16.5"/><line x1="6" y1="16.5" x2="12" y2="16.5"/></svg>`,
+    users:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="5.5" r="2.5"/><path d="M1.5 15.75a5.5 5.5 0 0 1 11 0"/><path d="M13.5 7.5a2.5 2.5 0 1 1 0-5"/><path d="M16.5 15.75a4 4 0 0 0-3-3.85"/></svg>`,
+    email:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3.75" width="15" height="10.5" rx="1.5"/><path d="M1.5 5.25 9 10.5l7.5-5.25"/></svg>`,
+    settings:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="2.25"/><path d="M14.7 11.1a1 1 0 0 0 .2 1.1l.05.05a1.21 1.21 0 0 1-1.71 1.71l-.05-.05a1 1 0 0 0-1.1-.2 1 1 0 0 0-.61.92v.14a1.21 1.21 0 0 1-2.42 0v-.07a1 1 0 0 0-.65-.92 1 1 0 0 0-1.1.2l-.05.05a1.21 1.21 0 0 1-1.71-1.71l.05-.05a1 1 0 0 0 .2-1.1 1 1 0 0 0-.92-.61H5.4a1.21 1.21 0 0 1 0-2.42h.07a1 1 0 0 0 .92-.65 1 1 0 0 0-.2-1.1l-.05-.05a1.21 1.21 0 0 1 1.71-1.71l.05.05a1 1 0 0 0 1.1.2h.04a1 1 0 0 0 .61-.92V3.4a1.21 1.21 0 0 1 2.42 0v.07a1 1 0 0 0 .61.92 1 1 0 0 0 1.1-.2l.05-.05a1.21 1.21 0 0 1 1.71 1.71l-.05.05a1 1 0 0 0-.2 1.1v.04a1 1 0 0 0 .92.61h.14a1.21 1.21 0 0 1 0 2.42h-.07a1 1 0 0 0-.92.61z"/></svg>`,
+    logs:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h12M3 9h12M3 13.5h7.5"/></svg>`,
+    commands:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 1.5 9 4.5 12"/><polyline points="13.5 6 16.5 9 13.5 12"/><line x1="7.5" y1="3" x2="10.5" y2="15"/></svg>`,
+    emergency: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5 16.5 16.5H1.5Z"/><line x1="9" y1="7" x2="9" y2="11"/><circle cx="9" cy="13.5" r="0.75" fill="currentColor" stroke="none"/></svg>`,
+  };
+
+  const _USER_NAV = [
+    { page: 'dashboard', label: 'Home',    icon: 'dashboard' },
+    { page: 'narada',    label: 'Narada',  icon: 'narada'    },
+  ];
+
+  const _ADMIN_NAV = [
+    { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
+    { page: 'narada',     label: 'Narada',   icon: 'narada'    },
+    { page: 'a-users',    label: 'Users',    icon: 'users'     },
+    { page: 'a-email',    label: 'Email',    icon: 'email'     },
+    { page: 'a-settings', label: 'System',   icon: 'settings'  },
+    { page: 'a-logs',     label: 'Logs',     icon: 'logs'      },
+    { page: 'a-cmds',     label: 'Commands', icon: 'commands'  },
+    { page: null,         label: 'Stop',     icon: 'emergency', danger: true },
+  ];
+
+  function movePill(itemEl, instant) {
+    const pill  = $('ios-pill');
+    const navEl = $('ios-nav');
+    if (!pill || !navEl || !itemEl) return;
+    const nr  = navEl.getBoundingClientRect();
+    const ir  = itemEl.getBoundingClientRect();
+    const ovr = 10;                          // px overhang each side — magnification
+    const tx  = ir.left - nr.left - ovr;
+    const w   = ir.width + ovr * 2;
+    if (instant) {
+      pill.style.transition = 'none';
+      pill.style.transform  = `translateX(${tx}px)`;
+      pill.style.width      = w + 'px';
+      pill.offsetHeight;          // force reflow so transition disables cleanly
+      pill.style.transition = '';
+    } else {
+      pill.style.transform = `translateX(${tx}px)`;
+      pill.style.width     = w + 'px';
+    }
+  }
+
+  function buildNav(role) {
+    const items = role === 'admin' ? _ADMIN_NAV : _USER_NAV;
+    const navEl = $('ios-nav');
+    if (!navEl) return;
+    navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
+    items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.className = 'ios-item' + (item.danger ? ' ios-danger' : '');
+      btn.innerHTML = `<span class="ios-icon">${_NAV_ICONS[item.icon]}</span><span class="ios-label">${item.label}</span>`;
+      if (item.danger) {
+        btn.onclick = () => emergencyStop();
+      } else {
+        btn.onclick = () => nav(item.page, btn);
+      }
+      navEl.appendChild(btn);
+    });
+    // Instantly place pill on first non-danger item
+    const first = navEl.querySelector('.ios-item:not(.ios-danger)');
+    if (first) {
+      first.classList.add('active');
+      requestAnimationFrame(() => movePill(first, true));
+    }
+  }
+
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
     const pg = $('page-' + pageId); if (pg) pg.classList.add('active');
-    if (navEl) navEl.classList.add('active');
-    closeMobileMenu();
+    if (navEl) { navEl.classList.add('active'); movePill(navEl); }
     if (pageId === 'a-users')    loadUsers();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
@@ -442,18 +514,9 @@ const G = (() => {
     if (pageId === 'a-cmds')     loadCmds();
   }
 
-  // ── Mobile sidebar ────────────────────────────────────────
-  function toggleMenu() {
-    const sidebar = $('sidebar');
-    const overlay = $('sidebar-overlay');
-    const isOpen  = sidebar.classList.contains('open');
-    sidebar.classList.toggle('open', !isOpen);
-    overlay.classList.toggle('visible', !isOpen);
-  }
-  function closeMobileMenu() {
-    $('sidebar')?.classList.remove('open');
-    $('sidebar-overlay')?.classList.remove('visible');
-  }
+  // ── Mobile sidebar (no-ops — replaced by iOS nav) ─────────
+  function toggleMenu() {}
+  function closeMobileMenu() {}
 
   // ── WebSocket ─────────────────────────────────────────────
   function connectWS() {
