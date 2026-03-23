@@ -143,6 +143,8 @@ CUSTOM_VOICE_COMMANDS = {}
 _alert_active = False
 _alert_flash_count = 0
 _danger_trigger_info = ""   # detection text from the SPECIFIC frame that triggered scissors
+_danger_consecutive = 0     # consecutive frames with danger label detected
+DANGER_CONFIRM_FRAMES = 5   # must appear in this many consecutive frames to trigger alert
 _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
@@ -496,13 +498,20 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label == user_data.danger_label:
+            if label == user_data.danger_label and confidence >= 0.55:
                 danger_detected = True
 
     if det_count > 0:
         _detections_today += det_count
 
+    global _danger_consecutive
     if danger_detected:
+        _danger_consecutive += 1
+    else:
+        _danger_consecutive = 0
+
+    if _danger_consecutive >= DANGER_CONFIRM_FRAMES:
+        _danger_consecutive = 0   # reset so it must confirm again after alert expires
         global _danger_trigger_info
         _danger_trigger_info = text_info   # snapshot the scissors-trigger frame
         threading.Thread(target=trigger_software_alert, daemon=True).start()
