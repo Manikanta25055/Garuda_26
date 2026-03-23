@@ -1188,32 +1188,16 @@ input[type=range]::-webkit-slider-thumb {
 .hm-swatch { width: 10px; height: 10px; border-radius: 2px; }
 .hm-legend-lbl { font-family: var(--mono); font-size: 10px; color: var(--t4); }
 
-/* ── btop-style Hardware Card ─────────────────────────────── */
-.btop-card       { font-family: var(--mono); padding: 14px 16px; }
+/* ── Minimal hardware stats ───────────────────────────────── */
 .hm-det-card     { flex: 1; min-width: 140px; display: flex; flex-direction: column; }
 .hm-det-card .det-timeline { flex: 1; max-height: 168px; overflow-y: auto; }
 
-.btop-title-row  { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.btop-tag        { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #5e5ce6; text-transform: uppercase; flex-shrink: 0; }
-.btop-hdivider   { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
-.btop-big-pct    { font-size: 22px; font-weight: 700; color: #30d158; letter-spacing: -0.01em; transition: color 0.4s; flex-shrink: 0; }
-
-.btop-canvas     { width: 100%; height: 90px; display: block; border-radius: 4px; margin-bottom: 10px; background: rgba(0,0,0,0.5); }
-
-.btop-cores      { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
-.btop-core-row   { display: flex; align-items: center; gap: 2px; height: 14px; }
-.btop-cid        { font-size: 10px; color: #5e5ce6; width: 10px; text-align: right; flex-shrink: 0; }
-.btop-hedge      { font-size: 11px; color: rgba(255,255,255,0.18); flex-shrink: 0; line-height: 1; user-select: none; }
-.btop-ctrack     { flex: 1; height: 10px; background: rgba(255,255,255,0.05); overflow: hidden; }
-.btop-cfill      { height: 100%; width: 0%; background: #30d158; transition: width 0.5s ease, background-color 0.3s ease; }
-.btop-cpct       { font-size: 10px; color: var(--text); width: 32px; text-align: right; flex-shrink: 0; }
-
-.btop-mem-row    { display: flex; align-items: center; gap: 5px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; }
-.btop-mtrack     { flex: 1; min-width: 80px; height: 10px; background: rgba(255,255,255,0.05); overflow: hidden; }
-.btop-mfill      { height: 100%; width: 0%; background: #5e5ce6; transition: width 0.5s ease; }
-.btop-mval       { font-size: 10px; color: var(--text); white-space: nowrap; }
-.btop-dot        { color: rgba(255,255,255,0.2); font-size: 10px; }
-.btop-fval       { font-size: 10px; color: var(--text); }
+.hw-stats-card   { padding: 20px 24px; }
+.hw-stats-row    { display: flex; align-items: center; }
+.hw-stat         { flex: 1; text-align: center; padding: 2px 8px; }
+.hw-stat-lbl     { display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--t4); margin-bottom: 8px; }
+.hw-stat-val     { display: block; font-size: 26px; font-weight: 200; color: var(--text); letter-spacing: -0.02em; }
+.hw-stat-div     { width: 1px; height: 38px; background: rgba(255,255,255,0.07); flex-shrink: 0; }
 
 /* ── Detection class breakdown ────────────────────────────── */
 .class-breakdown { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }

@@ -15,132 +15,12 @@ const G = (() => {
   let _allLogs   = [];
   let _cfg       = {};
 
-  // ── btop CPU graph ───────────────────────────────────────
-  const _HIST_LEN = 80;
-  const _cpuHist  = new Array(_HIST_LEN).fill(0);
-
-  // Smooth RGB lerp: green(low) → orange(mid) → red(high)
-  function _valRgb(v) {
-    const t = Math.max(0, Math.min(100, v)) / 100;
-    if (t <= 0.5) {
-      const f = t * 2;
-      return [Math.round(48 + f * 207), Math.round(209 - f * 50), Math.round(88 - f * 78)];
-    }
-    const f = (t - 0.5) * 2;
-    return [255, Math.round(159 - f * 90), Math.round(10 + f * 48)];
-  }
-  function _pctColor(v) {
-    const [r, g, b] = _valRgb(v); return `rgb(${r},${g},${b})`;
-  }
-
-  function _drawCpuGraph() {
-    const canvas = $('cpu-graph');
-    if (!canvas || !canvas.offsetWidth) return;
-    const dpr  = window.devicePixelRatio || 1;
-    const cssW = canvas.offsetWidth;
-    const cssH = 90;
-    canvas.width  = cssW * dpr;
-    canvas.height = cssH * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    const W = cssW, H = cssH;
-    const PAD = 8;   // vertical padding so extreme dots don't clip
-
-    // Background
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(0, 0, W, H);
-
-    // Subtle grid lines at 25 / 50 / 75 %
-    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-    ctx.lineWidth = 1;
-    [0.25, 0.5, 0.75].forEach(f => {
-      const y = Math.round(PAD + (1 - f) * (H - PAD * 2)) + 0.5;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-    });
-
-    const spacing = W / _HIST_LEN;
-    const pos = (i, val) => ({
-      x: (i + 0.5) * spacing,
-      y: PAD + (1 - val / 100) * (H - PAD * 2)
-    });
-
-    // Dim connecting trail behind dots
-    ctx.beginPath();
-    let started = false;
-    _cpuHist.forEach((val, i) => {
-      const { x, y } = pos(i, val);
-      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = 0.8;
-    ctx.stroke();
-
-    // Dots — Y position, size, and color all encode the load value
-    _cpuHist.forEach((val, i) => {
-      if (val < 0.5) return;
-      const { x, y } = pos(i, val);
-      const [r, g, b] = _valRgb(val);
-      const t      = val / 100;
-      const radius = 1.5 + t * 5;   // 1.5 px (idle) → 6.5 px (100 %)
-
-      // Soft glow halo
-      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.2);
-      glow.addColorStop(0, `rgba(${r},${g},${b},${0.18 + t * 0.12})`);
-      glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = glow;
-      ctx.fill();
-
-      // Solid dot
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
-      ctx.fill();
-
-      // Specular highlight
-      ctx.beginPath();
-      ctx.arc(x - radius * 0.22, y - radius * 0.22, radius * 0.32, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.fill();
-    });
-  }
-
-  function _updateBtop(s) {
-    // Graph + big %
-    if (s.cpu_percent != null) {
-      _cpuHist.push(s.cpu_percent);
-      if (_cpuHist.length > _HIST_LEN) _cpuHist.shift();
-      _drawCpuGraph();
-      const el = $('btop-cpu-pct');
-      if (el) { el.textContent = Math.round(s.cpu_percent) + '%'; el.style.color = _pctColor(s.cpu_percent); }
-    }
-    // Per-core bars
-    if (s.cpu_cores && s.cpu_cores.length) {
-      s.cpu_cores.forEach((pct, i) => {
-        const row = document.querySelector(`[data-core="${i}"]`);
-        if (!row) return;
-        const fill = row.querySelector('.btop-cfill');
-        const val  = row.querySelector('.btop-cpct');
-        if (fill) { fill.style.width = Math.min(100, pct) + '%'; fill.style.backgroundColor = _pctColor(pct); }
-        if (val)  val.textContent = Math.round(pct) + '%';
-      });
-    }
-    // RAM bar
-    if (s.ram_percent != null) {
-      const fill = $('btop-mfill');
-      if (fill) fill.style.width = Math.min(100, s.ram_percent) + '%';
-      const val = $('btop-mval');
-      if (val) {
-        val.textContent = (s.ram_used_gb != null && s.ram_total_gb != null)
-          ? `${s.ram_used_gb}/${s.ram_total_gb}G`
-          : Math.round(s.ram_percent) + '%';
-      }
-    }
-    // Temp
-    if (s.cpu_temp != null) setText('btop-temp-val', Math.round(s.cpu_temp) + '\u00b0C');
-    // FPS
-    if (s.inference_fps != null) setText('hw-fps', s.inference_fps.toFixed(1));
+  // ── Hardware stats ────────────────────────────────────────
+  function _updateHw(s) {
+    if (s.cpu_percent != null) setText('hwm-cpu',  Math.round(s.cpu_percent) + '%');
+    if (s.ram_used_gb != null) setText('hwm-ram',  s.ram_used_gb + ' GB');
+    if (s.cpu_temp    != null) setText('hwm-temp', Math.round(s.cpu_temp) + '\u00b0C');
+    if (s.inference_fps != null) setText('hw-fps', s.inference_fps.toFixed(1) + ' fps');
   }
 
   const SWATCH_COLORS = [
@@ -738,8 +618,8 @@ const G = (() => {
     setText('s-thr', s.detection_threshold ? s.detection_threshold.toFixed(2) : '—');
     setText('s-pipeline', s.alert_active ? 'Alert' : 'Active');
 
-    // btop hardware
-    _updateBtop(s);
+    // Hardware stats
+    _updateHw(s);
 
     // Recent detections
     if (s.alert_active && s.detection_info) maybeAddDetection(s.detection_info);
