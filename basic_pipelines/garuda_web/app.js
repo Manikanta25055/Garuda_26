@@ -61,16 +61,22 @@ const G = (() => {
     }
   }
 
-  function updateBackendStatus(url) {
+  async function updateBackendStatus(url) {
     const dot = $('bk-dot'), lbl = $('bk-label');
     if (!dot) return;
-    if (url) {
-      dot.className = 'bk-dot ok';
-      try { lbl.textContent = new URL(url).hostname; } catch(_){ lbl.textContent = url; }
-    } else {
-      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      dot.className = 'bk-dot' + (isLocal ? ' ok' : '');
-      lbl.textContent = isLocal ? 'localhost' : 'No backend';
+    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const displayHost = url ? (() => { try { return new URL(url).hostname; } catch(_){ return url; } })()
+                            : (isLocal ? 'localhost' : 'No backend');
+    lbl.textContent = displayHost;
+    dot.className = 'bk-dot';
+
+    // Actually ping the backend
+    const pingUrl = (url || '') + '/api/users-public';
+    try {
+      const r = await fetch(pingUrl, { method:'GET', credentials:'omit', signal: AbortSignal.timeout(5000) });
+      dot.className = 'bk-dot' + (r.ok ? ' ok' : '');
+    } catch(_) {
+      dot.className = 'bk-dot'; // grey = unreachable
     }
   }
 
@@ -107,9 +113,10 @@ const G = (() => {
   // ── Login screen ─────────────────────────────────────────
   async function loadProfiles() {
     const el = $('profile-cards');
-    el.innerHTML = '';
+    el.innerHTML = '<p style="color:var(--t3);font-size:13px">Loading...</p>';
     try {
       const users = await api('GET', '/api/users-public');
+      el.innerHTML = '';
       users.forEach(u => {
         const card = mk('div', 'profile-card');
         card.innerHTML = `
@@ -119,7 +126,14 @@ const G = (() => {
         el.appendChild(card);
       });
     } catch(e) {
-      el.innerHTML = '<p style="color:var(--t3)">Could not load users.</p>';
+      el.innerHTML = `
+        <div style="text-align:center;padding:20px 0">
+          <p style="color:var(--t3);font-size:13px;margin-bottom:14px">Cannot reach backend.<br>Make sure the Raspberry Pi is on.</p>
+          <button class="btn btn-ghost btn-sm" onclick="G.loadProfiles()">Retry</button>
+        </div>`;
+      // Auto-retry every 8 seconds until profiles load
+      setTimeout(() => { if ($('profile-cards').querySelector('button')) loadProfiles(); }, 8000);
+      return;
     }
     // Admin card
     const adm = mk('div','profile-card');
@@ -633,10 +647,11 @@ const G = (() => {
     const base = getBackend();
     const fullUrl = base ? base.replace(/\/$/, '') + url : url;
     const headers = {'Content-Type': 'application/json'};
-    // For cross-origin: send stored token as header (cookies won't work without HTTPS)
     const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
     if (tok) headers['X-Garuda-Token'] = tok;
-    const opts = { method, headers, credentials: 'include' };
+    // Cross-origin: omit cookies (auth via token header instead)
+    // Same-origin: include cookies for session
+    const opts = { method, headers, credentials: base ? 'omit' : 'include' };
     if(body !== undefined) opts.body = JSON.stringify(body);
     const r = await fetch(fullUrl, opts);
     const d = await r.json();
