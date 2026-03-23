@@ -448,7 +448,6 @@ const G = (() => {
   const _ADMIN_NAV = [
     { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
     { page: 'narada',     label: 'Narada',   icon: 'narada'    },
-    { page: 'a-users',    label: 'Users',    icon: 'users'     },
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
     { page: 'a-settings', label: 'System',   icon: 'settings'  },
     { page: 'a-logs',     label: 'Logs',     icon: 'logs'      },
