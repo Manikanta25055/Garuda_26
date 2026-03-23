@@ -893,7 +893,14 @@ def get_state_dict():
 ##############################################################################
 # FASTAPI APP
 ##############################################################################
-fastapi_app = FastAPI(title="Garuda Security System")
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def _lifespan(app):
+    asyncio.ensure_future(_ws_broadcaster())
+    yield
+
+fastapi_app = FastAPI(title="Garuda Security System", lifespan=_lifespan)
 
 # CORS — allow any origin so Vercel-hosted frontend can reach the RPi5 backend
 fastapi_app.add_middleware(
@@ -1285,11 +1292,6 @@ async def _ws_broadcaster():
             if isinstance(result, Exception):
                 dead.add(ws)
         _ws_clients.difference_update(dead)
-
-
-@fastapi_app.on_event("startup")
-async def _startup_broadcaster():
-    asyncio.ensure_future(_ws_broadcaster())
 
 
 @fastapi_app.websocket("/ws")
