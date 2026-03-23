@@ -170,10 +170,11 @@ _sessions = {}
 _ws_clients: set = set()
 
 # EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
-_cpu_ema  = 0.0
-_ram_ema  = 0.0
-_temp_ema = 0.0
-_EMA_A    = 0.25
+_cpu_ema       = 0.0
+_ram_ema       = 0.0
+_temp_ema      = 0.0
+_cpu_cores_ema: list = []   # per-core EMA values (populated on first psutil call)
+_EMA_A         = 0.25
 
 # Voice stop event
 _voice_stop_event = threading.Event()
@@ -840,17 +841,32 @@ def get_state_dict():
     uptime_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
 
     # System health (psutil) — EMA-smoothed to avoid jitter
-    global _cpu_ema, _ram_ema, _temp_ema
+    global _cpu_ema, _ram_ema, _temp_ema, _cpu_cores_ema
     cpu_pct = None
     ram_pct = None
     cpu_temp = None
+    cpu_cores = []
+    ram_used_gb = None
+    ram_total_gb = None
     if psutil:
         raw_cpu = psutil.cpu_percent(interval=None)
-        raw_ram = psutil.virtual_memory().percent
+        vm = psutil.virtual_memory()
+        raw_ram = vm.percent
         _cpu_ema = _EMA_A * raw_cpu + (1 - _EMA_A) * _cpu_ema
         _ram_ema = _EMA_A * raw_ram + (1 - _EMA_A) * _ram_ema
         cpu_pct = round(_cpu_ema, 1)
         ram_pct = round(_ram_ema, 1)
+        ram_used_gb  = round(vm.used  / (1024 ** 3), 1)
+        ram_total_gb = round(vm.total / (1024 ** 3), 1)
+        # Per-core EMA
+        raw_cores = psutil.cpu_percent(percpu=True, interval=None)
+        if not _cpu_cores_ema:
+            _cpu_cores_ema.extend(raw_cores)
+        else:
+            for i, v in enumerate(raw_cores):
+                if i < len(_cpu_cores_ema):
+                    _cpu_cores_ema[i] = _EMA_A * v + (1 - _EMA_A) * _cpu_cores_ema[i]
+        cpu_cores = [round(v, 1) for v in _cpu_cores_ema]
         try:
             temps = psutil.sensors_temperatures()
             if temps:
@@ -884,10 +900,12 @@ def get_state_dict():
         "voice_responses": voice_responses[-30:],
         "detection_threshold": DETECTION_THRESHOLD,
         "cpu_percent": cpu_pct,
+        "cpu_cores": cpu_cores,
         "ram_percent": ram_pct,
+        "ram_used_gb": ram_used_gb,
+        "ram_total_gb": ram_total_gb,
         "cpu_temp": cpu_temp,
         "inference_fps": inference_fps,
-        "class_counts": dict(_class_counts_today),
     }
 
 ##############################################################################

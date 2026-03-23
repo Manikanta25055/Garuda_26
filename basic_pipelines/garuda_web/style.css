@@ -140,6 +140,10 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
   border: 1px solid var(--border);
 }
 .btn-ghost:hover { background: rgba(255,255,255,0.10); }
+/* Sign Out button — subtle red tint */
+#header .btn-ghost[onclick*="logout"],
+.hud-signout { color: rgba(255,69,58,0.70); }
+#header .btn-ghost[onclick*="logout"]:hover { background: rgba(255,69,58,0.12); color: #ff453a; border-color: rgba(255,69,58,0.3); }
 .btn-link  { background: none; color: var(--accent); padding: 4px 8px; font-size: 13px; }
 .btn-link:hover { opacity: 0.75; }
 .btn-sm { padding: 5px 14px; font-size: 12px; }
@@ -1184,15 +1188,32 @@ input[type=range]::-webkit-slider-thumb {
 .hm-swatch { width: 10px; height: 10px; border-radius: 2px; }
 .hm-legend-lbl { font-family: var(--mono); font-size: 10px; color: var(--t4); }
 
-/* ── Hardware health bars ─────────────────────────────────── */
-.hw-rows { display: flex; flex-direction: column; gap: 9px; margin-top: 6px; }
-.hw-row  { display: flex; align-items: center; gap: 8px; }
-.hw-lbl  { font-size: 10px; color: var(--t4); width: 28px; font-family: var(--mono); }
-.hw-val  { font-size: 11px; color: var(--text); font-family: var(--mono); width: 42px; text-align: right; }
-.hw-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
-.hw-bar { height: 100%; width: 0%; background: var(--accent); border-radius: 2px; transition: width 0.6s ease; }
-.hw-bar-temp { background: var(--warn); }
-.hw-bar.danger { background: var(--danger); }
+/* ── btop-style Hardware Card ─────────────────────────────── */
+.btop-card       { font-family: var(--mono); padding: 14px 16px; }
+.hm-det-card     { flex: 1; min-width: 140px; display: flex; flex-direction: column; }
+.hm-det-card .det-timeline { flex: 1; max-height: 168px; overflow-y: auto; }
+
+.btop-title-row  { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.btop-tag        { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #5e5ce6; text-transform: uppercase; flex-shrink: 0; }
+.btop-hdivider   { flex: 1; height: 1px; background: rgba(255,255,255,0.07); }
+.btop-big-pct    { font-size: 22px; font-weight: 700; color: #30d158; letter-spacing: -0.01em; transition: color 0.4s; flex-shrink: 0; }
+
+.btop-canvas     { width: 100%; height: 80px; display: block; border-radius: 4px; margin-bottom: 10px; background: rgba(0,0,0,0.45); }
+
+.btop-cores      { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+.btop-core-row   { display: flex; align-items: center; gap: 2px; height: 14px; }
+.btop-cid        { font-size: 10px; color: #5e5ce6; width: 10px; text-align: right; flex-shrink: 0; }
+.btop-hedge      { font-size: 11px; color: rgba(255,255,255,0.18); flex-shrink: 0; line-height: 1; user-select: none; }
+.btop-ctrack     { flex: 1; height: 10px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.btop-cfill      { height: 100%; width: 0%; background: #30d158; transition: width 0.5s ease, background-color 0.3s ease; }
+.btop-cpct       { font-size: 10px; color: var(--text); width: 32px; text-align: right; flex-shrink: 0; }
+
+.btop-mem-row    { display: flex; align-items: center; gap: 5px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); flex-wrap: wrap; }
+.btop-mtrack     { flex: 1; min-width: 80px; height: 10px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.btop-mfill      { height: 100%; width: 0%; background: #5e5ce6; transition: width 0.5s ease; }
+.btop-mval       { font-size: 10px; color: var(--text); white-space: nowrap; }
+.btop-dot        { color: rgba(255,255,255,0.2); font-size: 10px; }
+.btop-fval       { font-size: 10px; color: var(--text); }
 
 /* ── Detection class breakdown ────────────────────────────── */
 .class-breakdown { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }

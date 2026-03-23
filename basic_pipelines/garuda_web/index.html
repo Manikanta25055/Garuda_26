@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=15"/>
+  <link rel="stylesheet" href="/static/style.css?v=16"/>
 </head>
 <body>
 <div id="app">
@@ -213,41 +213,61 @@
                 </div>
               </div>
 
-              <!-- Hardware Health (moved from sidebar) -->
-              <div class="dash-card">
+              <!-- Recent Detections (compact, sits beside heatmap) -->
+              <div class="dash-card hm-det-card">
                 <div class="dash-card-hdr">
-                  <div class="dash-card-title">Hardware</div>
-                  <div class="dash-card-meta" id="hw-fps">— fps</div>
+                  <div class="dash-card-title">Recent Detections</div>
+                  <div id="det-live-dot" class="det-live"></div>
                 </div>
-                <div class="hw-rows">
-                  <div class="hw-row">
-                    <span class="hw-lbl">CPU</span>
-                    <div class="hw-bar-wrap"><div id="hw-cpu-bar" class="hw-bar" style="width:0%"></div></div>
-                    <span class="hw-val" id="hw-cpu">—</span>
-                  </div>
-                  <div class="hw-row">
-                    <span class="hw-lbl">RAM</span>
-                    <div class="hw-bar-wrap"><div id="hw-ram-bar" class="hw-bar" style="width:0%"></div></div>
-                    <span class="hw-val" id="hw-ram">—</span>
-                  </div>
-                  <div class="hw-row">
-                    <span class="hw-lbl">Temp</span>
-                    <div class="hw-bar-wrap"><div id="hw-temp-bar" class="hw-bar hw-bar-temp" style="width:0%"></div></div>
-                    <span class="hw-val" id="hw-temp">—</span>
-                  </div>
+                <div id="recent-dets" class="det-timeline">
+                  <div class="det-empty">No detections yet this session</div>
                 </div>
               </div>
 
             </div>
 
-            <!-- Recent detections -->
-            <div class="dash-card">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Recent Detections</div>
-                <div id="det-live-dot" class="det-live"></div>
+            <!-- btop-style Hardware (full width) -->
+            <div class="dash-card btop-card">
+              <div class="btop-title-row">
+                <span class="btop-tag">CPU</span>
+                <div class="btop-hdivider"></div>
+                <span class="btop-big-pct" id="btop-cpu-pct">0%</span>
               </div>
-              <div id="recent-dets" class="det-timeline">
-                <div class="det-empty">No detections yet this session</div>
+              <canvas id="cpu-graph" class="btop-canvas"></canvas>
+              <div class="btop-cores">
+                <div class="btop-core-row" data-core="0">
+                  <span class="btop-cid">1</span><span class="btop-hedge">▕</span>
+                  <div class="btop-ctrack"><div class="btop-cfill" style="width:0%"></div></div>
+                  <span class="btop-hedge">▏</span><span class="btop-cpct">0%</span>
+                </div>
+                <div class="btop-core-row" data-core="1">
+                  <span class="btop-cid">2</span><span class="btop-hedge">▕</span>
+                  <div class="btop-ctrack"><div class="btop-cfill" style="width:0%"></div></div>
+                  <span class="btop-hedge">▏</span><span class="btop-cpct">0%</span>
+                </div>
+                <div class="btop-core-row" data-core="2">
+                  <span class="btop-cid">3</span><span class="btop-hedge">▕</span>
+                  <div class="btop-ctrack"><div class="btop-cfill" style="width:0%"></div></div>
+                  <span class="btop-hedge">▏</span><span class="btop-cpct">0%</span>
+                </div>
+                <div class="btop-core-row" data-core="3">
+                  <span class="btop-cid">4</span><span class="btop-hedge">▕</span>
+                  <div class="btop-ctrack"><div class="btop-cfill" style="width:0%"></div></div>
+                  <span class="btop-hedge">▏</span><span class="btop-cpct">0%</span>
+                </div>
+              </div>
+              <div class="btop-mem-row">
+                <span class="btop-tag">Mem</span>
+                <span class="btop-hedge">▕</span>
+                <div class="btop-mtrack"><div class="btop-mfill" id="btop-mfill"></div></div>
+                <span class="btop-hedge">▏</span>
+                <span class="btop-mval" id="btop-mval">—</span>
+                <span class="btop-dot">·</span>
+                <span class="btop-tag">Temp</span>
+                <span class="btop-fval" id="btop-temp-val">—</span>
+                <span class="btop-dot">·</span>
+                <span class="btop-tag">FPS</span>
+                <span class="btop-fval" id="hw-fps">—</span>
               </div>
             </div>
 
@@ -740,6 +760,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=10"></script>
+<script src="/static/app.js?v=11"></script>
 </body>
 </html>

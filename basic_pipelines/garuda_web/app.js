@@ -15,6 +15,91 @@ const G = (() => {
   let _allLogs   = [];
   let _cfg       = {};
 
+  // ── btop CPU graph ───────────────────────────────────────
+  const _HIST_LEN = 80;
+  const _cpuHist  = new Array(_HIST_LEN).fill(0);
+
+  function _pctColor(v) {
+    return v < 50 ? '#30d158' : v < 75 ? '#ffd60a' : '#ff453a';
+  }
+
+  function _drawCpuGraph() {
+    const canvas = $('cpu-graph');
+    if (!canvas || !canvas.offsetWidth) return;
+    const dpr  = window.devicePixelRatio || 1;
+    const cssW = canvas.offsetWidth;
+    const cssH = 80;
+    canvas.width  = cssW * dpr;
+    canvas.height = cssH * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const W = cssW, H = cssH;
+
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle grid lines at 25 / 50 / 75 %
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    [0.25, 0.5, 0.75].forEach(f => {
+      const y = Math.round(H * (1 - f)) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    });
+
+    // Draw one column per history slot — each colored by its own value
+    const barW = W / _HIST_LEN;
+    _cpuHist.forEach((val, i) => {
+      if (val <= 0) return;
+      const color  = _pctColor(val);
+      const barH   = Math.max(1, (val / 100) * (H - 2));
+      const x      = i * barW;
+      const y      = H - barH;
+      const grd    = ctx.createLinearGradient(0, y, 0, H);
+      grd.addColorStop(0, color + 'ee');
+      grd.addColorStop(1, color + '22');
+      ctx.fillStyle = grd;
+      ctx.fillRect(x, y, Math.max(1, barW - 0.5), barH);
+    });
+  }
+
+  function _updateBtop(s) {
+    // Graph + big %
+    if (s.cpu_percent != null) {
+      _cpuHist.push(s.cpu_percent);
+      if (_cpuHist.length > _HIST_LEN) _cpuHist.shift();
+      _drawCpuGraph();
+      const el = $('btop-cpu-pct');
+      if (el) { el.textContent = Math.round(s.cpu_percent) + '%'; el.style.color = _pctColor(s.cpu_percent); }
+    }
+    // Per-core bars
+    if (s.cpu_cores && s.cpu_cores.length) {
+      s.cpu_cores.forEach((pct, i) => {
+        const row = document.querySelector(`[data-core="${i}"]`);
+        if (!row) return;
+        const fill = row.querySelector('.btop-cfill');
+        const val  = row.querySelector('.btop-cpct');
+        if (fill) { fill.style.width = Math.min(100, pct) + '%'; fill.style.backgroundColor = _pctColor(pct); }
+        if (val)  val.textContent = Math.round(pct) + '%';
+      });
+    }
+    // RAM bar
+    if (s.ram_percent != null) {
+      const fill = $('btop-mfill');
+      if (fill) fill.style.width = Math.min(100, s.ram_percent) + '%';
+      const val = $('btop-mval');
+      if (val) {
+        val.textContent = (s.ram_used_gb != null && s.ram_total_gb != null)
+          ? `${s.ram_used_gb}/${s.ram_total_gb}G`
+          : Math.round(s.ram_percent) + '%';
+      }
+    }
+    // Temp
+    if (s.cpu_temp != null) setText('btop-temp-val', Math.round(s.cpu_temp) + '\u00b0C');
+    // FPS
+    if (s.inference_fps != null) setText('hw-fps', s.inference_fps.toFixed(1));
+  }
+
   const SWATCH_COLORS = [
     '#2997ff','#34c759','#ff3b30','#ff9f0a',
     '#af52de','#5e5ce6','#00c7be','#ff375f','#636366'
@@ -610,30 +695,8 @@ const G = (() => {
     setText('s-thr', s.detection_threshold ? s.detection_threshold.toFixed(2) : '—');
     setText('s-pipeline', s.alert_active ? 'Alert' : 'Active');
 
-    // Hardware health
-    if (s.cpu_percent != null) {
-      const cpu = Math.round(s.cpu_percent);
-      setText('hw-cpu', cpu + '%');
-      setWidth('hw-cpu-bar', cpu);
-      const cpuBar = $('hw-cpu-bar');
-      if (cpuBar) cpuBar.classList.toggle('danger', cpu > 85);
-    }
-    if (s.ram_percent != null) {
-      const ram = Math.round(s.ram_percent);
-      setText('hw-ram', ram + '%');
-      setWidth('hw-ram-bar', ram);
-    }
-    if (s.cpu_temp != null) {
-      const temp = Math.round(s.cpu_temp);
-      setText('hw-temp', temp + '\u00b0C');
-      const tempPct = Math.min(100, Math.max(0, ((temp - 30) / 50) * 100));
-      setWidth('hw-temp-bar', tempPct);
-      const tempBar = $('hw-temp-bar');
-      if (tempBar) tempBar.classList.toggle('danger', temp > 70);
-    }
-    if (s.inference_fps != null) {
-      setText('hw-fps', s.inference_fps.toFixed(1) + ' fps');
-    }
+    // btop hardware
+    _updateBtop(s);
 
     // Recent detections
     if (s.alert_active && s.detection_info) maybeAddDetection(s.detection_info);
