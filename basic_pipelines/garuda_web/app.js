@@ -33,6 +33,8 @@ const G = (() => {
                  || h.startsWith('192.168.') || h.startsWith('10.')
                  || h.startsWith('172.');
     if (isLocal) return '';
+    // Auto-detect backend for known Vercel frontend hostname
+    if (h === 'garuda.veeramanikanta.in') return 'https://api.veeramanikanta.in';
     return localStorage.getItem('garuda_backend') || '';
   }
 
