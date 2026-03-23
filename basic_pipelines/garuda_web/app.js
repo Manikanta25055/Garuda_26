@@ -541,11 +541,15 @@ const G = (() => {
       banner.classList.add('visible');
       $('pipeline-dot').className = 'hdr-dot alert';
       $('pipeline-label').textContent = 'Alert';
+      $('hud-dot').className = 'hdr-dot alert';
+      $('hud-label').textContent = 'Alert';
       if (!_prevAlertActive) recordActivity();
     } else {
       banner.classList.remove('visible');
       $('pipeline-dot').className = 'hdr-dot online';
       $('pipeline-label').textContent = 'Online';
+      $('hud-dot').className = 'hdr-dot online';
+      $('hud-label').textContent = 'Online';
       if (_prevAlertActive) _lastDetInfo = ''; // reset so next alert adds fresh entries
     }
     _prevAlertActive = !!s.alert_active;

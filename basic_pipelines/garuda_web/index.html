@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=7"/>
+  <link rel="stylesheet" href="/static/style.css?v=8"/>
 </head>
 <body>
 <div id="app">
@@ -133,7 +133,7 @@
   <!-- Alert banner -->
   <div id="alert-banner">DANGER DETECTED — CHECK CAMERA FEED</div>
 
-  <!-- Header -->
+  <!-- Header (hidden when logged in) -->
   <header id="header">
     <div class="header-brand">GARUDA</div>
     <div id="header-pills"></div>
@@ -146,6 +146,15 @@
       <button class="btn btn-ghost btn-sm" onclick="G.logout()">Sign Out</button>
     </div>
   </header>
+
+  <!-- Floating HUD — replaces header when logged in -->
+  <div id="top-hud">
+    <div class="hud-status">
+      <div id="hud-dot" class="hdr-dot"></div>
+      <span id="hud-label" style="font-size:11px;color:var(--t3);font-family:var(--mono)">—</span>
+    </div>
+    <button class="hud-signout" onclick="G.logout()">Sign Out</button>
+  </div>
 
   <!-- Body -->
   <div id="body">
@@ -738,6 +747,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=6"></script>
+<script src="/static/app.js?v=7"></script>
 </body>
 </html>

@@ -53,9 +53,9 @@ body::before {
   z-index: -1;
   background-color: #08080d;
   background-image:
-    linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(255,255,255,0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.032) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
 
 body {
@@ -308,6 +308,11 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 #app.logged-in #login-screen { display: none; }
 #app:not(.logged-in) #app-shell { display: none; }
 #app.logged-in .wv-docs-btn { display: none; }
+/* Hide the header bar when logged in — grid fills edge to edge */
+#app.logged-in #header { display: none; }
+/* Show the floating HUD only when logged in */
+#top-hud { display: none; }
+#app.logged-in #top-hud { display: flex; }
 
 /* ── Login ──────────────────────────────────────────────── */
 #login-screen {
@@ -492,6 +497,21 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 .hdr-dot.alert  { background: var(--danger); animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
 .hdr-user { font-size: 13px; color: var(--t2); }
+
+/* ── Floating top HUD (replaces header when logged in) ── */
+#top-hud {
+  position: fixed;
+  top: 12px; right: 16px;
+  z-index: 80;
+  align-items: center; gap: 12px;
+}
+.hud-status { display: flex; align-items: center; gap: 5px; }
+.hud-signout {
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; color: var(--t4); font-family: var(--font);
+  padding: 0; transition: color 0.15s;
+}
+.hud-signout:hover { color: var(--t1); }
 
 /* Body */
 #body { flex: 1; display: flex; overflow: hidden; }
