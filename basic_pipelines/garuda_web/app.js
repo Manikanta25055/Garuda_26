@@ -605,7 +605,7 @@ const G = (() => {
 
     // Stats
     setText('s-uptime', s.uptime || '—');
-    setText('s-det', String(s.detections_today || 0));
+
     setText('s-alert', s.last_alert ? timeSince(new Date(s.last_alert)) : 'None');
     setText('s-thr', s.detection_threshold ? s.detection_threshold.toFixed(2) : '—');
     setText('s-pipeline', s.alert_active ? 'Alert' : 'Active');
@@ -633,24 +633,6 @@ const G = (() => {
     }
     if (s.inference_fps != null) {
       setText('hw-fps', s.inference_fps.toFixed(1) + ' fps');
-    }
-
-    // Detection class breakdown
-    const breakdown = $('class-breakdown');
-    const breakdownCard = $('breakdown-card');
-    if (breakdown && s.class_counts) {
-      const entries = Object.entries(s.class_counts).sort((a, b) => b[1] - a[1]);
-      if (entries.length > 0) {
-        if (breakdownCard) breakdownCard.style.display = '';
-        const maxCount = entries[0][1];
-        const CLASS_COLORS = ['#2997ff','#30d158','#ff9f0a','#af52de','#5e5ce6','#ff375f','#00c7be'];
-        breakdown.innerHTML = entries.slice(0, 7).map(([cls, cnt], i) => `
-          <div class="class-row">
-            <span class="class-name">${esc(cls)}</span>
-            <div class="class-bar-wrap"><div class="class-bar" style="width:${Math.round(cnt/maxCount*100)}%;background:${CLASS_COLORS[i%CLASS_COLORS.length]}"></div></div>
-            <span class="class-count">${cnt}</span>
-          </div>`).join('');
-      }
     }
 
     // Recent detections

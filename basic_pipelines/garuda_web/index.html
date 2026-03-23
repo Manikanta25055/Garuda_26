@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=14"/>
+  <link rel="stylesheet" href="/static/style.css?v=15"/>
 </head>
 <body>
 <div id="app">
@@ -240,15 +240,6 @@
 
             </div>
 
-            <!-- Detection Breakdown -->
-            <div class="dash-card" id="breakdown-card" style="display:none">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Detected Today</div>
-                <div class="dash-card-meta">By object class</div>
-              </div>
-              <div id="class-breakdown" class="class-breakdown"></div>
-            </div>
-
             <!-- Recent detections -->
             <div class="dash-card">
               <div class="dash-card-hdr">
@@ -281,10 +272,7 @@
                   <span class="stat-lbl">Uptime</span>
                   <span class="stat-val" id="s-uptime">—</span>
                 </div>
-                <div class="stat-row">
-                  <span class="stat-lbl">Detections Today</span>
-                  <span class="stat-val" id="s-det">0</span>
-                </div>
+
                 <div class="stat-row">
                   <span class="stat-lbl">Last Alert</span>
                   <span class="stat-val" id="s-alert">None</span>
@@ -752,6 +740,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=9"></script>
+<script src="/static/app.js?v=10"></script>
 </body>
 </html>
