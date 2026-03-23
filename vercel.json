@@ -1,10 +1,15 @@
 {
-  "outputDirectory": "basic_pipelines/garuda_web",
+  "version": 2,
+  "builds": [
+    {
+      "src": "basic_pipelines/garuda_web/**",
+      "use": "@vercel/static"
+    }
+  ],
   "routes": [
-    { "src": "/static/style.css", "dest": "/style.css" },
-    { "src": "/static/app.js",    "dest": "/app.js"    },
-    { "src": "/static/(.*)",      "dest": "/$1"        },
-    { "handle": "filesystem"                            },
-    { "src": "/(.*)",             "dest": "/index.html" }
+    { "src": "/static/style\\.css", "dest": "/basic_pipelines/garuda_web/style.css" },
+    { "src": "/static/app\\.js",    "dest": "/basic_pipelines/garuda_web/app.js"    },
+    { "src": "/static/(.*)",        "dest": "/basic_pipelines/garuda_web/$1"        },
+    { "src": "/(.*)",               "dest": "/basic_pipelines/garuda_web/index.html" }
   ]
 }
