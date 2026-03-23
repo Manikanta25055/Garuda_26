@@ -489,8 +489,10 @@ const G = (() => {
     if (!pill || !navEl || !itemEl) return;
     const nr  = navEl.getBoundingClientRect();
     const ir  = itemEl.getBoundingClientRect();
-    const ovr = 8;                           // px overhang each side (< nav h-padding so pill stays inside)
-    const tx  = ir.left - nr.left - ovr;
+    const ovr = 8;
+    // getBoundingClientRect() is viewport-relative; pill is positioned in the
+    // nav's scrollable content area, so we must add scrollLeft to compensate.
+    const tx  = ir.left - nr.left + navEl.scrollLeft - ovr;
     const w   = ir.width + ovr * 2;
     if (instant) {
       pill.style.transition = 'none';
