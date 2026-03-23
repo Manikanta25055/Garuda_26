@@ -42,15 +42,23 @@
 /* ── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Grid background — subtle square grid throughout ───── */
-html {
-  background: var(--bg);
+/* ── Fixed background layer — position:fixed beats background-attachment:fixed
+      on iOS Safari and inside overflow:hidden containers ── */
+html { background: none; min-height: 100%; }
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  /* Dark base + two soft ambient light blobs + fine grid */
+  background-color: #08080d;
   background-image:
-    linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 48px 48px;
-  background-attachment: fixed;
-  min-height: 100%;
+    radial-gradient(ellipse 90% 60% at 15% 5%,  rgba(10,132,255,0.11)  0%, transparent 55%),
+    radial-gradient(ellipse 70% 55% at 85% 90%, rgba(175,82,222,0.09)  0%, transparent 55%),
+    linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
 }
 
 body {
@@ -1053,8 +1061,10 @@ input[type=range]::-webkit-slider-thumb {
 .dash-main, .dash-side { display: flex; flex-direction: column; gap: 12px; }
 
 .dash-card {
-  background: rgba(17,17,17,0.6);
-  border: 0.5px solid var(--border);
+  background: rgba(16,16,20,0.50);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 0.5px solid rgba(255,255,255,0.09);
   border-radius: var(--r-lg);
   padding: 16px;
 }
@@ -1077,8 +1087,10 @@ input[type=range]::-webkit-slider-thumb {
 
 /* Console card */
 .dash-console-card {
-  background: #000;
-  border: 0.5px solid var(--border);
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 0.5px solid rgba(255,255,255,0.07);
   border-radius: var(--r-lg);
   overflow: hidden;
 }
@@ -1184,8 +1196,10 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── Security Status Card ───────────────────────────────── */
 .status-card {
-  background: rgba(17,17,17,0.6);
-  border: 0.5px solid var(--border);
+  background: rgba(16,16,20,0.50);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 0.5px solid rgba(255,255,255,0.09);
   border-radius: var(--r-lg);
   padding: 18px;
   transition: background 0.35s ease, border-color 0.35s ease;
