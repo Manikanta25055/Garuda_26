@@ -601,8 +601,7 @@ const G = (() => {
       if (s.alert_active) {
         card.classList.add('alert');
         setText('status-label', 'ALERT');
-        const info = (s.detection_info || '').replace('No detections.', '').trim();
-        setText('status-desc', info || 'Threat detected');
+        setText('status-desc', 'Scissors detected');
       } else {
         card.classList.remove('alert');
         setText('status-label', 'ALL CLEAR');
@@ -621,8 +620,8 @@ const G = (() => {
     // Hardware stats
     _updateHw(s);
 
-    // Recent detections
-    if (s.alert_active && s.detection_info) maybeAddDetection(s.detection_info);
+    // Recent detections — only add entry when danger_info carries a scissors trigger
+    if (s.danger_info) maybeAddDetection(s.danger_info);
 
     // Console
     const logText = (s.system_log || []).join('\n');

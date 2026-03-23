@@ -134,6 +134,7 @@ CUSTOM_VOICE_COMMANDS = {}
 
 _alert_active = False
 _alert_flash_count = 0
+_danger_trigger_info = ""   # detection text from the SPECIFIC frame that triggered scissors
 _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
@@ -454,6 +455,8 @@ def app_callback(pad, info, user_data):
         _detections_today += det_count
 
     if danger_detected:
+        global _danger_trigger_info
+        _danger_trigger_info = text_info   # snapshot the scissors-trigger frame
         threading.Thread(target=trigger_software_alert, daemon=True).start()
         threading.Thread(target=log_scissors_detection, daemon=True).start()
         threading.Thread(target=send_email_alert, daemon=True).start()
@@ -828,12 +831,13 @@ def require_admin(request: Request):
 # STATE HELPER
 ##############################################################################
 def get_state_dict():
-    global _alert_active, _alert_flash_count
+    global _alert_active, _alert_flash_count, _danger_trigger_info
     # Decrement flash count
     if _alert_flash_count > 0:
         _alert_flash_count -= 1
         if _alert_flash_count == 0:
             _alert_active = False
+            _danger_trigger_info = ""
 
     uptime = int(time.time() - _app_start_time)
     hours, rem = divmod(uptime, 3600)
@@ -891,10 +895,9 @@ def get_state_dict():
             "privacy": MODE_PRIVACY,
         },
         "alert_active": _alert_active,
-        "detections_today": _detections_today,
+        "danger_info": _danger_trigger_info,   # only non-empty during a scissors alert
         "last_alert": _last_alert_time.isoformat() if _last_alert_time else None,
         "uptime": uptime_str,
-        "detection_info": latest_detection_info,
         "system_log": system_updates_log[-50:],
         "voice_log": voice_assistant_log[-30:],
         "voice_responses": voice_responses[-30:],
