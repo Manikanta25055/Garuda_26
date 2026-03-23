@@ -302,6 +302,7 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
 #app.logged-in #login-screen { display: none; }
 #app:not(.logged-in) #app-shell { display: none; }
+#app.logged-in .wv-docs-btn { display: none; }
 
 /* ── Login ──────────────────────────────────────────────── */
 #login-screen {
@@ -1234,7 +1235,7 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── Docs bubble button ─────────────────────────────────── */
 .wv-docs-btn {
-  position: absolute;
+  position: fixed;
   bottom: 26px; left: 28px;
   width: 30px; height: 30px; border-radius: 50%;
   background: rgba(255,255,255,0.05);
@@ -1243,7 +1244,7 @@ input[type=range]::-webkit-slider-thumb {
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: background var(--trans), color var(--trans), border-color var(--trans);
-  z-index: 2;
+  z-index: 50;
 }
 .wv-docs-btn:hover {
   background: rgba(255,255,255,0.10);
