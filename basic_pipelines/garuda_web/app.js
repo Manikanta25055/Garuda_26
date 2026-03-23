@@ -139,11 +139,16 @@ const G = (() => {
     const errEl = $('adm-err-1');
     if (!un || !pw) { showLoginErr(errEl, 'Enter username and password.'); return; }
     try {
-      await api('POST', '/api/admin/send-otp', { username: un, password: pw });
+      const r = await api('POST', '/api/admin/send-otp', { username: un, password: pw });
       _pendingAdmin = { username: un };
       if ($('adm-otp')) $('adm-otp').value = '';
       $('adm-err-2')?.classList.add('hidden');
       showLoginView('lv-admin-2');
+      // Email delivery failed — show dev bypass OTP so login can still proceed
+      if (r && !r.ok && r.bypass_otp) {
+        const e2 = $('adm-err-2');
+        if (e2) { e2.textContent = 'Email failed. Dev code: ' + r.bypass_otp; e2.classList.remove('hidden'); }
+      }
       setTimeout(() => $('adm-otp')?.focus(), 50);
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -884,7 +889,7 @@ const G = (() => {
 
   function showLoginErr(el, txt) {
     if (!el) return;
-    el.textContent = txt;
+    el.textContent = (typeof txt === 'string') ? txt : JSON.stringify(txt);
     el.classList.remove('hidden');
   }
 

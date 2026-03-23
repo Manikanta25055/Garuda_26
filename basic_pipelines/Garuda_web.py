@@ -974,6 +974,8 @@ async def users_public():
 async def login(data: LoginRequest, response: Response):
     u = data.username.strip()
     p = data.password.strip()
+    if u in USERS and USERS[u].get("role") == "admin":
+        raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
     if u in USERS and USERS[u]["password"] == p:
         token = create_session(u)
         response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
