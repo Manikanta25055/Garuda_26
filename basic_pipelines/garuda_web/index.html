@@ -188,20 +188,30 @@
               </div>
               <div class="info-section">
                 <div class="overline">Stats</div>
-                <div style="margin-top:2px">
-                  <div class="stat-item"><span>Uptime</span><span id="s-uptime">—</span></div>
-                  <div class="stat-item"><span>Detections today</span><span id="s-det">0</span></div>
-                  <div class="stat-item"><span>Last alert</span><span id="s-alert">—</span></div>
-                  <div class="stat-item"><span>Threshold</span><span id="s-thr">—</span></div>
+                <div class="readout-grid" style="margin-top:8px">
+                  <div class="readout-row">
+                    <div class="readout-label">Uptime</div>
+                    <div class="readout-val"><span id="s-uptime">—</span></div>
+                  </div>
+                  <div class="readout-row">
+                    <div class="readout-label">Detections</div>
+                    <div class="readout-val"><span id="s-det">0</span> <span class="readout-unit">today</span></div>
+                  </div>
+                  <div class="readout-row">
+                    <div class="readout-label">Last Alert</div>
+                    <div class="readout-val"><span id="s-alert">—</span></div>
+                  </div>
+                  <div class="readout-row">
+                    <div class="readout-label">Threshold</div>
+                    <div class="readout-val"><span id="s-thr">—</span></div>
+                  </div>
                 </div>
               </div>
+              <div class="info-section">
+                <div class="overline">System Modes</div>
+                <div id="modes-pills" class="modes-list" style="margin-top:8px"></div>
+              </div>
             </div>
-          </div>
-
-          <!-- Modes bar -->
-          <div class="dash-modes">
-            <span class="modes-label">Modes</span>
-            <div id="modes-pills"></div>
           </div>
 
           <!-- Console -->

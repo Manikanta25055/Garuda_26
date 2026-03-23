@@ -18,12 +18,12 @@ const G = (() => {
   ];
 
   const MODE_CFG = [
-    { key:'dnd',       label:'DND',       cls:'' },
-    { key:'night',     label:'Night',     cls:'yellow' },
-    { key:'emergency', label:'Emergency', cls:'' },
-    { key:'idle',      label:'Idle',      cls:'blue' },
-    { key:'email_off', label:'Email Off', cls:'' },
-    { key:'privacy',   label:'Privacy',   cls:'blue' },
+    { key:'privacy',   label:'Privacy Blur',    icon:'◉', cls:'mode-blue'   },
+    { key:'night',     label:'Night Mode',      icon:'◑', cls:'mode-purple'  },
+    { key:'dnd',       label:'Do Not Disturb',  icon:'◯', cls:'mode-warn'   },
+    { key:'idle',      label:'Idle',            icon:'⊟', cls:'mode-muted'  },
+    { key:'email_off', label:'Email Alerts Off',icon:'◫', cls:'mode-muted'  },
+    { key:'emergency', label:'Emergency',       icon:'△', cls:'mode-danger' },
   ];
 
   // ── Backend URL config ───────────────────────────────────
@@ -396,21 +396,24 @@ const G = (() => {
     const hpills = $('header-pills');
     if (!grid) return;
 
-    // Dashboard pills
+    // Dashboard list rows
     grid.innerHTML = '';
     MODE_CFG.forEach(m => {
-      const pill = mk('span','mode-pill'+(modes[m.key]?` active ${m.cls}`:''));
-      pill.innerHTML = `<span class="pill-dot"></span>${m.label}`;
-      pill.onclick = () => toggleMode(m.key, modes[m.key]);
-      grid.appendChild(pill);
+      const isOn = !!modes[m.key];
+      const row  = mk('div', `mode-row${isOn?' on':''} ${m.cls}`);
+      row.innerHTML = `
+        <div class="mode-row-icon">${m.icon}</div>
+        <span class="mode-row-label">${m.label}</span>
+        <div class="mode-toggle${isOn?' on':''}"></div>`;
+      row.onclick = () => toggleMode(m.key, isOn);
+      grid.appendChild(row);
     });
 
-    // Header — only active modes
+    // Header — only active modes (small pills)
     if (hpills) {
       hpills.innerHTML = '';
       MODE_CFG.filter(m=>modes[m.key]).forEach(m=>{
-        const p = mk('span',`mode-pill active ${m.cls}`);
-        p.style.cssText = 'font-size:11px;padding:3px 10px';
+        const p = mk('span','mode-pill active');
         p.textContent = m.label;
         hpills.appendChild(p);
       });
