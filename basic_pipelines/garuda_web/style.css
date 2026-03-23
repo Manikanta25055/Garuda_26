@@ -42,20 +42,23 @@
 /* ── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Fixed background layer — position:fixed beats background-attachment:fixed
-      on iOS Safari and inside overflow:hidden containers ── */
-html { background: none; min-height: 100%; }
+/* ── Background — dark base on html covers overscroll + short-page gaps;
+      body::before is the fixed grid tile that never scrolls ── */
+html, body {
+  background-color: #08080d;  /* fills overscroll rubber-band areas on iOS/mobile */
+}
 
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-color: #08080d;
+  /* grid only — base color handled by html/body above */
   background-image:
     linear-gradient(rgba(255,255,255,0.032) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.032) 1px, transparent 1px);
   background-size: 24px 24px;
+  background-color: #08080d;
 }
 
 body {
