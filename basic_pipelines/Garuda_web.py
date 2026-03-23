@@ -160,13 +160,20 @@ USERS = {
 
 # MJPEG frame buffer
 _frame_buffer = None
-_frame_lock = threading.Lock()
+_frame_lock   = threading.Lock()
+_frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
 
 # Session store: token → {username, role, expires}
 _sessions = {}
 
-# WebSocket clients
+# WebSocket clients (all connected devices)
 _ws_clients: set = set()
+
+# EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
+_cpu_ema  = 0.0
+_ram_ema  = 0.0
+_temp_ema = 0.0
+_EMA_A    = 0.25
 
 # Voice stop event
 _voice_stop_event = threading.Event()
@@ -461,7 +468,9 @@ def app_callback(pad, info, user_data):
         frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         _, jpeg = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 75])
         with _frame_lock:
+            global _frame_seq
             _frame_buffer = jpeg.tobytes()
+            _frame_seq += 1
         user_data.set_frame(frame_bgr)
 
     latest_detection_info = text_info
@@ -545,12 +554,13 @@ class GStreamerDetectionApp(GStreamerApp):
 
     def get_pipeline_string(self):
         if self.source_type == "rpi":
+            # 1280x720 @ 60fps — IMX708 supports up to 120fps at 720p vs 30fps at 1536x864
             source_element = (
                 "libcamerasrc name=src_0 ! "
-                f"video/x-raw, format={self.network_format}, width=1536, height=864 ! "
+                f"video/x-raw, format={self.network_format}, width=1280, height=720, framerate=60/1 ! "
                 + QUEUE("queue_src_scale")
                 + "videoscale ! "
-                f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, framerate=30/1 ! "
+                f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, framerate=60/1 ! "
             )
         elif self.source_type == "usb":
             source_element = (
@@ -829,19 +839,26 @@ def get_state_dict():
     mins, secs = divmod(rem, 60)
     uptime_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
 
-    # System health (psutil)
+    # System health (psutil) — EMA-smoothed to avoid jitter
+    global _cpu_ema, _ram_ema, _temp_ema
     cpu_pct = None
     ram_pct = None
     cpu_temp = None
     if psutil:
-        cpu_pct = psutil.cpu_percent(interval=None)
-        ram_pct = psutil.virtual_memory().percent
+        raw_cpu = psutil.cpu_percent(interval=None)
+        raw_ram = psutil.virtual_memory().percent
+        _cpu_ema = _EMA_A * raw_cpu + (1 - _EMA_A) * _cpu_ema
+        _ram_ema = _EMA_A * raw_ram + (1 - _EMA_A) * _ram_ema
+        cpu_pct = round(_cpu_ema, 1)
+        ram_pct = round(_ram_ema, 1)
         try:
             temps = psutil.sensors_temperatures()
             if temps:
                 for sensor_name in ('cpu_thermal', 'coretemp', 'k10temp', 'acpitz'):
                     if sensor_name in temps and temps[sensor_name]:
-                        cpu_temp = round(temps[sensor_name][0].current, 1)
+                        raw_temp = temps[sensor_name][0].current
+                        _temp_ema = _EMA_A * raw_temp + (1 - _EMA_A) * _temp_ema
+                        cpu_temp = round(_temp_ema, 1)
                         break
         except Exception:
             pass
@@ -1223,23 +1240,58 @@ async def emergency_stop(session=Depends(require_session)):
     return {"ok": True}
 
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
+# Uses _frame_seq to detect new frames only — avoids re-sending duplicate
+# frames and keeps per-client CPU near zero when the pipeline is idle.
 @fastapi_app.get("/stream")
 async def mjpeg_stream(request: Request):
     async def generate():
+        last_seq = -1
         while True:
             if await request.is_disconnected():
                 break
             with _frame_lock:
-                frame = _frame_buffer
-            if frame:
+                seq = _frame_seq
+                frame = _frame_buffer if seq != last_seq else None
+            if frame is not None:
+                last_seq = seq
                 yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
-            await asyncio.sleep(0.033)
+            else:
+                # No new frame yet — yield control briefly without busy-spinning
+                await asyncio.sleep(0.005)
     return StreamingResponse(
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
-# ── WebSocket ─────────────────────────────────────────────────────────────────
+# ── WebSocket broadcaster (single task → all clients) ────────────────────────
+# Compute state ONCE per tick and fan it out to every connected client in
+# parallel via asyncio.gather.  This is O(1) in CPU regardless of how many
+# clients are connected (vs the old per-client loop which was O(N)).
+_ws_state_queue: asyncio.Queue = None  # created in startup event
+
+async def _ws_broadcaster():
+    """Background task: compute state once per 500 ms and push to all clients."""
+    while True:
+        await asyncio.sleep(0.5)
+        if not _ws_clients:
+            continue
+        payload = get_state_dict()
+        dead: set = set()
+        results = await asyncio.gather(
+            *[ws.send_json(payload) for ws in list(_ws_clients)],
+            return_exceptions=True
+        )
+        for ws, result in zip(list(_ws_clients), results):
+            if isinstance(result, Exception):
+                dead.add(ws)
+        _ws_clients.difference_update(dead)
+
+
+@fastapi_app.on_event("startup")
+async def _startup_broadcaster():
+    asyncio.ensure_future(_ws_broadcaster())
+
+
 @fastapi_app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     # Accept token from cookie (same-origin) or query param (cross-origin)
@@ -1250,9 +1302,14 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     await websocket.accept()
     _ws_clients.add(websocket)
     try:
+        # Keep the connection alive; broadcaster pushes state.
+        # Also drain any pings/pongs from the client so the socket stays healthy.
         while True:
-            await websocket.send_json(get_state_dict())
-            await asyncio.sleep(0.5)
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=30)
+            except asyncio.TimeoutError:
+                # Send a lightweight ping to detect dead connections
+                await websocket.send_json({"ping": True})
     except Exception:
         pass
     finally:
