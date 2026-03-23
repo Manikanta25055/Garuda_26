@@ -360,6 +360,9 @@ def push_urgent_ws():
 ##############################################################################
 def trigger_software_alert():
     global _alert_active, _alert_flash_count, _last_alert_time
+    # Guard: skip if an alert is already in progress (prevents per-frame re-firing)
+    if _alert_active:
+        return
     with _mode_lock:
         dnd = MODE_DND
         idle = MODE_IDLE
@@ -1440,10 +1443,12 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         # Also drain any pings/pongs from the client so the socket stays healthy.
         while True:
             try:
-                await asyncio.wait_for(websocket.receive_text(), timeout=30)
+                # Drain any client messages (pings/pongs); 60s timeout before
+                # declaring the connection dead and exiting the loop.
+                await asyncio.wait_for(websocket.receive_text(), timeout=60)
             except asyncio.TimeoutError:
-                # Send a lightweight ping to detect dead connections
-                await websocket.send_json({"ping": True})
+                # No message in 60s → connection likely dead, exit cleanly
+                break
     except Exception:
         pass
     finally:
