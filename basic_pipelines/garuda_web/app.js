@@ -462,7 +462,7 @@ const G = (() => {
     if (!pill || !navEl || !itemEl) return;
     const nr  = navEl.getBoundingClientRect();
     const ir  = itemEl.getBoundingClientRect();
-    const ovr = 10;                          // px overhang each side — magnification
+    const ovr = 8;                           // px overhang each side (< nav h-padding so pill stays inside)
     const tx  = ir.left - nr.left - ovr;
     const w   = ir.width + ovr * 2;
     if (instant) {

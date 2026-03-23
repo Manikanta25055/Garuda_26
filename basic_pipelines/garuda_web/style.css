@@ -508,7 +508,7 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
   display: none;            /* shown via #app.logged-in */
   align-items: center;
   gap: 0;
-  padding: 6px;
+  padding: 6px 16px;   /* extra horizontal room so pill stays inside at ends */
   background: rgba(22, 22, 24, 0.72);
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
@@ -843,7 +843,7 @@ input[type=range]::-webkit-slider-thumb {
   .hdr-user    { display: none; }
 
   /* ── iOS nav mobile adjustments ── */
-  #ios-nav     { bottom: 14px; padding: 5px; }
+  #ios-nav     { bottom: 14px; padding: 5px 12px; }
   .ios-item    { padding: 7px 11px; min-width: 50px; }
   .ios-label   { font-size: 9px; }
 
