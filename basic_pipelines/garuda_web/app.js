@@ -19,8 +19,18 @@ const G = (() => {
   const _HIST_LEN = 80;
   const _cpuHist  = new Array(_HIST_LEN).fill(0);
 
+  // Smooth RGB lerp: green(low) → orange(mid) → red(high)
+  function _valRgb(v) {
+    const t = Math.max(0, Math.min(100, v)) / 100;
+    if (t <= 0.5) {
+      const f = t * 2;
+      return [Math.round(48 + f * 207), Math.round(209 - f * 50), Math.round(88 - f * 78)];
+    }
+    const f = (t - 0.5) * 2;
+    return [255, Math.round(159 - f * 90), Math.round(10 + f * 48)];
+  }
   function _pctColor(v) {
-    return v < 50 ? '#30d158' : v < 75 ? '#ffd60a' : '#ff453a';
+    const [r, g, b] = _valRgb(v); return `rgb(${r},${g},${b})`;
   }
 
   function _drawCpuGraph() {
@@ -28,38 +38,71 @@ const G = (() => {
     if (!canvas || !canvas.offsetWidth) return;
     const dpr  = window.devicePixelRatio || 1;
     const cssW = canvas.offsetWidth;
-    const cssH = 80;
+    const cssH = 90;
     canvas.width  = cssW * dpr;
     canvas.height = cssH * dpr;
     const ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
     const W = cssW, H = cssH;
+    const PAD = 8;   // vertical padding so extreme dots don't clip
 
     // Background
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, W, H);
 
     // Subtle grid lines at 25 / 50 / 75 %
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.04)';
     ctx.lineWidth = 1;
     [0.25, 0.5, 0.75].forEach(f => {
-      const y = Math.round(H * (1 - f)) + 0.5;
+      const y = Math.round(PAD + (1 - f) * (H - PAD * 2)) + 0.5;
       ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
     });
 
-    // Draw one column per history slot — each colored by its own value
-    const barW = W / _HIST_LEN;
+    const spacing = W / _HIST_LEN;
+    const pos = (i, val) => ({
+      x: (i + 0.5) * spacing,
+      y: PAD + (1 - val / 100) * (H - PAD * 2)
+    });
+
+    // Dim connecting trail behind dots
+    ctx.beginPath();
+    let started = false;
     _cpuHist.forEach((val, i) => {
-      if (val <= 0) return;
-      const color  = _pctColor(val);
-      const barH   = Math.max(1, (val / 100) * (H - 2));
-      const x      = i * barW;
-      const y      = H - barH;
-      const grd    = ctx.createLinearGradient(0, y, 0, H);
-      grd.addColorStop(0, color + 'ee');
-      grd.addColorStop(1, color + '22');
-      ctx.fillStyle = grd;
-      ctx.fillRect(x, y, Math.max(1, barW - 0.5), barH);
+      const { x, y } = pos(i, val);
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Dots — Y position, size, and color all encode the load value
+    _cpuHist.forEach((val, i) => {
+      if (val < 0.5) return;
+      const { x, y } = pos(i, val);
+      const [r, g, b] = _valRgb(val);
+      const t      = val / 100;
+      const radius = 1.5 + t * 5;   // 1.5 px (idle) → 6.5 px (100 %)
+
+      // Soft glow halo
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, radius * 3.2);
+      glow.addColorStop(0, `rgba(${r},${g},${b},${0.18 + t * 0.12})`);
+      glow.addColorStop(1, `rgba(${r},${g},${b},0)`);
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 3.2, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+
+      // Solid dot
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${r},${g},${b},0.9)`;
+      ctx.fill();
+
+      // Specular highlight
+      ctx.beginPath();
+      ctx.arc(x - radius * 0.22, y - radius * 0.22, radius * 0.32, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.fill();
     });
   }
 
