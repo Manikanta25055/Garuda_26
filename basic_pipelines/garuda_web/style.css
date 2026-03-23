@@ -1316,12 +1316,35 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── New elements — mobile ──────────────────────────────── */
 @media (max-width: 768px) {
-  .wv-top   { top: 16px; left: 16px; }
-  .wv-name  { font-size: 13px; letter-spacing: 3px; }
+
+  /* ── Login: pull brand + footer into document flow ── */
+  #login-screen {
+    overflow-y: auto;
+    padding-bottom: 60px; /* room for footer + docs btn */
+  }
+  .wv-top {
+    position: relative;
+    top: auto; left: auto;
+    padding: 32px 24px 0;
+  }
+  .wv-name    { font-size: 18px; letter-spacing: 3px; }
+  .wv-tagline { font-size: 10px; }
+  .login-center {
+    padding: 24px 20px 16px;
+    justify-content: flex-start;
+  }
   .login-card { padding: 24px 18px; max-width: 100%; }
-  .lc-title { font-size: 22px; }
-  .wv-footer { bottom: 12px; }
-  .wv-docs-btn { bottom: 16px; left: 16px; }
+  .lc-title   { font-size: 22px; }
+  .wv-footer  {
+    position: relative;
+    bottom: auto; left: auto; right: auto;
+    padding: 10px 0 4px;
+    text-align: center;
+  }
+  /* Keep docs btn fixed so it doesn't scroll away */
+  .wv-docs-btn { position: fixed; bottom: 16px; left: 16px; }
+
+  /* ── Dashboard ── */
   .dash-layout {
     grid-template-columns: 1fr;
     height: auto;
@@ -1329,6 +1352,8 @@ input[type=range]::-webkit-slider-thumb {
     gap: 12px;
   }
   .modern-input { font-size: 16px; } /* prevent iOS zoom */
-  .docs-term { min-width: 100px; }
+
+  /* ── Docs modal ── */
+  .docs-term    { min-width: 100px; }
   .fc-branch-row { gap: 14px; }
 }
