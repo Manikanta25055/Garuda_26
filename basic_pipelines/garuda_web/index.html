@@ -59,17 +59,18 @@
         </div>
       </div>
 
-      <!-- VIEW: Admin OTP — step 1 (username) -->
+      <!-- VIEW: Admin OTP — step 1 (credentials) -->
       <div id="lv-admin-1" class="hidden">
         <button class="lc-back" onclick="G.backToMain()">← Back</button>
         <div class="lc-title" style="font-size:22px">Admin Access</div>
-        <div class="lc-sub">Enter admin username to receive an OTP</div>
+        <div class="lc-sub">Verify credentials — a one-time code will be sent</div>
         <div class="lc-fields">
-          <input id="adm-user" class="modern-input" type="text" placeholder="Admin username" autocomplete="username"/>
+          <input id="adm-user" class="modern-input" type="text" placeholder="Username" autocomplete="username"/>
+          <input id="adm-pass" class="modern-input" type="password" placeholder="Password" autocomplete="current-password"/>
         </div>
         <div id="adm-err-1" class="lc-err hidden"></div>
         <button class="lc-signin lc-signin-danger" onclick="G.sendAdminOTP()">
-          Send OTP to Email
+          Send One-Time Code
         </button>
       </div>
 
@@ -113,6 +114,17 @@
     <div class="wv-footer-sub">Powered by Hailo AI &amp; Raspberry Pi 5</div>
   </div>
 
+  <!-- Documentation bubble — bottom left -->
+  <button class="wv-docs-btn" onclick="G.openDocs()" title="Documentation">
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1.5" y="1" width="8" height="10.5" rx="1.2" stroke="currentColor" stroke-width="0.9"/>
+      <line x1="3.5" y1="4" x2="7.5" y2="4" stroke="currentColor" stroke-width="0.75"/>
+      <line x1="3.5" y1="6" x2="7.5" y2="6" stroke="currentColor" stroke-width="0.75"/>
+      <line x1="3.5" y1="8" x2="6.2" y2="8" stroke="currentColor" stroke-width="0.75"/>
+      <path d="M9.5 3.5 L11.5 5.5 L9.5 7.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
+    </svg>
+  </button>
+
 </div><!-- /login-screen -->
 
 <!-- ══════════════════ APP SHELL ══════════════════ -->
@@ -155,11 +167,10 @@
       </div>
       <div id="admin-nav" class="nav-section hidden">
         <div class="nav-section-label">Admin</div>
-        <div class="nav-item" data-page="a-users" onclick="G.nav('a-users',this)">Users</div>
-        <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">Email</div>
+        <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">Email Alerts</div>
         <div class="nav-item" data-page="a-settings" onclick="G.nav('a-settings',this)">System</div>
         <div class="nav-item" data-page="a-logs" onclick="G.nav('a-logs',this)">Logs</div>
-        <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">Commands</div>
+        <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">Voice Commands</div>
       </div>
       <div id="sidebar-spacer"></div>
       <div class="nav-section">
@@ -177,6 +188,21 @@
           <!-- Left: main content column -->
           <div class="dash-main">
 
+            <!-- Security Status -->
+            <div id="status-card" class="status-card">
+              <div class="status-state">
+                <div class="status-pulse-ring" id="status-pulse-ring"></div>
+                <div>
+                  <div class="status-label" id="status-label">ALL CLEAR</div>
+                  <div class="status-desc" id="status-desc">No activity detected</div>
+                </div>
+              </div>
+              <div class="status-foot">
+                <span class="status-foot-lbl">Last alert</span>
+                <span class="status-foot-val" id="status-last">Never</span>
+              </div>
+            </div>
+
             <!-- Alert Activity heatmap -->
             <div class="dash-card">
               <div class="dash-card-hdr">
@@ -185,7 +211,7 @@
                   <div class="dash-card-meta">Last 12 weeks · stored locally</div>
                 </div>
                 <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">
-                  📷 Live Camera
+                  Camera
                 </button>
               </div>
               <div id="heatmap"></div>
@@ -226,34 +252,26 @@
               <div class="dash-card-hdr">
                 <div class="dash-card-title">System Status</div>
               </div>
-              <div class="stat-cards-list">
-                <div class="stat-card">
-                  <div class="stat-icon-bg" id="stat-uptime-icon" style="background:rgba(52,199,89,0.12);color:#34C759">⏱</div>
-                  <div class="stat-info">
-                    <div class="stat-lbl">Uptime</div>
-                    <div class="stat-val" id="s-uptime">—</div>
-                  </div>
+              <div class="stat-rows">
+                <div class="stat-row">
+                  <span class="stat-lbl">Uptime</span>
+                  <span class="stat-val" id="s-uptime">—</span>
                 </div>
-                <div class="stat-card">
-                  <div class="stat-icon-bg" id="stat-det-icon" style="background:rgba(161,161,166,0.10);color:#A1A1A6">🔔</div>
-                  <div class="stat-info">
-                    <div class="stat-lbl">Detections Today</div>
-                    <div class="stat-val" id="s-det">0</div>
-                  </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Detections Today</span>
+                  <span class="stat-val" id="s-det">0</span>
                 </div>
-                <div class="stat-card">
-                  <div class="stat-icon-bg" id="stat-alert-icon" style="background:rgba(161,161,166,0.10);color:#A1A1A6">⚡</div>
-                  <div class="stat-info">
-                    <div class="stat-lbl">Last Alert</div>
-                    <div class="stat-val" id="s-alert">None</div>
-                  </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Last Alert</span>
+                  <span class="stat-val" id="s-alert">None</span>
                 </div>
-                <div class="stat-card">
-                  <div class="stat-icon-bg" style="background:rgba(41,151,255,0.12);color:#2997FF">◎</div>
-                  <div class="stat-info">
-                    <div class="stat-lbl">Threshold</div>
-                    <div class="stat-val" id="s-thr">—</div>
-                  </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Threshold</span>
+                  <span class="stat-val" id="s-thr">—</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Pipeline</span>
+                  <span class="stat-val" id="s-pipeline">—</span>
                 </div>
               </div>
             </div>
@@ -278,7 +296,7 @@
               LIVE CAMERA
             </div>
             <span id="cam-status-txt" class="cam-ov-meta">Connecting...</span>
-            <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">✕ Close</button>
+            <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">Close</button>
           </div>
           <div class="cam-ov-body">
             <img id="cam-img" alt="Camera Feed" style="display:none"/>
@@ -566,6 +584,142 @@
       <button class="btn btn-ghost" onclick="G.closeModal('m-backend')">Cancel</button>
       <button class="btn btn-primary" onclick="G.saveBackendConfig()">Connect</button>
     </div>
+  </div>
+</div>
+
+<!-- ══════════════ DOCS MODAL ══════════════ -->
+<div id="m-docs" class="modal-overlay hidden">
+  <div class="modal docs-modal">
+
+    <div class="docs-header">
+      <div>
+        <div class="docs-title">Garuda</div>
+        <div class="docs-version">AI Security System · Hailo-8L · Raspberry Pi 5</div>
+      </div>
+      <button class="btn-text-mono" onclick="G.closeModal('m-docs')">Close</button>
+    </div>
+
+    <div class="docs-body">
+
+      <!-- ── FLOWCHART 1: Detection Pipeline ── -->
+      <div class="docs-section">
+        <div class="docs-section-title">Detection Pipeline</div>
+        <div class="fc-wrap">
+          <div class="fc-row">
+            <div class="fc-node fc-accent">Pi Camera</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">GStreamer</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node fc-accent">Hailo-8L NPU</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">YOLOv6n</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">Detections</div>
+          </div>
+        </div>
+        <p class="docs-p">All inference runs locally on-device at 13 TOPS. No cloud, no network latency — the Pi processes every frame before sending results to the dashboard via WebSocket.</p>
+      </div>
+
+      <!-- ── FLOWCHART 2: Alert Decision ── -->
+      <div class="docs-section">
+        <div class="docs-section-title">Alert Logic</div>
+        <div class="fc-wrap">
+          <div class="fc-row">
+            <div class="fc-node">Object Detected</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">Confidence Check</div>
+          </div>
+          <div class="fc-branch-row">
+            <div class="fc-branch-left">
+              <div class="fc-branch-label success-text">≥ threshold</div>
+              <div class="fc-arr fc-arr-down">↓</div>
+              <div class="fc-node fc-danger">ALERT</div>
+              <div class="fc-arr fc-arr-down">↓</div>
+              <div class="fc-node">Email · Dashboard · Voice</div>
+            </div>
+            <div class="fc-branch-sep"></div>
+            <div class="fc-branch-right">
+              <div class="fc-branch-label muted-text">&lt; threshold</div>
+              <div class="fc-arr fc-arr-down">↓</div>
+              <div class="fc-node">Log only</div>
+            </div>
+          </div>
+        </div>
+        <p class="docs-p">Confidence threshold is tunable in Admin → System (default 0.30). Raising it reduces false positives; lowering it increases sensitivity.</p>
+      </div>
+
+      <!-- ── FLOWCHART 3: Authentication ── -->
+      <div class="docs-section">
+        <div class="docs-section-title">Authentication Flow</div>
+        <div class="fc-wrap">
+          <div class="fc-row" style="margin-bottom:6px">
+            <div class="fc-node fc-muted">User</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">Password</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node fc-success">Dashboard</div>
+          </div>
+          <div class="fc-row">
+            <div class="fc-node fc-muted">Admin</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">Password</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node">Email OTP</div>
+            <div class="fc-arr">→</div>
+            <div class="fc-node fc-accent">Admin Dashboard</div>
+          </div>
+        </div>
+        <p class="docs-p">Admin access requires two-factor verification. A one-time code is sent to the configured alert email address before session is granted.</p>
+      </div>
+
+      <!-- ── Dashboard reference ── -->
+      <div class="docs-section">
+        <div class="docs-section-title">Dashboard Panels</div>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term">Security Status</span><span class="docs-def">ALL CLEAR or ALERT — live indicator updated on every WebSocket tick.</span></div>
+          <div class="docs-row"><span class="docs-term">Alert Activity</span><span class="docs-def">12-week heatmap stored in browser local storage. Persists across sessions.</span></div>
+          <div class="docs-row"><span class="docs-term">Recent Detections</span><span class="docs-def">Timestamped log of detected objects. Clears on sign-out.</span></div>
+          <div class="docs-row"><span class="docs-term">Camera</span><span class="docs-def">MJPEG stream from Pi camera. Off by default — tap Camera to open overlay.</span></div>
+          <div class="docs-row"><span class="docs-term">Console</span><span class="docs-def">Raw pipeline log. Useful for debugging threshold and detection issues.</span></div>
+        </div>
+      </div>
+
+      <!-- ── Modes ── -->
+      <div class="docs-section">
+        <div class="docs-section-title">System Modes</div>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term">Privacy Blur</span><span class="docs-def">Blurs detected faces in the camera stream.</span></div>
+          <div class="docs-row"><span class="docs-term">Night Mode</span><span class="docs-def">Heightened sensitivity for low-light.</span></div>
+          <div class="docs-row"><span class="docs-term">Do Not Disturb</span><span class="docs-def">Monitoring continues; email alerts suppressed.</span></div>
+          <div class="docs-row"><span class="docs-term">Idle</span><span class="docs-def">Pipeline active; all alert triggers paused.</span></div>
+          <div class="docs-row"><span class="docs-term">Emergency</span><span class="docs-def">Maximum priority — overrides DND and Idle.</span></div>
+        </div>
+      </div>
+
+      <!-- ── Narada ── -->
+      <div class="docs-section">
+        <div class="docs-section-title">Narada Voice Commands</div>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term mono-term">activate dnd</span><span class="docs-def">Toggle Do Not Disturb</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">night mode on/off</span><span class="docs-def">Toggle Night Mode</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">emergency mode</span><span class="docs-def">Activate Emergency priority</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">privacy on/off</span><span class="docs-def">Toggle face blur</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">status</span><span class="docs-def">Read active modes aloud</span></div>
+        </div>
+      </div>
+
+      <!-- ── Stack ── -->
+      <div class="docs-section" style="border-bottom:none;padding-bottom:0">
+        <div class="docs-section-title">Stack</div>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term">Inference</span><span class="docs-def">Hailo-8L · 13 TOPS · YOLOv6n via GStreamer + hailotools</span></div>
+          <div class="docs-row"><span class="docs-term">Backend</span><span class="docs-def">FastAPI · uvicorn · WebSocket real-time sync</span></div>
+          <div class="docs-row"><span class="docs-term">Tunnel</span><span class="docs-def">Cloudflare Tunnel → api.veeramanikanta.in</span></div>
+          <div class="docs-row"><span class="docs-term">Frontend</span><span class="docs-def">Vercel static SPA → garuda.veeramanikanta.in</span></div>
+        </div>
+      </div>
+
+    </div><!-- /docs-body -->
   </div>
 </div>
 

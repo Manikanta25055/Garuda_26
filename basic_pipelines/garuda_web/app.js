@@ -135,17 +135,18 @@ const G = (() => {
 
   async function sendAdminOTP() {
     const un = ($('adm-user')?.value || '').trim();
+    const pw = $('adm-pass')?.value || '';
     const errEl = $('adm-err-1');
-    if (!un) { showLoginErr(errEl, 'Enter admin username.'); return; }
+    if (!un || !pw) { showLoginErr(errEl, 'Enter username and password.'); return; }
     try {
-      await api('POST', '/api/admin/send-otp', { username: un });
+      await api('POST', '/api/admin/send-otp', { username: un, password: pw });
       _pendingAdmin = { username: un };
       if ($('adm-otp')) $('adm-otp').value = '';
       $('adm-err-2')?.classList.add('hidden');
       showLoginView('lv-admin-2');
       setTimeout(() => $('adm-otp')?.focus(), 50);
     } catch(e) {
-      showLoginErr(errEl, e.detail || 'Failed to send OTP.');
+      showLoginErr(errEl, extractError(e));
     }
   }
 
@@ -164,7 +165,7 @@ const G = (() => {
       _pendingAdmin = null;
       afterLogin();
     } catch(e) {
-      showLoginErr(errEl, e.detail || 'Invalid OTP.');
+      showLoginErr(errEl, extractError(e));
     }
   }
 
@@ -183,7 +184,7 @@ const G = (() => {
       }
       afterLogin();
     } catch(e) {
-      showLoginErr(errEl, e.detail || 'Incorrect username or password.');
+      showLoginErr(errEl, extractError(e));
     }
   }
 
@@ -425,25 +426,28 @@ const G = (() => {
     // Modes
     renderModes(s.modes);
 
-    // Stats
-    const uptime = fmtUptime(s.uptime_s);
-    setText('s-uptime', uptime);
-
-    const det = s.detections_today || 0;
-    setText('s-det', String(det));
-    const detIcon = $('stat-det-icon');
-    if (detIcon) detIcon.style.cssText = det > 0
-      ? 'background:rgba(255,159,10,0.12);color:#FF9F0A'
-      : 'background:rgba(161,161,166,0.10);color:#A1A1A6';
-
-    if (s.last_alert) {
-      setText('s-alert', timeSince(new Date(s.last_alert)));
-      const alertIcon = $('stat-alert-icon');
-      if (alertIcon) alertIcon.style.cssText = 'background:rgba(255,59,48,0.12);color:#FF3B30';
-    } else {
-      setText('s-alert', 'None');
+    // Security status card
+    const card = $('status-card');
+    if (card) {
+      if (s.alert_active) {
+        card.classList.add('alert');
+        setText('status-label', 'ALERT');
+        const info = (s.detection_info || '').replace('No detections.', '').trim();
+        setText('status-desc', info || 'Threat detected');
+      } else {
+        card.classList.remove('alert');
+        setText('status-label', 'ALL CLEAR');
+        setText('status-desc', 'No threats detected');
+      }
+      setText('status-last', s.last_alert ? timeSince(new Date(s.last_alert)) : 'Never');
     }
+
+    // Stats
+    setText('s-uptime', fmtUptime(s.uptime_s));
+    setText('s-det', String(s.detections_today || 0));
+    setText('s-alert', s.last_alert ? timeSince(new Date(s.last_alert)) : 'None');
     setText('s-thr', s.detection_threshold ? s.detection_threshold.toFixed(2) : '—');
+    setText('s-pipeline', s.alert_active ? 'Alert' : 'Active');
 
     // Recent detections
     if (s.alert_active && s.detection_info) maybeAddDetection(s.detection_info);
@@ -761,11 +765,26 @@ const G = (() => {
     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   const closeModal = id => hide(id);
 
+  function extractError(e) {
+    if (!e) return 'An error occurred.';
+    if (typeof e === 'string') return e;
+    if (e.detail) {
+      if (typeof e.detail === 'string') return e.detail;
+      if (Array.isArray(e.detail))
+        return e.detail.map(d => d.msg || d.message || String(d)).join('; ');
+      if (typeof e.detail === 'object') return e.detail.msg || JSON.stringify(e.detail);
+    }
+    if (e.message) return e.message;
+    return 'An error occurred.';
+  }
+
   function showLoginErr(el, txt) {
     if (!el) return;
     el.textContent = txt;
     el.classList.remove('hidden');
   }
+
+  function openDocs() { show('m-docs'); }
   function showMsg(el, txt, ok) {
     el.textContent = txt;
     el.className = 'msg ' + (ok ? 'ok' : 'err');
@@ -796,7 +815,7 @@ const G = (() => {
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
-    toggleCamera,
+    toggleCamera, openDocs,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
