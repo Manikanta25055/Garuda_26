@@ -138,6 +138,8 @@ _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
 _mode_lock = threading.Lock()
+_class_counts_today = {}   # class_name → count since startup
+_total_frames = 0          # total inference frames (for avg FPS)
 
 USERS = {
     "user": {
@@ -393,12 +395,13 @@ class user_app_callback_class(app_callback_class):
 
 def app_callback(pad, info, user_data):
     global latest_detection_info, DETECTION_THRESHOLD, MODE_PRIVACY
-    global _detections_today, _frame_buffer
+    global _detections_today, _frame_buffer, _total_frames, _class_counts_today
     buffer = info.get_buffer()
     if buffer is None:
         return Gst.PadProbeReturn.OK
 
     user_data.increment()
+    _total_frames += 1
     frame_num = user_data.get_count()
     text_info = f"Frame: {frame_num}\n"
     format_, width, height = get_caps_from_pad(pad)
@@ -423,6 +426,7 @@ def app_callback(pad, info, user_data):
         if confidence >= threshold:
             det_count += 1
             text_info += f"{label} ({confidence:.2f})\n"
+            _class_counts_today[label] = _class_counts_today.get(label, 0) + 1
             if privacy and label == "person" and frame is not None:
                 bbox = d.get_bbox()
                 x1 = int(bbox.xmin() * width)
@@ -825,6 +829,25 @@ def get_state_dict():
     mins, secs = divmod(rem, 60)
     uptime_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
 
+    # System health (psutil)
+    cpu_pct = None
+    ram_pct = None
+    cpu_temp = None
+    if psutil:
+        cpu_pct = psutil.cpu_percent(interval=None)
+        ram_pct = psutil.virtual_memory().percent
+        try:
+            temps = psutil.sensors_temperatures()
+            if temps:
+                for sensor_name in ('cpu_thermal', 'coretemp', 'k10temp', 'acpitz'):
+                    if sensor_name in temps and temps[sensor_name]:
+                        cpu_temp = round(temps[sensor_name][0].current, 1)
+                        break
+        except Exception:
+            pass
+
+    inference_fps = round(_total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
+
     return {
         "modes": {
             "dnd": MODE_DND,
@@ -843,6 +866,11 @@ def get_state_dict():
         "voice_log": voice_assistant_log[-30:],
         "voice_responses": voice_responses[-30:],
         "detection_threshold": DETECTION_THRESHOLD,
+        "cpu_percent": cpu_pct,
+        "ram_percent": ram_pct,
+        "cpu_temp": cpu_temp,
+        "inference_fps": inference_fps,
+        "class_counts": dict(_class_counts_today),
     }
 
 ##############################################################################

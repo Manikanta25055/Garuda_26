@@ -310,25 +310,85 @@ const G = (() => {
     try { activity = JSON.parse(localStorage.getItem('garuda_activity') || '{}'); }
     catch(_) { activity = {}; }
 
-    // 84 cells: 12 weeks × 7 days, ending today
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const CELL = 10, GAP = 3, COL_W = CELL + GAP;
+    const NUM_WEEKS = 13;
+
+    // Find start Sunday: go back to the Sunday that is ≤ (NUM_WEEKS-1)*7 days ago
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const cells = [];
-    for (let i = 83; i >= 0; i--) {
-      const d = new Date(today); d.setDate(d.getDate() - i);
-      const key = d.toISOString().slice(0, 10);
-      const count = activity[key] || 0;
-      const level = count >= 5 ? 3 : count >= 3 ? 2 : count >= 1 ? 1 : 0;
-      cells.push({ key, count, level });
+    const gridStart = new Date(today);
+    gridStart.setDate(today.getDate() - (NUM_WEEKS - 1) * 7 - today.getDay());
+
+    // Build columns (each = one week, Sun→Sat)
+    const cols = [];
+    for (let w = 0; w < NUM_WEEKS; w++) {
+      const col = [];
+      for (let d = 0; d < 7; d++) {
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + w * 7 + d);
+        if (date > today) { col.push(null); continue; }
+        const key = date.toISOString().slice(0, 10);
+        const count = activity[key] || 0;
+        const level = count >= 8 ? 4 : count >= 5 ? 3 : count >= 3 ? 2 : count >= 1 ? 1 : 0;
+        col.push({ key, count, level });
+      }
+      cols.push(col);
     }
 
-    container.innerHTML = '';
-    const grid = mk('div', 'hm-grid');
-    cells.forEach(c => {
-      const cell = mk('div', `hm-cell hm-${c.level}`);
-      cell.title = `${c.key}: ${c.count} alert${c.count !== 1 ? 's' : ''}`;
-      grid.appendChild(cell);
+    // Month labels: emit when month changes (skip if < 2 cols from edge)
+    const monthLabels = [];
+    let lastMonth = -1;
+    cols.forEach((col, wi) => {
+      const first = col.find(c => c !== null);
+      if (!first) return;
+      const m = new Date(first.key + 'T00:00:00').getMonth();
+      if (m !== lastMonth && wi > 0) {
+        monthLabels.push({ col: wi, label: MONTHS[m] });
+        lastMonth = m;
+      } else if (wi === 0) {
+        lastMonth = m;
+      }
     });
-    container.appendChild(grid);
+
+    // Build DOM
+    container.innerHTML = '';
+    const outer = mk('div', 'hm-outer');
+
+    // Left: day labels column
+    const left = mk('div', 'hm-left');
+    [['', false], ['Mon', true], ['', false], ['Wed', true], ['', false], ['Fri', true], ['', false]]
+      .forEach(([txt, vis]) => {
+        const lbl = mk('div', 'hm-day-label');
+        if (vis) lbl.textContent = txt;
+        left.appendChild(lbl);
+      });
+
+    // Right: month row + grid
+    const right = mk('div', 'hm-right');
+
+    const monthRow = mk('div', 'hm-month-row');
+    monthLabels.forEach(({ col, label }) => {
+      const span = mk('span', 'hm-month-lbl');
+      span.textContent = label;
+      span.style.left = (col * COL_W) + 'px';
+      monthRow.appendChild(span);
+    });
+
+    const grid = mk('div', 'hm-grid');
+    cols.forEach(col => {
+      col.forEach(cell => {
+        const el = mk('div', cell ? `hm-cell hm-${cell.level}` : 'hm-cell hm-empty');
+        if (cell && cell.count > 0)
+          el.title = `${cell.key}: ${cell.count} alert${cell.count !== 1 ? 's' : ''}`;
+        grid.appendChild(el);
+      });
+    });
+
+    right.appendChild(monthRow);
+    right.appendChild(grid);
+    outer.appendChild(left);
+    outer.appendChild(right);
+    container.appendChild(outer);
   }
 
   // ── Recent detections ────────────────────────────────────
@@ -443,11 +503,54 @@ const G = (() => {
     }
 
     // Stats
-    setText('s-uptime', fmtUptime(s.uptime_s));
+    setText('s-uptime', s.uptime || '—');
     setText('s-det', String(s.detections_today || 0));
     setText('s-alert', s.last_alert ? timeSince(new Date(s.last_alert)) : 'None');
     setText('s-thr', s.detection_threshold ? s.detection_threshold.toFixed(2) : '—');
     setText('s-pipeline', s.alert_active ? 'Alert' : 'Active');
+
+    // Hardware health
+    if (s.cpu_percent != null) {
+      const cpu = Math.round(s.cpu_percent);
+      setText('hw-cpu', cpu + '%');
+      setWidth('hw-cpu-bar', cpu);
+      const cpuBar = $('hw-cpu-bar');
+      if (cpuBar) cpuBar.classList.toggle('danger', cpu > 85);
+    }
+    if (s.ram_percent != null) {
+      const ram = Math.round(s.ram_percent);
+      setText('hw-ram', ram + '%');
+      setWidth('hw-ram-bar', ram);
+    }
+    if (s.cpu_temp != null) {
+      const temp = Math.round(s.cpu_temp);
+      setText('hw-temp', temp + '\u00b0C');
+      const tempPct = Math.min(100, Math.max(0, ((temp - 30) / 50) * 100));
+      setWidth('hw-temp-bar', tempPct);
+      const tempBar = $('hw-temp-bar');
+      if (tempBar) tempBar.classList.toggle('danger', temp > 70);
+    }
+    if (s.inference_fps != null) {
+      setText('hw-fps', s.inference_fps.toFixed(1) + ' fps');
+    }
+
+    // Detection class breakdown
+    const breakdown = $('class-breakdown');
+    const breakdownCard = $('breakdown-card');
+    if (breakdown && s.class_counts) {
+      const entries = Object.entries(s.class_counts).sort((a, b) => b[1] - a[1]);
+      if (entries.length > 0) {
+        if (breakdownCard) breakdownCard.style.display = '';
+        const maxCount = entries[0][1];
+        const CLASS_COLORS = ['#2997ff','#30d158','#ff9f0a','#af52de','#5e5ce6','#ff375f','#00c7be'];
+        breakdown.innerHTML = entries.slice(0, 7).map(([cls, cnt], i) => `
+          <div class="class-row">
+            <span class="class-name">${esc(cls)}</span>
+            <div class="class-bar-wrap"><div class="class-bar" style="width:${Math.round(cnt/maxCount*100)}%;background:${CLASS_COLORS[i%CLASS_COLORS.length]}"></div></div>
+            <span class="class-count">${cnt}</span>
+          </div>`).join('');
+      }
+    }
 
     // Recent detections
     if (s.alert_active && s.detection_info) maybeAddDetection(s.detection_info);
@@ -753,6 +856,7 @@ const G = (() => {
   const $ = id => document.getElementById(id);
   const val = id => ($(id)?.value || '').trim();
   const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+  const setWidth = (id, pct) => { const e = $(id); if (e) e.style.width = Math.min(100, Math.max(0, pct)) + '%'; };
   const show = id => $(id)?.classList.remove('hidden');
   const hide = id => $(id)?.classList.add('hidden');
   const mk = (tag, cls = '') => {
