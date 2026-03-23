@@ -10,390 +10,460 @@
   <link rel="stylesheet" href="/static/style.css"/>
 </head>
 <body>
-
 <div id="app">
 
-  <!-- ══════════════════ LOGIN ══════════════════ -->
-  <div id="login-screen">
+<!-- ══════════════════ LOGIN ══════════════════ -->
+<div id="login-screen">
 
-    <!-- Centered content — Apple-style: hero wordmark + profiles -->
-    <div class="login-center">
-
-      <!-- Hero wordmark -->
-      <div class="login-hero">
-        <div class="login-wordmark">Garuda</div>
-        <div class="login-subtitle">AI Security System</div>
-      </div>
-
-      <!-- Profile selection -->
-      <div id="profile-cards"></div>
-      <p id="login-prompt" class="login-prompt">Select your profile to continue</p>
-
-      <!-- Login panel (shown after profile click) -->
-      <div id="login-panel" class="hidden">
-        <div class="login-panel-header">
-          <div id="lp-avatar" class="lp-avatar"></div>
-          <h2 id="lp-title"></h2>
-          <p id="lp-sub"></p>
-        </div>
-        <div class="login-fields">
-          <div class="input-group">
-            <span class="input-label">Username</span>
-            <input id="li-user" class="input" type="text" autocomplete="username"/>
-          </div>
-          <div class="input-group">
-            <span class="input-label">Password</span>
-            <input id="li-pass" class="input" type="password" autocomplete="current-password"/>
-          </div>
-        </div>
-        <div id="li-err" class="msg err hidden" style="margin-top:10px"></div>
-        <div class="login-actions">
-          <button class="btn btn-primary" style="width:100%" onclick="G.submitLogin()">Continue</button>
-        </div>
-        <div class="login-back">
-          <button class="btn btn-link" onclick="G.showProfiles()">All accounts</button>
-          <button id="forgot-btn" class="btn btn-link hidden" onclick="G.goForgot()">Forgot password?</button>
-        </div>
-      </div>
-
-      <!-- Admin OTP -->
-      <div id="admin-otp-screen" class="hidden">
-        <div class="otp-header">
-          <h2>Two-Factor Verification</h2>
-          <p>A 6-digit code was sent to your alert email.</p>
-        </div>
-        <div class="otp-input-group">
-          <input id="otp-in" class="input otp-input" type="text" maxlength="6" placeholder="000000"/>
-        </div>
-        <div id="otp-err" class="msg err hidden"></div>
-        <div class="flex gap-8" style="width:100%">
-          <button class="btn btn-ghost grow" onclick="G.showProfiles()">Cancel</button>
-          <button class="btn btn-primary grow" onclick="G.verifyOTP()">Verify</button>
-        </div>
-      </div>
-
-      <!-- Forgot password -->
-      <div id="forgot-screen" class="hidden">
-        <div style="margin-bottom:20px;text-align:center">
-          <h2>Reset Password</h2>
-          <p style="color:var(--t3);font-size:13px;margin-top:6px">Enter your username to receive a reset OTP.</p>
-        </div>
-        <div class="input-group" style="text-align:left;width:100%">
-          <span class="input-label">Username</span>
-          <input id="fp-user" class="input" type="text"/>
-        </div>
-        <button class="btn btn-ghost" style="width:100%" onclick="G.sendForgotOTP()">Send OTP</button>
-        <div id="fp-otp-block" class="hidden flex col gap-12" style="text-align:left;width:100%">
-          <div class="input-group">
-            <span class="input-label">OTP</span>
-            <input id="fp-otp" class="input" type="text" maxlength="6"/>
-          </div>
-          <div class="input-group">
-            <span class="input-label">New Password</span>
-            <input id="fp-newpass" class="input" type="password"/>
-          </div>
-          <button class="btn btn-primary" style="width:100%" onclick="G.doReset()">Reset Password</button>
-        </div>
-        <div id="fp-msg" class="msg hidden"></div>
-        <button class="btn btn-link" onclick="G.showProfiles()">Back to login</button>
-      </div>
-
-    </div><!-- /login-center -->
-
-    <!-- Floating backend config — bottom-right corner -->
-    <div class="login-corner">
-      <div id="backend-status">
-        <div class="bk-dot" id="bk-dot"></div>
-        <span id="bk-label">No backend</span>
-      </div>
-      <button class="btn btn-link btn-sm" onclick="G.openBackendConfig()">Configure</button>
+  <!-- Top-left brand — WelcomeView style -->
+  <div class="wv-top">
+    <div class="wv-brand">
+      <div class="wv-name">GARUDA</div>
+      <div class="wv-tagline">AI Security Intelligence Platform</div>
     </div>
+  </div>
 
-  </div><!-- /login-screen -->
+  <!-- Center login card -->
+  <div class="login-center">
+    <div class="login-card">
 
-  <!-- ══════════════════ APP SHELL ══════════════════ -->
-  <div id="app-shell">
+      <!-- VIEW: Main sign-in form -->
+      <div id="lv-main">
+        <div class="lc-title">Sign In</div>
+        <div class="lc-sub">Access your security system</div>
 
-    <!-- Alert banner — no emoji, bold type -->
-    <div id="alert-banner">DANGER DETECTED — CHECK CAMERA FEED</div>
-
-    <!-- Header — wordmark only, no icon box -->
-    <header id="header">
-      <button id="menu-btn" onclick="G.toggleMenu()" aria-label="Menu">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="header-brand">Garuda</div>
-      <div id="header-pills"></div>
-      <div id="header-right">
-        <div class="hdr-status">
-          <div id="pipeline-dot" class="hdr-dot"></div>
-          <span id="pipeline-label">Initializing</span>
+        <!-- Backend row — web Configure style, macOS font/position -->
+        <div class="backend-row">
+          <div class="bk-dot" id="bk-dot"></div>
+          <span id="bk-label" class="bk-host">No backend</span>
+          <button class="btn-text-mono" onclick="G.openBackendConfig()">Configure</button>
         </div>
-        <span id="hdr-user" class="hdr-user"></span>
-        <button class="btn btn-ghost btn-sm" onclick="G.logout()">Sign Out</button>
+
+        <div class="lc-fields">
+          <input id="li-user" class="modern-input" type="text"
+                 placeholder="Username" autocomplete="username"/>
+          <input id="li-pass" class="modern-input" type="password"
+                 placeholder="Password" autocomplete="current-password"/>
+        </div>
+
+        <div id="li-err" class="lc-err hidden"></div>
+
+        <button id="lc-signin-btn" class="lc-signin" onclick="G.submitLogin()">
+          <span class="lc-arrow">→</span>
+          <span>Sign In</span>
+        </button>
+
+        <div class="lc-links">
+          <button class="lc-link" onclick="G.goAdminFlow()">🔒 Admin Access</button>
+          <button class="lc-link" id="forgot-link" onclick="G.goForgot()">Forgot Password?</button>
+        </div>
       </div>
-    </header>
 
-    <!-- Body -->
-    <div id="body">
-
-      <!-- Sidebar overlay (mobile tap-outside to close) -->
-      <div id="sidebar-overlay" onclick="G.toggleMenu()"></div>
-
-      <!-- Sidebar — text only, no emoji icons -->
-      <nav id="sidebar">
-        <div class="nav-section">
-          <div class="nav-section-label">Monitor</div>
-          <div class="nav-item active" data-page="dashboard" onclick="G.nav('dashboard',this)">Dashboard</div>
-          <div class="nav-item" data-page="narada" onclick="G.nav('narada',this)">Narada</div>
+      <!-- VIEW: Admin OTP — step 1 (username) -->
+      <div id="lv-admin-1" class="hidden">
+        <button class="lc-back" onclick="G.backToMain()">← Back</button>
+        <div class="lc-title" style="font-size:22px">Admin Access</div>
+        <div class="lc-sub">Enter admin username to receive an OTP</div>
+        <div class="lc-fields">
+          <input id="adm-user" class="modern-input" type="text" placeholder="Admin username" autocomplete="username"/>
         </div>
-        <div id="admin-nav" class="nav-section hidden">
-          <div class="nav-section-label">Admin</div>
-          <div class="nav-item" data-page="a-users" onclick="G.nav('a-users',this)">Users</div>
-          <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">Email</div>
-          <div class="nav-item" data-page="a-settings" onclick="G.nav('a-settings',this)">System</div>
-          <div class="nav-item" data-page="a-logs" onclick="G.nav('a-logs',this)">Logs</div>
-          <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">Commands</div>
+        <div id="adm-err-1" class="lc-err hidden"></div>
+        <button class="lc-signin lc-signin-danger" onclick="G.sendAdminOTP()">
+          Send OTP to Email
+        </button>
+      </div>
+
+      <!-- VIEW: Admin OTP — step 2 (verify) -->
+      <div id="lv-admin-2" class="hidden">
+        <button class="lc-back" onclick="G.backToAdminStep1()">← Back</button>
+        <div class="lc-title" style="font-size:22px">Two-Factor</div>
+        <div class="lc-sub">6-digit code sent to your alert email</div>
+        <div class="lc-fields">
+          <input id="adm-otp" class="modern-input lc-otp" type="text"
+                 maxlength="6" placeholder="000000" inputmode="numeric"/>
         </div>
-        <div id="sidebar-spacer"></div>
-        <div class="nav-section">
-          <div class="nav-item nav-danger" onclick="G.emergencyStop()">Emergency Stop</div>
+        <div id="adm-err-2" class="lc-err hidden"></div>
+        <button class="lc-signin lc-signin-danger" onclick="G.verifyAdminOTP()">
+          Verify OTP
+        </button>
+      </div>
+
+      <!-- VIEW: Forgot password -->
+      <div id="lv-forgot" class="hidden">
+        <button class="lc-back" onclick="G.backToMain()">← Back</button>
+        <div class="lc-title" style="font-size:22px">Reset Password</div>
+        <div class="lc-sub">Enter your username to receive OTP</div>
+        <div class="lc-fields">
+          <input id="fp-user" class="modern-input" type="text" placeholder="Username"/>
+          <div id="fp-otp-block" class="hidden" style="display:none;flex-direction:column;gap:12px">
+            <input id="fp-otp" class="modern-input lc-otp" type="text" maxlength="6" placeholder="OTP"/>
+            <input id="fp-newpass" class="modern-input" type="password" placeholder="New Password"/>
+          </div>
         </div>
-      </nav>
+        <div id="fp-msg" class="lc-err hidden"></div>
+        <button id="fp-btn" class="lc-signin" onclick="G.sendForgotOTP()">Send OTP</button>
+      </div>
 
-      <!-- Main -->
-      <main id="main">
+    </div><!-- /login-card -->
+  </div><!-- /login-center -->
 
-        <!-- ── DASHBOARD ── -->
-        <div id="page-dashboard" class="page">
-          <div class="dash-top">
+  <!-- Footer attribution -->
+  <div class="wv-footer">
+    <div class="wv-footer-line">Created by Manikanta Gonugondla</div>
+    <div class="wv-footer-sub">Powered by Hailo AI &amp; Raspberry Pi 5</div>
+  </div>
 
-            <!-- Camera -->
-            <div class="camera-pane" id="cam-pane">
-              <div class="camera-label" id="cam-label">
-                <div class="cam-live-dot"></div> Live
+</div><!-- /login-screen -->
+
+<!-- ══════════════════ APP SHELL ══════════════════ -->
+<div id="app-shell">
+
+  <!-- Alert banner -->
+  <div id="alert-banner">DANGER DETECTED — CHECK CAMERA FEED</div>
+
+  <!-- Header -->
+  <header id="header">
+    <button id="menu-btn" onclick="G.toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="header-brand">
+      <span class="hdr-eye">●</span>GARUDA
+    </div>
+    <div id="header-pills"></div>
+    <div id="header-right">
+      <div class="hdr-status">
+        <div id="pipeline-dot" class="hdr-dot"></div>
+        <span id="pipeline-label">Initializing</span>
+      </div>
+      <span id="hdr-user" class="hdr-user"></span>
+      <button class="btn btn-ghost btn-sm" onclick="G.logout()">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div id="body">
+
+    <!-- Sidebar overlay (mobile) -->
+    <div id="sidebar-overlay" onclick="G.toggleMenu()"></div>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <div class="nav-section">
+        <div class="nav-section-label">Monitor</div>
+        <div class="nav-item active" data-page="dashboard" onclick="G.nav('dashboard',this)">Dashboard</div>
+        <div class="nav-item" data-page="narada" onclick="G.nav('narada',this)">Narada</div>
+      </div>
+      <div id="admin-nav" class="nav-section hidden">
+        <div class="nav-section-label">Admin</div>
+        <div class="nav-item" data-page="a-users" onclick="G.nav('a-users',this)">Users</div>
+        <div class="nav-item" data-page="a-email" onclick="G.nav('a-email',this)">Email</div>
+        <div class="nav-item" data-page="a-settings" onclick="G.nav('a-settings',this)">System</div>
+        <div class="nav-item" data-page="a-logs" onclick="G.nav('a-logs',this)">Logs</div>
+        <div class="nav-item" data-page="a-cmds" onclick="G.nav('a-cmds',this)">Commands</div>
+      </div>
+      <div id="sidebar-spacer"></div>
+      <div class="nav-section">
+        <div class="nav-item nav-danger" onclick="G.emergencyStop()">Emergency Stop</div>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main id="main">
+
+      <!-- ── DASHBOARD ── -->
+      <div id="page-dashboard" class="page">
+        <div class="dash-layout">
+
+          <!-- Left: main content column -->
+          <div class="dash-main">
+
+            <!-- Alert Activity heatmap -->
+            <div class="dash-card">
+              <div class="dash-card-hdr">
+                <div>
+                  <div class="dash-card-title">Alert Activity</div>
+                  <div class="dash-card-meta">Last 12 weeks · stored locally</div>
+                </div>
+                <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">
+                  📷 Live Camera
+                </button>
               </div>
-              <!-- No src here — set dynamically after login to avoid onerror before DOM is ready -->
-              <img id="cam-img" alt="Camera Feed" style="display:none"/>
-              <div id="cam-offline" class="cam-offline">
-                <span>Camera feed unavailable</span>
+              <div id="heatmap"></div>
+              <div class="hm-legend">
+                <div class="hm-swatch hm-0"></div>
+                <div class="hm-swatch hm-1"></div>
+                <div class="hm-swatch hm-2"></div>
+                <div class="hm-swatch hm-3"></div>
+                <span class="hm-legend-lbl" style="margin-left:4px">Fewer</span>
+                <span class="hm-legend-lbl" style="margin-left:auto">More alerts</span>
               </div>
             </div>
 
-            <!-- Right info panel -->
-            <div class="info-pane">
-              <div class="info-section">
-                <div class="overline">Detections</div>
-                <div id="det-feed" class="det-feed">Waiting for pipeline...</div>
+            <!-- Recent detections -->
+            <div class="dash-card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Recent Detections</div>
+                <div id="det-live-dot" class="det-live"></div>
               </div>
-              <div class="info-section">
-                <div class="overline">Stats</div>
-                <div class="readout-grid" style="margin-top:8px">
-                  <div class="readout-row">
-                    <div class="readout-label">Uptime</div>
-                    <div class="readout-val"><span id="s-uptime">—</span></div>
+              <div id="recent-dets" class="det-timeline">
+                <div class="det-empty">No detections yet this session</div>
+              </div>
+            </div>
+
+            <!-- System console -->
+            <div class="dash-console-card">
+              <div class="console-header">System Console</div>
+              <div id="sys-console" class="console"></div>
+            </div>
+
+          </div><!-- /dash-main -->
+
+          <!-- Right: stats + modes -->
+          <div class="dash-side">
+
+            <!-- System status cards -->
+            <div class="dash-card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">System Status</div>
+              </div>
+              <div class="stat-cards-list">
+                <div class="stat-card">
+                  <div class="stat-icon-bg" id="stat-uptime-icon" style="background:rgba(52,199,89,0.12);color:#34C759">⏱</div>
+                  <div class="stat-info">
+                    <div class="stat-lbl">Uptime</div>
+                    <div class="stat-val" id="s-uptime">—</div>
                   </div>
-                  <div class="readout-row">
-                    <div class="readout-label">Detections</div>
-                    <div class="readout-val"><span id="s-det">0</span> <span class="readout-unit">today</span></div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon-bg" id="stat-det-icon" style="background:rgba(161,161,166,0.10);color:#A1A1A6">🔔</div>
+                  <div class="stat-info">
+                    <div class="stat-lbl">Detections Today</div>
+                    <div class="stat-val" id="s-det">0</div>
                   </div>
-                  <div class="readout-row">
-                    <div class="readout-label">Last Alert</div>
-                    <div class="readout-val"><span id="s-alert">—</span></div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon-bg" id="stat-alert-icon" style="background:rgba(161,161,166,0.10);color:#A1A1A6">⚡</div>
+                  <div class="stat-info">
+                    <div class="stat-lbl">Last Alert</div>
+                    <div class="stat-val" id="s-alert">None</div>
                   </div>
-                  <div class="readout-row">
-                    <div class="readout-label">Threshold</div>
-                    <div class="readout-val"><span id="s-thr">—</span></div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon-bg" style="background:rgba(41,151,255,0.12);color:#2997FF">◎</div>
+                  <div class="stat-info">
+                    <div class="stat-lbl">Threshold</div>
+                    <div class="stat-val" id="s-thr">—</div>
                   </div>
                 </div>
               </div>
-              <div class="info-section">
-                <div class="overline">System Modes</div>
-                <div id="modes-pills" class="modes-list" style="margin-top:8px"></div>
-              </div>
             </div>
-          </div>
 
-          <!-- Console -->
-          <div class="dash-console">
-            <div class="console-header">System Console</div>
-            <div id="sys-console" class="console"></div>
+            <!-- System modes -->
+            <div class="dash-card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">System Modes</div>
+              </div>
+              <div id="modes-pills" class="modes-list"></div>
+            </div>
+
+          </div><!-- /dash-side -->
+
+        </div><!-- /dash-layout -->
+
+        <!-- Camera overlay (fixed, hidden by default) -->
+        <div id="camera-overlay" class="camera-overlay hidden">
+          <div class="cam-ov-bar">
+            <div class="cam-ov-title">
+              <span class="cam-live-dot"></span>
+              LIVE CAMERA
+            </div>
+            <span id="cam-status-txt" class="cam-ov-meta">Connecting...</span>
+            <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">✕ Close</button>
+          </div>
+          <div class="cam-ov-body">
+            <img id="cam-img" alt="Camera Feed" style="display:none"/>
+            <div id="cam-offline" class="cam-offline">
+              <div class="cam-icon">◯</div>
+              <span>Camera feed unavailable</span>
+            </div>
           </div>
         </div>
 
-        <!-- ── NARADA ── -->
-        <div id="page-narada" class="page">
-          <div class="page-inner">
-            <h2 class="page-title">Narada</h2>
-            <p class="page-sub">Voice assistant — always listening. Speak commands naturally.</p>
+      </div><!-- /page-dashboard -->
 
-            <div class="two-col" style="margin-bottom:20px">
-              <div class="section-card">
-                <h3 class="section-title">Voice Input</h3>
-                <div id="narada-vlog" class="narada-log"></div>
-              </div>
-              <div class="section-card">
-                <h3 class="section-title">Responses</h3>
-                <div id="narada-resp" class="narada-log"></div>
-              </div>
-            </div>
+      <!-- ── NARADA ── -->
+      <div id="page-narada" class="page">
+        <div class="page-inner">
+          <h2 class="page-title">Narada</h2>
+          <p class="page-sub">Voice assistant — always listening. Speak commands naturally.</p>
 
-            <div class="section-card" style="margin-bottom:20px">
-              <h3 class="section-title">System Console</h3>
-              <div id="narada-console" class="console" style="height:100px;margin-top:8px"></div>
-            </div>
-
+          <div class="two-col" style="margin-bottom:20px">
             <div class="section-card">
-              <h3 class="section-title">Built-in Commands</h3>
-              <div class="cmds-grid" style="margin-top:14px">
-                <span class="cmd-phrase">activate / deactivate dnd</span>
-                <span class="cmd-desc">Do Not Disturb mode</span>
-                <span class="cmd-phrase">activate / deactivate night mode</span>
-                <span class="cmd-desc">High-sensitivity night alerts</span>
-                <span class="cmd-phrase">activate / deactivate emergency mode</span>
-                <span class="cmd-desc">Maximum alert priority</span>
-                <span class="cmd-phrase">activate / deactivate idle</span>
-                <span class="cmd-desc">Pause all alerts</span>
-                <span class="cmd-phrase">privacy on / privacy off</span>
-                <span class="cmd-desc">Face blur toggle</span>
-                <span class="cmd-phrase">what time is it</span>
-                <span class="cmd-desc">Current time</span>
-                <span class="cmd-phrase">status</span>
-                <span class="cmd-desc">Active modes summary</span>
-              </div>
+              <h3 class="section-title">Voice Input</h3>
+              <div id="narada-vlog" class="narada-log"></div>
+            </div>
+            <div class="section-card">
+              <h3 class="section-title">Responses</h3>
+              <div id="narada-resp" class="narada-log"></div>
+            </div>
+          </div>
+
+          <div class="section-card" style="margin-bottom:20px">
+            <h3 class="section-title">System Console</h3>
+            <div id="narada-console" class="console" style="height:100px;margin-top:8px"></div>
+          </div>
+
+          <div class="section-card">
+            <h3 class="section-title">Built-in Commands</h3>
+            <div class="cmds-grid" style="margin-top:14px">
+              <span class="cmd-phrase">activate / deactivate dnd</span>
+              <span class="cmd-desc">Do Not Disturb mode</span>
+              <span class="cmd-phrase">activate / deactivate night mode</span>
+              <span class="cmd-desc">High-sensitivity night alerts</span>
+              <span class="cmd-phrase">activate / deactivate emergency mode</span>
+              <span class="cmd-desc">Maximum alert priority</span>
+              <span class="cmd-phrase">activate / deactivate idle</span>
+              <span class="cmd-desc">Pause all alerts</span>
+              <span class="cmd-phrase">privacy on / privacy off</span>
+              <span class="cmd-desc">Face blur toggle</span>
+              <span class="cmd-phrase">what time is it</span>
+              <span class="cmd-desc">Current time</span>
+              <span class="cmd-phrase">status</span>
+              <span class="cmd-desc">Active modes summary</span>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- ── ADMIN: USERS ── -->
-        <div id="page-a-users" class="page">
-          <div class="admin-page">
-            <div class="admin-page-header">
-              <h2>Users</h2>
-              <button class="btn btn-primary btn-sm" onclick="G.openAddUser()">Add User</button>
-            </div>
-            <div class="t-wrap">
-              <table>
-                <thead><tr>
-                  <th>Username</th><th>Display Name</th><th>Role</th><th>Color</th><th></th>
-                </tr></thead>
-                <tbody id="u-tbody"></tbody>
-              </table>
-            </div>
+      <!-- ── ADMIN: USERS ── -->
+      <div id="page-a-users" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header">
+            <h2>Users</h2>
+            <button class="btn btn-primary btn-sm" onclick="G.openAddUser()">Add User</button>
+          </div>
+          <div class="t-wrap">
+            <table>
+              <thead><tr>
+                <th>Username</th><th>Display Name</th><th>Role</th><th>Color</th><th></th>
+              </tr></thead>
+              <tbody id="u-tbody"></tbody>
+            </table>
           </div>
         </div>
+      </div>
 
-        <!-- ── ADMIN: EMAIL ── -->
-        <div id="page-a-email" class="page">
-          <div class="admin-page">
-            <div class="admin-page-header"><h2>Email Settings</h2></div>
-            <div class="form-stack">
-              <div class="msg ok" style="font-size:12px">
-                App Password: myaccount.google.com → Security → App Passwords
-              </div>
-              <div class="input-group">
-                <span class="input-label">Sender Gmail</span>
-                <input id="e-sender" class="input" type="email"/>
-              </div>
-              <div class="input-group">
-                <span class="input-label">App Password</span>
-                <input id="e-pass" class="input" type="password" placeholder="xxxx xxxx xxxx xxxx"/>
-              </div>
-              <div class="input-group">
-                <span class="input-label">Alert Recipients (comma-separated)</span>
-                <input id="e-recip" class="input" type="text"/>
-              </div>
-              <div class="input-group">
-                <span class="input-label">Alert Cooldown (seconds)</span>
-                <input id="e-cool" class="input" type="number" min="10" max="3600"/>
-              </div>
-              <div class="form-row">
-                <button class="btn btn-ghost" onclick="G.testEmail()">Send Test Email</button>
-                <button class="btn btn-primary" onclick="G.saveEmail()">Save</button>
-              </div>
-              <div id="e-msg" class="msg hidden"></div>
+      <!-- ── ADMIN: EMAIL ── -->
+      <div id="page-a-email" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header"><h2>Email Settings</h2></div>
+          <div class="form-stack">
+            <div class="msg ok" style="font-size:12px">
+              App Password: myaccount.google.com → Security → App Passwords
             </div>
+            <div class="input-group">
+              <span class="input-label">Sender Gmail</span>
+              <input id="e-sender" class="input" type="email"/>
+            </div>
+            <div class="input-group">
+              <span class="input-label">App Password</span>
+              <input id="e-pass" class="input" type="password" placeholder="xxxx xxxx xxxx xxxx"/>
+            </div>
+            <div class="input-group">
+              <span class="input-label">Alert Recipients (comma-separated)</span>
+              <input id="e-recip" class="input" type="text"/>
+            </div>
+            <div class="input-group">
+              <span class="input-label">Alert Cooldown (seconds)</span>
+              <input id="e-cool" class="input" type="number" min="10" max="3600"/>
+            </div>
+            <div class="form-row">
+              <button class="btn btn-ghost" onclick="G.testEmail()">Send Test Email</button>
+              <button class="btn btn-primary" onclick="G.saveEmail()">Save</button>
+            </div>
+            <div id="e-msg" class="msg hidden"></div>
           </div>
         </div>
+      </div>
 
-        <!-- ── ADMIN: SYSTEM ── -->
-        <div id="page-a-settings" class="page">
-          <div class="admin-page">
-            <div class="admin-page-header"><h2>System Settings</h2></div>
-            <div class="form-stack">
-              <div>
-                <span class="input-label">Detection Threshold — <strong id="thr-val" style="color:var(--accent)">0.30</strong></span>
-                <input id="thr-slider" type="range" min="5" max="95" step="1" value="30"
-                       oninput="document.getElementById('thr-val').textContent=(this.value/100).toFixed(2)"/>
-                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t4);margin-top:4px">
-                  <span>Sensitive</span><span>Strict</span>
-                </div>
-              </div>
-              <div class="sep"></div>
-              <div class="input-group">
-                <span class="input-label">Danger Label (object that triggers alert)</span>
-                <input id="danger-lbl" class="input" type="text" placeholder="scissors"/>
-              </div>
-              <div class="sep"></div>
-              <div class="toggle-row">
-                <div class="toggle-info">
-                  <div><span>Face Privacy Blur</span></div>
-                  <div><span style="font-size:12px;color:var(--t3)">Blur detected persons in the feed</span></div>
-                </div>
-                <div id="priv-toggle" class="toggle on" onclick="G.togglePrivacy()"></div>
-              </div>
-              <div style="margin-top:8px">
-                <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
-              </div>
-              <div id="sys-msg" class="msg hidden"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ── ADMIN: LOGS ── -->
-        <div id="page-a-logs" class="page">
-          <div class="admin-page">
-            <div class="admin-page-header">
-              <h2>Logs</h2>
-              <div class="flex gap-8">
-                <input id="log-q" class="input" type="text" placeholder="Filter…"
-                       style="width:200px" oninput="G.filterLogs()"/>
-                <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export</button>
-              </div>
-            </div>
-            <div style="margin-bottom:24px">
-              <div class="overline" style="margin-bottom:8px">System Updates</div>
-              <div id="a-syslog" class="console" style="height:220px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
-            </div>
+      <!-- ── ADMIN: SYSTEM ── -->
+      <div id="page-a-settings" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header"><h2>System Settings</h2></div>
+          <div class="form-stack">
             <div>
-              <div class="overline" style="margin-bottom:8px">Voice Log</div>
-              <div id="a-vlog" class="narada-log section-card" style="height:180px"></div>
+              <span class="input-label">Detection Threshold — <strong id="thr-val" style="color:var(--accent)">0.30</strong></span>
+              <input id="thr-slider" type="range" min="5" max="95" step="1" value="30"
+                     oninput="document.getElementById('thr-val').textContent=(this.value/100).toFixed(2)"/>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t4);margin-top:4px">
+                <span>Sensitive</span><span>Strict</span>
+              </div>
             </div>
+            <div class="sep"></div>
+            <div class="input-group">
+              <span class="input-label">Danger Label (object that triggers alert)</span>
+              <input id="danger-lbl" class="input" type="text" placeholder="scissors"/>
+            </div>
+            <div class="sep"></div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div><span>Face Privacy Blur</span></div>
+                <div><span style="font-size:12px;color:var(--t3)">Blur detected persons in the feed</span></div>
+              </div>
+              <div id="priv-toggle" class="toggle on" onclick="G.togglePrivacy()"></div>
+            </div>
+            <div style="margin-top:8px">
+              <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
+            </div>
+            <div id="sys-msg" class="msg hidden"></div>
           </div>
         </div>
+      </div>
 
-        <!-- ── ADMIN: COMMANDS ── -->
-        <div id="page-a-cmds" class="page">
-          <div class="admin-page">
-            <div class="admin-page-header">
-              <h2>Custom Commands</h2>
-              <button class="btn btn-primary btn-sm" onclick="G.openAddCmd()">Add Command</button>
-            </div>
-            <p style="color:var(--t3);font-size:13px;margin-bottom:24px">
-              Teach Narada new phrases. Say the phrase and she responds with your custom message.
-            </p>
-            <div class="t-wrap">
-              <table>
-                <thead><tr><th>Phrase</th><th>Response</th><th></th></tr></thead>
-                <tbody id="cmd-tbody"></tbody>
-              </table>
+      <!-- ── ADMIN: LOGS ── -->
+      <div id="page-a-logs" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header">
+            <h2>Logs</h2>
+            <div class="flex gap-8">
+              <input id="log-q" class="input" type="text" placeholder="Filter…"
+                     style="width:200px" oninput="G.filterLogs()"/>
+              <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export</button>
             </div>
           </div>
+          <div style="margin-bottom:24px">
+            <div class="overline" style="margin-bottom:8px">System Updates</div>
+            <div id="a-syslog" class="console" style="height:220px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
+          </div>
+          <div>
+            <div class="overline" style="margin-bottom:8px">Voice Log</div>
+            <div id="a-vlog" class="narada-log section-card" style="height:180px"></div>
+          </div>
         </div>
+      </div>
 
-      </main>
-    </div>
-  </div><!-- /app-shell -->
+      <!-- ── ADMIN: COMMANDS ── -->
+      <div id="page-a-cmds" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header">
+            <h2>Custom Commands</h2>
+            <button class="btn btn-primary btn-sm" onclick="G.openAddCmd()">Add Command</button>
+          </div>
+          <p style="color:var(--t3);font-size:13px;margin-bottom:24px">
+            Teach Narada new phrases. Say the phrase and she responds with your custom message.
+          </p>
+          <div class="t-wrap">
+            <table>
+              <thead><tr><th>Phrase</th><th>Response</th><th></th></tr></thead>
+              <tbody id="cmd-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /body -->
+</div><!-- /app-shell -->
 </div><!-- /app -->
 
 <!-- ══════════════ MODALS ══════════════ -->
@@ -479,7 +549,6 @@
   </div>
 </div>
 
-<!-- Backend Config Modal -->
 <div id="m-backend" class="modal-overlay hidden">
   <div class="modal">
     <h2>Connect to Backend</h2>
@@ -490,8 +559,7 @@
     </p>
     <div class="input-group">
       <span class="input-label">Backend URL</span>
-      <input id="m-bk-url" class="input" type="url"
-             placeholder="http://192.168.x.x:8080"/>
+      <input id="m-bk-url" class="input" type="url" placeholder="http://192.168.x.x:8080"/>
     </div>
     <div id="m-bk-msg" class="msg hidden"></div>
     <div class="modal-actions">
