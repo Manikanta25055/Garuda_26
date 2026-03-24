@@ -108,7 +108,7 @@ EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 
 GROQ_API_KEY = ""   # loaded from system_logs/config.json at startup
-GROQ_MODEL   = "llama-3.3-70b-versatile"
+GROQ_MODEL   = "openai/gpt-oss-120b"
 
 ##############################################################################
 # GLOBALS & SETTINGS
