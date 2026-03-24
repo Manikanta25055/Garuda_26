@@ -794,6 +794,38 @@ def query_local_llm(user_input):
         return None
 
 
+def _apply_llm_result(llm_result):
+    """Apply mode/settings changes from an LLM JSON response and return the reply text."""
+    global DETECTION_THRESHOLD
+    def _to_bool(v):
+        if isinstance(v, bool): return v
+        if isinstance(v, int):  return v != 0
+        if isinstance(v, str):
+            return v.lower() in ("true", "active", "on", "yes", "1", "enabled")
+        return None
+    modes_to_change    = llm_result.get("modes", {}) or {}
+    settings_to_change = llm_result.get("settings", {}) or {}
+    with _mode_lock:
+        for key in ["MODE_DND","MODE_EMAIL_OFF","MODE_IDLE","MODE_NIGHT","MODE_EMERGENCY","MODE_PRIVACY"]:
+            raw = modes_to_change.get(key)
+            if raw is not None:
+                val = _to_bool(raw)
+                if val is not None:
+                    globals()[key] = val
+        raw_thr = settings_to_change.get("DETECTION_THRESHOLD")
+        if raw_thr is not None:
+            try:
+                DETECTION_THRESHOLD = max(0.05, min(0.95, float(raw_thr)))
+            except (ValueError, TypeError):
+                pass
+        if MODE_EMERGENCY:
+            globals()["MODE_DND"] = False
+        if MODE_NIGHT:
+            globals()["MODE_DND"] = False
+    push_urgent_ws()
+    return llm_result.get("response") or "Done."
+
+
 def voice_assistant_loop(stop_event, current_user=None):
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
     global DETECTION_THRESHOLD
@@ -832,33 +864,7 @@ def voice_assistant_loop(stop_event, current_user=None):
         llm_result = query_local_llm(user_input)
 
         if llm_result is not None:
-            def _to_bool(v):
-                if isinstance(v, bool): return v
-                if isinstance(v, int):  return v != 0
-                if isinstance(v, str):
-                    return v.lower() in ("true", "active", "on", "yes", "1", "enabled")
-                return None
-
-            modes_to_change = llm_result.get("modes", {}) or {}
-            settings_to_change = llm_result.get("settings", {}) or {}
-            with _mode_lock:
-                for key in ["MODE_DND","MODE_EMAIL_OFF","MODE_IDLE","MODE_NIGHT","MODE_EMERGENCY","MODE_PRIVACY"]:
-                    raw = modes_to_change.get(key)
-                    if raw is not None:
-                        val = _to_bool(raw)
-                        if val is not None:
-                            globals()[key] = val
-                raw_thr = settings_to_change.get("DETECTION_THRESHOLD")
-                if raw_thr is not None:
-                    try:
-                        DETECTION_THRESHOLD = max(0.05, min(0.95, float(raw_thr)))
-                    except (ValueError, TypeError):
-                        pass
-                if MODE_EMERGENCY:
-                    MODE_DND = False
-                if MODE_NIGHT:
-                    MODE_DND = False
-            response = llm_result.get("response") or "Done."
+            response = _apply_llm_result(llm_result)
         else:
             response = apply_rule_based_command(user_input_lower)
 
@@ -1077,6 +1083,9 @@ class WebRTCOfferRequest(BaseModel):
     sdp: str
     type: str
 
+class ChatRequest(BaseModel):
+    message: str
+
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @fastapi_app.get("/", response_class=HTMLResponse)
@@ -1206,6 +1215,22 @@ async def forgot_reset(data: ForgotPasswordRequest):
 @fastapi_app.get("/api/state")
 async def get_state(session=Depends(require_session)):
     return get_state_dict()
+
+@fastapi_app.post("/api/chat")
+async def chat(data: ChatRequest, session=Depends(require_session)):
+    msg = data.message.strip()
+    if not msg:
+        raise HTTPException(400, "Empty message")
+    # Run blocking Groq HTTP call in a thread so we don't block the event loop
+    loop = asyncio.get_event_loop()
+    llm_result = await loop.run_in_executor(None, query_local_llm, msg)
+    if llm_result is not None:
+        reply = _apply_llm_result(llm_result)
+    else:
+        reply = apply_rule_based_command(msg.lower())
+    append_voice_log(f"[chat] {session['username']}: {msg}")
+    append_voice_response(f"[chat] {reply}")
+    return {"response": reply}
 
 @fastapi_app.post("/api/modes")
 async def set_mode(data: ModeRequest, session=Depends(require_session)):

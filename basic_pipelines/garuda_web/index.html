@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=20"/>
+  <link rel="stylesheet" href="/static/style.css?v=21"/>
 </head>
 <body>
 <div id="app">
@@ -362,6 +362,32 @@
               <span class="cmd-phrase">status</span>
               <span class="cmd-desc">Active modes summary</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CHAT ── -->
+      <div id="page-chat" class="page">
+        <div class="chat-shell">
+          <div class="chat-header">
+            <div class="chat-header-info">
+              <div class="chat-avatar">N</div>
+              <div>
+                <div class="chat-name">Narada</div>
+                <div class="chat-sub">Garuda AI · powered by Llama 3.1</div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-bubble assistant">
+              <div class="chat-bubble-text">Hi! I'm Narada. Ask me anything about the security system, or give me a command — I can change modes, adjust the detection threshold, and more.</div>
+            </div>
+          </div>
+          <div class="chat-input-bar">
+            <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Ask Narada anything…"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn" onclick="G.sendChat()">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="1.5" x2="1.5" y2="7.5"/><line x1="16.5" y1="1.5" x2="9" y2="16.5"/><line x1="16.5" y1="1.5" x2="8.25" y2="8.25"/></svg>
+            </button>
           </div>
         </div>
       </div>
@@ -741,6 +767,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=15"></script>
+<script src="/static/app.js?v=16"></script>
 </body>
 </html>

@@ -234,6 +234,7 @@ const G = (() => {
     buildNav(_session.role);
     nav('dashboard');
     renderHeatmap();
+    _initChatInput();
     connectWS();
     if (_session.role === 'admin') loadCfg();
   }
@@ -440,6 +441,79 @@ const G = (() => {
     }
   }
 
+  // ── Chat ──────────────────────────────────────────────────
+  let _chatBusy = false;
+
+  function _chatAppend(role, text) {
+    const box = $('chat-messages');
+    if (!box) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-bubble ' + role;
+    const inner = document.createElement('div');
+    inner.className = 'chat-bubble-text';
+    inner.textContent = text;
+    wrap.appendChild(inner);
+    box.appendChild(wrap);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function _chatTyping(show) {
+    const box = $('chat-messages');
+    if (!box) return;
+    const existing = box.querySelector('.chat-typing');
+    if (show && !existing) {
+      const wrap = document.createElement('div');
+      wrap.className = 'chat-bubble assistant chat-typing';
+      wrap.innerHTML = '<div class="chat-bubble-text"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
+      box.appendChild(wrap);
+      box.scrollTop = box.scrollHeight;
+    } else if (!show && existing) {
+      existing.remove();
+    }
+  }
+
+  async function sendChat() {
+    if (_chatBusy) return;
+    const input = $('chat-input');
+    const btn   = $('chat-send-btn');
+    if (!input) return;
+    const msg = input.value.trim();
+    if (!msg) return;
+    input.value = '';
+    input.style.height = '';
+    _chatAppend('user', msg);
+    _chatBusy = true;
+    if (btn) btn.disabled = true;
+    _chatTyping(true);
+    try {
+      const res = await api('POST', '/api/chat', { message: msg });
+      _chatTyping(false);
+      _chatAppend('assistant', res.response || '…');
+    } catch(e) {
+      _chatTyping(false);
+      _chatAppend('assistant', 'Sorry, something went wrong. Try again.');
+    } finally {
+      _chatBusy = false;
+      if (btn) btn.disabled = false;
+      input.focus();
+    }
+  }
+
+  function _initChatInput() {
+    const input = $('chat-input');
+    if (!input) return;
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    });
+  }
+
   // ── Alert activity heatmap (localStorage) ────────────────
   function recordActivity() {
     const today = new Date().toISOString().slice(0, 10);
@@ -581,15 +655,18 @@ const G = (() => {
     logs:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h12M3 9h12M3 13.5h7.5"/></svg>`,
     commands:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 1.5 9 4.5 12"/><polyline points="13.5 6 16.5 9 13.5 12"/><line x1="7.5" y1="3" x2="10.5" y2="15"/></svg>`,
     emergency: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5 16.5 16.5H1.5Z"/><line x1="9" y1="7" x2="9" y2="11"/><circle cx="9" cy="13.5" r="0.75" fill="currentColor" stroke="none"/></svg>`,
+    chat:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 9.75a6.75 6.75 0 0 1-9.45 6.19L2.25 16.5l.56-4.05A6.75 6.75 0 1 1 15.75 9.75z"/></svg>`,
   };
 
   const _USER_NAV = [
-    { page: 'dashboard', label: 'Home',    icon: 'dashboard' },
-    { page: 'narada',    label: 'Narada',  icon: 'narada'    },
+    { page: 'dashboard', label: 'Home',   icon: 'dashboard' },
+    { page: 'chat',      label: 'Chat',   icon: 'chat'      },
+    { page: 'narada',    label: 'Narada', icon: 'narada'    },
   ];
 
   const _ADMIN_NAV = [
     { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
+    { page: 'chat',       label: 'Chat',     icon: 'chat'      },
     { page: 'narada',     label: 'Narada',   icon: 'narada'    },
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
     { page: 'a-settings', label: 'System',   icon: 'settings'  },
@@ -1094,7 +1171,7 @@ const G = (() => {
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
-    toggleCamera, openDocs,
+    toggleCamera, openDocs, sendChat,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
