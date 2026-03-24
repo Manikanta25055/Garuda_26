@@ -1439,11 +1439,10 @@ input[type=range]::-webkit-slider-thumb {
   display: inline-block;
   font-size: 9px; font-weight: 700; font-family: var(--mono);
   letter-spacing: 0.05em; text-transform: uppercase;
-  padding: 2px 5px; border-radius: 4px; text-align: center;
 }
-.rl-low  { background: rgba( 80,210,120,0.12); color: #6ed89a; border: 1px solid rgba( 80,210,120,0.2); }
-.rl-med  { background: rgba(220,185, 80,0.12); color: #d4b85a; border: 1px solid rgba(220,185, 80,0.2); }
-.rl-high { background: rgba( 90,150,255,0.12); color: #7aaeff; border: 1px solid rgba( 90,150,255,0.2); }
+.rl-low  { color: #6ed89a; }
+.rl-med  { color: #d4913a; }
+.rl-high { color: #d46a6a; }
 .rl-model {
   font-family: var(--mono); font-size: 10px; color: var(--t4);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
