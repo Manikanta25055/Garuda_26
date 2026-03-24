@@ -1221,7 +1221,6 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
-    # Run blocking Groq HTTP call in a thread so we don't block the event loop
     loop = asyncio.get_event_loop()
     llm_result = await loop.run_in_executor(None, query_local_llm, msg)
     if llm_result is not None:
@@ -1231,6 +1230,102 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     append_voice_log(f"[chat] {session['username']}: {msg}")
     append_voice_response(f"[chat] {reply}")
     return {"response": reply}
+
+def _groq_stream_text(user_input):
+    """Sync generator: yields text tokens from Groq streaming API."""
+    if not GROQ_API_KEY:
+        yield apply_rule_based_command(user_input.lower())
+        return
+    system_prompt = (
+        "You are Narada, the AI assistant embedded in Garuda — an AI home security system "
+        "running on Raspberry Pi 5 with Hailo-8L AI accelerator and IMX708 camera (1280×720 @ 60fps).\n"
+        "System details: YOLOv6n object detection, danger label = scissors (5-frame confirmation, "
+        "confidence ≥ 0.55), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
+        "(0.05–0.95 default 0.35), email alerts via Gmail SMTP, WebRTC + WS binary JPEG + MJPEG "
+        "camera streaming, Groq LLM (llama-3.3-70b-versatile) for this chat.\n"
+        "When the user requests a mode or setting change, confirm what you're doing. "
+        "Be concise and direct. Use markdown (bold, code blocks, lists) where it adds clarity."
+    )
+    payload = {
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_input},
+        ],
+        "temperature": 0.7,
+        "max_tokens": 600,
+        "stream": True,
+    }
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    try:
+        with requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            json=payload, headers=headers, stream=True, timeout=30
+        ) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                if line.startswith(b"data: "):
+                    chunk_raw = line[6:]
+                    if chunk_raw == b"[DONE]":
+                        return
+                    try:
+                        chunk = json.loads(chunk_raw)
+                        token = chunk["choices"][0]["delta"].get("content", "")
+                        if token:
+                            yield token
+                    except Exception:
+                        pass
+    except Exception:
+        yield apply_rule_based_command(user_input.lower())
+
+@fastapi_app.post("/api/chat/stream")
+async def chat_stream(data: ChatRequest, session=Depends(require_session)):
+    """SSE streaming chat — tokens arrive in real-time; commands applied after full response."""
+    msg = data.message.strip()
+    if not msg:
+        raise HTTPException(400, "Empty message")
+
+    loop  = asyncio.get_event_loop()
+    queue: asyncio.Queue = asyncio.Queue()
+
+    def _worker():
+        full_tokens = []
+        for token in _groq_stream_text(msg):
+            full_tokens.append(token)
+            loop.call_soon_threadsafe(queue.put_nowait, ("token", token))
+        # After full response, run structured JSON call in background to apply commands
+        full_text = "".join(full_tokens)
+        llm_result = query_local_llm(msg)
+        if llm_result is not None:
+            _apply_llm_result(llm_result)
+        append_voice_log(f"[chat] {session['username']}: {msg}")
+        append_voice_response(f"[chat] {full_text}")
+        loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
+
+    threading.Thread(target=_worker, daemon=True).start()
+
+    async def generate():
+        yield f"data: {json.dumps({'type': 'start'})}\n\n"
+        while True:
+            try:
+                kind, payload_val = await asyncio.wait_for(queue.get(), timeout=35)
+            except asyncio.TimeoutError:
+                break
+            if kind == "done":
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                break
+            yield f"data: {json.dumps({'type': 'token', 'text': payload_val})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 @fastapi_app.post("/api/modes")
 async def set_mode(data: ModeRequest, session=Depends(require_session)):

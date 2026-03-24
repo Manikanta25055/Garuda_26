@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=21"/>
+  <link rel="stylesheet" href="/static/style.css?v=22"/>
 </head>
 <body>
 <div id="app">
@@ -369,26 +369,45 @@
       <!-- ── CHAT ── -->
       <div id="page-chat" class="page">
         <div class="chat-shell">
+
+          <!-- Header -->
           <div class="chat-header">
             <div class="chat-header-info">
-              <div class="chat-avatar">N</div>
+              <div class="chat-avatar-wrap">
+                <div class="chat-avatar-ring"></div>
+                <div class="chat-avatar">N</div>
+              </div>
               <div>
-                <div class="chat-name">Narada</div>
-                <div class="chat-sub">Garuda AI · powered by Llama 3.1</div>
+                <div class="chat-name">Narada <span class="chat-model-tag">llama-3.3-70b</span></div>
+                <div class="chat-sub">Garuda AI Security Assistant</div>
+              </div>
+            </div>
+            <button class="chat-clear-btn" onclick="G.clearChat()" title="Clear chat">
+              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 15 6"/><path d="M5 6l1 10h6l1-10"/><path d="M7.5 6V4.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5V6"/></svg>
+            </button>
+          </div>
+
+          <!-- Messages -->
+          <div class="chat-messages" id="chat-messages">
+            <div class="chat-msg assistant">
+              <div class="chat-msg-avatar">N</div>
+              <div class="chat-msg-content">
+                <div class="chat-msg-body">Hi, I'm <strong>Narada</strong> — Garuda's AI security assistant.<br><br>I know everything about this system: the detection pipeline, active modes, alert history, camera setup, and hardware. Ask me anything, or tell me what to do — I can change modes, adjust the threshold, explain detections, and more.</div>
               </div>
             </div>
           </div>
-          <div class="chat-messages" id="chat-messages">
-            <div class="chat-bubble assistant">
-              <div class="chat-bubble-text">Hi! I'm Narada. Ask me anything about the security system, or give me a command — I can change modes, adjust the detection threshold, and more.</div>
+
+          <!-- Input -->
+          <div class="chat-input-wrap">
+            <div class="chat-input-box">
+              <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Message Narada…"></textarea>
+              <button class="chat-send-btn" id="chat-send-btn" onclick="G.sendChat()">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="14" x2="9" y2="4"/><polyline points="4.5 8.5 9 4 13.5 8.5"/></svg>
+              </button>
             </div>
+            <div class="chat-hint">Enter to send · Shift+Enter for newline</div>
           </div>
-          <div class="chat-input-bar">
-            <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Ask Narada anything…"></textarea>
-            <button class="chat-send-btn" id="chat-send-btn" onclick="G.sendChat()">
-              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="1.5" x2="1.5" y2="7.5"/><line x1="16.5" y1="1.5" x2="9" y2="16.5"/><line x1="16.5" y1="1.5" x2="8.25" y2="8.25"/></svg>
-            </button>
-          </div>
+
         </div>
       </div>
 
@@ -767,6 +786,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=16"></script>
+<script src="/static/app.js?v=17"></script>
 </body>
 </html>

@@ -443,74 +443,232 @@ const G = (() => {
 
   // ── Chat ──────────────────────────────────────────────────
   let _chatBusy = false;
+  let _thinkTimer = null;
 
-  function _chatAppend(role, text) {
+  const _THINKING = [
+    // Processing thoughts
+    "Analyzing Hailo-8L inference pipeline state…",
+    "Reviewing YOLOv6n detection confidence scores…",
+    "Cross-referencing security event log…",
+    "Consulting active mode configuration…",
+    "Scanning perimeter alert thresholds…",
+    "Correlating IMX708 frame metadata…",
+    "Evaluating scissors threat probability matrix…",
+    "Syncing with Garuda event database…",
+    "Checking WebRTC stream health…",
+    "Mapping 1280×720 detection grid…",
+    "Processing 5-frame confirmation buffers…",
+    "Reviewing GPIO sensor state…",
+    "Scanning system_logs for recent patterns…",
+    "Verifying detection threshold calibration…",
+    // Quotes & project philosophy
+    "\"Security is not a product, it's a process.\" — Bruce Schneier",
+    "\"The price of liberty is eternal vigilance.\" — Thomas Jefferson",
+    "60fps. Every frame a question. Every detection an answer.",
+    "Standing watch so you don't have to.",
+    "5 consecutive frames to confirm. Certainty over speed.",
+    "Threshold: the line between alert and silence.",
+    "Narada sees. Narada knows. Narada guards.",
+    "Every pixel on the IMX708 tells a story.",
+    "Privacy preserved. Threats surfaced.",
+    "Hailo-8L: 26 TOPS so the Pi 5 CPU doesn't have to.",
+    "One scissors detection is noise. Five is signal.",
+    "The best alarm is the one that never cries wolf.",
+  ];
+
+  // Simple inline markdown renderer
+  function _md(text) {
+    const esc = text
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return esc
+      // Fenced code blocks
+      .replace(/```([^`]*?)```/gs, '<pre class="chat-code-block"><code>$1</code></pre>')
+      // Inline code
+      .replace(/`([^`\n]+)`/g, '<code class="chat-inline-code">$1</code>')
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // Headers (## / ###) → bold line
+      .replace(/^#{1,3} (.+)$/gm, '<span class="chat-heading">$1</span>')
+      // Bullet lists
+      .replace(/^[-•] (.+)$/gm, '<span class="chat-li">$1</span>')
+      // Newlines
+      .replace(/\n/g, '<br>');
+  }
+
+  function _chatAddUser(text) {
     const box = $('chat-messages');
     if (!box) return;
-    const wrap = document.createElement('div');
-    wrap.className = 'chat-bubble ' + role;
-    const inner = document.createElement('div');
-    inner.className = 'chat-bubble-text';
-    inner.textContent = text;
-    wrap.appendChild(inner);
-    box.appendChild(wrap);
+    const el = document.createElement('div');
+    el.className = 'chat-msg user';
+    el.innerHTML = `<div class="chat-msg-pill">${_md(text)}</div>`;
+    box.appendChild(el);
     box.scrollTop = box.scrollHeight;
   }
 
-  function _chatTyping(show) {
+  function _chatAddAssistant() {
+    // Returns the body element to stream into
     const box = $('chat-messages');
-    if (!box) return;
-    const existing = box.querySelector('.chat-typing');
-    if (show && !existing) {
-      const wrap = document.createElement('div');
-      wrap.className = 'chat-bubble assistant chat-typing';
-      wrap.innerHTML = '<div class="chat-bubble-text"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>';
-      box.appendChild(wrap);
+    if (!box) return null;
+    const el = document.createElement('div');
+    el.className = 'chat-msg assistant';
+    el.innerHTML = `
+      <div class="chat-msg-avatar">N</div>
+      <div class="chat-msg-content">
+        <div class="chat-msg-body"></div>
+      </div>`;
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+    return el.querySelector('.chat-msg-body');
+  }
+
+  function _showThinking() {
+    const box = $('chat-messages');
+    if (!box || $('chat-thinking')) return;
+    const el = document.createElement('div');
+    el.id = 'chat-thinking';
+    el.className = 'chat-thinking';
+    el.innerHTML = `
+      <div class="think-header">
+        <span class="think-pulse"></span><span>Thinking</span>
+      </div>
+      <div class="think-lines" id="think-lines"></div>`;
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+
+    let idx = Math.floor(Math.random() * _THINKING.length);
+    const shown = [];
+    function addLine() {
+      const lines = $('think-lines');
+      if (!lines) return;
+      const d = document.createElement('div');
+      d.className = 'think-line';
+      d.textContent = _THINKING[idx % _THINKING.length];
+      idx++;
+      lines.appendChild(d);
+      shown.push(d);
+      requestAnimationFrame(() => d.classList.add('think-line-in'));
+      if (shown.length > 3) {
+        const old = shown.shift();
+        old.classList.add('think-line-out');
+        setTimeout(() => old.remove(), 350);
+      }
       box.scrollTop = box.scrollHeight;
-    } else if (!show && existing) {
-      existing.remove();
     }
+    addLine();
+    _thinkTimer = setInterval(addLine, 850);
+  }
+
+  function _hideThinking() {
+    clearInterval(_thinkTimer);
+    _thinkTimer = null;
+    const el = $('chat-thinking');
+    if (el) {
+      el.classList.add('think-fade-out');
+      setTimeout(() => el.remove(), 300);
+    }
+  }
+
+  function _streamInto(bodyEl, text, done) {
+    if (!bodyEl) return;
+    bodyEl.innerHTML = _md(text) + (done ? '' : '<span class="chat-cursor">|</span>');
+    const box = $('chat-messages');
+    if (box) box.scrollTop = box.scrollHeight;
   }
 
   async function sendChat() {
     if (_chatBusy) return;
-    const input = $('chat-input');
-    const btn   = $('chat-send-btn');
+    const input  = $('chat-input');
+    const btn    = $('chat-send-btn');
     if (!input) return;
     const msg = input.value.trim();
     if (!msg) return;
     input.value = '';
     input.style.height = '';
-    _chatAppend('user', msg);
+    _chatAddUser(msg);
     _chatBusy = true;
     if (btn) btn.disabled = true;
-    _chatTyping(true);
+    _showThinking();
+
+    const backend = getBackend() || '';
+    const token   = _token || '';
+    let bodyEl    = null;
+    let full      = '';
+    let gotFirst  = false;
+
     try {
-      const res = await api('POST', '/api/chat', { message: msg });
-      _chatTyping(false);
-      _chatAppend('assistant', res.response || '…');
+      const resp = await fetch(backend + '/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'X-Garuda-Token': token } : {}),
+        },
+        credentials: 'include',
+        body: JSON.stringify({ message: msg }),
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
+      const reader  = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let ev;
+          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+          if (ev.type === 'start') {
+            _hideThinking();
+            bodyEl = _chatAddAssistant();
+          } else if (ev.type === 'token' && bodyEl) {
+            if (!gotFirst) { gotFirst = true; }
+            full += ev.text;
+            _streamInto(bodyEl, full, false);
+          } else if (ev.type === 'done' && bodyEl) {
+            _streamInto(bodyEl, full, true);
+          }
+        }
+      }
     } catch(e) {
-      _chatTyping(false);
-      _chatAppend('assistant', 'Sorry, something went wrong. Try again.');
+      _hideThinking();
+      if (!bodyEl) bodyEl = _chatAddAssistant();
+      if (bodyEl) bodyEl.textContent = 'Connection error — please try again.';
     } finally {
+      _hideThinking();
+      if (bodyEl) _streamInto(bodyEl, full, true);
       _chatBusy = false;
       if (btn) btn.disabled = false;
       input.focus();
     }
   }
 
+  function clearChat() {
+    const box = $('chat-messages');
+    if (!box) return;
+    box.innerHTML = `
+      <div class="chat-msg assistant">
+        <div class="chat-msg-avatar">N</div>
+        <div class="chat-msg-content">
+          <div class="chat-msg-body">Chat cleared. How can I help?</div>
+        </div>
+      </div>`;
+  }
+
   function _initChatInput() {
     const input = $('chat-input');
     if (!input) return;
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendChat();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
     });
     input.addEventListener('input', () => {
       input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      input.style.height = Math.min(input.scrollHeight, 140) + 'px';
     });
   }
 
@@ -1171,7 +1329,7 @@ const G = (() => {
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
-    toggleCamera, openDocs, sendChat,
+    toggleCamera, openDocs, sendChat, clearChat,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
