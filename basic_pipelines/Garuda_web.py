@@ -126,10 +126,14 @@ CONFIG_FILE          = "system_logs/config.json"
 ALERT_HISTORY_FILE   = "system_logs/alert_history.json"
 PRESENCE_LOG_FILE    = "system_logs/presence_log.json"
 MASTER_KEYS_FILE     = "system_logs/master_keys.json"
+PERM_SYSTEM_LOG      = "system_logs/perm_system_log.txt"
+PERM_VOICE_LOG       = "system_logs/perm_voice_log.txt"
+PERM_DETECTION_LOG   = "system_logs/perm_detection_log.txt"
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
+_detection_log: List[str] = []   # in-memory recent detection events (danger + watch)
 latest_detection_info = ""
 
 ADMIN_OTP = None
@@ -154,6 +158,7 @@ _alert_flash_count = 0
 _alert_end_time  = 0.0   # epoch when current alert expires
 _danger_trigger_info = ""   # detection text from the SPECIFIC frame that triggered scissors
 _danger_consecutive = 0     # consecutive frames with danger label detected
+_last_danger_conf = 0.0     # confidence of last danger detection (for logging)
 DANGER_CONFIRM_FRAMES = 15  # must appear in this many consecutive frames to trigger alert
 _app_start_time = time.time()
 _detections_today = 0
@@ -161,6 +166,8 @@ _last_alert_time = None
 _mode_lock = threading.Lock()
 _class_counts_today = {}   # class_name → count since startup
 _total_frames = 0          # total inference frames (for avg FPS)
+_watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
+_perm_lock = threading.Lock()
 
 # ── Phone presence detection ──────────────────────────────
 KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
@@ -379,14 +386,39 @@ load_config()
 ##############################################################################
 # HELPERS
 ##############################################################################
+def _perm_write(filepath: str, line: str):
+    """Thread-safe append of one line to a permanent log file on disk."""
+    try:
+        os.makedirs("system_logs", exist_ok=True)
+        with _perm_lock:
+            with open(filepath, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+    except Exception:
+        pass
+
+def _append_detection_perm(event_type: str, label: str, confidence: float, info: str = ""):
+    """Append one detection event to in-memory list and permanent file."""
+    global _detection_log
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{stamp}] [{event_type.upper()}] {label} conf={confidence:.2f}"
+    if info:
+        line += f" — {info}"
+    _detection_log.append(line)
+    if len(_detection_log) > 500:
+        _detection_log[:] = _detection_log[-500:]
+    _perm_write(PERM_DETECTION_LOG, line)
+
 def log_system_update(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    system_updates_log.append(f"[{timestamp}] {message}")
+    entry = f"[{timestamp}] {message}"
+    system_updates_log.append(entry)
+    _perm_write(PERM_SYSTEM_LOG, entry)
 
 def append_voice_log(message, user_name=None):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     voice_assistant_log.append(entry)
+    _perm_write(PERM_VOICE_LOG, entry)
     if user_name and user_name in USERS:
         USERS[user_name]["history"]["narada_activity"].append(entry)
 
@@ -394,6 +426,7 @@ def append_voice_response(message, user_name=None):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     voice_responses.append(entry)
+    _perm_write(PERM_VOICE_LOG, "→ " + entry)
     if user_name and user_name in USERS:
         USERS[user_name]["history"]["narada_activity"].append(entry)
 
@@ -651,6 +684,7 @@ class user_app_callback_class(app_callback_class):
 def app_callback(pad, info, user_data):
     global latest_detection_info, DETECTION_THRESHOLD, MODE_PRIVACY
     global _detections_today, _frame_buffer, _total_frames, _class_counts_today
+    global _last_danger_conf
     buffer = info.get_buffer()
     if buffer is None:
         return Gst.PadProbeReturn.OK
@@ -696,9 +730,14 @@ def app_callback(pad, info, user_data):
                     frame[y1:y2, x1:x2] = roi_face
             if label == user_data.danger_label and confidence >= 0.55:
                 danger_detected = True
+                _last_danger_conf = confidence
             elif label in WATCH_LABELS and label != user_data.danger_label:
-                # WATCH category: log silently, no alert
-                log_system_update(f"[WATCH] {label} ({confidence:.2f})")
+                # WATCH: log silently with 30s cooldown to avoid per-frame spam
+                now_t = time.time()
+                if now_t - _watch_last_logged.get(label, 0) >= 30:
+                    _watch_last_logged[label] = now_t
+                    log_system_update(f"[WATCH] {label} ({confidence:.2f})")
+                    _append_detection_perm("WATCH", label, confidence)
 
     if det_count > 0:
         _detections_today += det_count
@@ -713,9 +752,13 @@ def app_callback(pad, info, user_data):
         _danger_consecutive = 0   # reset so it must confirm again after alert expires
         global _danger_trigger_info
         _danger_trigger_info = text_info   # snapshot the scissors-trigger frame
+        _captured_conf = _last_danger_conf
+        _captured_label = user_data.danger_label
         threading.Thread(target=trigger_software_alert, daemon=True).start()
         threading.Thread(target=log_scissors_detection, daemon=True).start()
         threading.Thread(target=send_email_alert, daemon=True).start()
+        threading.Thread(target=lambda: _append_detection_perm(
+            "DANGER", _captured_label, _captured_conf, "alert triggered"), daemon=True).start()
 
     user_data.person_detected = any(d.get_label() == "person" for d in detections)
 
@@ -1863,7 +1906,55 @@ async def get_logs(session=Depends(require_logs)):
         "voice_log": voice_assistant_log,
         "voice_responses": voice_responses,
         "presence_log": _presence_log[-200:],
+        "detection_log": _detection_log[-200:],
     }
+
+@fastapi_app.get("/api/logs/download")
+async def download_logs(session=Depends(require_logs)):
+    """Return all permanent logs as a single combined text file for download."""
+    parts = []
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    parts.append(f"# Garuda Security System — Full Log Export")
+    parts.append(f"# Generated: {stamp}")
+    parts.append("")
+
+    for title, filepath in [
+        ("SYSTEM LOG", PERM_SYSTEM_LOG),
+        ("VOICE LOG",  PERM_VOICE_LOG),
+        ("DETECTION LOG", PERM_DETECTION_LOG),
+        ("PRESENCE LOG", PRESENCE_LOG_FILE),
+    ]:
+        parts.append(f"{'='*60}")
+        parts.append(f"  {title}")
+        parts.append(f"{'='*60}")
+        try:
+            if filepath.endswith(".json"):
+                # presence_log is JSON array
+                if os.path.exists(filepath):
+                    with open(filepath, encoding="utf-8") as f:
+                        data = json.load(f)
+                    for e in data:
+                        parts.append(f"[{e.get('ts','')}] {e.get('event','').upper():8s} {e.get('device','')} ({e.get('mac','')})")
+                else:
+                    parts.append("(no entries)")
+            else:
+                if os.path.exists(filepath):
+                    with open(filepath, encoding="utf-8") as f:
+                        content = f.read().strip()
+                    parts.append(content if content else "(no entries)")
+                else:
+                    parts.append("(no entries)")
+        except Exception as ex:
+            parts.append(f"(error reading log: {ex})")
+        parts.append("")
+
+    content = "\n".join(parts)
+    fname = f"garuda-full-log-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+    return Response(
+        content=content,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 ##############################################################################
 # MASTER KEY ENDPOINTS

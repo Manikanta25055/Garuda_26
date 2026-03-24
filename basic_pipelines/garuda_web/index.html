@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=32"/>
+  <link rel="stylesheet" href="/static/style.css?v=33"/>
 </head>
 <body>
 <div id="app">
@@ -86,15 +86,15 @@
       <!-- VIEW: Master Key login -->
       <div id="lv-masterkey" class="hidden">
         <button class="lc-back" onclick="G.backToMain()">← Back</button>
-        <div class="lc-title" style="font-size:22px">Master Key</div>
-        <div class="lc-sub">Enter master key for instant admin access</div>
+        <div class="lc-title" style="font-size:22px;color:var(--mk-orange)">Master Key</div>
+        <div class="lc-sub">Enter master key for instant admin access — no password needed</div>
         <div class="lc-fields">
-          <input id="mk-login-key" class="modern-input" type="password"
+          <input id="mk-login-key" class="modern-input mk-key-input" type="password"
                  placeholder="Master key" autocomplete="off"/>
         </div>
         <div id="mk-login-err" class="lc-err hidden"></div>
-        <button class="lc-signin lc-signin-danger" onclick="G.submitMasterKeyLogin()">
-          Enter
+        <button class="lc-signin lc-signin-mk" onclick="G.submitMasterKeyLogin()">
+          Unlock
         </button>
       </div>
 
@@ -154,11 +154,12 @@
 <!-- Logs gate overlay — fixed over entire viewport until master key entered -->
 <div id="logs-gate" class="logs-gate-overlay hidden">
   <div class="logs-gate-card">
-    <div class="logs-gate-title">Master Key Required</div>
-    <div class="logs-gate-sub">Enter your master key to unlock the logs</div>
+    <button class="logs-gate-back" onclick="G.nav('dashboard')" title="Back to dashboard">← Back</button>
+    <div class="logs-gate-title" style="color:var(--mk-orange)">Master Key Required</div>
+    <div class="logs-gate-sub">Enter your master key to unlock the logs for this session</div>
     <input id="lg-key" class="modern-input" type="password" placeholder="Master key" autocomplete="off"/>
     <div id="lg-err" class="lc-err hidden"></div>
-    <button class="btn btn-primary" style="width:100%" onclick="G.unlockLogs()">Unlock Logs</button>
+    <button class="btn btn-primary" style="width:100%;background:var(--mk-orange);border-color:var(--mk-orange)" onclick="G.unlockLogs()">Unlock Logs</button>
   </div>
 </div>
 
@@ -620,23 +621,28 @@
         <div class="admin-page">
           <div class="admin-page-header">
             <h2>Logs</h2>
-            <div class="flex gap-8">
+            <div class="flex gap-8" style="flex-wrap:wrap;gap:6px">
               <input id="log-q" class="input" type="text" placeholder="Filter…"
-                     style="width:200px" oninput="G.filterLogs()"/>
-              <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export</button>
+                     style="width:160px" oninput="G.filterLogs()"/>
+              <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export Session</button>
+              <button class="btn btn-primary btn-sm" onclick="G.downloadFullLog()">⬇ Full Log</button>
             </div>
           </div>
           <div style="margin-bottom:24px">
-            <div class="overline" style="margin-bottom:8px">System Updates</div>
-            <div id="a-syslog" class="console" style="height:220px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
+            <div class="overline" style="margin-bottom:8px">System Updates <span style="font-size:10px;color:var(--t4)">(session)</span></div>
+            <div id="a-syslog" class="console" style="height:200px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
           </div>
           <div style="margin-bottom:24px">
-            <div class="overline" style="margin-bottom:8px">Voice Log</div>
-            <div id="a-vlog" class="narada-log section-card" style="height:180px"></div>
+            <div class="overline" style="margin-bottom:8px">Detection Events <span style="font-size:10px;color:var(--t4)">(session — danger &amp; watch labels)</span></div>
+            <div id="a-detlog" class="console" style="height:160px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
+          </div>
+          <div style="margin-bottom:24px">
+            <div class="overline" style="margin-bottom:8px">Presence Log <span style="font-size:10px;color:var(--t4)">(permanent)</span></div>
+            <div id="a-preslog" class="console" style="height:150px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
           </div>
           <div>
-            <div class="overline" style="margin-bottom:8px">Presence Log</div>
-            <div id="a-preslog" class="console" style="height:160px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
+            <div class="overline" style="margin-bottom:8px">Voice Log <span style="font-size:10px;color:var(--t4)">(session)</span></div>
+            <div id="a-vlog" class="narada-log section-card" style="height:160px"></div>
           </div>
         </div>
       </div>
@@ -909,6 +915,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=25"></script>
+<script src="/static/app.js?v=26"></script>
 </body>
 </html>

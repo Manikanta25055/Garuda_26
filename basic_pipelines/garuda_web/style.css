@@ -18,6 +18,7 @@
   --success:   #34C759;
   --warn:      #FF9F0A;
   --warn-d:    rgba(255,159,10,0.10);
+  --mk-orange: #E8854A;   /* master key accent */
   --purple:    #AF52DE;
 
   --t1: #F5F5F7;   /* primary text */
@@ -985,6 +986,16 @@ input[type=range]::-webkit-slider-thumb {
   letter-spacing: 0.02em;
 }
 .logs-gate-sub { font-size: 13px; color: var(--t3); }
+.logs-gate-back {
+  display: block;
+  background: none; border: none;
+  cursor: pointer;
+  font-family: var(--mono); font-size: 12px;
+  color: var(--t3); text-align: left;
+  padding: 0; margin-bottom: 4px;
+  transition: color var(--trans);
+}
+.logs-gate-back:hover { color: var(--t1); }
 
 /* ── Master Keys management ────────────────────────────── */
 .mk-list { display: flex; flex-direction: column; gap: 6px; }
@@ -1244,6 +1255,10 @@ input[type=range]::-webkit-slider-thumb {
 .lc-arrow { font-size: 18px; font-weight: 300; }
 .lc-signin-danger { background: var(--danger); }
 .lc-signin-danger:hover { background: #d93530; }
+.lc-signin-mk { background: var(--mk-orange); }
+.lc-signin-mk:hover { background: #d4703a; }
+.mk-key-input { border-color: rgba(232,133,74,0.3); }
+.mk-key-input:focus { border-color: var(--mk-orange); box-shadow: 0 0 0 3px rgba(232,133,74,0.15); }
 
 /* Bottom link row */
 .lc-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; }

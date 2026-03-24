@@ -139,7 +139,7 @@ const G = (() => {
 
   // ── Login view switcher ───────────────────────────────────
   function showLoginView(viewId) {
-    ['lv-main','lv-admin-1','lv-admin-2','lv-forgot'].forEach(id => {
+    ['lv-main','lv-admin-1','lv-admin-2','lv-forgot','lv-masterkey'].forEach(id => {
       const el = $(id);
       if (el) el.classList.toggle('hidden', id !== viewId);
     });
@@ -894,6 +894,8 @@ const G = (() => {
 
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
+    // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
+    $('logs-gate')?.classList.add('hidden');
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
     const pg = $('page-' + pageId); if (pg) pg.classList.add('active');
@@ -903,7 +905,6 @@ const G = (() => {
     if (pageId === 'a-settings') loadSysCfg();
     if (pageId === 'a-logs') {
       if (_logsUnlocked) {
-        $('logs-gate')?.classList.add('hidden');
         fetchAndRenderLogs();
       } else {
         $('logs-gate')?.classList.remove('hidden');
@@ -1255,15 +1256,40 @@ const G = (() => {
       const av = $('a-vlog');
       if (av) {
         av.innerHTML = [...(data.voice_log||[]), ...(data.voice_responses||[])]
-          .map(l => `<div class="narada-line">${l}</div>`).join('');
+          .map(l => `<div class="narada-line">${esc(l)}</div>`).join('');
         av.scrollTop = av.scrollHeight;
+      }
+      const dl = $('a-detlog');
+      if (dl) {
+        const dets = data.detection_log || [];
+        dl.textContent = dets.length ? dets.join('\n') : 'No detection events this session.';
+        dl.scrollTop = dl.scrollHeight;
       }
     } catch(e) {
       // 403 means logs not unlocked — re-show gate
-      if (e && e.detail && e.detail.includes('Master key')) {
+      if (e && (e.detail || '').toString().includes('Master key')) {
         _logsUnlocked = false;
         $('logs-gate')?.classList.remove('hidden');
       }
+    }
+  }
+
+  async function downloadFullLog() {
+    const base = getBackend();
+    const tok  = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const url  = (base ? base.replace(/\/$/, '') : '') + '/api/logs/download';
+    const headers = {};
+    if (tok) headers['X-Garuda-Token'] = tok;
+    try {
+      const r = await fetch(url, { method: 'GET', headers, credentials: base ? 'omit' : 'include' });
+      if (!r.ok) { alert('Download failed — make sure logs are unlocked.'); return; }
+      const blob = await r.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `garuda-full-log-${new Date().toISOString().slice(0,10)}.txt`;
+      a.click();
+    } catch(e) {
+      alert('Download error: ' + (e.message || e));
     }
   }
 
@@ -1597,7 +1623,7 @@ const G = (() => {
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
-    filterLogs, exportLogs,
+    filterLogs, exportLogs, downloadFullLog,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence, setStreamQuality,
     loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey,
     loadCmds, openAddCmd, addCmd, _delCmd,
