@@ -107,6 +107,9 @@ EMAIL_RECIPIENTS = ["amarmanikantan@gmail.com"]
 EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 
+GROQ_API_KEY = ""   # loaded from system_logs/config.json at startup
+GROQ_MODEL   = "llama-3.1-8b-instant"
+
 ##############################################################################
 # GLOBALS & SETTINGS
 ##############################################################################
@@ -237,6 +240,7 @@ def save_users():
 def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
     global EMAIL_COOLDOWN, EMAIL_SENDER, EMAIL_SENDER_PASS, DETECTION_THRESHOLD
+    global GROQ_API_KEY
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
@@ -248,6 +252,7 @@ def load_config():
             EMAIL_SENDER = cfg.get("email_sender", EMAIL_SENDER)
             EMAIL_SENDER_PASS = cfg.get("email_sender_pass", EMAIL_SENDER_PASS)
             DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
+            GROQ_API_KEY = cfg.get("groq_api_key", GROQ_API_KEY)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
 
@@ -748,34 +753,43 @@ def apply_rule_based_command(user_input_lower):
 
 
 def query_local_llm(user_input):
-    system_prompt = f"""You are Narada, an AI security assistant for the Garuda Security System.
-Current time: {datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}.
-Available modes: MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY.
-DETECTION_THRESHOLD: 0.05-0.95. Default 0.3.
-Respond ONLY in this JSON (no markdown, no backticks):
-{{"modes":{{"MODE_DND":null,"MODE_EMAIL_OFF":null,"MODE_IDLE":null,"MODE_NIGHT":null,"MODE_EMERGENCY":null,"MODE_PRIVACY":null}},"settings":{{"DETECTION_THRESHOLD":null}},"response":"your response here"}}
-Set mode values to true/false to change, null to leave unchanged."""
+    """Query Groq cloud API (llama-3.1-8b-instant) — zero local CPU usage."""
+    if not GROQ_API_KEY:
+        return None  # No key configured, fall back to rule-based
+    system_prompt = (
+        "You are Narada, an AI security assistant for the Garuda Security System.\n"
+        f"Current time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.\n"
+        "Available modes: MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY.\n"
+        "DETECTION_THRESHOLD range: 0.05-0.95 (default 0.3).\n"
+        "Respond ONLY with this JSON and nothing else (no markdown, no backticks):\n"
+        '{"modes":{"MODE_DND":null,"MODE_EMAIL_OFF":null,"MODE_IDLE":null,"MODE_NIGHT":null,"MODE_EMERGENCY":null,"MODE_PRIVACY":null},'
+        '"settings":{"DETECTION_THRESHOLD":null},"response":"your reply here"}\n'
+        "Set mode values to true/false to change them, null to leave unchanged."
+    )
     payload = {
-        "model": "phi3:latest",
-        "prompt": f"{system_prompt}\n\nUser says: {user_input}",
-        "stream": False,
-        "format": "json"
+        "model": GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_input},
+        ],
+        "temperature": 0.2,
+        "max_tokens": 256,
+        "response_format": {"type": "json_object"},
+    }
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json",
     }
     try:
-        res = requests.post("http://localhost:11434/api/generate", json=payload, timeout=5)
+        res = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            json=payload, headers=headers, timeout=8
+        )
         res.raise_for_status()
-        llm_response = res.json().get("response", "{}")
-        try:
-            parsed = json.loads(llm_response)
-        except json.JSONDecodeError:
-            cleaned = llm_response.strip().strip("```json").strip("```").strip()
-            try:
-                parsed = json.loads(cleaned)
-            except json.JSONDecodeError:
-                return None
-        return parsed
+        content = res.json()["choices"][0]["message"]["content"]
+        return json.loads(content)
     except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-        return None  # Ollama unavailable — silent fallback to rule-based
+        return None  # Network unavailable — fall back to rule-based
     except Exception:
         return None
 
