@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=29"/>
+  <link rel="stylesheet" href="/static/style.css?v=30"/>
 </head>
 <body>
 <div id="app">
@@ -530,7 +530,11 @@
             </div>
             <div class="sep"></div>
             <!-- Known Devices (owner presence detection) -->
-            <div class="settings-section-title">Known Devices (Owner Detection)</div>
+            <div class="settings-section-title" style="display:flex;align-items:center;justify-content:space-between">
+              Known Devices (Owner Detection)
+              <button class="btn btn-ghost btn-sm" onclick="G.scanNetwork()" id="scan-btn">Scan Network</button>
+            </div>
+            <div id="network-scan-list" class="devices-list" style="display:none"></div>
             <div id="devices-list" class="devices-list"></div>
             <div class="device-add-row">
               <input id="dev-name" class="input" placeholder="Device name (e.g. Manikanta's Phone)"/>
@@ -845,6 +849,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=22"></script>
+<script src="/static/app.js?v=23"></script>
 </body>
 </html>

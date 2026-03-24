@@ -123,6 +123,7 @@ NIGHT_MODE_LOG_FILE = "night_mode_findings.txt"
 LLM_LOG_FILE = "system_logs/llm_reasoning.json"
 USERS_FILE = "system_logs/users.json"
 CONFIG_FILE = "system_logs/config.json"
+ALERT_HISTORY_FILE = "system_logs/alert_history.json"
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -160,6 +161,7 @@ _total_frames = 0          # total inference frames (for avg FPS)
 
 # ── Phone presence detection ──────────────────────────────
 KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
+_alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
 _owner_present   = False
 _owner_last_seen = 0.0
 OWNER_AWAY_GRACE = 300        # seconds without seeing device before marking away
@@ -278,6 +280,28 @@ def load_config():
             WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
+
+def _load_alert_history():
+    """Load alert-activity history from disk into _alert_history."""
+    global _alert_history
+    try:
+        if os.path.exists(ALERT_HISTORY_FILE):
+            with open(ALERT_HISTORY_FILE) as f:
+                _alert_history = json.load(f)
+    except Exception:
+        _alert_history = {}
+
+def _record_alert_activity():
+    """Increment today's alert count and persist to disk."""
+    global _alert_history
+    today = datetime.date.today().isoformat()
+    _alert_history[today] = _alert_history.get(today, 0) + 1
+    try:
+        os.makedirs("system_logs", exist_ok=True)
+        with open(ALERT_HISTORY_FILE, "w") as f:
+            json.dump(_alert_history, f)
+    except Exception:
+        pass
 
 def save_config():
     try:
@@ -442,8 +466,11 @@ def _presence_poller():
     """
     global _owner_present, _owner_last_seen
     _subnet = ''
+    first = True
     while True:
-        time.sleep(30)
+        if not first:
+            time.sleep(30)
+        first = False
         if not KNOWN_DEVICES:
             continue
         # Discover subnet once (lazy) and reprobe each cycle
@@ -453,6 +480,10 @@ def _presence_poller():
             _probe_subnet_for_arp(_subnet)
             time.sleep(2)   # allow ARP responses to arrive
         found = _check_device_presence()
+        log_system_update(
+            f"[PRESENCE] {'Match' if found else 'No match'} — "
+            f"{len([l for l in _last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
+        )
         if found:
             _owner_last_seen = time.time()
             if not _owner_present:
@@ -488,6 +519,7 @@ def trigger_software_alert():
     _alert_active = True
     _alert_flash_count = 10
     _last_alert_time = datetime.datetime.now()
+    _record_alert_activity()
     log_system_update("Alert triggered.")
     push_urgent_ws()
     try:
@@ -605,7 +637,7 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label == user_data.danger_label and confidence >= 0.70:
+            if label == user_data.danger_label and confidence >= 0.55:
                 danger_detected = True
             elif label in WATCH_LABELS and label != user_data.danger_label:
                 # WATCH category: log silently, no alert
@@ -893,7 +925,7 @@ HARDWARE:
 
 DETECTION SYSTEM:
 - Model: YOLOv6n trained on 80 COCO classes
-- Danger label: scissors (requires 15 consecutive frames at confidence ≥ 0.70 to trigger — avoids false alarms)
+- Danger label: scissors (requires 15 consecutive frames at confidence ≥ 0.55 to trigger — avoids false alarms)
 - Detection threshold: adjustable 0.05–0.95 (lower = more sensitive, higher = stricter)
 - On threat: plays alarm sound, sends email alert with detection details and timestamp
 
@@ -1166,6 +1198,7 @@ def get_state_dict():
              "online": d["mac"].lower() in _last_arp_cache}
             for d in KNOWN_DEVICES
         ],
+        "alert_history": _alert_history,
     }
 
 ##############################################################################
@@ -1178,6 +1211,7 @@ async def _lifespan(app):
     global _event_loop, _ws_trigger
     _event_loop = asyncio.get_event_loop()
     _ws_trigger = asyncio.Event()
+    _load_alert_history()
     asyncio.ensure_future(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     yield
@@ -1436,7 +1470,7 @@ def _groq_stream_text(user_input):
         "You are Narada, the AI assistant embedded in Garuda — an AI home security system "
         "running on Raspberry Pi 5 with Hailo-8L AI accelerator and IMX708 camera (1280×720 @ 60fps).\n"
         "System details: YOLOv6n object detection, danger label = scissors (15-frame confirmation, "
-        "confidence ≥ 0.70), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
+        "confidence ≥ 0.55), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
         "(0.05–0.95 default 0.35), email alerts via Gmail SMTP, WebRTC + WS binary JPEG + MJPEG "
         "camera streaming, Groq LLM (llama-3.3-70b-versatile) for this chat.\n"
         "When the user requests a mode or setting change, confirm what you're doing. "
@@ -1652,6 +1686,23 @@ async def delete_command(data: DeleteCommandRequest, session=Depends(require_adm
 @fastapi_app.get("/api/devices")
 async def get_devices(session=Depends(require_admin)):
     return {"devices": KNOWN_DEVICES, "owner_present": _owner_present}
+
+@fastapi_app.get("/api/arp")
+async def get_arp_table(session=Depends(require_admin)):
+    """Return all active ARP entries so admin can identify device MACs."""
+    entries = []
+    try:
+        with open('/proc/net/arp') as f:
+            for line in f.readlines()[1:]:   # skip header
+                parts = line.split()
+                if len(parts) >= 4 and parts[2] == '0x2':  # 0x2 = complete entry
+                    entries.append({"ip": parts[0], "mac": parts[3]})
+    except Exception as e:
+        raise HTTPException(500, str(e))
+    registered_macs = {d["mac"].lower() for d in KNOWN_DEVICES}
+    for e in entries:
+        e["registered"] = e["mac"].lower() in registered_macs
+    return {"entries": entries}
 
 @fastapi_app.post("/api/devices/add")
 async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):

@@ -132,7 +132,7 @@ const G = (() => {
 
     if (!backend && !isLocal) openBackendConfig();
     showLoginView('lv-main');
-    renderHeatmap();
+    renderHeatmap({});  // render empty heatmap; real data arrives via WS after login
   }
 
   // ── Login view switcher ───────────────────────────────────
@@ -233,15 +233,16 @@ const G = (() => {
     $('hdr-user').textContent = _session.display_name || _session.username;
     buildNav(_session.role);
     nav('dashboard');
-    renderHeatmap();
     _initChatInput();
     setModelTier(_chatModelTier);   // restore saved tier
-    connectWS();
-    if (_session.role === 'admin') {
-      loadCfg();
-      const cw = $('dash-console-wrap');
-      if (cw) cw.classList.remove('hidden');
+    // Always reset console visibility first, then show for admin only
+    const cw = $('dash-console-wrap');
+    if (cw) {
+      cw.classList.add('hidden');
+      if (_session.role === 'admin') cw.classList.remove('hidden');
     }
+    connectWS();
+    if (_session.role === 'admin') loadCfg();
   }
 
   async function logout() {
@@ -666,23 +667,13 @@ const G = (() => {
     });
   }
 
-  // ── Alert activity heatmap (localStorage) ────────────────
-  function recordActivity() {
-    const today = new Date().toISOString().slice(0, 10);
-    let activity;
-    try { activity = JSON.parse(localStorage.getItem('garuda_activity') || '{}'); }
-    catch(_) { activity = {}; }
-    activity[today] = (activity[today] || 0) + 1;
-    localStorage.setItem('garuda_activity', JSON.stringify(activity));
-    renderHeatmap();
-  }
+  // ── Alert activity heatmap (backend-stored, lifetime-persistent) ────────
+  let _lastHeatmapKey = '';
 
-  function renderHeatmap() {
+  function renderHeatmap(activity) {
+    activity = activity || {};
     const container = $('heatmap');
     if (!container) return;
-    let activity;
-    try { activity = JSON.parse(localStorage.getItem('garuda_activity') || '{}'); }
-    catch(_) { activity = {}; }
 
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const CELL = 10, GAP = 3, COL_W = CELL + GAP;
@@ -917,7 +908,7 @@ const G = (() => {
       $('pipeline-label').textContent = 'Alert';
       $('hud-dot').className = 'hdr-dot alert';
       $('hud-label').textContent = 'Alert';
-      if (!_prevAlertActive) recordActivity();
+      // Alert activity is recorded server-side; heatmap updates via WS state
     } else {
       banner.classList.remove('visible');
       $('pipeline-dot').className = 'hdr-dot online';
@@ -955,6 +946,15 @@ const G = (() => {
 
     // Hardware stats
     _updateHw(s);
+
+    // Alert activity heatmap — re-render only when data changes
+    if (s.alert_history) {
+      const key = JSON.stringify(s.alert_history);
+      if (key !== _lastHeatmapKey) {
+        _lastHeatmapKey = key;
+        renderHeatmap(s.alert_history);
+      }
+    }
 
     // Recent detections — only add entry when danger_info carries a scissors trigger
     if (s.danger_info) maybeAddDetection(s.danger_info);
@@ -1262,6 +1262,43 @@ const G = (() => {
     } catch(e) {}
   }
 
+  async function scanNetwork() {
+    const btn = $('scan-btn');
+    const el  = $('network-scan-list');
+    if (!el) return;
+    if (btn) btn.textContent = 'Scanning…';
+    el.style.display = 'flex';
+    el.innerHTML = '<div class="device-empty">Scanning local network…</div>';
+    try {
+      const data = await api('GET', '/api/arp');
+      const entries = data.entries || [];
+      if (!entries.length) {
+        el.innerHTML = '<div class="device-empty">No devices found. Try again in 30s after presence poller runs.</div>';
+      } else {
+        el.innerHTML = '<div class="device-empty" style="margin-bottom:4px;color:var(--t2)">Click a device to register it as the owner\'s phone:</div>'
+          + entries.map(e => `
+            <div class="device-row" style="cursor:${e.registered?'default':'pointer'}" onclick="${e.registered?'':
+              `G._regFromScan('${e.mac}','${e.ip}')`}">
+              <span class="device-dot ${e.registered ? 'online' : ''}"></span>
+              <span class="device-mac" style="flex:1">${esc(e.mac)}</span>
+              <span style="font-size:11px;color:var(--t3)">${esc(e.ip)}</span>
+              ${e.registered ? '<span style="font-size:11px;color:var(--success)">registered</span>' : ''}
+            </div>`).join('');
+      }
+    } catch(e) {
+      el.innerHTML = '<div class="device-empty" style="color:var(--danger)">Scan failed.</div>';
+    }
+    if (btn) btn.textContent = 'Scan Network';
+  }
+
+  function _regFromScan(mac, ip) {
+    const nameEl = $('dev-name');
+    const macEl  = $('dev-mac');
+    if (nameEl) nameEl.value = `Device (${ip})`;
+    if (macEl)  macEl.value  = mac;
+    showEl('dev-msg', `MAC pre-filled — enter a name and click Add.`, true);
+  }
+
   // ── Stream quality ─────────────────────────────────────────
   let _streamQuality = sessionStorage.getItem('garuda_sq') || 'high';
 
@@ -1407,7 +1444,7 @@ const G = (() => {
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs,
-    loadDevices, addDevice, deleteDevice, setStreamQuality,
+    loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, setStreamQuality,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,
   };
