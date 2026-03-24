@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=30"/>
+  <link rel="stylesheet" href="/static/style.css?v=31"/>
 </head>
 <body>
 <div id="app">
@@ -182,7 +182,10 @@
                   <div class="status-label" id="status-label">ALL CLEAR</div>
                   <div class="status-desc" id="status-desc">No activity detected</div>
                 </div>
-                <span id="owner-badge" class="owner-badge hidden">Owner Home</span>
+                <span id="owner-badge" class="owner-badge hidden">
+                  <span id="owner-badge-name">Owner</span> is home
+                  <button class="owner-refresh-btn" title="Refresh presence" onclick="G.refreshPresence()">↻</button>
+                </span>
               </div>
               <div class="status-foot">
                 <span class="status-foot-lbl">Last alert</span>
@@ -534,6 +537,16 @@
               Known Devices (Owner Detection)
               <button class="btn btn-ghost btn-sm" onclick="G.scanNetwork()" id="scan-btn">Scan Network</button>
             </div>
+            <div class="tip-box">
+              <strong>iPhone users:</strong> iOS randomizes your MAC by default. To use your real MAC:
+              <ol style="margin:6px 0 0 16px;padding:0;font-size:12px;line-height:1.7">
+                <li>Open <strong>Settings → Wi-Fi</strong></li>
+                <li>Tap the <strong>ⓘ</strong> next to your home network</li>
+                <li>Turn off <strong>Private Wi-Fi Address</strong></li>
+                <li>Reconnect, then tap ⓘ again — copy the <strong>Wi-Fi Address</strong> shown there</li>
+              </ol>
+              <strong>Android users:</strong> Settings → Wi-Fi → (network) → Privacy → use device MAC.
+            </div>
             <div id="network-scan-list" class="devices-list" style="display:none"></div>
             <div id="devices-list" class="devices-list"></div>
             <div class="device-add-row">
@@ -849,6 +862,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=23"></script>
+<script src="/static/app.js?v=24"></script>
 </body>
 </html>

@@ -849,6 +849,9 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── Owner presence badge ───────────────────────────────── */
 .owner-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin-left: auto;
   font-size: 11px;
   font-weight: 600;
@@ -857,6 +860,31 @@ input[type=range]::-webkit-slider-thumb {
   opacity: 0.85;
 }
 .owner-badge.hidden { display: none; }
+.owner-refresh-btn {
+  background: none;
+  border: none;
+  color: var(--success);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.2s;
+}
+.owner-refresh-btn:hover { opacity: 1; transform: rotate(30deg); }
+.owner-refresh-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Settings tip box ────────────────────────────────────── */
+.tip-box {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--t2);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
 
 /* ── Settings: section title ────────────────────────────── */
 .settings-section-title {

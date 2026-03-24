@@ -959,9 +959,15 @@ const G = (() => {
     // Recent detections — only add entry when danger_info carries a scissors trigger
     if (s.danger_info) maybeAddDetection(s.danger_info);
 
-    // Owner badge
+    // Owner badge — show device name
     const badge = $('owner-badge');
-    if (badge) badge.classList.toggle('hidden', !s.owner_present);
+    if (badge) {
+      badge.classList.toggle('hidden', !s.owner_present);
+      if (s.owner_present && s.owner_name) {
+        const nameEl = $('owner-badge-name');
+        if (nameEl) nameEl.textContent = s.owner_name;
+      }
+    }
 
     // System console — admin dashboard only
     if (_session && _session.role === 'admin') {
@@ -1299,6 +1305,16 @@ const G = (() => {
     showEl('dev-msg', `MAC pre-filled — enter a name and click Add.`, true);
   }
 
+  // ── Presence refresh ──────────────────────────────────────
+  async function refreshPresence() {
+    const btn = document.querySelector('.owner-refresh-btn');
+    if (btn) { btn.textContent = '…'; btn.disabled = true; }
+    try {
+      await api('POST', '/api/presence_refresh', {});
+    } catch(e) {}
+    if (btn) { btn.textContent = '↻'; btn.disabled = false; }
+  }
+
   // ── Stream quality ─────────────────────────────────────────
   let _streamQuality = sessionStorage.getItem('garuda_sq') || 'high';
 
@@ -1444,7 +1460,7 @@ const G = (() => {
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs,
-    loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, setStreamQuality,
+    loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence, setStreamQuality,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,
   };

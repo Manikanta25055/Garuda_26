@@ -149,6 +149,7 @@ CUSTOM_VOICE_COMMANDS = {}
 
 _alert_active = False
 _alert_flash_count = 0
+_alert_end_time  = 0.0   # epoch when current alert expires
 _danger_trigger_info = ""   # detection text from the SPECIFIC frame that triggered scissors
 _danger_consecutive = 0     # consecutive frames with danger label detected
 DANGER_CONFIRM_FRAMES = 15  # must appear in this many consecutive frames to trigger alert
@@ -164,7 +165,7 @@ KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
 _alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
 _owner_present   = False
 _owner_last_seen = 0.0
-OWNER_AWAY_GRACE = 300        # seconds without seeing device before marking away
+OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
 _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_poller)
 
 # ── Detection categories ──────────────────────────────────
@@ -517,7 +518,8 @@ def trigger_software_alert():
         except Exception:
             pass
     _alert_active = True
-    _alert_flash_count = 10
+    _alert_flash_count = 3          # legacy field kept for compat; real timer below
+    _alert_end_time = time.time() + 12   # alert lasts 12 seconds
     _last_alert_time = datetime.datetime.now()
     _record_alert_activity()
     log_system_update("Alert triggered.")
@@ -1114,13 +1116,13 @@ def require_admin(request: Request):
 # STATE HELPER
 ##############################################################################
 def get_state_dict():
-    global _alert_active, _alert_flash_count, _danger_trigger_info
-    # Decrement flash count
-    if _alert_flash_count > 0:
-        _alert_flash_count -= 1
-        if _alert_flash_count == 0:
-            _alert_active = False
-            _danger_trigger_info = ""
+    global _alert_active, _alert_flash_count, _danger_trigger_info, _alert_end_time
+    # Expire alert once the wall-clock timer runs out
+    if _alert_active and _alert_end_time > 0 and time.time() >= _alert_end_time:
+        _alert_active = False
+        _alert_end_time = 0.0
+        _alert_flash_count = 0
+        _danger_trigger_info = ""
 
     uptime = int(time.time() - _app_start_time)
     hours, rem = divmod(uptime, 3600)
@@ -1193,6 +1195,9 @@ def get_state_dict():
         "cpu_temp": cpu_temp,
         "inference_fps": inference_fps,
         "owner_present": _owner_present,
+        "owner_name": next(
+            (d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), None
+        ),
         "known_devices": [
             {"name": d["name"], "mac": d["mac"],
              "online": d["mac"].lower() in _last_arp_cache}
@@ -1703,6 +1708,31 @@ async def get_arp_table(session=Depends(require_admin)):
     for e in entries:
         e["registered"] = e["mac"].lower() in registered_macs
     return {"entries": entries}
+
+def _do_presence_check():
+    """Blocking presence check — run in thread executor from async endpoints."""
+    global _owner_present, _owner_last_seen
+    subnet = _get_local_subnet()
+    if subnet:
+        _probe_subnet_for_arp(subnet)
+        time.sleep(2)
+    found = _check_device_presence()
+    if found:
+        _owner_last_seen = time.time()
+        if not _owner_present:
+            _owner_present = True
+            log_system_update("Owner arrived (manual refresh).")
+    elif _owner_present:
+        _owner_present = False
+        log_system_update("Owner away (manual refresh — device not found).")
+
+@fastapi_app.post("/api/presence_refresh")
+async def presence_refresh(session=Depends(require_session)):
+    """Trigger an immediate ARP presence check without waiting for the 30s poller."""
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _do_presence_check)
+    push_urgent_ws()
+    return {"owner_present": _owner_present}
 
 @fastapi_app.post("/api/devices/add")
 async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
