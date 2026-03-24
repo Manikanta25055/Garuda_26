@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=27"/>
+  <link rel="stylesheet" href="/static/style.css?v=28"/>
 </head>
 <body>
 <div id="app">
@@ -182,6 +182,7 @@
                   <div class="status-label" id="status-label">ALL CLEAR</div>
                   <div class="status-desc" id="status-desc">No activity detected</div>
                 </div>
+                <span id="owner-badge" class="owner-badge hidden">Owner Home</span>
               </div>
               <div class="status-foot">
                 <span class="status-foot-lbl">Last alert</span>
@@ -251,12 +252,6 @@
               </div>
             </div>
 
-            <!-- System console -->
-            <div class="dash-console-card">
-              <div class="console-header">System Console</div>
-              <div id="sys-console" class="console"></div>
-            </div>
-
           </div><!-- /dash-main -->
 
           <!-- Right: stats + modes -->
@@ -308,6 +303,11 @@
               LIVE CAMERA
             </div>
             <span id="cam-status-txt" class="cam-ov-meta">Connecting...</span>
+            <div class="stream-quality-group">
+              <button id="sq-low"  class="sq-pill" onclick="G.setStreamQuality('low')">Low</button>
+              <button id="sq-med"  class="sq-pill" onclick="G.setStreamQuality('med')">Med</button>
+              <button id="sq-high" class="sq-pill sq-active" onclick="G.setStreamQuality('high')">High</button>
+            </div>
             <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">Close</button>
           </div>
           <div class="cam-ov-body">
@@ -527,7 +527,22 @@
               </div>
               <div id="priv-toggle" class="toggle on" onclick="G.togglePrivacy()"></div>
             </div>
-            <div style="margin-top:8px">
+            <div class="sep"></div>
+            <!-- Known Devices (owner presence detection) -->
+            <div class="settings-section-title">Known Devices (Owner Detection)</div>
+            <div id="devices-list" class="devices-list"></div>
+            <div class="device-add-row">
+              <input id="dev-name" class="input" placeholder="Device name (e.g. Manikanta's Phone)"/>
+              <input id="dev-mac"  class="input" placeholder="MAC address (e.g. a4:c3:f0:12:34:56)"/>
+              <button class="btn btn-primary btn-sm" onclick="G.addDevice()">Add</button>
+            </div>
+            <div id="dev-msg" class="msg hidden"></div>
+            <div class="sep"></div>
+            <!-- Watch Labels -->
+            <div class="settings-section-title">Watch Labels <span style="font-size:11px;color:var(--t3);font-weight:400">(log only, no alert)</span></div>
+            <input id="watch-labels" class="input" type="text" placeholder="person, backpack, suitcase"/>
+            <div style="font-size:11px;color:var(--t3);margin-top:4px">Comma-separated YOLO class names to silently log (no alert triggered).</div>
+            <div style="margin-top:16px">
               <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
             </div>
             <div id="sys-msg" class="msg hidden"></div>
@@ -550,9 +565,13 @@
             <div class="overline" style="margin-bottom:8px">System Updates</div>
             <div id="a-syslog" class="console" style="height:220px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
           </div>
-          <div>
+          <div style="margin-bottom:24px">
             <div class="overline" style="margin-bottom:8px">Voice Log</div>
             <div id="a-vlog" class="narada-log section-card" style="height:180px"></div>
+          </div>
+          <div>
+            <div class="overline" style="margin-bottom:8px">Presence Log</div>
+            <div id="a-preslog" class="console" style="height:160px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
           </div>
         </div>
       </div>
@@ -825,6 +844,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=20"></script>
+<script src="/static/app.js?v=21"></script>
 </body>
 </html>

@@ -847,6 +847,85 @@ input[type=range]::-webkit-slider-thumb {
 
 /* Hamburger / sidebar removed — replaced by iOS bottom nav */
 
+/* ── Owner presence badge ───────────────────────────────── */
+.owner-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success);
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+}
+.owner-badge.hidden { display: none; }
+
+/* ── Settings: section title ────────────────────────────── */
+.settings-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+/* ── Device list ─────────────────────────────────────────── */
+.devices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  min-height: 24px;
+}
+.device-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.device-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--border-2);
+  flex-shrink: 0;
+}
+.device-dot.online { background: var(--success); }
+.device-name { flex: 1; color: var(--t1); }
+.device-mac  { color: var(--t3); font-family: var(--mono); font-size: 11px; }
+.device-empty { font-size: 12px; color: var(--t3); padding: 6px 0; }
+.device-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.device-add-row .input { flex: 1; min-width: 120px; }
+
+/* ── Stream quality pills ────────────────────────────────── */
+.stream-quality-group {
+  display: flex;
+  gap: 4px;
+}
+.sq-pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border-2);
+  color: var(--t3);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.sq-pill.sq-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.sq-pill:hover:not(.sq-active) { border-color: var(--t3); color: var(--t2); }
+
 /* ── Mobile responsive ─────────────────────────────────── */
 @media (max-width: 768px) {
 

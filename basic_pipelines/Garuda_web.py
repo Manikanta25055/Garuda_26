@@ -155,6 +155,24 @@ _mode_lock = threading.Lock()
 _class_counts_today = {}   # class_name → count since startup
 _total_frames = 0          # total inference frames (for avg FPS)
 
+# ── Phone presence detection ──────────────────────────────
+KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
+_owner_present   = False
+_owner_last_seen = 0.0
+OWNER_AWAY_GRACE = 300        # seconds without seeing device before marking away
+_last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_poller)
+
+# ── Detection categories ──────────────────────────────────
+WATCH_LABELS: list = ['person', 'backpack', 'suitcase']  # log silently, no alert
+
+# ── Stream quality ────────────────────────────────────────
+STREAM_QUALITY = 'high'
+_QUALITY_MAP = {
+    'low':  (30, 0.125),   # JPEG q=30, max 8 fps
+    'med':  (50, 0.067),   # JPEG q=50, max 15 fps
+    'high': (75, 0.033),   # JPEG q=75, max 30 fps
+}
+
 USERS = {
     "user": {
         "password": "user",
@@ -240,7 +258,7 @@ def save_users():
 def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
     global EMAIL_COOLDOWN, EMAIL_SENDER, EMAIL_SENDER_PASS, DETECTION_THRESHOLD
-    global GROQ_API_KEY
+    global GROQ_API_KEY, KNOWN_DEVICES, WATCH_LABELS
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
@@ -253,6 +271,8 @@ def load_config():
             EMAIL_SENDER_PASS = cfg.get("email_sender_pass", EMAIL_SENDER_PASS)
             DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
             GROQ_API_KEY = cfg.get("groq_api_key", GROQ_API_KEY)
+            KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
+            WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
 
@@ -267,6 +287,8 @@ def save_config():
             "email_sender": EMAIL_SENDER,
             "email_sender_pass": EMAIL_SENDER_PASS,
             "detection_threshold": DETECTION_THRESHOLD,
+            "known_devices": KNOWN_DEVICES,
+            "watch_labels": WATCH_LABELS,
         }
         with open(CONFIG_FILE, "w") as f:
             json.dump(cfg, f, indent=2)
@@ -361,6 +383,38 @@ def push_urgent_ws():
     """Signal the WS broadcaster to push state immediately (cross-thread safe)."""
     if _event_loop and _ws_trigger:
         _event_loop.call_soon_threadsafe(_ws_trigger.set)
+
+##############################################################################
+# PHONE PRESENCE DETECTION
+##############################################################################
+def _check_device_presence() -> bool:
+    """Return True if any registered device MAC appears in the kernel ARP table."""
+    global _last_arp_cache
+    try:
+        with open('/proc/net/arp') as f:
+            _last_arp_cache = f.read().lower()
+        return any(d.get('mac', '').lower() in _last_arp_cache for d in KNOWN_DEVICES)
+    except Exception:
+        return False
+
+def _presence_poller():
+    """Background thread: poll ARP table every 30s to detect owner's phone."""
+    global _owner_present, _owner_last_seen
+    while True:
+        time.sleep(30)
+        if not KNOWN_DEVICES:
+            continue
+        found = _check_device_presence()
+        if found:
+            _owner_last_seen = time.time()
+            if not _owner_present:
+                _owner_present = True
+                log_system_update("Owner arrived — device detected on network.")
+                push_urgent_ws()
+        elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
+            _owner_present = False
+            log_system_update("Owner away — device not seen for 5 min.")
+            push_urgent_ws()
 
 ##############################################################################
 # ALERTS
@@ -505,6 +559,9 @@ def app_callback(pad, info, user_data):
                     frame[y1:y2, x1:x2] = roi_face
             if label == user_data.danger_label and confidence >= 0.55:
                 danger_detected = True
+            elif label in WATCH_LABELS and label != user_data.danger_label:
+                # WATCH category: log silently, no alert
+                log_system_update(f"[WATCH] {label} ({confidence:.2f})")
 
     if det_count > 0:
         _detections_today += det_count
@@ -1055,6 +1112,12 @@ def get_state_dict():
         "ram_total_gb": ram_total_gb,
         "cpu_temp": cpu_temp,
         "inference_fps": inference_fps,
+        "owner_present": _owner_present,
+        "known_devices": [
+            {"name": d["name"], "mac": d["mac"],
+             "online": d["mac"].lower() in _last_arp_cache}
+            for d in KNOWN_DEVICES
+        ],
     }
 
 ##############################################################################
@@ -1068,6 +1131,7 @@ async def _lifespan(app):
     _event_loop = asyncio.get_event_loop()
     _ws_trigger = asyncio.Event()
     asyncio.ensure_future(_ws_broadcaster())
+    threading.Thread(target=_presence_poller, daemon=True).start()
     yield
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
@@ -1124,6 +1188,14 @@ class ConfigUpdateRequest(BaseModel):
     email_cooldown: Optional[int] = None
     danger_label: Optional[str] = None
     privacy: Optional[bool] = None
+    watch_labels: Optional[List[str]] = None
+
+class DeviceAddRequest(BaseModel):
+    name: str
+    mac: str
+
+class DeviceDeleteRequest(BaseModel):
+    mac: str
 
 class CustomCommandRequest(BaseModel):
     phrase: str
@@ -1486,6 +1558,7 @@ async def get_config(session=Depends(require_admin)):
         "privacy": MODE_PRIVACY,
         "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
         "custom_modes": CUSTOM_MODES,
+        "watch_labels": WATCH_LABELS,
     }
 
 @fastapi_app.post("/api/config")
@@ -1509,6 +1582,9 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
         # Update danger label in user_data if available
         if app_gst and hasattr(app_gst, 'user_data'):
             app_gst.user_data.danger_label = data.danger_label
+    if data.watch_labels is not None:
+        global WATCH_LABELS
+        WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
     save_config()
     log_system_update("Config updated.")
     return {"ok": True}
@@ -1524,6 +1600,42 @@ async def delete_command(data: DeleteCommandRequest, session=Depends(require_adm
     CUSTOM_VOICE_COMMANDS.pop(data.phrase.lower(), None)
     save_config()
     return {"ok": True}
+
+@fastapi_app.get("/api/devices")
+async def get_devices(session=Depends(require_admin)):
+    return {"devices": KNOWN_DEVICES, "owner_present": _owner_present}
+
+@fastapi_app.post("/api/devices/add")
+async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
+    import re
+    mac = data.mac.strip().lower()
+    if not re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
+        raise HTTPException(400, "Invalid MAC address format (use aa:bb:cc:dd:ee:ff)")
+    if any(d['mac'].lower() == mac for d in KNOWN_DEVICES):
+        raise HTTPException(400, "Device with this MAC already registered")
+    KNOWN_DEVICES.append({"name": data.name.strip(), "mac": mac})
+    save_config()
+    log_system_update(f"Known device added: {data.name.strip()} ({mac})")
+    return {"ok": True, "devices": KNOWN_DEVICES}
+
+@fastapi_app.post("/api/devices/delete")
+async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin)):
+    mac = data.mac.strip().lower()
+    before = len(KNOWN_DEVICES)
+    KNOWN_DEVICES[:] = [d for d in KNOWN_DEVICES if d['mac'].lower() != mac]
+    if len(KNOWN_DEVICES) == before:
+        raise HTTPException(404, "Device not found")
+    save_config()
+    log_system_update(f"Known device removed: {mac}")
+    return {"ok": True, "devices": KNOWN_DEVICES}
+
+@fastapi_app.post("/api/stream_quality")
+async def set_stream_quality(data: dict, session=Depends(require_session)):
+    global STREAM_QUALITY
+    q = data.get("quality", "high")
+    if q in _QUALITY_MAP:
+        STREAM_QUALITY = q
+    return {"quality": STREAM_QUALITY}
 
 @fastapi_app.post("/api/email/test")
 async def test_email(session=Depends(require_admin)):
@@ -1554,17 +1666,21 @@ async def emergency_stop(session=Depends(require_session)):
 async def mjpeg_stream(request: Request):
     async def generate():
         last_seq = -1
+        last_sent = 0.0
         while True:
             if await request.is_disconnected():
                 break
+            jpeg_q, min_interval = _QUALITY_MAP[STREAM_QUALITY]
+            now = time.time()
             with _frame_lock:
                 seq = _frame_seq
-                frame = _frame_buffer if seq != last_seq else None
-            if frame is not None:
+                raw = _frame_raw if seq != last_seq else None
+            if raw is not None and (now - last_sent) >= min_interval:
+                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, jpeg_q])
                 last_seq = seq
-                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
+                last_sent = now
+                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
             else:
-                # No new frame yet — yield control briefly without busy-spinning
                 await asyncio.sleep(0.005)
     return StreamingResponse(
         generate(),
@@ -1627,10 +1743,10 @@ async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
 # Compute state ONCE per tick and fan-out via asyncio.gather — O(1) in CPU.
 
 async def _ws_broadcaster():
-    """Background task: push state immediately on events, or every 2s as heartbeat."""
+    """Background task: push state immediately on events, or every 5s as heartbeat."""
     while True:
         try:
-            await asyncio.wait_for(_ws_trigger.wait(), timeout=2.0)
+            await asyncio.wait_for(_ws_trigger.wait(), timeout=5.0)
         except asyncio.TimeoutError:
             pass
         _ws_trigger.clear()

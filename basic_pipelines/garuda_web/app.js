@@ -427,6 +427,7 @@ const G = (() => {
     const isHidden = overlay.classList.contains('hidden');
     if (isHidden) {
       overlay.classList.remove('hidden');
+      setStreamQuality(_streamQuality);
       const camOffline = $('cam-offline');
       if (camOffline) camOffline.style.display = 'flex';
       _camSetStatus('Connecting…');
@@ -954,14 +955,18 @@ const G = (() => {
     // Recent detections — only add entry when danger_info carries a scissors trigger
     if (s.danger_info) maybeAddDetection(s.danger_info);
 
-    // Console
+    // Owner badge
+    const badge = $('owner-badge');
+    if (badge) badge.classList.toggle('hidden', !s.owner_present);
+
+    // Console — Narada chat page only (system console removed from user dashboard)
     const logText = (s.system_log || []).join('\n');
-    ['sys-console', 'narada-console'].forEach(id => {
-      const con = $(id); if (!con) return;
-      const atBot = con.scrollTop + con.clientHeight >= con.scrollHeight - 8;
-      con.textContent = logText;
-      if (atBot) con.scrollTop = con.scrollHeight;
-    });
+    const narCon = $('narada-console');
+    if (narCon) {
+      const atBot = narCon.scrollTop + narCon.clientHeight >= narCon.scrollHeight - 8;
+      narCon.textContent = logText;
+      if (atBot) narCon.scrollTop = narCon.scrollHeight;
+    }
 
     // Narada
     renderLog('narada-vlog',  s.voice_log      || [], false);
@@ -1154,7 +1159,12 @@ const G = (() => {
       $('thr-val').textContent = (t / 100).toFixed(2);
       _privacyOn = cfg.privacy !== undefined ? cfg.privacy : true;
       $('priv-toggle').className = 'toggle' + (_privacyOn ? ' on' : '');
+      const wl = $('watch-labels');
+      if (wl) wl.value = (cfg.watch_labels || []).join(', ');
+      const dl = $('danger-lbl');
+      if (dl && cfg.danger_label) dl.value = cfg.danger_label;
     } catch(e) {}
+    loadDevices();
   }
 
   function togglePrivacy() {
@@ -1165,9 +1175,15 @@ const G = (() => {
   async function saveSettings() {
     const thr = parseInt($('thr-slider').value) / 100;
     const dl = val('danger-lbl') || undefined;
+    const wlRaw = val('watch-labels') || '';
+    const watchLabels = wlRaw.split(',').map(s => s.trim()).filter(Boolean);
     try {
-      await api('POST', '/api/config',
-        { detection_threshold: thr, privacy: _privacyOn, ...(dl ? { danger_label: dl } : {}) });
+      await api('POST', '/api/config', {
+        detection_threshold: thr,
+        privacy: _privacyOn,
+        watch_labels: watchLabels,
+        ...(dl ? { danger_label: dl } : {})
+      });
       showEl('sys-msg', 'Settings saved.', true);
     } catch(e) { showEl('sys-msg', e.detail || 'Failed.', false); }
   }
@@ -1175,10 +1191,18 @@ const G = (() => {
   // ── Admin: Logs ───────────────────────────────────────────
   function renderLogs() {
     const q = (val('log-q') || '').toLowerCase();
-    const el = $('a-syslog'); if (!el) return;
-    const lines = _allLogs.filter(l => !q || l.toLowerCase().includes(q));
-    el.textContent = lines.join('\n');
-    el.scrollTop = el.scrollHeight;
+    const el = $('a-syslog');
+    if (el) {
+      const lines = _allLogs.filter(l => !q || l.toLowerCase().includes(q));
+      el.textContent = lines.join('\n');
+      el.scrollTop = el.scrollHeight;
+    }
+    const pl = $('a-preslog');
+    if (pl) {
+      const presLines = _allLogs.filter(l => l.includes('[OWNER'));
+      pl.textContent = presLines.length ? presLines.join('\n') : 'No presence events yet.';
+      pl.scrollTop = pl.scrollHeight;
+    }
   }
 
   function filterLogs() { renderLogs(); }
@@ -1189,6 +1213,60 @@ const G = (() => {
     a.href = URL.createObjectURL(blob);
     a.download = `garuda-logs-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
+  }
+
+  // ── Device management (owner presence) ───────────────────
+  async function loadDevices() {
+    const el = $('devices-list'); if (!el) return;
+    try {
+      const data = await api('GET', '/api/devices');
+      const devs = data.devices || [];
+      if (!devs.length) {
+        el.innerHTML = '<div class="device-empty">No devices registered.</div>';
+        return;
+      }
+      el.innerHTML = devs.map(d => `
+        <div class="device-row">
+          <span class="device-dot ${d.online ? 'online' : ''}"></span>
+          <span class="device-name">${esc(d.name)}</span>
+          <span class="device-mac">${esc(d.mac)}</span>
+          <button class="btn btn-ghost btn-sm" onclick="G.deleteDevice('${esc(d.mac)}')">Remove</button>
+        </div>`).join('');
+    } catch(e) { el.innerHTML = '<div class="device-empty" style="color:var(--danger)">Failed to load devices.</div>'; }
+  }
+
+  async function addDevice() {
+    const name = val('dev-name').trim();
+    const mac  = val('dev-mac').trim().toLowerCase();
+    const MAC_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/;
+    if (!name) { showEl('dev-msg', 'Enter a device name.', false); return; }
+    if (!MAC_RE.test(mac)) { showEl('dev-msg', 'Invalid MAC format (e.g. a4:c3:f0:12:34:56).', false); return; }
+    try {
+      await api('POST', '/api/devices/add', { name, mac });
+      $('dev-name').value = ''; $('dev-mac').value = '';
+      showEl('dev-msg', 'Device added.', true);
+      loadDevices();
+    } catch(e) { showEl('dev-msg', e.detail || 'Failed to add device.', false); }
+  }
+
+  async function deleteDevice(mac) {
+    try {
+      await api('POST', '/api/devices/delete', { mac });
+      loadDevices();
+    } catch(e) {}
+  }
+
+  // ── Stream quality ─────────────────────────────────────────
+  let _streamQuality = sessionStorage.getItem('garuda_sq') || 'high';
+
+  function setStreamQuality(q) {
+    _streamQuality = q;
+    sessionStorage.setItem('garuda_sq', q);
+    ['low','med','high'].forEach(t => {
+      const btn = $('sq-' + t); if (!btn) return;
+      btn.classList.toggle('sq-active', t === q);
+    });
+    api('POST', '/api/stream_quality', { quality: q }).catch(() => {});
   }
 
   // ── Admin: Commands ───────────────────────────────────────
@@ -1323,6 +1401,7 @@ const G = (() => {
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs,
+    loadDevices, addDevice, deleteDevice, setStreamQuality,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,
   };
