@@ -108,7 +108,7 @@ EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 
 GROQ_API_KEY = ""   # loaded from system_logs/config.json at startup
-GROQ_MODEL   = "llama-3.1-8b-instant"
+GROQ_MODEL   = "llama-3.3-70b-versatile"
 
 ##############################################################################
 # GLOBALS & SETTINGS
