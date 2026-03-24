@@ -33,6 +33,9 @@ import string
 import json
 import requests
 import secrets
+import socket
+import ipaddress
+import subprocess
 import asyncio
 import threading
 from pathlib import Path
@@ -147,7 +150,7 @@ _alert_active = False
 _alert_flash_count = 0
 _danger_trigger_info = ""   # detection text from the SPECIFIC frame that triggered scissors
 _danger_consecutive = 0     # consecutive frames with danger label detected
-DANGER_CONFIRM_FRAMES = 5   # must appear in this many consecutive frames to trigger alert
+DANGER_CONFIRM_FRAMES = 15  # must appear in this many consecutive frames to trigger alert
 _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
@@ -387,6 +390,39 @@ def push_urgent_ws():
 ##############################################################################
 # PHONE PRESENCE DETECTION
 ##############################################################################
+def _get_local_subnet() -> str:
+    """Return the first local subnet (e.g. '192.168.1.0/24') from ip route."""
+    try:
+        out = subprocess.check_output(['ip', 'route'], text=True, timeout=3)
+        for line in out.splitlines():
+            parts = line.split()
+            # Lines like: "192.168.1.0/24 dev wlan0 ..."
+            if parts and '/' in parts[0] and parts[0][0].isdigit():
+                return parts[0]
+    except Exception:
+        pass
+    return ''
+
+def _probe_subnet_for_arp(subnet: str):
+    """Send a UDP datagram to every host in subnet to force ARP table population.
+
+    The packets are sent to port 9 (discard service) so remote hosts ignore them,
+    but the kernel must resolve each MAC via ARP before sending — populating the
+    local ARP cache so /proc/net/arp reflects every reachable device.
+    """
+    try:
+        net = ipaddress.IPv4Network(subnet, strict=False)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setblocking(False)
+        for host in net.hosts():
+            try:
+                sock.sendto(b'\x00', (str(host), 9))
+            except Exception:
+                pass
+        sock.close()
+    except Exception:
+        pass
+
 def _check_device_presence() -> bool:
     """Return True if any registered device MAC appears in the kernel ARP table."""
     global _last_arp_cache
@@ -398,12 +434,24 @@ def _check_device_presence() -> bool:
         return False
 
 def _presence_poller():
-    """Background thread: poll ARP table every 30s to detect owner's phone."""
+    """Background thread: poll ARP table every 30s to detect owner's phone.
+
+    Before reading /proc/net/arp we send UDP probes to every host in the local
+    subnet.  This forces ARP resolution so the table contains all active devices,
+    not just those that have recently communicated with the Pi directly.
+    """
     global _owner_present, _owner_last_seen
+    _subnet = ''
     while True:
         time.sleep(30)
         if not KNOWN_DEVICES:
             continue
+        # Discover subnet once (lazy) and reprobe each cycle
+        if not _subnet:
+            _subnet = _get_local_subnet()
+        if _subnet:
+            _probe_subnet_for_arp(_subnet)
+            time.sleep(2)   # allow ARP responses to arrive
         found = _check_device_presence()
         if found:
             _owner_last_seen = time.time()
@@ -557,7 +605,7 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label == user_data.danger_label and confidence >= 0.55:
+            if label == user_data.danger_label and confidence >= 0.70:
                 danger_detected = True
             elif label in WATCH_LABELS and label != user_data.danger_label:
                 # WATCH category: log silently, no alert
@@ -845,7 +893,7 @@ HARDWARE:
 
 DETECTION SYSTEM:
 - Model: YOLOv6n trained on 80 COCO classes
-- Danger label: scissors (requires 5 consecutive frames at confidence ≥ 0.55 to trigger — avoids false alarms)
+- Danger label: scissors (requires 15 consecutive frames at confidence ≥ 0.70 to trigger — avoids false alarms)
 - Detection threshold: adjustable 0.05–0.95 (lower = more sensitive, higher = stricter)
 - On threat: plays alarm sound, sends email alert with detection details and timestamp
 
@@ -1387,8 +1435,8 @@ def _groq_stream_text(user_input):
     system_prompt = (
         "You are Narada, the AI assistant embedded in Garuda — an AI home security system "
         "running on Raspberry Pi 5 with Hailo-8L AI accelerator and IMX708 camera (1280×720 @ 60fps).\n"
-        "System details: YOLOv6n object detection, danger label = scissors (5-frame confirmation, "
-        "confidence ≥ 0.55), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
+        "System details: YOLOv6n object detection, danger label = scissors (15-frame confirmation, "
+        "confidence ≥ 0.70), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
         "(0.05–0.95 default 0.35), email alerts via Gmail SMTP, WebRTC + WS binary JPEG + MJPEG "
         "camera streaming, Groq LLM (llama-3.3-70b-versatile) for this chat.\n"
         "When the user requests a mode or setting change, confirm what you're doing. "

@@ -237,7 +237,11 @@ const G = (() => {
     _initChatInput();
     setModelTier(_chatModelTier);   // restore saved tier
     connectWS();
-    if (_session.role === 'admin') loadCfg();
+    if (_session.role === 'admin') {
+      loadCfg();
+      const cw = $('dash-console-wrap');
+      if (cw) cw.classList.remove('hidden');
+    }
   }
 
   async function logout() {
@@ -959,13 +963,15 @@ const G = (() => {
     const badge = $('owner-badge');
     if (badge) badge.classList.toggle('hidden', !s.owner_present);
 
-    // Console — Narada chat page only (system console removed from user dashboard)
-    const logText = (s.system_log || []).join('\n');
-    const narCon = $('narada-console');
-    if (narCon) {
-      const atBot = narCon.scrollTop + narCon.clientHeight >= narCon.scrollHeight - 8;
-      narCon.textContent = logText;
-      if (atBot) narCon.scrollTop = narCon.scrollHeight;
+    // System console — admin dashboard only
+    if (_session && _session.role === 'admin') {
+      const logText = (s.system_log || []).join('\n');
+      const con = $('sys-console');
+      if (con) {
+        const atBot = con.scrollTop + con.clientHeight >= con.scrollHeight - 8;
+        con.textContent = logText;
+        if (atBot) con.scrollTop = con.scrollHeight;
+      }
     }
 
     // Narada
