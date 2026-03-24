@@ -235,6 +235,7 @@ const G = (() => {
     nav('dashboard');
     renderHeatmap();
     _initChatInput();
+    setModelTier(_chatModelTier);   // restore saved tier
     connectWS();
     if (_session.role === 'admin') loadCfg();
   }
@@ -442,8 +443,28 @@ const G = (() => {
   }
 
   // ── Chat ──────────────────────────────────────────────────
-  let _chatBusy = false;
-  let _thinkTimer = null;
+  let _chatBusy    = false;
+  let _thinkTimer  = null;
+  let _chatModelTier = sessionStorage.getItem('garuda_model_tier') || 'high';
+
+  function setModelTier(tier) {
+    _chatModelTier = tier;
+    sessionStorage.setItem('garuda_model_tier', tier);
+    ['low','med','high'].forEach(t => {
+      const btn = $('tier-' + t);
+      if (btn) btn.classList.toggle('tier-btn-active', t === tier);
+      const row = $('rl-' + t);
+      if (row) row.classList.toggle('rl-active', t === tier);
+    });
+  }
+
+  function toggleRateLimitInfo() {
+    const bubble = $('chat-ratelimit-bubble');
+    const btn    = $('chat-info-btn');
+    if (!bubble) return;
+    const open = bubble.classList.toggle('open');
+    if (btn) btn.classList.toggle('active', open);
+  }
 
   const _THINKING = [
     // Processing thoughts
@@ -592,7 +613,7 @@ const G = (() => {
     _showThinking();
 
     try {
-      const res  = await api('POST', '/api/chat', { message: msg });
+      const res  = await api('POST', '/api/chat', { message: msg, model_tier: _chatModelTier });
       const text = res.response || '…';
       _hideThinking();
       const bodyEl = _chatAddAssistant();
@@ -1297,7 +1318,7 @@ const G = (() => {
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
-    toggleCamera, openDocs, sendChat, clearChat,
+    toggleCamera, openDocs, sendChat, clearChat, setModelTier, toggleRateLimitInfo,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,

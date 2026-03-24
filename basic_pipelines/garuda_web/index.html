@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=24"/>
+  <link rel="stylesheet" href="/static/style.css?v=25"/>
 </head>
 <body>
 <div id="app">
@@ -381,9 +381,48 @@
                 <div class="chat-sub">Garuda AI Security Assistant</div>
               </div>
             </div>
-            <button class="chat-clear-btn" onclick="G.clearChat()" title="Clear chat">
-              <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 15 6"/><path d="M5 6l1 10h6l1-10"/><path d="M7.5 6V4.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5V6"/></svg>
-            </button>
+            <div class="chat-header-controls">
+              <!-- Model tier selector -->
+              <div class="model-tier-selector" title="Select model quality tier">
+                <button class="tier-btn" id="tier-low"  onclick="G.setModelTier('low')">Low</button>
+                <button class="tier-btn" id="tier-med"  onclick="G.setModelTier('med')">Med</button>
+                <button class="tier-btn tier-btn-active" id="tier-high" onclick="G.setModelTier('high')">High</button>
+              </div>
+              <!-- Rate limit info -->
+              <button class="chat-info-btn" id="chat-info-btn" onclick="G.toggleRateLimitInfo()" title="Rate limit info">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><line x1="9" y1="8.5" x2="9" y2="13"/><circle cx="9" cy="5.5" r="0.6" fill="currentColor" stroke="none"/></svg>
+              </button>
+              <!-- Clear -->
+              <button class="chat-clear-btn" onclick="G.clearChat()" title="Clear chat">
+                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 15 6"/><path d="M5 6l1 10h6l1-10"/><path d="M7.5 6V4.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5V6"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Rate limit info bubble -->
+          <div class="chat-ratelimit-bubble" id="chat-ratelimit-bubble">
+            <div class="rl-title">Groq Free Plan · Rate Limits</div>
+            <div class="rl-table">
+              <div class="rl-row rl-head">
+                <span>Tier</span><span>Model</span><span>Req/min</span><span>Req/day</span><span>Tok/min</span><span>Tok/day</span>
+              </div>
+              <div class="rl-row" id="rl-low">
+                <span class="rl-tier-badge rl-low">LOW</span>
+                <span class="rl-model">llama-3.1-8b-instant</span>
+                <span>30</span><span>14,400</span><span>6K</span><span>500K</span>
+              </div>
+              <div class="rl-row" id="rl-med">
+                <span class="rl-tier-badge rl-med">MED</span>
+                <span class="rl-model">llama-3.3-70b-versatile</span>
+                <span>30</span><span>1,000</span><span>12K</span><span>100K</span>
+              </div>
+              <div class="rl-row rl-active" id="rl-high">
+                <span class="rl-tier-badge rl-high">HIGH</span>
+                <span class="rl-model">openai/gpt-oss-120b</span>
+                <span>30</span><span>1,000</span><span>8K</span><span>200K</span>
+              </div>
+            </div>
+            <div class="rl-note">Higher tiers are smarter but have smaller daily quotas. Switch to Low for casual use.</div>
           </div>
 
           <!-- Messages -->
@@ -786,6 +825,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=19"></script>
+<script src="/static/app.js?v=20"></script>
 </body>
 </html>

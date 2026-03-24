@@ -752,10 +752,12 @@ def apply_rule_based_command(user_input_lower):
     return "I heard you, but I'm not sure what to do. Try a command like 'activate dnd'."
 
 
-def query_local_llm(user_input):
+def query_local_llm(user_input, model=None):
     """Query Groq cloud API — rich project context, live state, natural language commands."""
     if not GROQ_API_KEY:
         return None  # No key configured, fall back to rule-based
+    if model is None:
+        model = GROQ_MODEL
 
     # Build live state snapshot (read under lock)
     with _mode_lock:
@@ -833,7 +835,7 @@ RULES:
 - Never invent capabilities not described above."""
 
     payload = {
-        "model": GROQ_MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user",   "content": user_input},
@@ -1151,6 +1153,13 @@ class WebRTCOfferRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    model_tier: str = 'high'   # low | med | high
+
+TIER_MODELS = {
+    'low':  'llama-3.1-8b-instant',
+    'med':  'llama-3.3-70b-versatile',
+    'high': GROQ_MODEL,          # openai/gpt-oss-120b
+}
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -1287,13 +1296,14 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
+    model = TIER_MODELS.get(data.model_tier, GROQ_MODEL)
     loop = asyncio.get_event_loop()
-    llm_result = await loop.run_in_executor(None, query_local_llm, msg)
+    llm_result = await loop.run_in_executor(None, query_local_llm, msg, model)
     if llm_result is not None:
         reply = _apply_llm_result(llm_result)
     else:
         reply = apply_rule_based_command(msg.lower())
-    append_voice_log(f"[chat] {session['username']}: {msg}")
+    append_voice_log(f"[chat] {session['username']} [{data.model_tier}]: {msg}")
     append_voice_response(f"[chat] {reply}")
     return {"response": reply}
 
