@@ -607,7 +607,7 @@ def trigger_software_alert():
             pass
     _alert_active = True
     _alert_flash_count = 3          # legacy field kept for compat; real timer below
-    _alert_end_time = time.time() + 12   # alert lasts 12 seconds
+    _alert_end_time = time.time() + 3    # brief 3-second flash, email is the real notification
     _last_alert_time = datetime.datetime.now()
     _record_alert_activity()
     log_system_update("Alert triggered.")
@@ -1240,6 +1240,7 @@ def get_state_dict():
         _alert_end_time = 0.0
         _alert_flash_count = 0
         _danger_trigger_info = ""
+        push_urgent_ws()   # immediately push cleared state to all clients
 
     uptime = int(time.time() - _app_start_time)
     hours, rem = divmod(uptime, 3600)
@@ -2136,10 +2137,10 @@ async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
 # Compute state ONCE per tick and fan-out via asyncio.gather — O(1) in CPU.
 
 async def _ws_broadcaster():
-    """Background task: push state immediately on events, or every 5s as heartbeat."""
+    """Background task: push state immediately on events, or every 2s as heartbeat."""
     while True:
         try:
-            await asyncio.wait_for(_ws_trigger.wait(), timeout=5.0)
+            await asyncio.wait_for(_ws_trigger.wait(), timeout=2.0)
         except asyncio.TimeoutError:
             pass
         _ws_trigger.clear()
