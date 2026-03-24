@@ -579,8 +579,8 @@ const G = (() => {
 
   async function sendChat() {
     if (_chatBusy) return;
-    const input  = $('chat-input');
-    const btn    = $('chat-send-btn');
+    const input = $('chat-input');
+    const btn   = $('chat-send-btn');
     if (!input) return;
     const msg = input.value.trim();
     if (!msg) return;
@@ -591,57 +591,25 @@ const G = (() => {
     if (btn) btn.disabled = true;
     _showThinking();
 
-    const backend = getBackend() || '';
-    const token   = _token || '';
-    let bodyEl    = null;
-    let full      = '';
-    let gotFirst  = false;
-
     try {
-      const resp = await fetch(backend + '/api/chat/stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'X-Garuda-Token': token } : {}),
-        },
-        credentials: 'include',
-        body: JSON.stringify({ message: msg }),
-      });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-
-      const reader  = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buf = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          let ev;
-          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
-          if (ev.type === 'start') {
-            _hideThinking();
-            bodyEl = _chatAddAssistant();
-          } else if (ev.type === 'token' && bodyEl) {
-            if (!gotFirst) { gotFirst = true; }
-            full += ev.text;
-            _streamInto(bodyEl, full, false);
-          } else if (ev.type === 'done' && bodyEl) {
-            _streamInto(bodyEl, full, true);
-          }
-        }
+      const res  = await api('POST', '/api/chat', { message: msg });
+      const text = res.response || '…';
+      _hideThinking();
+      const bodyEl = _chatAddAssistant();
+      // Typewriter: reveal chars at ~18ms each, then snap remaining on done
+      let i = 0;
+      function tick() {
+        if (!bodyEl) return;
+        i = Math.min(i + 3, text.length);
+        _streamInto(bodyEl, text.slice(0, i), i === text.length);
+        if (i < text.length) requestAnimationFrame(tick);
       }
+      requestAnimationFrame(tick);
     } catch(e) {
       _hideThinking();
-      if (!bodyEl) bodyEl = _chatAddAssistant();
+      const bodyEl = _chatAddAssistant();
       if (bodyEl) bodyEl.textContent = 'Connection error — please try again.';
     } finally {
-      _hideThinking();
-      if (bodyEl) _streamInto(bodyEl, full, true);
       _chatBusy = false;
       if (btn) btn.disabled = false;
       input.focus();
