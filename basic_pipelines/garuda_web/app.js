@@ -12,8 +12,10 @@ const G = (() => {
   let _lastDetInfo = '';
   let _recentDets  = [];
   let _privacyOn = true;
-  let _allLogs   = [];
-  let _cfg       = {};
+  let _allLogs      = [];
+  let _presenceLogs = [];
+  let _cfg          = {};
+  let _logsUnlocked = false;
 
   // ── Hardware stats ────────────────────────────────────────
   function _updateHw(s) {
@@ -201,6 +203,28 @@ const G = (() => {
     }
   }
 
+  function goMasterKey() {
+    showLoginView('lv-masterkey');
+    setTimeout(() => $('mk-login-key')?.focus(), 50);
+  }
+
+  async function submitMasterKeyLogin() {
+    const key = ($('mk-login-key')?.value || '').trim();
+    const errEl = $('mk-login-err');
+    if (!key) { showLoginErr(errEl, 'Enter your master key.'); return; }
+    try {
+      const res = await api('POST', '/api/master_key/login', { key });
+      _session = res;
+      if (res.token && getBackend()) {
+        _token = res.token;
+        localStorage.setItem('garuda_token', _token);
+      }
+      afterLogin();
+    } catch(e) {
+      showLoginErr(errEl, extractError(e));
+    }
+  }
+
   async function submitLogin() {
     const un = ($('li-user')?.value || '').trim();
     const pw = $('li-pass')?.value || '';
@@ -241,13 +265,16 @@ const G = (() => {
       cw.classList.add('hidden');
       if (_session.role === 'admin') cw.classList.remove('hidden');
     }
+    // Set logs unlock state from session (master key login sets this true)
+    _logsUnlocked = !!_session.logs_unlocked;
+    $('logs-gate')?.classList.add('hidden');
     connectWS();
     if (_session.role === 'admin') loadCfg();
   }
 
   async function logout() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
-    _session = null; _token = null;
+    _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
     localStorage.removeItem('garuda_token');
     localStorage.removeItem('garuda_remember');
@@ -874,7 +901,15 @@ const G = (() => {
     if (pageId === 'a-users')    loadUsers();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
-    if (pageId === 'a-logs')     renderLogs();
+    if (pageId === 'a-logs') {
+      if (_logsUnlocked) {
+        $('logs-gate')?.classList.add('hidden');
+        fetchAndRenderLogs();
+      } else {
+        $('logs-gate')?.classList.remove('hidden');
+        setTimeout(() => $('lg-key')?.focus(), 80);
+      }
+    }
     if (pageId === 'a-cmds')     loadCmds();
   }
 
@@ -984,15 +1019,9 @@ const G = (() => {
     renderLog('narada-vlog',  s.voice_log      || [], false);
     renderLog('narada-resp',  s.voice_responses || [], true);
 
-    // Admin logs live update
+    // Sync system_log from WS state for any live-updating consumers
+    // (actual admin logs page fetches via /api/logs which requires master key)
     _allLogs = s.system_log || [];
-    renderLogs();
-    const av = $('a-vlog');
-    if (av) {
-      av.innerHTML = [...(s.voice_log||[]), ...(s.voice_responses||[])]
-        .map(l => `<div class="log-line">${esc(l)}</div>`).join('');
-      av.scrollTop = av.scrollHeight;
-    }
   }
 
   function fmtUptime(secs) {
@@ -1177,6 +1206,7 @@ const G = (() => {
       if (dl && cfg.danger_label) dl.value = cfg.danger_label;
     } catch(e) {}
     loadDevices();
+    loadMasterKeys();
   }
 
   function togglePrivacy() {
@@ -1201,6 +1231,42 @@ const G = (() => {
   }
 
   // ── Admin: Logs ───────────────────────────────────────────
+  async function unlockLogs() {
+    const key = ($('lg-key')?.value || '').trim();
+    const errEl = $('lg-err');
+    if (!key) { showEl('lg-err', 'Enter master key.', false); errEl?.classList.remove('hidden'); return; }
+    try {
+      await api('POST', '/api/master_key/verify', { key });
+      _logsUnlocked = true;
+      $('logs-gate')?.classList.add('hidden');
+      if ($('lg-key')) $('lg-key').value = '';
+      fetchAndRenderLogs();
+    } catch(e) {
+      if (errEl) { errEl.textContent = extractError(e); errEl.classList.remove('hidden'); }
+    }
+  }
+
+  async function fetchAndRenderLogs() {
+    try {
+      const data = await api('GET', '/api/logs');
+      _allLogs = data.system_log || [];
+      _presenceLogs = data.presence_log || [];
+      renderLogs();
+      const av = $('a-vlog');
+      if (av) {
+        av.innerHTML = [...(data.voice_log||[]), ...(data.voice_responses||[])]
+          .map(l => `<div class="narada-line">${l}</div>`).join('');
+        av.scrollTop = av.scrollHeight;
+      }
+    } catch(e) {
+      // 403 means logs not unlocked — re-show gate
+      if (e && e.detail && e.detail.includes('Master key')) {
+        _logsUnlocked = false;
+        $('logs-gate')?.classList.remove('hidden');
+      }
+    }
+  }
+
   function renderLogs() {
     const q = (val('log-q') || '').toLowerCase();
     const el = $('a-syslog');
@@ -1211,13 +1277,19 @@ const G = (() => {
     }
     const pl = $('a-preslog');
     if (pl) {
-      const presLines = _allLogs.filter(l => l.includes('[OWNER'));
-      pl.textContent = presLines.length ? presLines.join('\n') : 'No presence events yet.';
+      if (_presenceLogs.length) {
+        pl.textContent = _presenceLogs.map(e => {
+          const icon = e.event === 'arrived' ? '→' : '←';
+          return `${e.ts}  ${icon}  ${e.device || 'Unknown'}  (${e.mac || 'no mac'})`;
+        }).join('\n');
+      } else {
+        pl.textContent = 'No presence events yet.';
+      }
       pl.scrollTop = pl.scrollHeight;
     }
   }
 
-  function filterLogs() { renderLogs(); }
+  function filterLogs() { if (_logsUnlocked) renderLogs(); }
 
   function exportLogs() {
     const blob = new Blob([_allLogs.join('\n')], { type: 'text/plain' });
@@ -1313,6 +1385,71 @@ const G = (() => {
       await api('POST', '/api/presence_refresh', {});
     } catch(e) {}
     if (btn) { btn.textContent = '↻'; btn.disabled = false; }
+  }
+
+  // ── Master Keys management ────────────────────────────────
+  async function loadMasterKeys() {
+    const el = $('mk-list'); if (!el) return;
+    try {
+      const data = await api('GET', '/api/master_keys');
+      const keys = data.keys || [];
+      if (!keys.length) {
+        el.innerHTML = '<div style="font-size:12px;color:var(--t3)">No master keys found.</div>';
+        return;
+      }
+      el.innerHTML = keys.map((k, i) => `
+        <div class="mk-item">
+          <span>${esc(k)}</span>
+          ${keys.length > 1 ? `<button class="mk-item-del" onclick="G.deleteMasterKey(${i})" title="Delete">×</button>` : ''}
+        </div>`).join('');
+    } catch(e) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--t3)">Could not load keys.</div>';
+    }
+  }
+
+  async function requestMkOtp() {
+    const current = ($('mk-current')?.value || '').trim();
+    const msgEl = $('mk-msg');
+    if (!current) { showEl('mk-msg', 'Enter your current master key first.', false); return; }
+    try {
+      const r = await api('POST', '/api/master_key/request_otp', { current_key: current });
+      const row = $('mk-otp-row');
+      if (row) { row.classList.remove('hidden'); row.style.display = 'flex'; }
+      if (r.bypass_otp) {
+        showEl('mk-msg', 'Email failed. Dev OTP: ' + r.bypass_otp, false);
+      } else {
+        showEl('mk-msg', 'OTP sent to your alert email.', true);
+      }
+    } catch(e) {
+      showEl('mk-msg', extractError(e), false);
+    }
+  }
+
+  async function addMasterKey() {
+    const otp    = ($('mk-otp-in')?.value  || '').trim();
+    const newKey = ($('mk-new-in')?.value  || '').trim();
+    if (!otp || !newKey) { showEl('mk-msg', 'Enter OTP and new key.', false); return; }
+    try {
+      await api('POST', '/api/master_key/add', { otp, new_key: newKey });
+      showEl('mk-msg', 'Master key added.', true);
+      if ($('mk-current')) $('mk-current').value = '';
+      if ($('mk-otp-in'))  $('mk-otp-in').value  = '';
+      if ($('mk-new-in'))  $('mk-new-in').value  = '';
+      const row = $('mk-otp-row');
+      if (row) { row.classList.add('hidden'); row.style.display = 'none'; }
+      loadMasterKeys();
+    } catch(e) {
+      showEl('mk-msg', extractError(e), false);
+    }
+  }
+
+  async function deleteMasterKey(idx) {
+    try {
+      await api('POST', '/api/master_key/delete', { index: idx });
+      loadMasterKeys();
+    } catch(e) {
+      showEl('mk-msg', extractError(e), false);
+    }
   }
 
   // ── Stream quality ─────────────────────────────────────────
@@ -1451,6 +1588,7 @@ const G = (() => {
     init,
     submitLogin, logout,
     goAdminFlow, backToMain, backToAdminStep1, sendAdminOTP, verifyAdminOTP,
+    goMasterKey, submitMasterKeyLogin, unlockLogs,
     goForgot, sendForgotOTP, doReset,
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
@@ -1461,6 +1599,7 @@ const G = (() => {
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence, setStreamQuality,
+    loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,
   };
@@ -1479,7 +1618,11 @@ document.addEventListener('keydown', e => {
   const lv1 = document.getElementById('lv-main');
   const lv2 = document.getElementById('lv-admin-1');
   const lv3 = document.getElementById('lv-admin-2');
-  if (lv1 && !lv1.classList.contains('hidden')) G.submitLogin();
+  const lvm = document.getElementById('lv-masterkey');
+  const lg  = document.getElementById('logs-gate');
+  if (lg && !lg.classList.contains('hidden'))    G.unlockLogs();
+  else if (lvm && !lvm.classList.contains('hidden')) G.submitMasterKeyLogin();
+  else if (lv1 && !lv1.classList.contains('hidden')) G.submitLogin();
   else if (lv2 && !lv2.classList.contains('hidden')) G.sendAdminOTP();
   else if (lv3 && !lv3.classList.contains('hidden')) G.verifyAdminOTP();
 });

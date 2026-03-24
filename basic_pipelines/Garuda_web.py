@@ -122,8 +122,10 @@ SCISSORS_LOG_FILE = "danger_sightings.txt"
 NIGHT_MODE_LOG_FILE = "night_mode_findings.txt"
 LLM_LOG_FILE = "system_logs/llm_reasoning.json"
 USERS_FILE = "system_logs/users.json"
-CONFIG_FILE = "system_logs/config.json"
-ALERT_HISTORY_FILE = "system_logs/alert_history.json"
+CONFIG_FILE          = "system_logs/config.json"
+ALERT_HISTORY_FILE   = "system_logs/alert_history.json"
+PRESENCE_LOG_FILE    = "system_logs/presence_log.json"
+MASTER_KEYS_FILE     = "system_logs/master_keys.json"
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -163,6 +165,10 @@ _total_frames = 0          # total inference frames (for avg FPS)
 # ── Phone presence detection ──────────────────────────────
 KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
 _alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
+_presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
+MASTER_KEYS: list    = ["cizduz-vudqa6-mynsoK"]   # master key bootstrap value
+MASTER_KEY_OTP: str | None = None
+_pending_mk: str | None    = None
 _owner_present   = False
 _owner_last_seen = 0.0
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
@@ -301,6 +307,50 @@ def _record_alert_activity():
         os.makedirs("system_logs", exist_ok=True)
         with open(ALERT_HISTORY_FILE, "w") as f:
             json.dump(_alert_history, f)
+    except Exception:
+        pass
+
+def _load_presence_log():
+    global _presence_log
+    try:
+        if os.path.exists(PRESENCE_LOG_FILE):
+            with open(PRESENCE_LOG_FILE) as f:
+                _presence_log = json.load(f)
+    except Exception:
+        _presence_log = []
+
+def _append_presence_log(event: str, device: str, mac: str):
+    """Append one presence event and persist to disk."""
+    global _presence_log
+    _presence_log.append({
+        "ts":     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "event":  event,
+        "device": device,
+        "mac":    mac,
+    })
+    try:
+        os.makedirs("system_logs", exist_ok=True)
+        with open(PRESENCE_LOG_FILE, "w") as f:
+            json.dump(_presence_log, f)
+    except Exception:
+        pass
+
+def load_master_keys():
+    global MASTER_KEYS
+    try:
+        if os.path.exists(MASTER_KEYS_FILE):
+            with open(MASTER_KEYS_FILE) as f:
+                data = json.load(f)
+            if isinstance(data.get("keys"), list) and data["keys"]:
+                MASTER_KEYS[:] = data["keys"]
+    except Exception:
+        pass
+
+def save_master_keys():
+    try:
+        os.makedirs("system_logs", exist_ok=True)
+        with open(MASTER_KEYS_FILE, "w") as f:
+            json.dump({"keys": MASTER_KEYS}, f, indent=2)
     except Exception:
         pass
 
@@ -489,11 +539,16 @@ def _presence_poller():
             _owner_last_seen = time.time()
             if not _owner_present:
                 _owner_present = True
-                log_system_update("Owner arrived — device detected on network.")
+                dev  = next((d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "Unknown")
+                mac  = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
+                _append_presence_log("arrived", dev, mac)
+                log_system_update(f"[OWNER] {dev} arrived — device detected on network.")
                 push_urgent_ws()
         elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
             _owner_present = False
-            log_system_update("Owner away — device not seen for 5 min.")
+            dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
+            _append_presence_log("left", dev, "")
+            log_system_update(f"[OWNER] {dev} away — device not seen for {OWNER_AWAY_GRACE}s.")
             push_urgent_ws()
 
 ##############################################################################
@@ -1086,7 +1141,19 @@ def create_session(username, duration=3600):
     _sessions[token] = {
         "username": username,
         "role": USERS[username]["role"],
-        "expires": time.time() + duration
+        "expires": time.time() + duration,
+        "logs_unlocked": False,
+    }
+    return token
+
+def create_master_session(duration=3600):
+    """Create an admin session via master key — logs unlocked immediately."""
+    token = secrets.token_hex(32)
+    _sessions[token] = {
+        "username": "admin",
+        "role": "admin",
+        "expires": time.time() + duration,
+        "logs_unlocked": True,
     }
     return token
 
@@ -1110,6 +1177,13 @@ def require_admin(request: Request):
     session = require_session(request)
     if session["role"] != "admin":
         raise HTTPException(403, "Admin access required")
+    return session
+
+def require_logs(request: Request):
+    """Admin session AND master key must have been entered this session."""
+    session = require_admin(request)
+    if not session.get("logs_unlocked", False):
+        raise HTTPException(403, "Master key required to view logs.")
     return session
 
 ##############################################################################
@@ -1217,6 +1291,8 @@ async def _lifespan(app):
     _event_loop = asyncio.get_event_loop()
     _ws_trigger = asyncio.Event()
     _load_alert_history()
+    _load_presence_log()
+    load_master_keys()
     asyncio.ensure_future(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     yield
@@ -1375,6 +1451,7 @@ async def session_info(session=Depends(require_session)):
         "username": u,
         "display_name": USERS.get(u, {}).get("display_name", u),
         "box_color": USERS.get(u, {}).get("box_color", "#1565c0"),
+        "logs_unlocked": session.get("logs_unlocked", False),
     }
 
 @fastapi_app.post("/api/logout")
@@ -1721,10 +1798,15 @@ def _do_presence_check():
         _owner_last_seen = time.time()
         if not _owner_present:
             _owner_present = True
-            log_system_update("Owner arrived (manual refresh).")
+            dev = next((d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "Unknown")
+            mac = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
+            _append_presence_log("arrived", dev, mac)
+            log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
     elif _owner_present:
         _owner_present = False
-        log_system_update("Owner away (manual refresh — device not found).")
+        dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
+        _append_presence_log("left", dev, "")
+        log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
 
 @fastapi_app.post("/api/presence_refresh")
 async def presence_refresh(session=Depends(require_session)):
@@ -1775,12 +1857,103 @@ async def test_email(session=Depends(require_admin)):
     return {"ok": True}
 
 @fastapi_app.get("/api/logs")
-async def get_logs(session=Depends(require_session)):
+async def get_logs(session=Depends(require_logs)):
     return {
         "system_log": system_updates_log,
         "voice_log": voice_assistant_log,
         "voice_responses": voice_responses,
+        "presence_log": _presence_log[-200:],
     }
+
+##############################################################################
+# MASTER KEY ENDPOINTS
+##############################################################################
+@fastapi_app.post("/api/master_key/login")
+async def master_key_login(data: dict, response: Response):
+    """Log in with only a master key — issues an admin session with logs unlocked."""
+    key = (data.get("key") or "").strip()
+    if not key or key not in MASTER_KEYS:
+        raise HTTPException(401, "Invalid master key.")
+    token = create_master_session()
+    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
+    log_system_update("Master key login.")
+    return {
+        "role": "admin",
+        "username": "admin",
+        "display_name": USERS.get("admin", {}).get("display_name", "Admin"),
+        "token": token,
+        "logs_unlocked": True,
+    }
+
+@fastapi_app.post("/api/master_key/verify")
+async def master_key_verify(data: dict, request: Request):
+    """Unlock logs on an existing admin session by verifying a master key."""
+    require_admin(request)
+    key = (data.get("key") or "").strip()
+    if not key or key not in MASTER_KEYS:
+        raise HTTPException(401, "Invalid master key.")
+    token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token")
+    if token and token in _sessions:
+        _sessions[token]["logs_unlocked"] = True
+    return {"ok": True, "logs_unlocked": True}
+
+@fastapi_app.get("/api/master_keys")
+async def list_master_keys(session=Depends(require_admin)):
+    """Return master keys with all but last 4 chars masked."""
+    masked = []
+    for k in MASTER_KEYS:
+        if len(k) > 4:
+            masked.append("\u2022" * (len(k) - 4) + k[-4:])
+        else:
+            masked.append("\u2022\u2022\u2022\u2022")
+    return {"keys": masked, "count": len(MASTER_KEYS)}
+
+@fastapi_app.post("/api/master_key/request_otp")
+async def master_key_request_otp(data: dict, session=Depends(require_admin)):
+    """Step 1 of adding a master key: verify an existing key, then email OTP."""
+    global MASTER_KEY_OTP
+    current = (data.get("current_key") or "").strip()
+    if not current or current not in MASTER_KEYS:
+        raise HTTPException(401, "Current master key is incorrect.")
+    MASTER_KEY_OTP = generate_otp_code(6)
+    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
+    ok, err = send_otp_via_email(dest, MASTER_KEY_OTP)
+    if not ok:
+        return {"ok": False, "error": err, "bypass_otp": MASTER_KEY_OTP}
+    return {"ok": True}
+
+@fastapi_app.post("/api/master_key/add")
+async def master_key_add(data: dict, session=Depends(require_admin)):
+    """Step 2: verify OTP and persist new master key."""
+    global MASTER_KEY_OTP
+    otp = (data.get("otp") or "").strip()
+    new_key = (data.get("new_key") or "").strip()
+    if not otp or otp != MASTER_KEY_OTP:
+        raise HTTPException(401, "Invalid OTP.")
+    if not new_key or len(new_key) < 8:
+        raise HTTPException(400, "Key must be at least 8 characters.")
+    if new_key in MASTER_KEYS:
+        raise HTTPException(400, "Key already exists.")
+    MASTER_KEYS.append(new_key)
+    save_master_keys()
+    MASTER_KEY_OTP = None
+    log_system_update("New master key added.")
+    return {"ok": True}
+
+@fastapi_app.post("/api/master_key/delete")
+async def master_key_delete(data: dict, session=Depends(require_admin)):
+    """Delete a master key by index — cannot delete the last key."""
+    idx = data.get("index")
+    if idx is None or not isinstance(idx, int):
+        raise HTTPException(400, "index required.")
+    if len(MASTER_KEYS) <= 1:
+        raise HTTPException(400, "Cannot delete the last master key.")
+    if idx < 0 or idx >= len(MASTER_KEYS):
+        raise HTTPException(400, "Index out of range.")
+    MASTER_KEYS.pop(idx)
+    save_master_keys()
+    log_system_update("Master key deleted.")
+    return {"ok": True}
 
 @fastapi_app.post("/api/emergency-stop")
 async def emergency_stop(session=Depends(require_session)):

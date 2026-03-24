@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=31"/>
+  <link rel="stylesheet" href="/static/style.css?v=32"/>
 </head>
 <body>
 <div id="app">
@@ -61,6 +61,7 @@
         <div class="lc-links">
           <button class="lc-link" onclick="G.goAdminFlow()">Admin Access</button>
           <button class="lc-link" id="forgot-link" onclick="G.goForgot()">Forgot Password?</button>
+          <button class="lc-link" onclick="G.goMasterKey()">Use Master Key</button>
         </div>
       </div>
 
@@ -76,6 +77,24 @@
         <div id="adm-err-1" class="lc-err hidden"></div>
         <button class="lc-signin lc-signin-danger" onclick="G.sendAdminOTP()">
           Send One-Time Code
+        </button>
+        <div class="lc-links" style="margin-top:12px">
+          <button class="lc-link" onclick="G.goMasterKey()">Use Master Key instead</button>
+        </div>
+      </div>
+
+      <!-- VIEW: Master Key login -->
+      <div id="lv-masterkey" class="hidden">
+        <button class="lc-back" onclick="G.backToMain()">← Back</button>
+        <div class="lc-title" style="font-size:22px">Master Key</div>
+        <div class="lc-sub">Enter master key for instant admin access</div>
+        <div class="lc-fields">
+          <input id="mk-login-key" class="modern-input" type="password"
+                 placeholder="Master key" autocomplete="off"/>
+        </div>
+        <div id="mk-login-err" class="lc-err hidden"></div>
+        <button class="lc-signin lc-signin-danger" onclick="G.submitMasterKeyLogin()">
+          Enter
         </button>
       </div>
 
@@ -131,6 +150,17 @@
   </button>
 
 </div><!-- /login-screen -->
+
+<!-- Logs gate overlay — fixed over entire viewport until master key entered -->
+<div id="logs-gate" class="logs-gate-overlay hidden">
+  <div class="logs-gate-card">
+    <div class="logs-gate-title">Master Key Required</div>
+    <div class="logs-gate-sub">Enter your master key to unlock the logs</div>
+    <input id="lg-key" class="modern-input" type="password" placeholder="Master key" autocomplete="off"/>
+    <div id="lg-err" class="lc-err hidden"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="G.unlockLogs()">Unlock Logs</button>
+  </div>
+</div>
 
 <!-- ══════════════════ APP SHELL ══════════════════ -->
 <div id="app-shell">
@@ -564,6 +594,23 @@
               <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
             </div>
             <div id="sys-msg" class="msg hidden"></div>
+            <div class="sep"></div>
+            <!-- Master Keys -->
+            <div class="settings-section-title">Master Keys</div>
+            <div style="font-size:12px;color:var(--t3);margin-bottom:10px">
+              Master keys grant instant admin access and unlock the logs page.
+            </div>
+            <div id="mk-list" class="mk-list"></div>
+            <div class="mk-add-form" style="margin-top:12px">
+              <input id="mk-current" class="input" type="password" placeholder="Enter a current master key"/>
+              <button class="btn btn-ghost btn-sm" onclick="G.requestMkOtp()">Request OTP</button>
+            </div>
+            <div id="mk-otp-row" class="hidden" style="display:none;flex-direction:column;gap:10px;margin-top:10px">
+              <input id="mk-otp-in" class="input lc-otp" type="text" maxlength="6" placeholder="6-digit OTP"/>
+              <input id="mk-new-in" class="input" type="text" placeholder="New master key (min 8 chars)"/>
+              <button class="btn btn-primary btn-sm" onclick="G.addMasterKey()">Add Key</button>
+            </div>
+            <div id="mk-msg" class="msg hidden" style="margin-top:8px"></div>
           </div>
         </div>
       </div>
@@ -862,6 +909,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=24"></script>
+<script src="/static/app.js?v=25"></script>
 </body>
 </html>
