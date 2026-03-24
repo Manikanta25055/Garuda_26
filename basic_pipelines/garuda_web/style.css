@@ -858,6 +858,18 @@ input[type=range]::-webkit-slider-thumb {
   .page          { height: auto; }
   #page-dashboard { overflow: visible; height: auto; }
 
+  /* ── Chat: pin to viewport so input always stays at bottom ── */
+  #page-chat {
+    position: fixed;
+    top: 52px;          /* below the top header */
+    left: 0; right: 0; bottom: 0;
+    height: auto;
+    overflow: hidden;
+    z-index: 2;         /* above content, below header(5) and nav(90) */
+  }
+  #page-chat .chat-shell { height: 100%; }
+  #page-chat .chat-input-wrap { padding-bottom: 90px; } /* clear floating nav pill */
+
   /* ── Login ── */
   .login-wordmark  { font-size: 48px; letter-spacing: 4px; }
   .login-subtitle  { font-size: 15px; }
