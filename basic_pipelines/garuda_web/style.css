@@ -1381,10 +1381,8 @@ input[type=range]::-webkit-slider-thumb {
 /* Message rows */
 .chat-msg {
   display: flex; gap: 14px;
-  padding: 10px 20px;
-  transition: background var(--trans);
+  padding: 8px 20px;
 }
-.chat-msg:hover { background: rgba(255,255,255,0.02); }
 
 /* User pill — right-aligned */
 .chat-msg.user {
@@ -1393,12 +1391,13 @@ input[type=range]::-webkit-slider-thumb {
 }
 .chat-msg-pill {
   max-width: 70%;
-  background: var(--accent);
-  color: #fff;
+  background: rgba(255,255,255,0.1);
+  color: var(--t1);
   padding: 10px 16px;
   border-radius: 20px 20px 4px 20px;
   font-size: 14px; line-height: 1.55;
   word-break: break-word;
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
 /* Assistant — left, with avatar */
@@ -1414,7 +1413,8 @@ input[type=range]::-webkit-slider-thumb {
 }
 .chat-msg-content { flex: 1; min-width: 0; }
 .chat-msg-body {
-  font-size: 14px; line-height: 1.65; color: var(--t1);
+  font-size: 14px; line-height: 1.65;
+  color: #F5F5F7 !important;
   word-break: break-word;
 }
 
