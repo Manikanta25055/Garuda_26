@@ -366,6 +366,7 @@ def save_config():
             "detection_threshold": DETECTION_THRESHOLD,
             "known_devices": KNOWN_DEVICES,
             "watch_labels": WATCH_LABELS,
+            "groq_api_key": GROQ_API_KEY,
         }
         with open(CONFIG_FILE, "w") as f:
             json.dump(cfg, f, indent=2)
@@ -1385,6 +1386,7 @@ class ConfigUpdateRequest(BaseModel):
     danger_label: Optional[str] = None
     privacy: Optional[bool] = None
     watch_labels: Optional[List[str]] = None
+    groq_api_key: Optional[str] = None
 
 class DeviceAddRequest(BaseModel):
     name: str
@@ -1748,6 +1750,7 @@ async def get_config(session=Depends(require_admin)):
         "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
         "custom_modes": CUSTOM_MODES,
         "watch_labels": WATCH_LABELS,
+        "groq_api_key": GROQ_API_KEY,
     }
 
 @fastapi_app.post("/api/config")
@@ -1774,6 +1777,9 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.watch_labels is not None:
         global WATCH_LABELS
         WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
+    if data.groq_api_key is not None:
+        global GROQ_API_KEY
+        GROQ_API_KEY = data.groq_api_key.strip()
     save_config()
     log_system_update("Config updated.")
     return {"ok": True}

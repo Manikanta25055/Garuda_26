@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=35"/>
+  <link rel="stylesheet" href="/static/style.css?v=36"/>
 </head>
 <body>
 <div id="app">
@@ -576,6 +576,11 @@
             </div>
             <div id="dev-msg" class="msg hidden"></div>
             <div class="sep"></div>
+            <!-- Narada (Groq API) -->
+            <div class="settings-section-title">Narada — Groq API Key</div>
+            <input id="groq-api-key" class="input" type="password" placeholder="gsk_…  (paste your Groq API key)"/>
+            <div style="font-size:11px;color:var(--t3);margin-top:4px">Required for Narada voice assistant. Get a free key at <b>console.groq.com</b>.</div>
+            <div class="sep"></div>
             <!-- Watch Labels -->
             <div class="settings-section-title">Watch Labels <span style="font-size:11px;color:var(--t3);font-weight:400">(log only, no alert)</span></div>
             <input id="watch-labels" class="input" type="text" placeholder="person, backpack, suitcase"/>
@@ -920,6 +925,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=28"></script>
+<script src="/static/app.js?v=29"></script>
 </body>
 </html>

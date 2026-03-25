@@ -1191,6 +1191,8 @@ const G = (() => {
       if (wl) wl.value = (cfg.watch_labels || []).join(', ');
       const dl = $('danger-lbl');
       if (dl && cfg.danger_label) dl.value = cfg.danger_label;
+      const gk = $('groq-api-key');
+      if (gk) gk.value = cfg.groq_api_key || '';
     } catch(e) {}
     loadDevices();
     loadMasterKeys();
@@ -1207,11 +1209,13 @@ const G = (() => {
     const wlRaw = val('watch-labels') || '';
     const watchLabels = wlRaw.split(',').map(s => s.trim()).filter(Boolean);
     try {
+      const groqKey = val('groq-api-key');
       await api('POST', '/api/config', {
         detection_threshold: thr,
         privacy: _privacyOn,
         watch_labels: watchLabels,
-        ...(dl ? { danger_label: dl } : {})
+        ...(dl ? { danger_label: dl } : {}),
+        ...(groqKey !== undefined ? { groq_api_key: groqKey } : {})
       });
       showEl('sys-msg', 'Settings saved.', true);
     } catch(e) { showEl('sys-msg', e.detail || 'Failed.', false); }
