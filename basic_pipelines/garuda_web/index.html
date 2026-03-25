@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=33"/>
+  <link rel="stylesheet" href="/static/style.css?v=34"/>
 </head>
 <body>
 <div id="app">
@@ -602,14 +602,30 @@
               Master keys grant instant admin access and unlock the logs page.
             </div>
             <div id="mk-list" class="mk-list"></div>
-            <div class="mk-add-form" style="margin-top:12px">
-              <input id="mk-current" class="input" type="password" placeholder="Enter a current master key"/>
-              <button class="btn btn-ghost btn-sm" onclick="G.requestMkOtp()">Request OTP</button>
-            </div>
-            <div id="mk-otp-row" class="hidden" style="display:none;flex-direction:column;gap:10px;margin-top:10px">
-              <input id="mk-otp-in" class="input lc-otp" type="text" maxlength="6" placeholder="6-digit OTP"/>
-              <input id="mk-new-in" class="input" type="text" placeholder="New master key (min 8 chars)"/>
-              <button class="btn btn-primary btn-sm" onclick="G.addMasterKey()">Add Key</button>
+            <!-- Step 1 -->
+            <div class="mk-create-block">
+              <div class="mk-step-label" style="margin-top:14px">Step 1 — Verify identity</div>
+              <div class="mk-add-form">
+                <input id="mk-current" class="input" type="password" placeholder="Enter an existing master key"/>
+                <button class="btn btn-ghost btn-sm" onclick="G.requestMkOtp()">Send OTP</button>
+              </div>
+              <!-- Steps 2 + 3: shown after OTP sent -->
+              <div id="mk-otp-row" class="hidden" style="display:none;flex-direction:column;gap:10px;margin-top:14px">
+                <div class="mk-step-label">Step 2 — Enter OTP from email</div>
+                <input id="mk-otp-in" class="input lc-otp" type="text" maxlength="6" placeholder="6-digit code"/>
+                <div class="mk-step-label" style="margin-top:4px">Step 3 — Create a new key</div>
+                <input id="mk-new-in" class="input" type="text"
+                       placeholder="Enter new master key" autocomplete="new-password"
+                       oninput="G.onMkKeyInput()"/>
+                <!-- Strength meter -->
+                <div class="mk-strength-wrap">
+                  <div class="mk-strength-bar"><div id="mk-strength-fill" class="mk-strength-fill"></div></div>
+                  <span id="mk-strength-label" class="mk-strength-label"></span>
+                </div>
+                <!-- Rules checklist -->
+                <div id="mk-rules" class="mk-rules"></div>
+                <button class="btn btn-primary btn-sm" onclick="G.addMasterKey()">Add Key</button>
+              </div>
             </div>
             <div id="mk-msg" class="msg hidden" style="margin-top:8px"></div>
           </div>
@@ -915,6 +931,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=26"></script>
+<script src="/static/app.js?v=27"></script>
 </body>
 </html>

@@ -2022,10 +2022,27 @@ async def master_key_add(data: dict, session=Depends(require_admin)):
     new_key = (data.get("new_key") or "").strip()
     if not otp or otp != MASTER_KEY_OTP:
         raise HTTPException(401, "Invalid OTP.")
-    if not new_key or len(new_key) < 8:
-        raise HTTPException(400, "Key must be at least 8 characters.")
+    if not new_key or len(new_key) < 12:
+        raise HTTPException(400, "Key must be at least 12 characters.")
+    if not re.search(r'[A-Z]', new_key):
+        raise HTTPException(400, "Key must contain at least one uppercase letter.")
+    if not re.search(r'[a-z]', new_key):
+        raise HTTPException(400, "Key must contain at least one lowercase letter.")
+    if not re.search(r'[0-9]', new_key):
+        raise HTTPException(400, "Key must contain at least one number.")
+    if not re.search(r'[^A-Za-z0-9]', new_key):
+        raise HTTPException(400, "Key must contain at least one symbol (!@#$ etc.).")
+    _MK_COMMON = ['password','master','admin','garuda','security','qwerty','asdfgh',
+                   'zxcvbn','123456','letmein','welcome','login','access']
+    if any(w in new_key.lower() for w in _MK_COMMON):
+        raise HTTPException(400, "Key contains a common word or sequence — choose something more random.")
     if new_key in MASTER_KEYS:
         raise HTTPException(400, "Key already exists.")
+    # Reject keys too similar to existing ones (shared 6-char substring)
+    for existing in MASTER_KEYS:
+        for i in range(len(existing) - 5):
+            if existing[i:i+6] in new_key:
+                raise HTTPException(400, "Key is too similar to an existing master key.")
     MASTER_KEYS.append(new_key)
     save_master_keys()
     MASTER_KEY_OTP = None

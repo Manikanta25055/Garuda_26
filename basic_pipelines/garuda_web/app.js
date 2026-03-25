@@ -1413,6 +1413,55 @@ const G = (() => {
     if (btn) { btn.textContent = '↻'; btn.disabled = false; }
   }
 
+  // ── Master key strength checker ───────────────────────────
+  const _MK_COMMON = ['password','master','admin','garuda','security','qwerty',
+    'asdfgh','zxcvbn','123456','654321','abcdef','letmein','welcome','login',
+    'access','camera','house','home','lock','safe'];
+
+  function _mkStrength(key) {
+    const rules = [
+      { id:'len12',  label:'At least 12 characters',       pass: key.length >= 12,                       req: true  },
+      { id:'len14',  label:'14+ characters (recommended)', pass: key.length >= 14,                       req: false },
+      { id:'upper',  label:'Uppercase letter (A–Z)',        pass: /[A-Z]/.test(key),                      req: true  },
+      { id:'lower',  label:'Lowercase letter (a–z)',        pass: /[a-z]/.test(key),                      req: true  },
+      { id:'num',    label:'Number (0–9)',                  pass: /[0-9]/.test(key),                      req: true  },
+      { id:'sym',    label:'Symbol  (!@#$%^&* etc.)',       pass: /[^A-Za-z0-9]/.test(key),               req: true  },
+      { id:'noSeq',  label:'No keyboard sequences',        pass: !_MK_COMMON.some(s => key.toLowerCase().includes(s)), req: true },
+      { id:'noRep',  label:'No long repeating characters', pass: !/(.)\1{3,}/.test(key),                 req: true  },
+    ];
+    const required = rules.filter(r => r.req);
+    const passed   = rules.filter(r => r.pass);
+    const score    = passed.length;
+    let strength = '', color = '';
+    if (key.length > 0) {
+      if (score <= 3)      { strength = 'Very Weak'; color = '#FF3B30'; }
+      else if (score <= 4) { strength = 'Weak';      color = '#FF9F0A'; }
+      else if (score <= 5) { strength = 'Fair';      color = '#FFD60A'; }
+      else if (score <= 6) { strength = 'Strong';    color = '#30D158'; }
+      else                 { strength = 'Very Strong'; color = '#34C759'; }
+    }
+    const pct = key.length ? Math.round((score / rules.length) * 100) : 0;
+    const allReqPassed = required.every(r => r.pass);
+    return { rules, score, strength, color, pct, allReqPassed };
+  }
+
+  function onMkKeyInput() {
+    const key = $('mk-new-in')?.value || '';
+    const { rules, strength, color, pct } = _mkStrength(key);
+    const fill = $('mk-strength-fill');
+    const lbl  = $('mk-strength-label');
+    const rulesEl = $('mk-rules');
+    if (fill) { fill.style.width = pct + '%'; fill.style.background = color; }
+    if (lbl)  { lbl.textContent = strength; lbl.style.color = color; }
+    if (rulesEl) {
+      rulesEl.innerHTML = rules.map(r => `
+        <div class="mk-rule ${r.pass ? 'pass' : (r.req ? 'fail' : 'opt')}">
+          <span class="mk-rule-icon">${r.pass ? '✓' : '–'}</span>
+          <span>${r.label}${!r.req ? ' <em>(optional)</em>' : ''}</span>
+        </div>`).join('');
+    }
+  }
+
   // ── Master Keys management ────────────────────────────────
   async function loadMasterKeys() {
     const el = $('mk-list'); if (!el) return;
@@ -1455,6 +1504,13 @@ const G = (() => {
     const otp    = ($('mk-otp-in')?.value  || '').trim();
     const newKey = ($('mk-new-in')?.value  || '').trim();
     if (!otp || !newKey) { showEl('mk-msg', 'Enter OTP and new key.', false); return; }
+    // Client-side strength check
+    const { allReqPassed, rules } = _mkStrength(newKey);
+    if (!allReqPassed) {
+      const failed = rules.find(r => r.req && !r.pass);
+      showEl('mk-msg', 'Key too weak: ' + (failed?.label || 'does not meet requirements') + '.', false);
+      return;
+    }
     try {
       await api('POST', '/api/master_key/add', { otp, new_key: newKey });
       showEl('mk-msg', 'Master key added.', true);
@@ -1625,7 +1681,7 @@ const G = (() => {
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs, downloadFullLog,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence, setStreamQuality,
-    loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey,
+    loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey, onMkKeyInput,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,
   };
