@@ -258,7 +258,6 @@ const G = (() => {
     buildNav(_session.role);
     nav('dashboard');
     _initChatInput();
-    setModelTier(_chatModelTier);   // restore saved tier
     // Always reset console visibility first, then show for admin only
     const cw = $('dash-console-wrap');
     if (cw) {
@@ -459,7 +458,6 @@ const G = (() => {
     const isHidden = overlay.classList.contains('hidden');
     if (isHidden) {
       overlay.classList.remove('hidden');
-      setStreamQuality(_streamQuality);
       const camOffline = $('cam-offline');
       if (camOffline) camOffline.style.display = 'flex';
       _camSetStatus('Connecting…');
@@ -478,18 +476,6 @@ const G = (() => {
   // ── Chat ──────────────────────────────────────────────────
   let _chatBusy    = false;
   let _thinkTimer  = null;
-  let _chatModelTier = sessionStorage.getItem('garuda_model_tier') || 'high';
-
-  function setModelTier(tier) {
-    _chatModelTier = tier;
-    sessionStorage.setItem('garuda_model_tier', tier);
-    ['low','med','high'].forEach(t => {
-      const btn = $('tier-' + t);
-      if (btn) btn.classList.toggle('tier-btn-active', t === tier);
-      const row = $('rl-' + t);
-      if (row) row.classList.toggle('rl-active', t === tier);
-    });
-  }
 
   function toggleRateLimitInfo() {
     const bubble = $('chat-ratelimit-bubble');
@@ -646,7 +632,7 @@ const G = (() => {
     _showThinking();
 
     try {
-      const res  = await api('POST', '/api/chat', { message: msg, model_tier: _chatModelTier });
+      const res  = await api('POST', '/api/chat', { message: msg });
       const text = res.response || '…';
       _hideThinking();
       const bodyEl = _chatAddAssistant();
@@ -1534,19 +1520,6 @@ const G = (() => {
     }
   }
 
-  // ── Stream quality ─────────────────────────────────────────
-  let _streamQuality = sessionStorage.getItem('garuda_sq') || 'high';
-
-  function setStreamQuality(q) {
-    _streamQuality = q;
-    sessionStorage.setItem('garuda_sq', q);
-    ['low','med','high'].forEach(t => {
-      const btn = $('sq-' + t); if (!btn) return;
-      btn.classList.toggle('sq-active', t === q);
-    });
-    api('POST', '/api/stream_quality', { quality: q }).catch(() => {});
-  }
-
   // ── Admin: Commands ───────────────────────────────────────
   async function loadCmds() {
     try {
@@ -1675,12 +1648,12 @@ const G = (() => {
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
-    toggleCamera, openDocs, sendChat, clearChat, setModelTier, toggleRateLimitInfo,
+    toggleCamera, openDocs, sendChat, clearChat, toggleRateLimitInfo,
     loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs, downloadFullLog,
-    loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence, setStreamQuality,
+    loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence,
     loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey, onMkKeyInput,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,

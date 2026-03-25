@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=34"/>
+  <link rel="stylesheet" href="/static/style.css?v=35"/>
 </head>
 <body>
 <div id="app">
@@ -343,11 +343,6 @@
               LIVE CAMERA
             </div>
             <span id="cam-status-txt" class="cam-ov-meta">Connecting...</span>
-            <div class="stream-quality-group">
-              <button id="sq-low"  class="sq-pill" onclick="G.setStreamQuality('low')">Low</button>
-              <button id="sq-med"  class="sq-pill" onclick="G.setStreamQuality('med')">Med</button>
-              <button id="sq-high" class="sq-pill sq-active" onclick="G.setStreamQuality('high')">High</button>
-            </div>
             <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">Close</button>
           </div>
           <div class="cam-ov-body">
@@ -417,12 +412,6 @@
               </div>
             </div>
             <div class="chat-header-controls">
-              <!-- Model tier selector -->
-              <div class="model-tier-selector" title="Select model quality tier">
-                <button class="tier-btn" id="tier-low"  onclick="G.setModelTier('low')">Low</button>
-                <button class="tier-btn" id="tier-med"  onclick="G.setModelTier('med')">Med</button>
-                <button class="tier-btn tier-btn-active" id="tier-high" onclick="G.setModelTier('high')">High</button>
-              </div>
               <!-- Rate limit info -->
               <button class="chat-info-btn" id="chat-info-btn" onclick="G.toggleRateLimitInfo()" title="Rate limit info">
                 <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><line x1="9" y1="8.5" x2="9" y2="13"/><circle cx="9" cy="5.5" r="0.6" fill="currentColor" stroke="none"/></svg>
@@ -931,6 +920,6 @@
   </div>
 </div>
 
-<script src="/static/app.js?v=27"></script>
+<script src="/static/app.js?v=28"></script>
 </body>
 </html>

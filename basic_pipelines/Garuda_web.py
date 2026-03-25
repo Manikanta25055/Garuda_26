@@ -111,7 +111,7 @@ EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 
 GROQ_API_KEY = ""   # loaded from system_logs/config.json at startup
-GROQ_MODEL   = "openai/gpt-oss-120b"
+GROQ_MODEL   = "llama-3.3-70b-versatile"
 
 ##############################################################################
 # GLOBALS & SETTINGS
@@ -155,11 +155,10 @@ CUSTOM_VOICE_COMMANDS = {}
 
 _alert_active = False
 _alert_flash_count = 0
-_alert_end_time  = 0.0   # epoch when current alert expires
-_danger_trigger_info = ""   # detection text from the SPECIFIC frame that triggered scissors
-_danger_consecutive = 0     # consecutive frames with danger label detected
-_last_danger_conf = 0.0     # confidence of last danger detection (for logging)
-DANGER_CONFIRM_FRAMES = 15  # must appear in this many consecutive frames to trigger alert
+_alert_end_time     = 0.0   # epoch when current alert expires (3s visual banner)
+_alert_cooldown_until = 0.0 # epoch after which the next alert may fire (60s cooldown)
+_danger_trigger_info = ""   # detection text snapshot that fired the alert
+_last_danger_conf    = 0.0  # confidence of last danger detection (for logging)
 _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
@@ -184,13 +183,6 @@ _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_
 # ── Detection categories ──────────────────────────────────
 WATCH_LABELS: list = ['person', 'backpack', 'suitcase']  # log silently, no alert
 
-# ── Stream quality ────────────────────────────────────────
-STREAM_QUALITY = 'high'
-_QUALITY_MAP = {
-    'low':  (30, 0.125),   # JPEG q=30, max 8 fps
-    'med':  (50, 0.067),   # JPEG q=50, max 15 fps
-    'high': (75, 0.033),   # JPEG q=75, max 30 fps
-}
 
 USERS = {
     "user": {
@@ -588,9 +580,12 @@ def _presence_poller():
 # ALERTS
 ##############################################################################
 def trigger_software_alert():
-    global _alert_active, _alert_flash_count, _last_alert_time
+    global _alert_active, _alert_flash_count, _last_alert_time, _alert_cooldown_until
     # Guard: skip if an alert is already in progress (prevents per-frame re-firing)
     if _alert_active:
+        return
+    # Guard: 60s cooldown between alerts to suppress false positives (e.g. fans)
+    if time.time() < _alert_cooldown_until:
         return
     with _mode_lock:
         dnd = MODE_DND
@@ -608,6 +603,7 @@ def trigger_software_alert():
     _alert_active = True
     _alert_flash_count = 3          # legacy field kept for compat; real timer below
     _alert_end_time = time.time() + 3    # brief 3-second flash, email is the real notification
+    _alert_cooldown_until = time.time() + 60  # 60s before next alert can fire
     _last_alert_time = datetime.datetime.now()
     _record_alert_activity()
     log_system_update("Alert triggered.")
@@ -728,7 +724,7 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label == user_data.danger_label and confidence >= 0.55:
+            if label == user_data.danger_label:
                 danger_detected = True
                 _last_danger_conf = confidence
             elif label in WATCH_LABELS and label != user_data.danger_label:
@@ -742,16 +738,9 @@ def app_callback(pad, info, user_data):
     if det_count > 0:
         _detections_today += det_count
 
-    global _danger_consecutive
     if danger_detected:
-        _danger_consecutive += 1
-    else:
-        _danger_consecutive = 0
-
-    if _danger_consecutive >= DANGER_CONFIRM_FRAMES:
-        _danger_consecutive = 0   # reset so it must confirm again after alert expires
         global _danger_trigger_info
-        _danger_trigger_info = text_info   # snapshot the scissors-trigger frame
+        _danger_trigger_info = text_info   # snapshot the frame that triggered
         _captured_conf = _last_danger_conf
         _captured_label = user_data.danger_label
         threading.Thread(target=trigger_software_alert, daemon=True).start()
@@ -1432,13 +1421,6 @@ class WebRTCOfferRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
-    model_tier: str = 'high'   # low | med | high
-
-TIER_MODELS = {
-    'low':  'llama-3.1-8b-instant',
-    'med':  'llama-3.3-70b-versatile',
-    'high': GROQ_MODEL,          # openai/gpt-oss-120b
-}
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -1576,14 +1558,13 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
-    model = TIER_MODELS.get(data.model_tier, GROQ_MODEL)
     loop = asyncio.get_event_loop()
-    llm_result = await loop.run_in_executor(None, query_local_llm, msg, model)
+    llm_result = await loop.run_in_executor(None, query_local_llm, msg, GROQ_MODEL)
     if llm_result is not None:
         reply = _apply_llm_result(llm_result)
     else:
         reply = apply_rule_based_command(msg.lower())
-    append_voice_log(f"[chat] {session['username']} [{data.model_tier}]: {msg}")
+    append_voice_log(f"[chat] {session['username']}: {msg}")
     append_voice_response(f"[chat] {reply}")
     return {"response": reply}
 
@@ -1595,8 +1576,8 @@ def _groq_stream_text(user_input):
     system_prompt = (
         "You are Narada, the AI assistant embedded in Garuda — an AI home security system "
         "running on Raspberry Pi 5 with Hailo-8L AI accelerator and IMX708 camera (1280×720 @ 60fps).\n"
-        "System details: YOLOv6n object detection, danger label = scissors (15-frame confirmation, "
-        "confidence ≥ 0.55), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
+        "System details: YOLOv6n object detection, danger label = scissors (single-frame trigger, "
+        "60s cooldown between alerts), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
         "(0.05–0.95 default 0.35), email alerts via Gmail SMTP, WebRTC + WS binary JPEG + MJPEG "
         "camera streaming, Groq LLM (llama-3.3-70b-versatile) for this chat.\n"
         "When the user requests a mode or setting change, confirm what you're doing. "
@@ -1884,14 +1865,6 @@ async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin
     log_system_update(f"Known device removed: {mac}")
     return {"ok": True, "devices": KNOWN_DEVICES}
 
-@fastapi_app.post("/api/stream_quality")
-async def set_stream_quality(data: dict, session=Depends(require_session)):
-    global STREAM_QUALITY
-    q = data.get("quality", "high")
-    if q in _QUALITY_MAP:
-        STREAM_QUALITY = q
-    return {"quality": STREAM_QUALITY}
-
 @fastapi_app.post("/api/email/test")
 async def test_email(session=Depends(require_admin)):
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
@@ -2081,13 +2054,12 @@ async def mjpeg_stream(request: Request):
         while True:
             if await request.is_disconnected():
                 break
-            jpeg_q, min_interval = _QUALITY_MAP[STREAM_QUALITY]
             now = time.time()
             with _frame_lock:
                 seq = _frame_seq
                 raw = _frame_raw if seq != last_seq else None
-            if raw is not None and (now - last_sent) >= min_interval:
-                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, jpeg_q])
+            if raw is not None and (now - last_sent) >= 0.033:
+                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 75])
                 last_seq = seq
                 last_sent = now
                 yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
