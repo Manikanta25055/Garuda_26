@@ -1671,16 +1671,18 @@ document.addEventListener('click', e => {
   if (e.target.classList.contains('modal-overlay')) e.target.classList.add('hidden');
 });
 
-// Enter key for login views
+// Enter key shortcuts — logs-gate works while logged in; login views only before login
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
+  const lg = document.getElementById('logs-gate');
+  if (lg && !lg.classList.contains('hidden')) { G.unlockLogs(); return; }
+  // All remaining shortcuts are for the login screen only
+  if (document.getElementById('app').classList.contains('logged-in')) return;
   const lv1 = document.getElementById('lv-main');
   const lv2 = document.getElementById('lv-admin-1');
   const lv3 = document.getElementById('lv-admin-2');
   const lvm = document.getElementById('lv-masterkey');
-  const lg  = document.getElementById('logs-gate');
-  if (lg && !lg.classList.contains('hidden'))    G.unlockLogs();
-  else if (lvm && !lvm.classList.contains('hidden')) G.submitMasterKeyLogin();
+  if (lvm && !lvm.classList.contains('hidden')) G.submitMasterKeyLogin();
   else if (lv1 && !lv1.classList.contains('hidden')) G.submitLogin();
   else if (lv2 && !lv2.classList.contains('hidden')) G.sendAdminOTP();
   else if (lv3 && !lv3.classList.contains('hidden')) G.verifyAdminOTP();

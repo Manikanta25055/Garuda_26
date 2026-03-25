@@ -1560,6 +1560,12 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
+    if not GROQ_API_KEY:
+        reply = ("Narada is not configured yet. "
+                 "Please go to Admin → Settings → Narada and enter your Groq API key, then click Save Settings.")
+        append_voice_log(f"[chat] {session['username']}: {msg}")
+        append_voice_response(f"[chat] {reply}")
+        return {"response": reply}
     loop = asyncio.get_event_loop()
     llm_result = await loop.run_in_executor(None, query_local_llm, msg, GROQ_MODEL)
     if llm_result is not None:
