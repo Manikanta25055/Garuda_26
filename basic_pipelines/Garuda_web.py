@@ -581,38 +581,36 @@ def _presence_poller():
 # ALERTS
 ##############################################################################
 def trigger_software_alert():
-    global _alert_active, _alert_flash_count, _last_alert_time, _alert_cooldown_until
-    # Guard: skip if an alert is already in progress (prevents per-frame re-firing)
-    if _alert_active:
-        return
-    # Guard: 60s cooldown between alerts to suppress false positives (e.g. fans)
-    if time.time() < _alert_cooldown_until:
-        return
+    global _alert_active, _alert_flash_count, _last_alert_time
+    global _alert_end_time, _alert_cooldown_until
     with _mode_lock:
         dnd = MODE_DND
         idle = MODE_IDLE
         night = MODE_NIGHT
     if dnd or idle:
-        log_system_update("Alert skipped (DND/Idle active).")
         return
-    if night:
+    was_active = _alert_active
+    # Extend the 3s window every frame scissors is visible — alert stays on
+    # while scissors is in frame and expires 3s after it disappears.
+    _alert_active = True
+    _alert_flash_count = 3
+    _alert_end_time = time.time() + 3
+    if not was_active:
+        # New alert starting: log, record, sound, email
+        if night:
+            try:
+                with open(NIGHT_MODE_LOG_FILE, "a") as f:
+                    f.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
+            except Exception:
+                pass
+        _last_alert_time = datetime.datetime.now()
+        _record_alert_activity()
+        log_system_update("Alert triggered.")
+        push_urgent_ws()
         try:
-            with open(NIGHT_MODE_LOG_FILE, "a") as f:
-                f.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
+            os.system("aplay /usr/share/sounds/alsa/Front_Center.wav &")
         except Exception:
             pass
-    _alert_active = True
-    _alert_flash_count = 3          # legacy field kept for compat; real timer below
-    _alert_end_time = time.time() + 3    # brief 3-second flash, email is the real notification
-    _alert_cooldown_until = time.time() + 60  # 60s before next alert can fire
-    _last_alert_time = datetime.datetime.now()
-    _record_alert_activity()
-    log_system_update("Alert triggered.")
-    push_urgent_ws()
-    try:
-        os.system("aplay /usr/share/sounds/alsa/Front_Center.wav &")
-    except Exception:
-        pass
 
 def send_email_alert():
     global last_email_sent_time
@@ -745,10 +743,15 @@ def app_callback(pad, info, user_data):
         _captured_conf = _last_danger_conf
         _captured_label = user_data.danger_label
         threading.Thread(target=trigger_software_alert, daemon=True).start()
-        threading.Thread(target=log_scissors_detection, daemon=True).start()
         threading.Thread(target=send_email_alert, daemon=True).start()
-        threading.Thread(target=lambda: _append_detection_perm(
-            "DANGER", _captured_label, _captured_conf, "alert triggered"), daemon=True).start()
+        # Log danger to permanent log at most once per 60s to avoid per-frame spam
+        _danger_key = "__danger__"
+        _now = time.time()
+        if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
+            _watch_last_logged[_danger_key] = _now
+            threading.Thread(target=log_scissors_detection, daemon=True).start()
+            threading.Thread(target=lambda: _append_detection_perm(
+                "DANGER", _captured_label, _captured_conf, "alert triggered"), daemon=True).start()
 
     user_data.person_detected = any(d.get_label() == "person" for d in detections)
 
@@ -2145,9 +2148,9 @@ async def _ws_broadcaster():
         except asyncio.TimeoutError:
             pass
         _ws_trigger.clear()
+        payload = get_state_dict()   # always run — handles alert expiry even without clients
         if not _ws_clients:
             continue
-        payload = get_state_dict()
         dead: set = set()
         results = await asyncio.gather(
             *[ws.send_json(payload) for ws in list(_ws_clients)],
