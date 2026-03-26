@@ -17,6 +17,18 @@ const G = (() => {
   let _cfg          = {};
   let _logsUnlocked = false;
   let _lastAlertState = false;
+  let _uptimeBase = 0;          // seconds from backend
+  let _uptimeReceivedAt = 0;    // Date.now() when received
+
+  function _fmtUptimeLive() {
+    if (!_uptimeReceivedAt) return '—';
+    const elapsed = Math.floor((Date.now() - _uptimeReceivedAt) / 1000);
+    const total = _uptimeBase + elapsed;
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
 
   // ── Toast notification system ──────────────────────────────
   function showToast(message, type = 'info', duration = 4000) {
@@ -47,7 +59,7 @@ const G = (() => {
     if (s.cpu_percent != null) updateMetricRing('hw-cpu', s.cpu_percent, 100, '%');
     if (s.ram_percent != null) updateMetricRing('hw-ram', s.ram_percent, 100, '%');
     if (s.cpu_temp != null) updateMetricRing('hw-temp', s.cpu_temp, 85, '\u00b0C');
-    if (s.inference_fps != null) updateMetricRing('hw-fps', s.inference_fps, 30, 'fps');
+    if (s.inference_fps != null) updateMetricRing('hw-fps', s.inference_fps, 60, 'fps');
     if (s.disk_percent != null) updateMetricRing('hw-disk', s.disk_percent, 100, '%');
   }
 
@@ -337,6 +349,8 @@ const G = (() => {
     buildNav(_session.role);
     nav('dashboard');
     _initChatInput();
+    // Live uptime ticker (updates between WS pushes)
+    setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
     // Always reset console visibility first, then show for admin only
     const cw = $('dash-console-wrap');
     if (cw) {
@@ -1086,8 +1100,12 @@ const G = (() => {
       setText('status-last', s.last_alert ? timeSince(new Date(s.last_alert)) : 'Never');
     }
 
-    // Stats
-    setText('s-uptime', s.uptime || '—');
+    // Stats — live uptime ticker
+    if (s.uptime_seconds != null) {
+      _uptimeBase = s.uptime_seconds;
+      _uptimeReceivedAt = Date.now();
+    }
+    setText('s-uptime', _fmtUptimeLive());
 
     setText('s-alert', s.last_alert ? timeSince(new Date(s.last_alert)) : 'None');
     setText('s-thr', s.detection_threshold ? s.detection_threshold.toFixed(2) : '—');

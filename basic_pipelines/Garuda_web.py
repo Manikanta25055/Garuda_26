@@ -1513,6 +1513,7 @@ def get_state_dict():
         "danger_info": _danger_trigger_info,   # only non-empty during a scissors alert
         "last_alert": _last_alert_time.isoformat() if _last_alert_time else None,
         "uptime": uptime_str,
+        "uptime_seconds": uptime,
         "system_log": system_updates_log[-50:],
         "voice_log": voice_assistant_log[-30:],
         "voice_responses": voice_responses[-30:],
@@ -1867,8 +1868,6 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     if not GROQ_API_KEY:
         reply = ("Narada is not configured yet. "
                  "Please go to Admin → Settings → Narada and enter your Groq API key, then click Save Settings.")
-        append_voice_log(f"[chat] {session['username']}: {msg}")
-        append_voice_response(f"[chat] {reply}")
         return {"response": reply}
     loop = asyncio.get_event_loop()
     llm_result = await loop.run_in_executor(None, query_local_llm, msg, GROQ_MODEL)
@@ -1876,8 +1875,6 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
         reply = _apply_llm_result(llm_result)
     else:
         reply = apply_rule_based_command(msg.lower())
-    append_voice_log(f"[chat] {session['username']}: {msg}")
-    append_voice_response(f"[chat] {reply}")
     return {"response": reply}
 
 def _groq_stream_text(user_input):
@@ -1952,8 +1949,6 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
         llm_result = query_local_llm(msg)
         if llm_result is not None:
             _apply_llm_result(llm_result)
-        append_voice_log(f"[chat] {session['username']}: {msg}")
-        append_voice_response(f"[chat] {full_text}")
         loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
     threading.Thread(target=_worker, daemon=True).start()
