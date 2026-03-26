@@ -634,7 +634,7 @@ const G = (() => {
     const el = document.createElement('div');
     el.className = 'chat-msg assistant';
     el.innerHTML = `
-      <div class="chat-msg-avatar">N</div>
+      <div class="chat-msg-avatar-gradient"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
       <div class="chat-msg-content">
         <div class="chat-msg-body"></div>
       </div>`;
@@ -741,7 +741,7 @@ const G = (() => {
     if (!box) return;
     box.innerHTML = `
       <div class="chat-msg assistant">
-        <div class="chat-msg-avatar">N</div>
+        <div class="chat-msg-avatar-gradient"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <div class="chat-msg-content">
           <div class="chat-msg-body">Chat cleared. How can I help?</div>
         </div>
@@ -1010,8 +1010,32 @@ const G = (() => {
       wsUrl = `${proto}://${location.host}/ws`;
     }
     _ws = new WebSocket(wsUrl);
+    _ws.onopen = () => _syncPendingEvents();
     _ws.onmessage = e => tick(JSON.parse(e.data));
     _ws.onclose   = () => setTimeout(connectWS, 3000);
+  }
+
+  // ── Offline event sync on reconnect ─────────────────────
+  async function _syncPendingEvents() {
+    try {
+      const res = await api('GET', '/api/events/pending');
+      if (res.events && res.events.length > 0) {
+        showToast(`Synced ${res.events.length} queued events`, 'info');
+        // Inject into activity feed
+        res.events.forEach(ev => {
+          let type = 'info';
+          if (ev.event_type === 'DANGER' || ev.event_type === 'TAMPER') type = 'danger';
+          else if (ev.event_type === 'WATCH') type = 'watch';
+          else if (ev.event_type === 'PRESENCE') type = 'presence';
+          const time = ev.timestamp ? ev.timestamp.split('T').pop().split('.')[0] : '';
+          const text = `[${ev.event_type}] ${ev.label || ''}${ev.info ? ' — ' + ev.info : ''}`;
+          _activityItems.unshift({ text, type, time });
+        });
+        if (_activityItems.length > 50) _activityItems.length = 50;
+        const feed = document.getElementById('activity-feed');
+        if (feed) _renderActivityFeed(feed);
+      }
+    } catch(_) {}
   }
 
   function tick(s) {
@@ -1197,6 +1221,16 @@ const G = (() => {
       diskOk ? true : (diskWarn ? 'warn' : false),
       s.disk_percent != null ? `${s.disk_used_gb}/${s.disk_total_gb} GB (${Math.round(s.disk_percent)}%)` : 'OK');
     if (s.disk_percent >= 95) issues++;
+
+    // Event queue
+    const pending = s.pending_sync || 0;
+    const queueOk = s.net_online !== false && pending === 0;
+    const queueWarn = s.net_online !== false && pending > 0;
+    _setHealthRow('sh-queue',
+      queueOk ? true : (queueWarn ? 'warn' : false),
+      s.net_online === false ? `Offline — ${pending} events queued locally` :
+      pending > 0 ? `${pending} events pending sync` : 'Online — no pending events');
+    if (s.net_online === false) issues++;
 
     // Badge
     const badge = document.getElementById('sec-health-badge');

@@ -78,6 +78,8 @@ try:
 except Exception:
     pass
 
+import sqlite3
+
 try:
     import psutil
 except ImportError:
@@ -378,7 +380,7 @@ def _load_presence_log():
         _presence_log = []
 
 def _append_presence_log(event: str, device: str, mac: str):
-    """Append one presence event and persist to disk."""
+    """Append one presence event, persist to disk, and queue for sync."""
     global _presence_log
     _presence_log.append({
         "ts":     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -390,6 +392,7 @@ def _append_presence_log(event: str, device: str, mac: str):
         _atomic_json_write(PRESENCE_LOG_FILE, _presence_log)
     except Exception:
         pass
+    queue_event("PRESENCE", device, 0.0, f"{event} (mac={mac})")
 
 def load_master_keys():
     global MASTER_KEYS
@@ -443,7 +446,7 @@ def _perm_write(filepath: str, line: str):
         pass
 
 def _append_detection_perm(event_type: str, label: str, confidence: float, info: str = ""):
-    """Append one detection event to in-memory list and permanent file."""
+    """Append one detection event to in-memory list, permanent file, and SQLite queue."""
     global _detection_log
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"[{stamp}] [{event_type.upper()}] {label} conf={confidence:.2f}"
@@ -453,6 +456,7 @@ def _append_detection_perm(event_type: str, label: str, confidence: float, info:
     if len(_detection_log) > 500:
         _detection_log[:] = _detection_log[-500:]
     _perm_write(PERM_DETECTION_LOG, line)
+    queue_event(event_type.upper(), label, confidence, info)
 
 def log_system_update(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -475,6 +479,117 @@ def append_voice_response(message, user_name=None):
     _perm_write(PERM_VOICE_LOG, "→ " + entry)
     if user_name and user_name in USERS:
         USERS[user_name]["history"]["narada_activity"].append(entry)
+
+##############################################################################
+# OFFLINE EVENT QUEUE (SQLite)
+##############################################################################
+EVENTS_DB = "system_logs/garuda_events.db"
+_eq_lock = threading.Lock()
+_net_online = True          # tracked by connectivity monitor
+
+def _init_event_db():
+    """Create events table if not exists."""
+    os.makedirs(os.path.dirname(EVENTS_DB) or ".", exist_ok=True)
+    conn = sqlite3.connect(EVENTS_DB)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            label TEXT,
+            confidence REAL DEFAULT 0,
+            info TEXT DEFAULT '',
+            synced INTEGER DEFAULT 0
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_synced ON events(synced)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_ts ON events(timestamp)")
+    conn.commit()
+    conn.close()
+
+def queue_event(event_type: str, label: str = "", confidence: float = 0.0, info: str = ""):
+    """Insert an event into the SQLite queue. Thread-safe."""
+    stamp = datetime.datetime.now().isoformat()
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            conn.execute(
+                "INSERT INTO events (timestamp, event_type, label, confidence, info) VALUES (?, ?, ?, ?, ?)",
+                (stamp, event_type, label, confidence, info))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            log_system_update(f"[QUEUE] DB write error: {e}")
+
+def get_events_since(since_ts: str = "", limit: int = 500) -> list:
+    """Return events after the given ISO timestamp, oldest-first."""
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            conn.row_factory = sqlite3.Row
+            if since_ts:
+                rows = conn.execute(
+                    "SELECT * FROM events WHERE timestamp > ? ORDER BY timestamp ASC LIMIT ?",
+                    (since_ts, limit)).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM events ORDER BY timestamp ASC LIMIT ?",
+                    (limit,)).fetchall()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+def get_pending_count() -> int:
+    """Return count of unsynced events."""
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            count = conn.execute("SELECT COUNT(*) FROM events WHERE synced = 0").fetchone()[0]
+            conn.close()
+            return count
+        except Exception:
+            return 0
+
+def mark_events_synced(up_to_id: int):
+    """Mark all events up to and including the given ID as synced."""
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            conn.execute("UPDATE events SET synced = 1 WHERE id <= ?", (up_to_id,))
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+def _check_connectivity() -> bool:
+    """Quick connectivity check — try to resolve DNS."""
+    import socket
+    try:
+        socket.create_connection(("1.1.1.1", 53), timeout=3)
+        return True
+    except OSError:
+        return False
+
+def _connectivity_monitor():
+    """Background thread: monitor internet connectivity, log transitions."""
+    global _net_online
+    was_online = True
+    while True:
+        time.sleep(30)
+        online = _check_connectivity()
+        if online and not was_online:
+            # Just came back online
+            _net_online = True
+            pending = get_pending_count()
+            log_system_update(f"[NETWORK] Internet restored — {pending} queued events ready to sync")
+            push_urgent_ws()
+        elif not online and was_online:
+            # Just went offline
+            _net_online = False
+            log_system_update("[NETWORK] Internet connection lost — events will be queued locally")
+            push_urgent_ws()
+        was_online = online
 
 def stop_app():
     log_system_update("Stopping Garuda Web app.")
@@ -1432,6 +1547,9 @@ def get_state_dict():
         # Log counts for badge display (avoid sending full arrays over WS)
         "detection_log_count": len(_detection_log),
         "presence_log_count": len(_presence_log),
+        # Offline queue
+        "net_online": _net_online,
+        "pending_sync": get_pending_count(),
     }
 
 ##############################################################################
@@ -1472,12 +1590,14 @@ async def _lifespan(app):
     global _event_loop, _ws_trigger
     _event_loop = asyncio.get_event_loop()
     _ws_trigger = asyncio.Event()
+    _init_event_db()
     _load_alert_history()
     _load_presence_log()
     load_master_keys()
     asyncio.ensure_future(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     threading.Thread(target=_deadman_monitor, daemon=True).start()
+    threading.Thread(target=_connectivity_monitor, daemon=True).start()
     yield
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
@@ -2242,6 +2362,37 @@ async def emergency_stop(session=Depends(require_session)):
     log_system_update(f"Emergency stop by {session['username']}.")
     threading.Thread(target=stop_app, daemon=True).start()
     return {"ok": True}
+
+# ── Offline event queue endpoints ─────────────────────────────────────────────
+@fastapi_app.get("/api/events/since")
+async def events_since(since: str = "", limit: int = 500, session=Depends(require_session)):
+    """Return events after the given ISO timestamp, oldest-first."""
+    events = get_events_since(since, limit)
+    return {"events": events, "count": len(events)}
+
+@fastapi_app.get("/api/events/pending")
+async def events_pending(session=Depends(require_session)):
+    """Return all unsynced events and mark them as synced."""
+    events = get_events_since("", 1000)
+    unsynced = [e for e in events if not e.get("synced")]
+    if unsynced:
+        max_id = max(e["id"] for e in unsynced)
+        mark_events_synced(max_id)
+    return {"events": unsynced, "count": len(unsynced)}
+
+@fastapi_app.get("/api/events/stats")
+async def events_stats(session=Depends(require_session)):
+    """Return queue statistics."""
+    pending = get_pending_count()
+    total = 0
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            total = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+            conn.close()
+        except Exception:
+            pass
+    return {"pending": pending, "total": total, "online": _net_online}
 
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
 # Uses _frame_seq to detect new frames only — avoids re-sending duplicate
