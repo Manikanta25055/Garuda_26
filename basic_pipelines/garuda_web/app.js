@@ -38,15 +38,17 @@ const G = (() => {
   // ── Hardware stats ────────────────────────────────────────
   function _updateHw(s) {
     if (s.cpu_percent != null) setText('hwm-cpu',  Math.round(s.cpu_percent) + '%');
-    if (s.ram_used_gb != null) setText('hwm-ram',  s.ram_used_gb + ' GB');
-    if (s.cpu_temp    != null) setText('hwm-temp', Math.round(s.cpu_temp) + '\u00b0C');
-    if (s.inference_fps != null) setText('hwm-fps', s.inference_fps.toFixed(1) + ' fps');
+    if (s.ram_percent != null) setText('hwm-ram',  Math.round(s.ram_percent) + '%');
+    if (s.cpu_temp    != null) setText('hwm-temp', Math.round(s.cpu_temp) + '\u00b0');
+    if (s.inference_fps != null) setText('hwm-fps', Math.round(s.inference_fps));
+    if (s.disk_percent != null) setText('hwm-disk', Math.round(s.disk_percent) + '%');
 
     // Update metric rings
     if (s.cpu_percent != null) updateMetricRing('hw-cpu', s.cpu_percent, 100, '%');
     if (s.ram_percent != null) updateMetricRing('hw-ram', s.ram_percent, 100, '%');
     if (s.cpu_temp != null) updateMetricRing('hw-temp', s.cpu_temp, 85, '\u00b0C');
     if (s.inference_fps != null) updateMetricRing('hw-fps', s.inference_fps, 30, 'fps');
+    if (s.disk_percent != null) updateMetricRing('hw-disk', s.disk_percent, 100, '%');
   }
 
   // ── Hardware metric ring updater ───────────────────────────
@@ -905,7 +907,6 @@ const G = (() => {
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
     { page: 'a-settings', label: 'System',   icon: 'settings'  },
     { page: 'a-logs',     label: 'Logs',     icon: 'logs'      },
-    { page: 'a-users',    label: 'Users',    icon: 'users'     },
     { page: 'a-cmds',     label: 'Commands', icon: 'commands'  },
     { page: null,         label: 'Stop',     icon: 'emergency', danger: true },
   ];
@@ -979,7 +980,6 @@ const G = (() => {
       });
     }
     if (navEl) { navEl.classList.add('active'); movePill(navEl); }
-    if (pageId === 'a-users')    loadUsers();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
     if (pageId === 'a-logs') {
@@ -1112,15 +1112,17 @@ const G = (() => {
     const lcSys = document.getElementById('log-count-system');
     if (lcSys) lcSys.textContent = (s.system_log || []).length || 0;
     const lcDet = document.getElementById('log-count-detection');
-    if (lcDet) lcDet.textContent = (s.detection_log || []).length || 0;
+    if (lcDet) lcDet.textContent = s.detection_log_count || 0;
     const lcPres = document.getElementById('log-count-presence');
-    if (lcPres) lcPres.textContent = (s.presence_log || []).length || 0;
+    if (lcPres) lcPres.textContent = s.presence_log_count || 0;
     const lcVoice = document.getElementById('log-count-voice');
     if (lcVoice) lcVoice.textContent = ((s.voice_log || []).length + (s.voice_responses || []).length) || 0;
 
-    // Narada
-    renderLog('narada-vlog',  s.voice_log      || [], false);
-    renderLog('narada-resp',  s.voice_responses || [], true);
+    // Narada feed (conversation-style)
+    _updateNaradaFeed(s.voice_log || [], s.voice_responses || []);
+
+    // Security health panel
+    _updateSecHealth(s);
 
     // Sync system_log from WS state for any live-updating consumers
     // (actual admin logs page fetches via /api/logs which requires master key)
@@ -1154,6 +1156,103 @@ const G = (() => {
       `<div class="log-line${isResp ? ' response' : ''}">${esc(l)}</div>`
     ).join('');
     if (atBot) el.scrollTop = el.scrollHeight;
+  }
+
+  // ── Security health panel ──────────────────────────────────
+  function _updateSecHealth(s) {
+    let issues = 0;
+
+    // Watchdog
+    _setHealthRow('sh-watchdog',
+      s.watchdog_ok !== false,
+      s.watchdog_ok === false ? 'Heartbeat lost — possible tampering' : 'Heartbeat active');
+    if (s.watchdog_ok === false) issues++;
+
+    // Camera
+    _setHealthRow('sh-camera',
+      !s.camera_blind,
+      s.camera_blind ? 'Lens may be blocked or covered' : 'Feed normal');
+    if (s.camera_blind) issues++;
+
+    // Thermal
+    const tempOk = !s.throttled;
+    const tempWarn = s.cpu_temp >= 70 && !s.throttled;
+    _setHealthRow('sh-temp',
+      tempOk && !tempWarn ? true : (tempWarn ? 'warn' : false),
+      s.throttled ? `Throttling at ${Math.round(s.cpu_temp || 0)}\u00b0C` :
+      tempWarn ? `${Math.round(s.cpu_temp)}\u00b0C — approaching limit` : 'Temperature normal');
+    if (s.throttled) issues++;
+
+    // Network
+    _setHealthRow('sh-network',
+      s.net_connected !== false,
+      s.net_connected === false ? 'No network interface up' :
+      s.net_iface ? `Connected via ${s.net_iface}` : 'Connected');
+    if (s.net_connected === false) issues++;
+
+    // Disk
+    const diskOk = !s.disk_percent || s.disk_percent < 85;
+    const diskWarn = s.disk_percent >= 85 && s.disk_percent < 95;
+    _setHealthRow('sh-disk',
+      diskOk ? true : (diskWarn ? 'warn' : false),
+      s.disk_percent != null ? `${s.disk_used_gb}/${s.disk_total_gb} GB (${Math.round(s.disk_percent)}%)` : 'OK');
+    if (s.disk_percent >= 95) issues++;
+
+    // Badge
+    const badge = document.getElementById('sec-health-badge');
+    if (badge) {
+      badge.textContent = issues === 0 ? 'All OK' : `${issues} Issue${issues > 1 ? 's' : ''}`;
+      badge.className = 'sec-health-badge' + (issues === 0 ? '' : issues >= 2 ? ' critical' : ' warn');
+    }
+  }
+
+  function _setHealthRow(id, status, desc) {
+    const row = document.getElementById(id);
+    if (!row) return;
+    const icon = row.querySelector('.sec-health-icon');
+    const descEl = row.querySelector('.sec-health-desc');
+    if (icon) {
+      if (status === true) {
+        icon.className = 'sec-health-icon ok';
+        icon.innerHTML = '&#10003;';
+      } else if (status === 'warn') {
+        icon.className = 'sec-health-icon warn';
+        icon.innerHTML = '!';
+      } else {
+        icon.className = 'sec-health-icon critical';
+        icon.innerHTML = '&#10007;';
+      }
+    }
+    if (descEl) descEl.textContent = desc;
+  }
+
+  // ── Narada conversation feed ──────────────────────────────
+  let _lastNaradaKey = '';
+  function _updateNaradaFeed(voiceLog, voiceResponses) {
+    const feed = document.getElementById('narada-feed');
+    if (!feed) return;
+    const key = voiceLog.length + ':' + voiceResponses.length;
+    if (key === _lastNaradaKey) return;
+    _lastNaradaKey = key;
+
+    // Interleave voice inputs and responses
+    const items = [];
+    const maxLen = Math.max(voiceLog.length, voiceResponses.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < voiceLog.length) items.push({ type: 'user', text: voiceLog[i] });
+      if (i < voiceResponses.length) items.push({ type: 'assistant', text: voiceResponses[i] });
+    }
+
+    if (!items.length) {
+      feed.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg></div><span>Speak a command to begin</span></div>';
+      return;
+    }
+
+    const atBot = feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 8;
+    feed.innerHTML = items.map(item =>
+      `<div class="narada-msg ${item.type}">${esc(item.text)}</div>`
+    ).join('');
+    if (atBot) feed.scrollTop = feed.scrollHeight;
   }
 
   function renderModes(modes) {
@@ -1193,81 +1292,6 @@ const G = (() => {
   // ── Admin: load config ────────────────────────────────────
   async function loadCfg() {
     try { _cfg = await api('GET', '/api/config'); } catch(_) {}
-  }
-
-  // ── Admin: Users ──────────────────────────────────────────
-  async function loadUsers() {
-    try {
-      const data = await api('GET', '/api/users');
-      _renderUserCards(data);
-    } catch(e) { console.error(e); }
-  }
-
-  function _renderUserCards(users) {
-    const container = document.getElementById('u-cards');
-    if (!container) return;
-    container.innerHTML = '';
-    for (const [uname, udata] of Object.entries(users)) {
-      const initial = (udata.display_name || uname).charAt(0).toUpperCase();
-      const card = document.createElement('div');
-      card.className = 'user-card';
-      card.innerHTML = `
-        <div class="user-avatar" style="background:${udata.box_color || '#1565c0'}">${initial}</div>
-        <div class="user-info">
-          <div class="user-name">${udata.display_name || uname}</div>
-          <div class="user-role">${udata.role} \u00b7 @${uname}</div>
-        </div>
-        <div class="user-actions">
-          <button class="btn btn-ghost btn-sm" onclick="G._editUser(${JSON.stringify(uname)},${JSON.stringify(udata.display_name)},${JSON.stringify(udata.box_color)})">Edit</button>
-          ${uname !== 'admin' ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="G._delUser(${JSON.stringify(uname)})">Delete</button>` : ''}
-        </div>`;
-      container.appendChild(card);
-    }
-  }
-
-  function openAddUser() {
-    $('m-uname').value = ''; $('m-upass').value = ''; $('m-dname').value = '';
-    $('m-color').value = '#2997ff'; $('m-role').value = 'user';
-    $('m-add-err').classList.add('hidden');
-    show('m-add-user');
-  }
-
-  async function addUser() {
-    const un = val('m-uname'), pw = val('m-upass'), dn = val('m-dname');
-    const color = $('m-color').value, role = $('m-role').value;
-    const err = $('m-add-err');
-    if (!un || !pw) { showMsg(err, 'Username and password required.', false); return; }
-    try {
-      await api('POST', '/api/users/add',
-        { username: un, password: pw, display_name: dn || un, box_color: color, role });
-      closeModal('m-add-user'); loadUsers();
-    } catch(e) { showMsg(err, e.detail || 'Failed.', false); }
-  }
-
-  function _editUser(un, dn, col) {
-    $('m-edit-un').value = un;
-    $('m-edit-title').textContent = `Edit — ${un}`;
-    $('m-edit-dn').value = dn; $('m-edit-pw').value = ''; $('m-edit-col').value = col;
-    $('m-edit-err').classList.add('hidden');
-    show('m-edit-user');
-  }
-
-  async function saveUser() {
-    const un = $('m-edit-un').value, dn = val('m-edit-dn');
-    const pw = val('m-edit-pw'), col = $('m-edit-col').value;
-    const err = $('m-edit-err');
-    const payload = { username: un, display_name: dn, box_color: col };
-    if (pw) payload.new_password = pw;
-    try {
-      await api('POST', '/api/users/update', payload);
-      closeModal('m-edit-user'); loadUsers();
-    } catch(e) { showMsg(err, e.detail || 'Failed.', false); }
-  }
-
-  async function _delUser(un) {
-    if (!confirm(`Delete user "${un}"? This cannot be undone.`)) return;
-    try { await api('POST', '/api/users/delete', { username: un }); loadUsers(); }
-    catch(e) { alert(e.detail || 'Failed.'); }
   }
 
   // ── Admin: Email ──────────────────────────────────────────
@@ -1368,7 +1392,7 @@ const G = (() => {
       const av = $('a-vlog');
       if (av) {
         av.innerHTML = [...(data.voice_log||[]), ...(data.voice_responses||[])]
-          .map(l => `<div class="narada-line">${esc(l)}</div>`).join('');
+          .map(l => `<div class="log-line">${esc(l)}</div>`).join('');
         av.scrollTop = av.scrollHeight;
       }
       const dl = $('a-detlog');
@@ -1793,7 +1817,6 @@ const G = (() => {
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleCamera, openDocs, sendChat, clearChat, toggleRateLimitInfo,
-    loadUsers, openAddUser, addUser, _editUser, saveUser, _delUser,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs, downloadFullLog,

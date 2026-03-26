@@ -83,7 +83,7 @@ try:
 except ImportError:
     psutil = None
 
-from fastapi import FastAPI, WebSocket, HTTPException, Request, Response, Depends
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Response, Depends
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -1349,6 +1349,42 @@ def get_state_dict():
 
     inference_fps = round(_total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
 
+    # ── Disk usage ──
+    disk_pct = None
+    disk_used_gb = None
+    disk_total_gb = None
+    if psutil:
+        try:
+            du = psutil.disk_usage('/')
+            disk_pct = round(du.percent, 1)
+            disk_used_gb = round(du.used / (1024 ** 3), 1)
+            disk_total_gb = round(du.total / (1024 ** 3), 1)
+        except Exception:
+            pass
+
+    # ── Network status ──
+    net_connected = False
+    net_iface = None
+    if psutil:
+        try:
+            stats = psutil.net_if_stats()
+            for iface in ('wlan0', 'eth0', 'end0'):
+                if iface in stats and stats[iface].isup:
+                    net_connected = True
+                    net_iface = iface
+                    break
+        except Exception:
+            pass
+
+    # ── Thermal throttling (RPi5: >80°C = throttled) ──
+    throttled = False
+    if cpu_temp and cpu_temp >= 80:
+        throttled = True
+
+    # ── Security health ──
+    watchdog_ok = (time.time() - _last_heartbeat) < _DEADMAN_TIMEOUT
+    camera_blind = _blind_alert_sent
+
     return {
         "modes": {
             "dnd": MODE_DND,
@@ -1383,6 +1419,19 @@ def get_state_dict():
             for d in KNOWN_DEVICES
         ],
         "alert_history": _alert_history,
+        # Security health
+        "watchdog_ok": watchdog_ok,
+        "camera_blind": camera_blind,
+        "throttled": throttled,
+        # Extended hardware
+        "disk_percent": disk_pct,
+        "disk_used_gb": disk_used_gb,
+        "disk_total_gb": disk_total_gb,
+        "net_connected": net_connected,
+        "net_iface": net_iface,
+        # Log counts for badge display (avoid sending full arrays over WS)
+        "detection_log_count": len(_detection_log),
+        "presence_log_count": len(_presence_log),
     }
 
 ##############################################################################
@@ -2272,8 +2321,10 @@ async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
                 await websocket.send_bytes(frame)
             else:
                 await asyncio.sleep(0.005)
-    except Exception:
+    except WebSocketDisconnect:
         pass
+    except Exception as e:
+        log_system_update(f"[STREAM] WS stream error: {type(e).__name__}")
 
 # ── WebSocket broadcaster (event-driven) ─────────────────────────────────────
 # Waits on _ws_trigger asyncio.Event with a 2s timeout (heartbeat).

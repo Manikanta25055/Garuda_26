@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=37"/>
+  <link rel="stylesheet" href="/static/style.css?v=38"/>
 </head>
 <body>
 <div id="app">
@@ -255,7 +255,7 @@
                   </svg>
                   <div class="hw-ring-val" id="hwm-temp">—</div>
                 </div>
-                <div class="hw-tile-label">Temperature</div>
+                <div class="hw-tile-label">Temp</div>
               </div>
               <div class="hw-tile" id="hw-fps-tile">
                 <div class="hw-ring-wrap">
@@ -266,7 +266,63 @@
                   </svg>
                   <div class="hw-ring-val" id="hwm-fps">—</div>
                 </div>
-                <div class="hw-tile-label">Inference</div>
+                <div class="hw-tile-label">FPS</div>
+              </div>
+              <div class="hw-tile" id="hw-disk-tile">
+                <div class="hw-ring-wrap">
+                  <svg viewBox="0 0 64 64">
+                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
+                    <circle class="hw-ring-fg" id="hw-disk-ring" cx="32" cy="32" r="27"
+                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
+                  </svg>
+                  <div class="hw-ring-val" id="hwm-disk">—</div>
+                </div>
+                <div class="hw-tile-label">Disk</div>
+              </div>
+            </div>
+
+            <!-- Security Health -->
+            <div class="card sec-health-card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Security Health</div>
+                <div class="sec-health-badge" id="sec-health-badge">All OK</div>
+              </div>
+              <div class="sec-health-rows">
+                <div class="sec-health-row" id="sh-watchdog">
+                  <div class="sec-health-icon ok">&#10003;</div>
+                  <div class="sec-health-info">
+                    <div class="sec-health-name">Watchdog Timer</div>
+                    <div class="sec-health-desc" id="sh-watchdog-desc">Heartbeat active</div>
+                  </div>
+                </div>
+                <div class="sec-health-row" id="sh-camera">
+                  <div class="sec-health-icon ok">&#10003;</div>
+                  <div class="sec-health-info">
+                    <div class="sec-health-name">Camera Feed</div>
+                    <div class="sec-health-desc" id="sh-camera-desc">Feed normal</div>
+                  </div>
+                </div>
+                <div class="sec-health-row" id="sh-temp">
+                  <div class="sec-health-icon ok">&#10003;</div>
+                  <div class="sec-health-info">
+                    <div class="sec-health-name">Thermal Control</div>
+                    <div class="sec-health-desc" id="sh-temp-desc">Temperature normal</div>
+                  </div>
+                </div>
+                <div class="sec-health-row" id="sh-network">
+                  <div class="sec-health-icon ok">&#10003;</div>
+                  <div class="sec-health-info">
+                    <div class="sec-health-name">Network</div>
+                    <div class="sec-health-desc" id="sh-network-desc">Connected</div>
+                  </div>
+                </div>
+                <div class="sec-health-row" id="sh-disk">
+                  <div class="sec-health-icon ok">&#10003;</div>
+                  <div class="sec-health-info">
+                    <div class="sec-health-name">Storage</div>
+                    <div class="sec-health-desc" id="sh-disk-desc">OK</div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -394,40 +450,60 @@
 
       <!-- ── NARADA ── -->
       <div id="page-narada" class="page">
-        <div class="page-inner">
-          <h2 class="page-title">Narada</h2>
-          <p class="page-sub">Voice assistant — always listening. Speak commands naturally.</p>
+        <div class="narada-shell">
 
-          <div class="two-col" style="margin-bottom:20px">
-            <div class="section-card">
-              <h3 class="section-title">Voice Input</h3>
-              <div id="narada-vlog" class="narada-log"></div>
-            </div>
-            <div class="section-card">
-              <h3 class="section-title">Responses</h3>
-              <div id="narada-resp" class="narada-log"></div>
+          <!-- Header -->
+          <div class="narada-header">
+            <div class="narada-header-info">
+              <div class="narada-avatar-wrap">
+                <div class="narada-avatar">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/>
+                    <path d="M5 11a7 7 0 0 0 14 0"/>
+                    <line x1="12" y1="18" x2="12" y2="22"/>
+                  </svg>
+                </div>
+                <div class="narada-pulse" id="narada-pulse"></div>
+              </div>
+              <div>
+                <div class="narada-name">Narada</div>
+                <div class="narada-status" id="narada-status">Voice assistant — always listening</div>
+              </div>
             </div>
           </div>
 
-          <div class="section-card">
-            <h3 class="section-title">Built-in Commands</h3>
-            <div class="cmds-grid" style="margin-top:14px">
-              <span class="cmd-phrase">activate / deactivate dnd</span>
-              <span class="cmd-desc">Do Not Disturb mode</span>
-              <span class="cmd-phrase">activate / deactivate night mode</span>
-              <span class="cmd-desc">High-sensitivity night alerts</span>
-              <span class="cmd-phrase">activate / deactivate emergency mode</span>
-              <span class="cmd-desc">Maximum alert priority</span>
-              <span class="cmd-phrase">activate / deactivate idle</span>
-              <span class="cmd-desc">Pause all alerts</span>
-              <span class="cmd-phrase">privacy on / privacy off</span>
-              <span class="cmd-desc">Face blur toggle</span>
-              <span class="cmd-phrase">what time is it</span>
-              <span class="cmd-desc">Current time</span>
-              <span class="cmd-phrase">status</span>
-              <span class="cmd-desc">Active modes summary</span>
+          <!-- Conversation feed -->
+          <div class="narada-feed" id="narada-feed">
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg>
+              </div>
+              <span>Speak a command to begin</span>
             </div>
           </div>
+
+          <!-- Quick Commands -->
+          <div class="narada-cmds-section">
+            <div class="narada-cmds-title">Quick Commands</div>
+            <div class="narada-cmd-chips">
+              <button class="narada-chip" onclick="G.toggleMode('dnd',false)">
+                <span class="narada-chip-icon">◯</span>DND On
+              </button>
+              <button class="narada-chip" onclick="G.toggleMode('night',false)">
+                <span class="narada-chip-icon">◑</span>Night Mode
+              </button>
+              <button class="narada-chip" onclick="G.toggleMode('emergency',false)">
+                <span class="narada-chip-icon">△</span>Emergency
+              </button>
+              <button class="narada-chip" onclick="G.toggleMode('idle',false)">
+                <span class="narada-chip-icon">⊟</span>Idle
+              </button>
+              <button class="narada-chip" onclick="G.toggleMode('privacy',true)">
+                <span class="narada-chip-icon">◉</span>Privacy
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -506,17 +582,6 @@
             <div class="chat-disclaimer">Narada is an AI and can make mistakes. Verify important actions before acting on them.</div>
           </div>
 
-        </div>
-      </div>
-
-      <!-- ── ADMIN: USERS ── -->
-      <div id="page-a-users" class="page">
-        <div class="admin-page">
-          <div class="admin-page-header">
-            <h2>Users</h2>
-            <button class="btn btn-primary btn-sm" onclick="G.openAddUser()">Add User</button>
-          </div>
-          <div id="u-cards" class="user-cards"></div>
         </div>
       </div>
 
@@ -737,69 +802,6 @@
 
 <!-- ══════════════ MODALS ══════════════ -->
 
-<div id="m-add-user" class="modal-overlay hidden">
-  <div class="modal">
-    <h2>New User</h2>
-    <div class="input-group">
-      <span class="input-label">Username</span>
-      <input id="m-uname" class="input" type="text" placeholder="login credential"/>
-    </div>
-    <div class="input-group">
-      <span class="input-label">Password</span>
-      <input id="m-upass" class="input" type="password"/>
-    </div>
-    <div class="input-group">
-      <span class="input-label">Display Name</span>
-      <input id="m-dname" class="input" type="text" placeholder="shown on login screen"/>
-    </div>
-    <div>
-      <span class="input-label">Profile Color</span>
-      <div id="m-swatches" class="swatch-row"></div>
-      <input id="m-color" type="color" value="#2997ff"
-             style="margin-top:8px;width:100%;height:34px;border:1px solid var(--border);
-                    border-radius:var(--r-sm);background:none;cursor:pointer;padding:2px 6px"/>
-    </div>
-    <div>
-      <span class="input-label">Role</span>
-      <select id="m-role" class="input select">
-        <option value="user">User</option>
-        <option value="admin">Admin</option>
-      </select>
-    </div>
-    <div id="m-add-err" class="msg err hidden"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="G.closeModal('m-add-user')">Cancel</button>
-      <button class="btn btn-primary" onclick="G.addUser()">Add User</button>
-    </div>
-  </div>
-</div>
-
-<div id="m-edit-user" class="modal-overlay hidden">
-  <div class="modal">
-    <h2 id="m-edit-title">Edit User</h2>
-    <input id="m-edit-un" type="hidden"/>
-    <div class="input-group">
-      <span class="input-label">Display Name</span>
-      <input id="m-edit-dn" class="input" type="text"/>
-    </div>
-    <div class="input-group">
-      <span class="input-label">New Password (blank = unchanged)</span>
-      <input id="m-edit-pw" class="input" type="password" placeholder="(keep current)"/>
-    </div>
-    <div>
-      <span class="input-label">Profile Color</span>
-      <input id="m-edit-col" type="color"
-             style="width:100%;height:34px;border:1px solid var(--border);
-                    border-radius:var(--r-sm);background:none;cursor:pointer;padding:2px 6px"/>
-    </div>
-    <div id="m-edit-err" class="msg err hidden"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="G.closeModal('m-edit-user')">Cancel</button>
-      <button class="btn btn-primary" onclick="G.saveUser()">Save</button>
-    </div>
-  </div>
-</div>
-
 <div id="m-add-cmd" class="modal-overlay hidden">
   <div class="modal">
     <h2>New Command</h2>
@@ -919,6 +921,6 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=30"></script>
+<script src="/static/app.js?v=31"></script>
 </body>
 </html>

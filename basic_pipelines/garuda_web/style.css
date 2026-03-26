@@ -770,6 +770,116 @@ textarea:-webkit-autofill {
 }
 .section-title { margin-bottom: 12px; }
 
+/* ── Narada (modernized) ────────────────────────────────── */
+.narada-shell { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.narada-header {
+  padding: 16px 20px;
+  border-bottom: 0.5px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  flex-shrink: 0;
+}
+.narada-header-info { display: flex; align-items: center; gap: 14px; }
+.narada-avatar-wrap { position: relative; flex-shrink: 0; }
+.narada-avatar {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #5e5ce6, #af52de);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+}
+.narada-avatar svg { width: 20px; height: 20px; }
+.narada-pulse {
+  position: absolute; bottom: -2px; right: -2px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #34C759;
+  border: 2px solid var(--bg);
+}
+.narada-pulse.inactive { background: var(--t4); }
+.narada-name { font-size: 16px; font-weight: 600; color: var(--t1); }
+.narada-status { font-size: 12px; color: var(--t3); margin-top: 1px; }
+
+.narada-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.narada-msg {
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  animation: fadeSlideUp 0.2s ease;
+}
+.narada-msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.narada-msg.assistant {
+  align-self: flex-start;
+  background: var(--surface-2);
+  color: var(--t1);
+  border-bottom-left-radius: 4px;
+}
+.narada-msg-time {
+  font-size: 10px;
+  color: var(--t4);
+  margin-top: 2px;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.narada-cmds-section {
+  flex-shrink: 0;
+  padding: 12px 20px 16px;
+  border-top: 0.5px solid var(--border);
+}
+.narada-cmds-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.narada-cmd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.narada-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+  color: var(--t2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.narada-chip:hover {
+  background: var(--surface-3);
+  color: var(--t1);
+  transform: translateY(-1px);
+}
+.narada-chip-icon { font-size: 13px; opacity: 0.7; }
+
+/* Keep narada-log for admin logs page */
 .narada-log {
   font-family: var(--mono);
   font-size: 11px;
@@ -780,15 +890,6 @@ textarea:-webkit-autofill {
 }
 .narada-log .log-line { padding: 1px 0; }
 .narada-log .log-line.response { color: var(--accent); }
-
-.cmds-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 20px;
-  font-size: 13px;
-}
-.cmd-phrase { color: var(--accent); font-family: var(--mono); font-size: 12px; }
-.cmd-desc   { color: var(--t3); }
 
 /* ── Admin pages ────────────────────────────────────────── */
 .admin-page {
@@ -1424,7 +1525,7 @@ input[type=range]::-webkit-slider-thumb {
 .hw-stat-div     { width: 1px; height: 38px; background: rgba(255,255,255,0.07); flex-shrink: 0; }
 
 /* ── Hardware metric tiles (ring gauges) ─────────────────── */
-.hw-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.hw-metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
 .hw-tile {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1446,9 +1547,13 @@ input[type=range]::-webkit-slider-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
 }
 .hw-tile-label { font-size: 12px; color: var(--t3); font-weight: 500; letter-spacing: 0.3px; text-transform: uppercase; }
 
@@ -1644,32 +1749,47 @@ input[type=range]::-webkit-slider-thumb {
 .log-pane { display: none; }
 .log-pane.active { display: block; }
 
-/* ── User cards (admin users page) ──────────────────────── */
-.user-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.user-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.user-avatar {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
+/* ── Security Health Card ────────────────────────────────── */
+.sec-health-card { }
+.sec-health-badge {
+  font-size: 11px;
   font-weight: 600;
-  color: #fff;
+  padding: 3px 10px;
+  border-radius: 10px;
+  background: rgba(52, 199, 89, 0.15);
+  color: #34C759;
+  letter-spacing: 0.2px;
+}
+.sec-health-badge.warn {
+  background: rgba(255, 159, 10, 0.15);
+  color: #FF9F0A;
+}
+.sec-health-badge.critical {
+  background: rgba(255, 59, 48, 0.15);
+  color: #FF3B30;
+}
+.sec-health-rows { display: flex; flex-direction: column; gap: 2px; }
+.sec-health-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.sec-health-row:last-child { border-bottom: none; }
+.sec-health-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
   flex-shrink: 0;
 }
-.user-info { flex: 1; min-width: 0; }
-.user-name { font-size: 15px; font-weight: 600; }
-.user-role { font-size: 12px; color: var(--t3); margin-top: 2px; }
-.user-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.sec-health-icon.ok { background: rgba(52, 199, 89, 0.15); color: #34C759; }
+.sec-health-icon.warn { background: rgba(255, 159, 10, 0.15); color: #FF9F0A; }
+.sec-health-icon.critical { background: rgba(255, 59, 48, 0.15); color: #FF3B30; }
+.sec-health-info { flex: 1; min-width: 0; }
+.sec-health-name { font-size: 13px; font-weight: 600; color: var(--t1); }
+.sec-health-desc { font-size: 11px; color: var(--t3); margin-top: 1px; }
 
 /* ── Toast System ───────────────────────────────────────── */
 .toast-container {
@@ -2404,5 +2524,4 @@ input[type=range]::-webkit-slider-thumb {
 
 @media (max-width: 600px) {
   .hw-metrics { grid-template-columns: repeat(2, 1fr); }
-  .user-cards { grid-template-columns: 1fr; }
 }
