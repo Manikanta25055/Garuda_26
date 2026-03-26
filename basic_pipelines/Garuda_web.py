@@ -38,7 +38,14 @@ import ipaddress
 import subprocess
 import asyncio
 import threading
+import hashlib
+import tempfile
+import re
 from pathlib import Path
+from collections import defaultdict
+
+from dotenv import load_dotenv
+load_dotenv()
 
 import speech_recognition as sr
 import ctypes
@@ -102,15 +109,15 @@ from hailo_rpi_common import (
 )
 
 ##############################################################################
-# EMAIL CONFIG
+# EMAIL CONFIG (secrets from .env, overridable via config.json for non-secrets)
 ##############################################################################
-EMAIL_SENDER = "mgonugondlamanikanta@gmail.com"
-EMAIL_SENDER_PASS = "grhy ipzy hedi xprp"
+EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "")
+EMAIL_SENDER_PASS = os.environ.get("EMAIL_SENDER_PASS", "")
 EMAIL_RECIPIENTS = ["amarmanikantan@gmail.com"]
 EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 
-GROQ_API_KEY = ""   # loaded from system_logs/config.json at startup
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL   = "llama-3.3-70b-versatile"
 
 ##############################################################################
@@ -163,6 +170,15 @@ _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
 _mode_lock = threading.Lock()
+
+# ── Dead man's switch ────────────────────────────────────
+_last_heartbeat = time.time()      # updated by GET /api/heartbeat
+_DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper alert
+_deadman_alert_sent = False
+
+# ── Camera blindness detection ───────────────────────────
+_blind_frame_count = 0
+_blind_alert_sent = False
 _class_counts_today = {}   # class_name → count since startup
 _total_frames = 0          # total inference frames (for avg FPS)
 _watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
@@ -182,6 +198,55 @@ _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_
 
 # ── Detection categories ──────────────────────────────────
 WATCH_LABELS: list = ['person', 'backpack', 'suitcase']  # log silently, no alert
+
+# ── Password hashing (PBKDF2-SHA256) ────────────────────
+def _hash_password(pw: str) -> str:
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, 260000)
+    return f"pbkdf2:sha256:260000:{salt.hex()}:{dk.hex()}"
+
+def _verify_password(pw: str, stored: str) -> bool:
+    if stored.startswith("pbkdf2:"):
+        parts = stored.split(":")
+        if len(parts) != 5:
+            return False
+        _, algo, iters, salt_hex, dk_hex = parts
+        dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
+        return dk.hex() == dk_hex
+    return pw == stored  # plaintext fallback for migration
+
+# ── Atomic JSON write ────────────────────────────────────
+def _atomic_json_write(filepath: str, data):
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(filepath) or ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, filepath)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+# ── Rate limiter (in-memory, per-IP) ────────────────────
+_rate_store: dict = defaultdict(list)   # IP → [timestamps]
+_RATE_LIMIT = 30     # max requests
+_RATE_WINDOW = 60    # per N seconds
+
+def _check_rate_limit(request) -> bool:
+    """Return True if request is within rate limit, False if exceeded."""
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    stamps = _rate_store[ip]
+    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
+    if len(stamps) >= _RATE_LIMIT:
+        return False
+    stamps.append(now)
+    return True
 
 
 USERS = {
@@ -260,16 +325,14 @@ def load_users():
 
 def save_users():
     try:
-        os.makedirs("system_logs", exist_ok=True)
-        with open(USERS_FILE, "w") as f:
-            json.dump(USERS, f, indent=2)
+        _atomic_json_write(USERS_FILE, USERS)
     except Exception as e:
         log_system_update(f"Failed to save users: {e}")
 
 def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
-    global EMAIL_COOLDOWN, EMAIL_SENDER, EMAIL_SENDER_PASS, DETECTION_THRESHOLD
-    global GROQ_API_KEY, KNOWN_DEVICES, WATCH_LABELS
+    global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
+    global KNOWN_DEVICES, WATCH_LABELS
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
@@ -279,9 +342,7 @@ def load_config():
             EMAIL_RECIPIENTS = cfg.get("email_recipients", EMAIL_RECIPIENTS)
             EMAIL_COOLDOWN = cfg.get("email_cooldown", EMAIL_COOLDOWN)
             EMAIL_SENDER = cfg.get("email_sender", EMAIL_SENDER)
-            EMAIL_SENDER_PASS = cfg.get("email_sender_pass", EMAIL_SENDER_PASS)
             DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
-            GROQ_API_KEY = cfg.get("groq_api_key", GROQ_API_KEY)
             KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
             WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
         except Exception as e:
@@ -303,9 +364,7 @@ def _record_alert_activity():
     today = datetime.date.today().isoformat()
     _alert_history[today] = _alert_history.get(today, 0) + 1
     try:
-        os.makedirs("system_logs", exist_ok=True)
-        with open(ALERT_HISTORY_FILE, "w") as f:
-            json.dump(_alert_history, f)
+        _atomic_json_write(ALERT_HISTORY_FILE, _alert_history)
     except Exception:
         pass
 
@@ -328,9 +387,7 @@ def _append_presence_log(event: str, device: str, mac: str):
         "mac":    mac,
     })
     try:
-        os.makedirs("system_logs", exist_ok=True)
-        with open(PRESENCE_LOG_FILE, "w") as f:
-            json.dump(_presence_log, f)
+        _atomic_json_write(PRESENCE_LOG_FILE, _presence_log)
     except Exception:
         pass
 
@@ -347,29 +404,23 @@ def load_master_keys():
 
 def save_master_keys():
     try:
-        os.makedirs("system_logs", exist_ok=True)
-        with open(MASTER_KEYS_FILE, "w") as f:
-            json.dump({"keys": MASTER_KEYS}, f, indent=2)
+        _atomic_json_write(MASTER_KEYS_FILE, {"keys": MASTER_KEYS})
     except Exception:
         pass
 
 def save_config():
     try:
-        os.makedirs("system_logs", exist_ok=True)
         cfg = {
             "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
             "custom_modes": CUSTOM_MODES,
             "email_recipients": EMAIL_RECIPIENTS,
             "email_cooldown": EMAIL_COOLDOWN,
             "email_sender": EMAIL_SENDER,
-            "email_sender_pass": EMAIL_SENDER_PASS,
             "detection_threshold": DETECTION_THRESHOLD,
             "known_devices": KNOWN_DEVICES,
             "watch_labels": WATCH_LABELS,
-            "groq_api_key": GROQ_API_KEY,
         }
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(cfg, f, indent=2)
+        _atomic_json_write(CONFIG_FILE, cfg)
     except Exception as e:
         log_system_update(f"Failed to save config: {e}")
 
@@ -386,6 +437,8 @@ def _perm_write(filepath: str, line: str):
         with _perm_lock:
             with open(filepath, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
+                f.flush()
+                os.fsync(f.fileno())
     except Exception:
         pass
 
@@ -694,6 +747,21 @@ def app_callback(pad, info, user_data):
         frame = get_numpy_from_buffer(buffer, format_, width, height)
     else:
         frame = None
+
+    # Camera blindness detection — flag if camera is covered/blocked
+    global _blind_frame_count, _blind_alert_sent
+    if frame is not None:
+        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        variance = float(np.var(gray))
+        if variance < 50:   # nearly uniform → blocked/covered
+            _blind_frame_count += 1
+            if _blind_frame_count >= 300 and not _blind_alert_sent:   # ~10s at 30fps
+                _blind_alert_sent = True
+                log_system_update("[TAMPER] Camera blindness detected — lens may be covered!")
+                _append_detection_perm("TAMPER", "camera_blind", 0.0, "camera appears blocked")
+        else:
+            _blind_frame_count = 0
+            _blind_alert_sent = False
 
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
@@ -1318,6 +1386,34 @@ def get_state_dict():
     }
 
 ##############################################################################
+# DEAD MAN'S SWITCH MONITOR
+##############################################################################
+def _deadman_monitor():
+    """Background thread: if no /api/heartbeat in _DEADMAN_TIMEOUT seconds, send tamper alert."""
+    global _deadman_alert_sent
+    while True:
+        time.sleep(60)
+        elapsed = time.time() - _last_heartbeat
+        if elapsed > _DEADMAN_TIMEOUT and not _deadman_alert_sent:
+            _deadman_alert_sent = True
+            log_system_update(f"[TAMPER] No heartbeat in {int(elapsed)}s — possible system tampering!")
+            # Send tamper alert email
+            try:
+                body = (f"Garuda dead man's switch triggered.\n"
+                        f"No heartbeat received in {int(elapsed)} seconds.\n"
+                        f"Possible system tampering or network failure.")
+                msg = MIMEText(body)
+                msg['Subject'] = "TAMPER ALERT: Garuda heartbeat missed"
+                msg['From'] = EMAIL_SENDER
+                msg['To'] = ", ".join(EMAIL_RECIPIENTS)
+                server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
+                server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
+                server.send_message(msg)
+                server.quit()
+            except Exception as e:
+                log_system_update(f"[TAMPER] Failed to send alert email: {e}")
+
+##############################################################################
 # FASTAPI APP
 ##############################################################################
 from contextlib import asynccontextmanager
@@ -1332,6 +1428,7 @@ async def _lifespan(app):
     load_master_keys()
     asyncio.ensure_future(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
+    threading.Thread(target=_deadman_monitor, daemon=True).start()
     yield
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
@@ -1340,14 +1437,35 @@ async def _lifespan(app):
 
 fastapi_app = FastAPI(title="Garuda Security System", lifespan=_lifespan)
 
-# CORS — allow any origin so Vercel-hosted frontend can reach the RPi5 backend
+# CORS — restrict to known origins
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://garuda.veeramanikanta.in",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "X-Garuda-Token"],
 )
+
+# Security headers middleware
+@fastapi_app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' blob: data:; "
+        "connect-src 'self' wss: ws:; "
+        "frame-ancestors 'none'"
+    )
+    return response
 
 # Serve static files from garuda_web/
 _static_dir = Path(__file__).parent / "garuda_web"
@@ -1383,13 +1501,11 @@ class UpdateUserRequest(BaseModel):
 class ConfigUpdateRequest(BaseModel):
     detection_threshold: Optional[float] = None
     email_sender: Optional[str] = None
-    email_sender_pass: Optional[str] = None
     email_recipients: Optional[List[str]] = None
     email_cooldown: Optional[int] = None
     danger_label: Optional[str] = None
     privacy: Optional[bool] = None
     watch_labels: Optional[List[str]] = None
-    groq_api_key: Optional[str] = None
 
 class DeviceAddRequest(BaseModel):
     name: str
@@ -1450,20 +1566,25 @@ async def users_public():
     return result
 
 @fastapi_app.post("/api/login")
-async def login(data: LoginRequest, response: Response):
+async def login(data: LoginRequest, request: Request, response: Response):
+    if not _check_rate_limit(request):
+        raise HTTPException(429, "Too many requests. Try again later.")
     u = data.username.strip()
     p = data.password.strip()
     if u in USERS and USERS[u].get("role") == "admin":
         raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
-    if u in USERS and USERS[u]["password"] == p:
+    if u in USERS and _verify_password(p, USERS[u]["password"]):
+        # Auto-migrate plaintext passwords to hashed
+        if not USERS[u]["password"].startswith("pbkdf2:"):
+            USERS[u]["password"] = _hash_password(p)
+            save_users()
         duration = 5 * 24 * 3600 if data.remember_me else 3600
         token = create_session(u, duration)
         response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=duration)
         log_system_update(f"Login: {u}")
-        if u in USERS:
-            USERS[u]["history"]["logins"].append(
-                datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            save_users()
+        USERS[u]["history"]["logins"].append(
+            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        save_users()
         return {
             "role": USERS[u]["role"],
             "username": u,
@@ -1494,24 +1615,31 @@ async def logout(request: Request, response: Response):
     return {"ok": True}
 
 @fastapi_app.post("/api/admin/send-otp")
-async def admin_send_otp(data: OTPRequest, response: Response):
+async def admin_send_otp(data: OTPRequest, request: Request, response: Response):
     """Admin login step 1: verify credentials, send OTP."""
+    if not _check_rate_limit(request):
+        raise HTTPException(429, "Too many requests. Try again later.")
     global ADMIN_OTP
     u = data.username.strip()
     p = data.password.strip()
-    if u not in USERS or USERS[u]["password"] != p or USERS[u]["role"] != "admin":
+    if u not in USERS or not _verify_password(p, USERS[u]["password"]) or USERS[u]["role"] != "admin":
         raise HTTPException(401, "Invalid admin credentials.")
+    # Auto-migrate plaintext passwords to hashed
+    if not USERS[u]["password"].startswith("pbkdf2:"):
+        USERS[u]["password"] = _hash_password(p)
+        save_users()
     ADMIN_OTP = generate_otp_code(6)
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
     ok, err = send_otp_via_email(dest, ADMIN_OTP)
     if not ok:
-        # Allow bypass with the OTP embedded in the error response for dev
-        return {"ok": False, "error": err, "bypass_otp": ADMIN_OTP}
+        return {"ok": False, "error": err}
     return {"ok": True}
 
 @fastapi_app.post("/api/admin/verify-otp")
-async def admin_verify_otp(data: VerifyOTPRequest, response: Response):
+async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: Response):
     """Admin login step 2: verify OTP, issue session."""
+    if not _check_rate_limit(request):
+        raise HTTPException(429, "Too many requests. Try again later.")
     global ADMIN_OTP
     if data.otp.strip() != ADMIN_OTP:
         raise HTTPException(401, "Invalid OTP.")
@@ -1527,7 +1655,9 @@ async def admin_verify_otp(data: VerifyOTPRequest, response: Response):
     }
 
 @fastapi_app.post("/api/forgot/send-otp")
-async def forgot_send_otp(data: SendForgotOTPRequest):
+async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
+    if not _check_rate_limit(request):
+        raise HTTPException(429, "Too many requests. Try again later.")
     global USER_FORGOT_OTP, _forgot_otp_user
     u = data.username.strip()
     if u not in USERS:
@@ -1537,17 +1667,19 @@ async def forgot_send_otp(data: SendForgotOTPRequest):
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
     ok, err = send_otp_via_email(dest, USER_FORGOT_OTP)
     if not ok:
-        return {"ok": False, "error": err, "bypass_otp": USER_FORGOT_OTP}
+        return {"ok": False, "error": err}
     return {"ok": True}
 
 @fastapi_app.post("/api/forgot/reset")
-async def forgot_reset(data: ForgotPasswordRequest):
+async def forgot_reset(data: ForgotPasswordRequest, request: Request):
+    if not _check_rate_limit(request):
+        raise HTTPException(429, "Too many requests. Try again later.")
     global USER_FORGOT_OTP, _forgot_otp_user
     if data.otp.strip() != USER_FORGOT_OTP or not _forgot_otp_user:
         raise HTTPException(401, "Invalid OTP.")
     if not data.new_password.strip():
         raise HTTPException(400, "Password cannot be empty.")
-    USERS[_forgot_otp_user]["password"] = data.new_password.strip()
+    USERS[_forgot_otp_user]["password"] = _hash_password(data.new_password.strip())
     save_users()
     log_system_update(f"Password reset for {_forgot_otp_user}.")
     USER_FORGOT_OTP = None
@@ -1713,7 +1845,7 @@ async def add_user(data: AddUserRequest, session=Depends(require_admin)):
     if not data.username.strip() or not data.password.strip():
         raise HTTPException(400, "Username and password required.")
     USERS[data.username] = {
-        "password": data.password,
+        "password": _hash_password(data.password),
         "role": data.role,
         "display_name": data.display_name or data.username.capitalize(),
         "box_color": data.box_color,
@@ -1739,7 +1871,7 @@ async def update_user(data: UpdateUserRequest, session=Depends(require_admin)):
     if data.username not in USERS:
         raise HTTPException(404, "User not found.")
     if data.new_password:
-        USERS[data.username]["password"] = data.new_password
+        USERS[data.username]["password"] = _hash_password(data.new_password)
     if data.display_name is not None:
         USERS[data.username]["display_name"] = data.display_name
     if data.box_color is not None:
@@ -1759,19 +1891,17 @@ async def get_config(session=Depends(require_admin)):
         "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
         "custom_modes": CUSTOM_MODES,
         "watch_labels": WATCH_LABELS,
-        "groq_api_key": GROQ_API_KEY,
+        "groq_configured": bool(GROQ_API_KEY),
     }
 
 @fastapi_app.post("/api/config")
 async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
-    global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
+    global DETECTION_THRESHOLD, EMAIL_SENDER
     global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY
     if data.detection_threshold is not None:
         DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
     if data.email_sender is not None:
         EMAIL_SENDER = data.email_sender
-    if data.email_sender_pass is not None:
-        EMAIL_SENDER_PASS = data.email_sender_pass
     if data.email_recipients is not None:
         EMAIL_RECIPIENTS = data.email_recipients
     if data.email_cooldown is not None:
@@ -1786,9 +1916,6 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.watch_labels is not None:
         global WATCH_LABELS
         WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
-    if data.groq_api_key is not None:
-        global GROQ_API_KEY
-        GROQ_API_KEY = data.groq_api_key.strip()
     save_config()
     log_system_update("Config updated.")
     return {"ok": True}
@@ -1858,7 +1985,6 @@ async def presence_refresh(session=Depends(require_session)):
 
 @fastapi_app.post("/api/devices/add")
 async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
-    import re
     mac = data.mac.strip().lower()
     if not re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
         raise HTTPException(400, "Invalid MAC address format (use aa:bb:cc:dd:ee:ff)")
@@ -1949,8 +2075,10 @@ async def download_logs(session=Depends(require_logs)):
 # MASTER KEY ENDPOINTS
 ##############################################################################
 @fastapi_app.post("/api/master_key/login")
-async def master_key_login(data: dict, response: Response):
+async def master_key_login(data: dict, request: Request, response: Response):
     """Log in with only a master key — issues an admin session with logs unlocked."""
+    if not _check_rate_limit(request):
+        raise HTTPException(429, "Too many requests. Try again later.")
     key = (data.get("key") or "").strip()
     if not key or key not in MASTER_KEYS:
         raise HTTPException(401, "Invalid master key.")
@@ -1999,7 +2127,7 @@ async def master_key_request_otp(data: dict, session=Depends(require_admin)):
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
     ok, err = send_otp_via_email(dest, MASTER_KEY_OTP)
     if not ok:
-        return {"ok": False, "error": err, "bypass_otp": MASTER_KEY_OTP}
+        return {"ok": False, "error": err}
     return {"ok": True}
 
 @fastapi_app.post("/api/master_key/add")
@@ -2052,6 +2180,14 @@ async def master_key_delete(data: dict, session=Depends(require_admin)):
     log_system_update("Master key deleted.")
     return {"ok": True}
 
+@fastapi_app.get("/api/heartbeat")
+async def heartbeat():
+    """Public health check — used by UptimeRobot or external monitors."""
+    global _last_heartbeat, _deadman_alert_sent
+    _last_heartbeat = time.time()
+    _deadman_alert_sent = False
+    return {"ok": True, "uptime": int(time.time() - _app_start_time)}
+
 @fastapi_app.post("/api/emergency-stop")
 async def emergency_stop(session=Depends(require_session)):
     log_system_update(f"Emergency stop by {session['username']}.")
@@ -2062,7 +2198,11 @@ async def emergency_stop(session=Depends(require_session)):
 # Uses _frame_seq to detect new frames only — avoids re-sending duplicate
 # frames and keeps per-client CPU near zero when the pipeline is idle.
 @fastapi_app.get("/stream")
-async def mjpeg_stream(request: Request):
+async def mjpeg_stream(request: Request, token: Optional[str] = None):
+    # Authenticate via cookie or ?token= query param
+    session_token = request.cookies.get("garuda_session") or token
+    if not get_session(session_token):
+        raise HTTPException(401, "Not authenticated")
     async def generate():
         last_seq = -1
         last_sent = 0.0

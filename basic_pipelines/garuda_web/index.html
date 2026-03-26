@@ -205,14 +205,12 @@
           <!-- Left: main content column -->
           <div class="dash-main">
 
-            <!-- Security Status -->
-            <div id="status-card" class="status-card">
+            <!-- Security Status Hero -->
+            <div id="status-card" class="card status-card">
               <div class="status-state">
                 <div class="status-pulse-ring" id="status-pulse-ring"></div>
-                <div>
-                  <div class="status-label" id="status-label">ALL CLEAR</div>
-                  <div class="status-desc" id="status-desc">No activity detected</div>
-                </div>
+                <div class="status-label" id="status-label">ALL CLEAR</div>
+                <div class="status-desc" id="status-desc">No activity detected</div>
                 <span id="owner-badge" class="owner-badge hidden">
                   <span id="owner-badge-name">Owner</span> is home
                   <button class="owner-refresh-btn" title="Refresh presence" onclick="G.refreshPresence()">↻</button>
@@ -224,11 +222,59 @@
               </div>
             </div>
 
-            <!-- Heatmap + Hardware side by side -->
+            <!-- Hardware Metric Tiles -->
+            <div class="hw-metrics">
+              <div class="hw-tile" id="hw-cpu-tile">
+                <div class="hw-ring-wrap">
+                  <svg viewBox="0 0 64 64">
+                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
+                    <circle class="hw-ring-fg" id="hw-cpu-ring" cx="32" cy="32" r="27"
+                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
+                  </svg>
+                  <div class="hw-ring-val" id="hwm-cpu">—</div>
+                </div>
+                <div class="hw-tile-label">CPU</div>
+              </div>
+              <div class="hw-tile" id="hw-ram-tile">
+                <div class="hw-ring-wrap">
+                  <svg viewBox="0 0 64 64">
+                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
+                    <circle class="hw-ring-fg" id="hw-ram-ring" cx="32" cy="32" r="27"
+                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
+                  </svg>
+                  <div class="hw-ring-val" id="hwm-ram">—</div>
+                </div>
+                <div class="hw-tile-label">Memory</div>
+              </div>
+              <div class="hw-tile" id="hw-temp-tile">
+                <div class="hw-ring-wrap">
+                  <svg viewBox="0 0 64 64">
+                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
+                    <circle class="hw-ring-fg" id="hw-temp-ring" cx="32" cy="32" r="27"
+                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
+                  </svg>
+                  <div class="hw-ring-val" id="hwm-temp">—</div>
+                </div>
+                <div class="hw-tile-label">Temperature</div>
+              </div>
+              <div class="hw-tile" id="hw-fps-tile">
+                <div class="hw-ring-wrap">
+                  <svg viewBox="0 0 64 64">
+                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
+                    <circle class="hw-ring-fg" id="hw-fps-ring" cx="32" cy="32" r="27"
+                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
+                  </svg>
+                  <div class="hw-ring-val" id="hwm-fps">—</div>
+                </div>
+                <div class="hw-tile-label">Inference</div>
+              </div>
+            </div>
+
+            <!-- Heatmap + Recent Detections row -->
             <div class="hm-hw-row">
 
-              <!-- Alert Activity heatmap (natural-size) -->
-              <div class="dash-card hm-card">
+              <!-- Alert Activity heatmap -->
+              <div class="card hm-card">
                 <div class="dash-card-hdr">
                   <div>
                     <div class="dash-card-title">Alert Activity</div>
@@ -248,8 +294,8 @@
                 </div>
               </div>
 
-              <!-- Recent Detections (compact, sits beside heatmap) -->
-              <div class="dash-card hm-det-card">
+              <!-- Recent Detections -->
+              <div class="card hm-det-card">
                 <div class="dash-card-hdr">
                   <div class="dash-card-title">Recent Detections</div>
                   <div id="det-live-dot" class="det-live"></div>
@@ -261,33 +307,22 @@
 
             </div>
 
-            <!-- Hardware stats -->
-            <div class="dash-card hw-stats-card">
-              <div class="hw-stats-row">
-                <div class="hw-stat">
-                  <span class="hw-stat-lbl">CPU</span>
-                  <span class="hw-stat-val" id="hwm-cpu">—</span>
-                </div>
-                <div class="hw-stat-div"></div>
-                <div class="hw-stat">
-                  <span class="hw-stat-lbl">Memory</span>
-                  <span class="hw-stat-val" id="hwm-ram">—</span>
-                </div>
-                <div class="hw-stat-div"></div>
-                <div class="hw-stat">
-                  <span class="hw-stat-lbl">Temperature</span>
-                  <span class="hw-stat-val" id="hwm-temp">—</span>
-                </div>
-                <div class="hw-stat-div"></div>
-                <div class="hw-stat">
-                  <span class="hw-stat-lbl">Inference</span>
-                  <span class="hw-stat-val" id="hw-fps">—</span>
+            <!-- Activity Feed -->
+            <div class="card" id="activity-feed-card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Activity Feed</div>
+                <div class="dash-card-meta" id="activity-count">Live</div>
+              </div>
+              <div id="activity-feed" class="activity-feed">
+                <div class="empty-state">
+                  <div class="empty-state-icon">○</div>
+                  <span>No activity yet this session</span>
                 </div>
               </div>
             </div>
 
-            <!-- System console — admin only -->
-            <div id="dash-console-wrap" class="dash-console-card hidden">
+            <!-- System Console — admin only -->
+            <div id="dash-console-wrap" class="card dash-console-card hidden">
               <div class="console-header">System Console</div>
               <div id="sys-console" class="console"></div>
             </div>
@@ -481,14 +516,7 @@
             <h2>Users</h2>
             <button class="btn btn-primary btn-sm" onclick="G.openAddUser()">Add User</button>
           </div>
-          <div class="t-wrap">
-            <table>
-              <thead><tr>
-                <th>Username</th><th>Display Name</th><th>Role</th><th>Color</th><th></th>
-              </tr></thead>
-              <tbody id="u-tbody"></tbody>
-            </table>
-          </div>
+          <div id="u-cards" class="user-cards"></div>
         </div>
       </div>
 
@@ -496,9 +524,9 @@
       <div id="page-a-email" class="page">
         <div class="admin-page">
           <div class="admin-page-header"><h2>Email Settings</h2></div>
-          <div class="form-stack">
-            <div class="msg ok" style="font-size:12px">
-              App Password: myaccount.google.com → Security → App Passwords
+          <div class="settings-card">
+            <div class="info-banner">
+              <strong>Gmail App Password required.</strong> Go to myaccount.google.com → Security → App Passwords to generate one.
             </div>
             <div class="input-group">
               <span class="input-label">Sender Gmail</span>
@@ -529,7 +557,10 @@
       <div id="page-a-settings" class="page">
         <div class="admin-page">
           <div class="admin-page-header"><h2>System Settings</h2></div>
-          <div class="form-stack">
+
+          <!-- Card 1: Detection -->
+          <div class="settings-card">
+            <div class="settings-section-title">Detection</div>
             <div>
               <span class="input-label">Detection Threshold — <strong id="thr-val" style="color:var(--accent)">0.30</strong></span>
               <input id="thr-slider" type="range" min="5" max="95" step="1" value="30"
@@ -538,12 +569,15 @@
                 <span>Sensitive</span><span>Strict</span>
               </div>
             </div>
-            <div class="sep"></div>
-            <div class="input-group">
+            <div class="input-group" style="margin-top:16px">
               <span class="input-label">Danger Label (object that triggers alert)</span>
               <input id="danger-lbl" class="input" type="text" placeholder="scissors"/>
             </div>
-            <div class="sep"></div>
+          </div>
+
+          <!-- Card 2: Privacy -->
+          <div class="settings-card">
+            <div class="settings-section-title">Privacy</div>
             <div class="toggle-row">
               <div class="toggle-info">
                 <div><span>Face Privacy Blur</span></div>
@@ -551,8 +585,10 @@
               </div>
               <div id="priv-toggle" class="toggle on" onclick="G.togglePrivacy()"></div>
             </div>
-            <div class="sep"></div>
-            <!-- Known Devices (owner presence detection) -->
+          </div>
+
+          <!-- Card 3: Known Devices -->
+          <div class="settings-card">
             <div class="settings-section-title" style="display:flex;align-items:center;justify-content:space-between">
               Known Devices (Owner Detection)
               <button class="btn btn-ghost btn-sm" onclick="G.scanNetwork()" id="scan-btn">Scan Network</button>
@@ -575,22 +611,24 @@
               <button class="btn btn-primary btn-sm" onclick="G.addDevice()">Add</button>
             </div>
             <div id="dev-msg" class="msg hidden"></div>
-            <div class="sep"></div>
-            <!-- Narada (Groq API) -->
+          </div>
+
+          <!-- Card 4: Narada -->
+          <div class="settings-card">
             <div class="settings-section-title">Narada — Groq API Key</div>
             <input id="groq-api-key" class="input" type="password" placeholder="gsk_…  (paste your Groq API key)"/>
             <div style="font-size:11px;color:var(--t3);margin-top:4px">Required for Narada voice assistant. Get a free key at <b>console.groq.com</b>.</div>
-            <div class="sep"></div>
-            <!-- Watch Labels -->
+          </div>
+
+          <!-- Card 5: Watch Labels -->
+          <div class="settings-card">
             <div class="settings-section-title">Watch Labels <span style="font-size:11px;color:var(--t3);font-weight:400">(log only, no alert)</span></div>
             <input id="watch-labels" class="input" type="text" placeholder="person, backpack, suitcase"/>
             <div style="font-size:11px;color:var(--t3);margin-top:4px">Comma-separated YOLO class names to silently log (no alert triggered).</div>
-            <div style="margin-top:16px">
-              <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
-            </div>
-            <div id="sys-msg" class="msg hidden"></div>
-            <div class="sep"></div>
-            <!-- Master Keys -->
+          </div>
+
+          <!-- Card 6: Master Keys -->
+          <div class="settings-card">
             <div class="settings-section-title">Master Keys</div>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px">
               Master keys grant instant admin access and unlock the logs page.
@@ -623,6 +661,12 @@
             </div>
             <div id="mk-msg" class="msg hidden" style="margin-top:8px"></div>
           </div>
+
+          <!-- Save button (outside cards) -->
+          <div style="margin-top:16px">
+            <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
+          </div>
+          <div id="sys-msg" class="msg hidden"></div>
         </div>
       </div>
 
@@ -632,27 +676,32 @@
           <div class="admin-page-header">
             <h2>Logs</h2>
             <div class="flex gap-8" style="flex-wrap:wrap;gap:6px">
-              <input id="log-q" class="input" type="text" placeholder="Filter…"
-                     style="width:160px" oninput="G.filterLogs()"/>
+              <input id="log-q" class="input" type="text" placeholder="Filter..." style="width:160px" oninput="G.filterLogs()"/>
               <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export Session</button>
-              <button class="btn btn-primary btn-sm" onclick="G.downloadFullLog()">⬇ Full Log</button>
+              <button class="btn btn-primary btn-sm" onclick="G.downloadFullLog()">Download Full</button>
             </div>
           </div>
-          <div style="margin-bottom:24px">
-            <div class="overline" style="margin-bottom:8px">System Updates <span style="font-size:10px;color:var(--t4)">(session)</span></div>
-            <div id="a-syslog" class="console" style="height:200px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
-          </div>
-          <div style="margin-bottom:24px">
-            <div class="overline" style="margin-bottom:8px">Detection Events <span style="font-size:10px;color:var(--t4)">(session — danger &amp; watch labels)</span></div>
-            <div id="a-detlog" class="console" style="height:160px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
-          </div>
-          <div style="margin-bottom:24px">
-            <div class="overline" style="margin-bottom:8px">Presence Log <span style="font-size:10px;color:var(--t4)">(permanent)</span></div>
-            <div id="a-preslog" class="console" style="height:150px;background:var(--surface);color:var(--t2);border:1px solid var(--border-2);border-radius:var(--r)"></div>
-          </div>
-          <div>
-            <div class="overline" style="margin-bottom:8px">Voice Log <span style="font-size:10px;color:var(--t4)">(session)</span></div>
-            <div id="a-vlog" class="narada-log section-card" style="height:160px"></div>
+          <div class="settings-card" style="padding:0;overflow:hidden">
+            <div class="log-tabs">
+              <button class="log-tab active" data-log="system" onclick="G.switchLogTab('system')">System <span class="log-tab-badge" id="log-count-system">0</span></button>
+              <button class="log-tab" data-log="detection" onclick="G.switchLogTab('detection')">Detection <span class="log-tab-badge" id="log-count-detection">0</span></button>
+              <button class="log-tab" data-log="presence" onclick="G.switchLogTab('presence')">Presence <span class="log-tab-badge" id="log-count-presence">0</span></button>
+              <button class="log-tab" data-log="voice" onclick="G.switchLogTab('voice')">Voice <span class="log-tab-badge" id="log-count-voice">0</span></button>
+            </div>
+            <div style="padding:16px 20px">
+              <div id="log-pane-system" class="log-pane active">
+                <div id="a-syslog" class="console" style="height:360px"></div>
+              </div>
+              <div id="log-pane-detection" class="log-pane">
+                <div id="a-detlog" class="console" style="height:360px"></div>
+              </div>
+              <div id="log-pane-presence" class="log-pane">
+                <div id="a-preslog" class="console" style="height:360px"></div>
+              </div>
+              <div id="log-pane-voice" class="log-pane">
+                <div id="a-vlog" class="narada-log section-card" style="height:360px"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -791,139 +840,84 @@
 
 <!-- ══════════════ DOCS MODAL ══════════════ -->
 <div id="m-docs" class="modal-overlay hidden">
-  <div class="modal docs-modal">
-
-    <div class="docs-header">
-      <div>
-        <div class="docs-title">Garuda</div>
-        <div class="docs-version">AI Security System · Hailo-8L · Raspberry Pi 5</div>
-      </div>
-      <button class="btn-text-mono" onclick="G.closeModal('m-docs')">Close</button>
+  <div class="modal" style="max-width:640px">
+    <h2>Documentation</h2>
+    <div class="docs-tabs">
+      <button class="docs-tab active" onclick="G.switchDocsTab(this,'docs-overview')">Overview</button>
+      <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-detection')">Detection</button>
+      <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-auth')">Authentication</button>
+      <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-stack')">Stack</button>
     </div>
 
-    <div class="docs-body">
-
-      <!-- ── FLOWCHART 1: Detection Pipeline ── -->
-      <div class="docs-section">
-        <div class="docs-section-title">Detection Pipeline</div>
-        <div class="fc-wrap">
-          <div class="fc-row">
-            <div class="fc-node fc-accent">Pi Camera</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">GStreamer</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node fc-accent">Hailo-8L NPU</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">YOLOv6n</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">Detections</div>
-          </div>
-        </div>
-        <p class="docs-p">All inference runs locally on-device at 13 TOPS. No cloud, no network latency — the Pi processes every frame before sending results to the dashboard via WebSocket.</p>
+    <div id="docs-overview" class="docs-section active">
+      <h3>Garuda Security System</h3>
+      <p>AI-powered home security running on Raspberry Pi 5 with Hailo-8L neural processor. Real-time object detection at 30+ FPS with configurable danger alerts.</p>
+      <h4>Detection Pipeline</h4>
+      <div class="docs-flow">
+        <div class="docs-flow-step"><span class="docs-flow-num">1</span> Camera capture</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">2</span> Hailo inference</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">3</span> Post-processing</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">4</span> Alert logic</div>
       </div>
+      <h4>System Modes</h4>
+      <p>Control system behavior with toggleable modes: <code>Privacy Blur</code> obscures faces, <code>Night Mode</code> enables high-priority alerts, <code>DND</code> suppresses all alerts, <code>Emergency</code> overrides DND for critical situations.</p>
+    </div>
 
-      <!-- ── FLOWCHART 2: Alert Decision ── -->
-      <div class="docs-section">
-        <div class="docs-section-title">Alert Logic</div>
-        <div class="fc-wrap">
-          <div class="fc-row">
-            <div class="fc-node">Object Detected</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">Confidence Check</div>
-          </div>
-          <div class="fc-branch-row">
-            <div class="fc-branch-left">
-              <div class="fc-branch-label success-text">≥ threshold</div>
-              <div class="fc-arr fc-arr-down">↓</div>
-              <div class="fc-node fc-danger">ALERT</div>
-              <div class="fc-arr fc-arr-down">↓</div>
-              <div class="fc-node">Email · Dashboard · Voice</div>
-            </div>
-            <div class="fc-branch-sep"></div>
-            <div class="fc-branch-right">
-              <div class="fc-branch-label muted-text">&lt; threshold</div>
-              <div class="fc-arr fc-arr-down">↓</div>
-              <div class="fc-node">Log only</div>
-            </div>
-          </div>
-        </div>
-        <p class="docs-p">Confidence threshold is tunable in Admin → System (default 0.30). Raising it reduces false positives; lowering it increases sensitivity.</p>
+    <div id="docs-detection" class="docs-section">
+      <h3>Detection System</h3>
+      <h4>How it works</h4>
+      <p>YOLOv6n model runs on the Hailo-8L at 30+ FPS. Each frame is analyzed for objects matching COCO class labels. Detections above the confidence threshold are logged.</p>
+      <h4>Alert Logic</h4>
+      <div class="docs-flow">
+        <div class="docs-flow-step"><span class="docs-flow-num">1</span> Object detected</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">2</span> Matches danger label?</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">3</span> Trigger alert</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">4</span> Send email</div>
       </div>
+      <h4>Categories</h4>
+      <p><strong>Danger labels</strong> (default: <code>scissors</code>) trigger visual + audio + email alerts. <strong>Watch labels</strong> (e.g. <code>person</code>, <code>backpack</code>) are silently logged without triggering alerts.</p>
+      <p>Detection threshold (0.05–0.95) controls sensitivity. Lower values detect more objects but may produce false positives.</p>
+    </div>
 
-      <!-- ── FLOWCHART 3: Authentication ── -->
-      <div class="docs-section">
-        <div class="docs-section-title">Authentication Flow</div>
-        <div class="fc-wrap">
-          <div class="fc-row" style="margin-bottom:6px">
-            <div class="fc-node fc-muted">User</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">Password</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node fc-success">Dashboard</div>
-          </div>
-          <div class="fc-row">
-            <div class="fc-node fc-muted">Admin</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">Password</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node">Email OTP</div>
-            <div class="fc-arr">→</div>
-            <div class="fc-node fc-accent">Admin Dashboard</div>
-          </div>
-        </div>
-        <p class="docs-p">Admin access requires two-factor verification. A one-time code is sent to the configured alert email address before session is granted.</p>
+    <div id="docs-auth" class="docs-section">
+      <h3>Authentication</h3>
+      <h4>Login Flow</h4>
+      <div class="docs-flow">
+        <div class="docs-flow-step"><span class="docs-flow-num">1</span> Credentials</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">2</span> OTP via email</div>
+        <span class="docs-flow-arrow">→</span>
+        <div class="docs-flow-step"><span class="docs-flow-num">3</span> Session token</div>
       </div>
+      <p><strong>Users</strong> log in with username + password. <strong>Admins</strong> require an additional OTP sent via email. <strong>Master Keys</strong> provide instant admin access and unlock the logs page.</p>
+      <h4>Session Management</h4>
+      <p>Sessions expire after 1 hour (admin) or 5 days (user with "Remember me"). Tokens are stored as HTTP-only cookies for same-origin requests and in localStorage for cross-origin access.</p>
+    </div>
 
-      <!-- ── Dashboard reference ── -->
-      <div class="docs-section">
-        <div class="docs-section-title">Dashboard Panels</div>
-        <div class="docs-rows">
-          <div class="docs-row"><span class="docs-term">Security Status</span><span class="docs-def">ALL CLEAR or ALERT — live indicator updated on every WebSocket tick.</span></div>
-          <div class="docs-row"><span class="docs-term">Alert Activity</span><span class="docs-def">12-week heatmap stored in browser local storage. Persists across sessions.</span></div>
-          <div class="docs-row"><span class="docs-term">Recent Detections</span><span class="docs-def">Timestamped log of detected objects. Clears on sign-out.</span></div>
-          <div class="docs-row"><span class="docs-term">Camera</span><span class="docs-def">Live feed: WebRTC (H.264, low-latency) → WS binary JPEG (CF Tunnel) → MJPEG fallback. Off by default — tap Camera to open overlay.</span></div>
-          <div class="docs-row"><span class="docs-term">Console</span><span class="docs-def">Raw pipeline log. Useful for debugging threshold and detection issues.</span></div>
-        </div>
+    <div id="docs-stack" class="docs-section">
+      <h3>Technology Stack</h3>
+      <div class="docs-stack-grid">
+        <div class="docs-stack-item"><strong>Hailo-8L</strong><span>13 TOPS neural processor for real-time AI inference</span></div>
+        <div class="docs-stack-item"><strong>Raspberry Pi 5</strong><span>Quad-core Arm Cortex-A76 @ 2.4GHz host</span></div>
+        <div class="docs-stack-item"><strong>YOLOv6n</strong><span>Lightweight object detection model optimized for edge</span></div>
+        <div class="docs-stack-item"><strong>GStreamer</strong><span>Media pipeline for camera capture and processing</span></div>
+        <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python web framework with WebSocket support</span></div>
+        <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Secure remote access without port forwarding</span></div>
       </div>
+    </div>
 
-      <!-- ── Modes ── -->
-      <div class="docs-section">
-        <div class="docs-section-title">System Modes</div>
-        <div class="docs-rows">
-          <div class="docs-row"><span class="docs-term">Privacy Blur</span><span class="docs-def">Blurs detected faces in the camera stream.</span></div>
-          <div class="docs-row"><span class="docs-term">Night Mode</span><span class="docs-def">Heightened sensitivity for low-light.</span></div>
-          <div class="docs-row"><span class="docs-term">Do Not Disturb</span><span class="docs-def">Monitoring continues; email alerts suppressed.</span></div>
-          <div class="docs-row"><span class="docs-term">Idle</span><span class="docs-def">Pipeline active; all alert triggers paused.</span></div>
-          <div class="docs-row"><span class="docs-term">Emergency</span><span class="docs-def">Maximum priority — overrides DND and Idle.</span></div>
-        </div>
-      </div>
-
-      <!-- ── Narada ── -->
-      <div class="docs-section">
-        <div class="docs-section-title">Narada Voice Commands</div>
-        <div class="docs-rows">
-          <div class="docs-row"><span class="docs-term mono-term">activate dnd</span><span class="docs-def">Toggle Do Not Disturb</span></div>
-          <div class="docs-row"><span class="docs-term mono-term">night mode on/off</span><span class="docs-def">Toggle Night Mode</span></div>
-          <div class="docs-row"><span class="docs-term mono-term">emergency mode</span><span class="docs-def">Activate Emergency priority</span></div>
-          <div class="docs-row"><span class="docs-term mono-term">privacy on/off</span><span class="docs-def">Toggle face blur</span></div>
-          <div class="docs-row"><span class="docs-term mono-term">status</span><span class="docs-def">Read active modes aloud</span></div>
-        </div>
-      </div>
-
-      <!-- ── Stack ── -->
-      <div class="docs-section" style="border-bottom:none;padding-bottom:0">
-        <div class="docs-section-title">Stack</div>
-        <div class="docs-rows">
-          <div class="docs-row"><span class="docs-term">Inference</span><span class="docs-def">Hailo-8L · 13 TOPS · YOLOv6n via GStreamer + hailotools</span></div>
-          <div class="docs-row"><span class="docs-term">Backend</span><span class="docs-def">FastAPI · uvicorn · WebSocket real-time sync</span></div>
-          <div class="docs-row"><span class="docs-term">Tunnel</span><span class="docs-def">Cloudflare Tunnel → api.veeramanikanta.in</span></div>
-          <div class="docs-row"><span class="docs-term">Frontend</span><span class="docs-def">Vercel static SPA → garuda.veeramanikanta.in</span></div>
-        </div>
-      </div>
-
-    </div><!-- /docs-body -->
+    <button class="btn btn-ghost" style="margin-top:16px;width:100%" onclick="document.getElementById('m-docs').classList.add('hidden')">Close</button>
   </div>
 </div>
+
+<!-- Toast container -->
+<div id="toast-container" class="toast-container"></div>
 
 <script src="/static/app.js?v=30"></script>
 </body>

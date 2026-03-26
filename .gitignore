@@ -26,3 +26,6 @@ xcuserdata/
 # Xcode Workspace
 *.xcworkspace/xcuserdata/
 Garuda.xcodeproj/xcuserdata/
+
+# Secrets
+.env

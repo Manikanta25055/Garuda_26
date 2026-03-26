@@ -16,13 +16,90 @@ const G = (() => {
   let _presenceLogs = [];
   let _cfg          = {};
   let _logsUnlocked = false;
+  let _lastAlertState = false;
+
+  // ── Toast notification system ──────────────────────────────
+  function showToast(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${message}</span><button class="toast-dismiss" onclick="this.parentElement.classList.add('removing');setTimeout(()=>this.parentElement.remove(),200)">&times;</button>`;
+    container.appendChild(toast);
+    if (container.children.length > 3) container.firstChild.remove();
+    setTimeout(() => {
+      if (toast.parentElement) {
+        toast.classList.add('removing');
+        setTimeout(() => toast.remove(), 200);
+      }
+    }, duration);
+  }
 
   // ── Hardware stats ────────────────────────────────────────
   function _updateHw(s) {
     if (s.cpu_percent != null) setText('hwm-cpu',  Math.round(s.cpu_percent) + '%');
     if (s.ram_used_gb != null) setText('hwm-ram',  s.ram_used_gb + ' GB');
     if (s.cpu_temp    != null) setText('hwm-temp', Math.round(s.cpu_temp) + '\u00b0C');
-    if (s.inference_fps != null) setText('hw-fps', s.inference_fps.toFixed(1) + ' fps');
+    if (s.inference_fps != null) setText('hwm-fps', s.inference_fps.toFixed(1) + ' fps');
+
+    // Update metric rings
+    if (s.cpu_percent != null) updateMetricRing('hw-cpu', s.cpu_percent, 100, '%');
+    if (s.ram_percent != null) updateMetricRing('hw-ram', s.ram_percent, 100, '%');
+    if (s.cpu_temp != null) updateMetricRing('hw-temp', s.cpu_temp, 85, '\u00b0C');
+    if (s.inference_fps != null) updateMetricRing('hw-fps', s.inference_fps, 30, 'fps');
+  }
+
+  // ── Hardware metric ring updater ───────────────────────────
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 27; // 169.65
+  function updateMetricRing(id, value, max, unit) {
+    const ring = document.getElementById(id + '-ring');
+    const valEl = document.getElementById(id.replace('hw-','hwm-').replace('-tile',''));
+    if (!ring) return;
+    const pct = Math.min(value / max, 1);
+    const offset = RING_CIRCUMFERENCE * (1 - pct);
+    ring.style.strokeDashoffset = offset;
+    // Color: green < 60%, yellow 60-80%, red > 80%
+    const color = pct < 0.6 ? '#34C759' : pct < 0.8 ? '#FF9F0A' : '#FF3B30';
+    ring.style.stroke = color;
+  }
+
+  // ── Activity feed ──────────────────────────────────────────
+  let _activityItems = [];
+  function _updateActivityFeed(d) {
+    const feed = document.getElementById('activity-feed');
+    if (!feed) return;
+
+    // Check for new system log entries
+    const sysLog = d.system_log || [];
+    const lastEntry = sysLog.length > 0 ? sysLog[sysLog.length - 1] : null;
+    if (lastEntry && (!_activityItems.length || _activityItems[0].text !== lastEntry)) {
+      // Determine type from log content
+      let type = 'info';
+      let text = lastEntry.replace(/^\[[\d\-: ]+\]\s*/, ''); // strip timestamp
+      if (text.includes('[TAMPER]') || text.includes('Alert triggered')) type = 'danger';
+      else if (text.includes('[WATCH]') || text.includes('[PRESENCE]')) type = 'watch';
+      else if (text.includes('[OWNER]')) type = 'presence';
+
+      const time = lastEntry.match(/^\[([\d\-: ]+)\]/)?.[1] || '';
+      _activityItems.unshift({ text, type, time: time.split(' ').pop() || '' });
+      if (_activityItems.length > 30) _activityItems.pop();
+
+      _renderActivityFeed(feed);
+    }
+  }
+
+  function _renderActivityFeed(feed) {
+    if (!_activityItems.length) {
+      feed.innerHTML = '<div class="empty-state"><div class="empty-state-icon">\u25CB</div><span>No activity yet this session</span></div>';
+      return;
+    }
+    feed.innerHTML = _activityItems.map(item =>
+      `<div class="activity-item">
+        <div class="activity-dot ${item.type}"></div>
+        <div class="activity-text">${item.text}</div>
+        <div class="activity-time">${item.time}</div>
+      </div>`
+    ).join('');
   }
 
   const SWATCH_COLORS = [
@@ -449,7 +526,8 @@ const G = (() => {
       if (camOffline) camOffline.style.display = 'flex';
       _camSetStatus('Unavailable');
     };
-    camImg.src = backend + '/stream?t=' + Date.now();
+    const streamToken = _token ? `&token=${encodeURIComponent(_token)}` : '';
+    camImg.src = backend + '/stream?t=' + Date.now() + streamToken;
   }
 
   function toggleCamera() {
@@ -827,6 +905,7 @@ const G = (() => {
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
     { page: 'a-settings', label: 'System',   icon: 'settings'  },
     { page: 'a-logs',     label: 'Logs',     icon: 'logs'      },
+    { page: 'a-users',    label: 'Users',    icon: 'users'     },
     { page: 'a-cmds',     label: 'Commands', icon: 'commands'  },
     { page: null,         label: 'Stop',     icon: 'emergency', danger: true },
   ];
@@ -882,9 +961,23 @@ const G = (() => {
   function nav(pageId, navEl) {
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => {
+      if (p.classList.contains('active')) {
+        p.style.opacity = '0';
+        setTimeout(() => { p.classList.remove('active'); p.style.opacity = ''; }, 0);
+      } else {
+        p.classList.remove('active');
+      }
+    });
     document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
-    const pg = $('page-' + pageId); if (pg) pg.classList.add('active');
+    const pg = $('page-' + pageId);
+    if (pg) {
+      requestAnimationFrame(() => {
+        pg.classList.add('active');
+        pg.style.opacity = '0';
+        requestAnimationFrame(() => { pg.style.opacity = '1'; });
+      });
+    }
     if (navEl) { navEl.classList.add('active'); movePill(navEl); }
     if (pageId === 'a-users')    loadUsers();
     if (pageId === 'a-email')    loadEmailCfg();
@@ -939,6 +1032,16 @@ const G = (() => {
       $('hud-label').textContent = 'Online';
       if (_prevAlertActive) _lastDetInfo = ''; // reset so next alert adds fresh entries
     }
+
+    // Push notification on new alert
+    if (s.alert_active && !_lastAlertState) {
+      if (Notification.permission === 'granted') {
+        new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/favicon.ico' });
+      }
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+    _lastAlertState = s.alert_active;
+
     _prevAlertActive = !!s.alert_active;
 
     // Modes
@@ -1001,6 +1104,19 @@ const G = (() => {
         if (atBot) con.scrollTop = con.scrollHeight;
       }
     }
+
+    // Activity feed
+    _updateActivityFeed(s);
+
+    // Log badge counts
+    const lcSys = document.getElementById('log-count-system');
+    if (lcSys) lcSys.textContent = (s.system_log || []).length || 0;
+    const lcDet = document.getElementById('log-count-detection');
+    if (lcDet) lcDet.textContent = (s.detection_log || []).length || 0;
+    const lcPres = document.getElementById('log-count-presence');
+    if (lcPres) lcPres.textContent = (s.presence_log || []).length || 0;
+    const lcVoice = document.getElementById('log-count-voice');
+    if (lcVoice) lcVoice.textContent = ((s.voice_log || []).length + (s.voice_responses || []).length) || 0;
 
     // Narada
     renderLog('narada-vlog',  s.voice_log      || [], false);
@@ -1083,24 +1199,30 @@ const G = (() => {
   async function loadUsers() {
     try {
       const data = await api('GET', '/api/users');
-      const tb = $('u-tbody'); tb.innerHTML = '';
-      Object.entries(data).forEach(([un, u]) => {
-        const tr = mk('tr');
-        tr.innerHTML = `
-          <td style="font-family:var(--mono);font-size:12px">${esc(un)}</td>
-          <td>${esc(u.display_name)}</td>
-          <td><span class="mode-pill${u.role==='admin'?' active blue':''}"
-              style="cursor:default;font-size:11px">${u.role}</span></td>
-          <td><span class="color-dot" style="background:${u.box_color}"></span></td>
-          <td class="flex gap-8">
-            <button class="btn btn-ghost btn-sm"
-              onclick='G._editUser(${JSON.stringify(un)},${JSON.stringify(u.display_name)},${JSON.stringify(u.box_color)})'>Edit</button>
-            ${un !== 'admin' ? `<button class="btn btn-danger btn-sm"
-              onclick='G._delUser(${JSON.stringify(un)})'>Delete</button>` : ''}
-          </td>`;
-        tb.appendChild(tr);
-      });
+      _renderUserCards(data);
     } catch(e) { console.error(e); }
+  }
+
+  function _renderUserCards(users) {
+    const container = document.getElementById('u-cards');
+    if (!container) return;
+    container.innerHTML = '';
+    for (const [uname, udata] of Object.entries(users)) {
+      const initial = (udata.display_name || uname).charAt(0).toUpperCase();
+      const card = document.createElement('div');
+      card.className = 'user-card';
+      card.innerHTML = `
+        <div class="user-avatar" style="background:${udata.box_color || '#1565c0'}">${initial}</div>
+        <div class="user-info">
+          <div class="user-name">${udata.display_name || uname}</div>
+          <div class="user-role">${udata.role} \u00b7 @${uname}</div>
+        </div>
+        <div class="user-actions">
+          <button class="btn btn-ghost btn-sm" onclick="G._editUser(${JSON.stringify(uname)},${JSON.stringify(udata.display_name)},${JSON.stringify(udata.box_color)})">Edit</button>
+          ${uname !== 'admin' ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="G._delUser(${JSON.stringify(uname)})">Delete</button>` : ''}
+        </div>`;
+      container.appendChild(card);
+    }
   }
 
   function openAddUser() {
@@ -1166,16 +1288,16 @@ const G = (() => {
       email_cooldown: parseInt($('e-cool').value) || 60,
     };
     const pw = val('e-pass'); if (pw) payload.email_sender_pass = pw;
-    try { await api('POST', '/api/config', payload); showEl('e-msg', 'Saved.', true); }
-    catch(e) { showEl('e-msg', e.detail || 'Failed.', false); }
+    try { await api('POST', '/api/config', payload); showToast('Email settings saved.', 'success'); }
+    catch(e) { showToast(e.detail || 'Failed to save email settings.', 'error'); }
   }
 
   async function testEmail() {
-    showEl('e-msg', 'Sending…', true);
+    showToast('Sending test email\u2026', 'info', 3000);
     try {
       const r = await api('POST', '/api/email/test', {});
-      showEl('e-msg', r.ok ? 'Test email sent!' : 'Failed: ' + r.error, r.ok);
-    } catch(e) { showEl('e-msg', e.detail || 'Failed.', false); }
+      showToast(r.ok ? 'Test email sent!' : 'Failed: ' + r.error, r.ok ? 'success' : 'error');
+    } catch(e) { showToast(e.detail || 'Failed to send test email.', 'error'); }
   }
 
   // ── Admin: System settings ────────────────────────────────
@@ -1217,8 +1339,8 @@ const G = (() => {
         ...(dl ? { danger_label: dl } : {}),
         ...(groqKey !== undefined ? { groq_api_key: groqKey } : {})
       });
-      showEl('sys-msg', 'Settings saved.', true);
-    } catch(e) { showEl('sys-msg', e.detail || 'Failed.', false); }
+      showToast('Settings saved.', 'success');
+    } catch(e) { showToast(e.detail || 'Failed to save settings.', 'error'); }
   }
 
   // ── Admin: Logs ───────────────────────────────────────────
@@ -1307,6 +1429,25 @@ const G = (() => {
 
   function filterLogs() { if (_logsUnlocked) renderLogs(); }
 
+  // ── Log tab switching ──────────────────────────────────────
+  function switchLogTab(tab) {
+    document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.log-pane').forEach(p => p.classList.remove('active'));
+    const tabEl = document.querySelector(`.log-tab[data-log="${tab}"]`);
+    const paneEl = document.getElementById(`log-pane-${tab}`);
+    if (tabEl) tabEl.classList.add('active');
+    if (paneEl) paneEl.classList.add('active');
+  }
+
+  // ── Docs tab switching ─────────────────────────────────────
+  function switchDocsTab(btn, sectionId) {
+    document.querySelectorAll('.docs-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.docs-section').forEach(s => s.classList.remove('active'));
+    btn.classList.add('active');
+    const section = document.getElementById(sectionId);
+    if (section) section.classList.add('active');
+  }
+
   function exportLogs() {
     const blob = new Blob([_allLogs.join('\n')], { type: 'text/plain' });
     const a = document.createElement('a');
@@ -1339,14 +1480,14 @@ const G = (() => {
     const name = val('dev-name').trim();
     const mac  = val('dev-mac').trim().toLowerCase();
     const MAC_RE = /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/;
-    if (!name) { showEl('dev-msg', 'Enter a device name.', false); return; }
-    if (!MAC_RE.test(mac)) { showEl('dev-msg', 'Invalid MAC format (e.g. a4:c3:f0:12:34:56).', false); return; }
+    if (!name) { showToast('Enter a device name.', 'error'); return; }
+    if (!MAC_RE.test(mac)) { showToast('Invalid MAC format (e.g. a4:c3:f0:12:34:56).', 'error'); return; }
     try {
       await api('POST', '/api/devices/add', { name, mac });
       $('dev-name').value = ''; $('dev-mac').value = '';
-      showEl('dev-msg', 'Device added.', true);
+      showToast('Device added.', 'success');
       loadDevices();
-    } catch(e) { showEl('dev-msg', e.detail || 'Failed to add device.', false); }
+    } catch(e) { showToast(e.detail || 'Failed to add device.', 'error'); }
   }
 
   async function deleteDevice(mac) {
@@ -1390,7 +1531,7 @@ const G = (() => {
     const macEl  = $('dev-mac');
     if (nameEl) nameEl.value = `Device (${ip})`;
     if (macEl)  macEl.value  = mac;
-    showEl('dev-msg', `MAC pre-filled — enter a name and click Add.`, true);
+    showToast('MAC pre-filled \u2014 enter a name and click Add.', 'info');
   }
 
   // ── Presence refresh ──────────────────────────────────────
@@ -1474,36 +1615,35 @@ const G = (() => {
 
   async function requestMkOtp() {
     const current = ($('mk-current')?.value || '').trim();
-    const msgEl = $('mk-msg');
-    if (!current) { showEl('mk-msg', 'Enter your current master key first.', false); return; }
+    if (!current) { showToast('Enter your current master key first.', 'error'); return; }
     try {
       const r = await api('POST', '/api/master_key/request_otp', { current_key: current });
       const row = $('mk-otp-row');
       if (row) { row.classList.remove('hidden'); row.style.display = 'flex'; }
       if (r.bypass_otp) {
-        showEl('mk-msg', 'Email failed. Dev OTP: ' + r.bypass_otp, false);
+        showToast('Email failed. Dev OTP: ' + r.bypass_otp, 'error', 8000);
       } else {
-        showEl('mk-msg', 'OTP sent to your alert email.', true);
+        showToast('OTP sent to your alert email.', 'success');
       }
     } catch(e) {
-      showEl('mk-msg', extractError(e), false);
+      showToast(extractError(e), 'error');
     }
   }
 
   async function addMasterKey() {
     const otp    = ($('mk-otp-in')?.value  || '').trim();
     const newKey = ($('mk-new-in')?.value  || '').trim();
-    if (!otp || !newKey) { showEl('mk-msg', 'Enter OTP and new key.', false); return; }
+    if (!otp || !newKey) { showToast('Enter OTP and new key.', 'error'); return; }
     // Client-side strength check
     const { allReqPassed, rules } = _mkStrength(newKey);
     if (!allReqPassed) {
       const failed = rules.find(r => r.req && !r.pass);
-      showEl('mk-msg', 'Key too weak: ' + (failed?.label || 'does not meet requirements') + '.', false);
+      showToast('Key too weak: ' + (failed?.label || 'does not meet requirements') + '.', 'error');
       return;
     }
     try {
       await api('POST', '/api/master_key/add', { otp, new_key: newKey });
-      showEl('mk-msg', 'Master key added.', true);
+      showToast('Master key added.', 'success');
       if ($('mk-current')) $('mk-current').value = '';
       if ($('mk-otp-in'))  $('mk-otp-in').value  = '';
       if ($('mk-new-in'))  $('mk-new-in').value  = '';
@@ -1511,7 +1651,7 @@ const G = (() => {
       if (row) { row.classList.add('hidden'); row.style.display = 'none'; }
       loadMasterKeys();
     } catch(e) {
-      showEl('mk-msg', extractError(e), false);
+      showToast(extractError(e), 'error');
     }
   }
 
@@ -1520,7 +1660,7 @@ const G = (() => {
       await api('POST', '/api/master_key/delete', { index: idx });
       loadMasterKeys();
     } catch(e) {
-      showEl('mk-msg', extractError(e), false);
+      showToast(extractError(e), 'error');
     }
   }
 
@@ -1661,6 +1801,9 @@ const G = (() => {
     loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey, onMkKeyInput,
     loadCmds, openAddCmd, addCmd, _delCmd,
     closeModal,
+    switchLogTab,
+    switchDocsTab,
+    showToast,
   };
 })();
 
