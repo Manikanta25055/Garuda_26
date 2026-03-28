@@ -1,0 +1,7 @@
+pytest>=7.4
+pytest-asyncio>=0.23
+httpx>=0.26
+psutil
+python-dotenv
+fastapi
+uvicorn[standard]

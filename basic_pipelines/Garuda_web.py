@@ -172,6 +172,7 @@ _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
 _mode_lock = threading.Lock()
+_alert_lock = threading.Lock()   # guards _alert_active/_alert_end_time/_danger_trigger_info
 
 # ── Dead man's switch ────────────────────────────────────
 _last_heartbeat = time.time()      # updated by GET /api/heartbeat
@@ -613,10 +614,9 @@ def send_otp_via_email(email, otp_code):
     msg['From'] = EMAIL_SENDER
     msg['To'] = email
     try:
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
-        server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
+            server.send_message(msg)
         log_system_update(f"OTP email sent to {email}")
         return True, None
     except smtplib.SMTPAuthenticationError:
@@ -757,12 +757,13 @@ def trigger_software_alert():
         night = MODE_NIGHT
     if dnd or idle:
         return
-    was_active = _alert_active
-    # Extend the 3s window every frame scissors is visible — alert stays on
-    # while scissors is in frame and expires 3s after it disappears.
-    _alert_active = True
-    _alert_flash_count = 3
-    _alert_end_time = time.time() + 3
+    with _alert_lock:
+        was_active = _alert_active
+        # Extend the 3s window every frame scissors is visible — alert stays on
+        # while scissors is in frame and expires 3s after it disappears.
+        _alert_active = True
+        _alert_flash_count = 3
+        _alert_end_time = time.time() + 3
     if not was_active:
         # New alert starting: log, record, sound, email
         if night:
@@ -805,10 +806,9 @@ def send_email_alert():
     msg['From'] = EMAIL_SENDER
     msg['To'] = ", ".join(EMAIL_RECIPIENTS)
     try:
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
-        server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-        server.send_message(msg)
-        server.quit()
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
+            server.send_message(msg)
         log_system_update("Email alert sent.")
     except Exception as e:
         log_system_update(f"Failed sending email alert: {e}")
@@ -1385,8 +1385,8 @@ def get_session(token):
     return None
 
 def require_session(request: Request):
-    # Accept token from cookie (same-origin) or X-Garuda-Token header (cross-origin)
-    token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token")
+    # X-Garuda-Token header takes priority (cross-origin API); cookie is browser fallback
+    token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
     session = get_session(token)
     if not session:
         raise HTTPException(401, "Not authenticated")
@@ -1411,12 +1411,16 @@ def require_logs(request: Request):
 def get_state_dict():
     global _alert_active, _alert_flash_count, _danger_trigger_info, _alert_end_time
     # Expire alert once the wall-clock timer runs out
-    if _alert_active and _alert_end_time > 0 and time.time() >= _alert_end_time:
-        _alert_active = False
-        _alert_end_time = 0.0
-        _alert_flash_count = 0
-        _danger_trigger_info = ""
-        push_urgent_ws()   # immediately push cleared state to all clients
+    _just_cleared = False
+    with _alert_lock:
+        if _alert_active and _alert_end_time > 0 and time.time() >= _alert_end_time:
+            _alert_active = False
+            _alert_end_time = 0.0
+            _alert_flash_count = 0
+            _danger_trigger_info = ""
+            _just_cleared = True
+    if _just_cleared:
+        push_urgent_ws()   # push cleared state outside lock to avoid deadlock
 
     uptime = int(time.time() - _app_start_time)
     hours, rem = divmod(uptime, 3600)
@@ -1574,10 +1578,9 @@ def _deadman_monitor():
                 msg['Subject'] = "TAMPER ALERT: Garuda heartbeat missed"
                 msg['From'] = EMAIL_SENDER
                 msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-                server = smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10)
-                server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-                server.send_message(msg)
-                server.quit()
+                with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+                    server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
+                    server.send_message(msg)
             except Exception as e:
                 log_system_update(f"[TAMPER] Failed to send alert email: {e}")
 
@@ -2345,11 +2348,19 @@ async def master_key_delete(data: dict, session=Depends(require_admin)):
     return {"ok": True}
 
 @fastapi_app.get("/api/heartbeat")
-async def heartbeat():
-    """Public health check — used by UptimeRobot or external monitors."""
+async def heartbeat(request: Request, key: Optional[str] = None):
+    """Health check for external monitors (UptimeRobot etc.).
+    Accepts an optional ?key= query param or X-Heartbeat-Key header to guard
+    the dead-man reset. Without a key the endpoint still returns health data
+    but does NOT reset the deadman timer (prevents unauthenticated suppression).
+    """
     global _last_heartbeat, _deadman_alert_sent
-    _last_heartbeat = time.time()
-    _deadman_alert_sent = False
+    _HEARTBEAT_KEY = os.environ.get("HEARTBEAT_KEY", "")
+    provided = key or request.headers.get("X-Heartbeat-Key", "")
+    # Only reset dead-man's switch if key matches (or no key configured)
+    if not _HEARTBEAT_KEY or provided == _HEARTBEAT_KEY:
+        _last_heartbeat = time.time()
+        _deadman_alert_sent = False
     return {"ok": True, "uptime": int(time.time() - _app_start_time)}
 
 @fastapi_app.post("/api/emergency-stop")

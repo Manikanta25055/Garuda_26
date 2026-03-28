@@ -19,6 +19,8 @@ const G = (() => {
   let _lastAlertState = false;
   let _uptimeBase = 0;          // seconds from backend
   let _uptimeReceivedAt = 0;    // Date.now() when received
+  let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
+  let _chatInputController = null; // AbortController for chat input listeners
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -264,8 +266,8 @@ const G = (() => {
       if ($('adm-otp')) $('adm-otp').value = '';
       $('adm-err-2')?.classList.add('hidden');
       showLoginView('lv-admin-2');
-      // Email delivery failed — show dev bypass OTP so login can still proceed
-      if (r && !r.ok && r.bypass_otp) {
+      // Dev-only OTP fallback (only shown on localhost)
+      if (r && !r.ok && r.bypass_otp && location.hostname === 'localhost') {
         const e2 = $('adm-err-2');
         if (e2) { e2.textContent = 'Email failed. Dev code: ' + r.bypass_otp; e2.classList.remove('hidden'); }
       }
@@ -349,8 +351,9 @@ const G = (() => {
     buildNav(_session.role);
     nav('dashboard');
     _initChatInput();
-    // Live uptime ticker (updates between WS pushes)
-    setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
+    // Live uptime ticker — save ID so it can be cleared on logout
+    if (_uptimeInterval) clearInterval(_uptimeInterval);
+    _uptimeInterval = setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
     // Always reset console visibility first, then show for admin only
     const cw = $('dash-console-wrap');
     if (cw) {
@@ -366,6 +369,9 @@ const G = (() => {
 
   async function logout() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
+    // Clear uptime interval and chat listeners before resetting state
+    if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
+    if (_chatInputController) { _chatInputController.abort(); _chatInputController = null; }
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
     localStorage.removeItem('garuda_token');
@@ -402,7 +408,7 @@ const G = (() => {
     if (!un) { showEl('fp-msg', 'Enter your username.', false); return; }
     try {
       const r = await api('POST', '/api/forgot/send-otp', { username: un });
-      if (r.bypass_otp) showEl('fp-msg', `Dev OTP: ${r.bypass_otp}`, false);
+      if (r.bypass_otp && location.hostname === 'localhost') showEl('fp-msg', `Dev OTP: ${r.bypass_otp}`, false);
       else showEl('fp-msg', 'OTP sent to alert email.', true);
       const fpBlock = $('fp-otp-block');
       if (fpBlock) { fpBlock.classList.remove('hidden'); fpBlock.style.display = 'flex'; }
@@ -765,13 +771,17 @@ const G = (() => {
   function _initChatInput() {
     const input = $('chat-input');
     if (!input) return;
+    // Remove previous listeners via AbortController to prevent accumulation across logins
+    if (_chatInputController) _chatInputController.abort();
+    _chatInputController = new AbortController();
+    const sig = { signal: _chatInputController.signal };
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
-    });
+    }, sig);
     input.addEventListener('input', () => {
       input.style.height = 'auto';
       input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-    });
+    }, sig);
   }
 
   // ── Alert activity heatmap (backend-stored, lifetime-persistent) ────────
@@ -1025,7 +1035,7 @@ const G = (() => {
     }
     _ws = new WebSocket(wsUrl);
     _ws.onopen = () => _syncPendingEvents();
-    _ws.onmessage = e => tick(JSON.parse(e.data));
+    _ws.onmessage = e => { try { tick(JSON.parse(e.data)); } catch(_) {} };
     _ws.onclose   = () => setTimeout(connectWS, 3000);
   }
 
@@ -1091,7 +1101,7 @@ const G = (() => {
       if (s.alert_active) {
         card.classList.add('alert');
         setText('status-label', 'ALERT');
-        setText('status-desc', 'Scissors detected');
+        setText('status-desc', s.danger_info || 'Threat detected');
       } else {
         card.classList.remove('alert');
         setText('status-label', 'ALL CLEAR');
@@ -1547,8 +1557,11 @@ const G = (() => {
           <span class="device-dot ${d.online ? 'online' : ''}"></span>
           <span class="device-name">${esc(d.name)}</span>
           <span class="device-mac">${esc(d.mac)}</span>
-          <button class="btn btn-ghost btn-sm" onclick="G.deleteDevice('${esc(d.mac)}')">Remove</button>
+          <button class="btn btn-ghost btn-sm dev-del-btn" data-mac="${esc(d.mac)}">Remove</button>
         </div>`).join('');
+      el.querySelectorAll('.dev-del-btn').forEach(btn => {
+        btn.addEventListener('click', () => G.deleteDevice(btn.dataset.mac));
+      });
     } catch(e) { el.innerHTML = '<div class="device-empty" style="color:var(--danger)">Failed to load devices.</div>'; }
   }
 
@@ -1588,13 +1601,18 @@ const G = (() => {
       } else {
         el.innerHTML = '<div class="device-empty" style="margin-bottom:4px;color:var(--t2)">Click a device to register it as the owner\'s phone:</div>'
           + entries.map(e => `
-            <div class="device-row" style="cursor:${e.registered?'default':'pointer'}" onclick="${e.registered?'':
-              `G._regFromScan('${e.mac}','${e.ip}')`}">
+            <div class="device-row scan-entry" style="cursor:${e.registered?'default':'pointer'}"
+              data-mac="${esc(e.mac)}" data-ip="${esc(e.ip)}" data-registered="${e.registered?'1':''}">
               <span class="device-dot ${e.registered ? 'online' : ''}"></span>
               <span class="device-mac" style="flex:1">${esc(e.mac)}</span>
               <span style="font-size:11px;color:var(--t3)">${esc(e.ip)}</span>
               ${e.registered ? '<span style="font-size:11px;color:var(--success)">registered</span>' : ''}
             </div>`).join('');
+        el.querySelectorAll('.scan-entry').forEach(row => {
+          if (!row.dataset.registered) {
+            row.addEventListener('click', () => G._regFromScan(row.dataset.mac, row.dataset.ip));
+          }
+        });
       }
     } catch(e) {
       el.innerHTML = '<div class="device-empty" style="color:var(--danger)">Scan failed.</div>';
@@ -1696,7 +1714,7 @@ const G = (() => {
       const r = await api('POST', '/api/master_key/request_otp', { current_key: current });
       const row = $('mk-otp-row');
       if (row) { row.classList.remove('hidden'); row.style.display = 'flex'; }
-      if (r.bypass_otp) {
+      if (r.bypass_otp && location.hostname === 'localhost') {
         showToast('Email failed. Dev OTP: ' + r.bypass_otp, 'error', 8000);
       } else {
         showToast('OTP sent to your alert email.', 'success');
@@ -1853,7 +1871,8 @@ const G = (() => {
     const opts = { method, headers, credentials: base ? 'omit' : 'include' };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const r = await fetch(fullUrl, opts);
-    const d = await r.json();
+    let d;
+    try { d = await r.json(); } catch(_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
     if (!r.ok) throw d;
     return d;
   }
