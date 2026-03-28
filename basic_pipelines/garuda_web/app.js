@@ -21,6 +21,7 @@ const G = (() => {
   let _uptimeReceivedAt = 0;    // Date.now() when received
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
   let _chatInputController = null; // AbortController for chat input listeners
+  let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -75,7 +76,7 @@ const G = (() => {
     const offset = RING_CIRCUMFERENCE * (1 - pct);
     ring.style.strokeDashoffset = offset;
     // Color: green < 60%, yellow 60-80%, red > 80%
-    const color = pct < 0.6 ? '#34C759' : pct < 0.8 ? '#FF9F0A' : '#FF3B30';
+    const color = pct < 0.6 ? '#30D158' : pct < 0.8 ? '#FF9F0A' : '#FF453A';
     ring.style.stroke = color;
   }
 
@@ -1034,9 +1035,14 @@ const G = (() => {
       wsUrl = `${proto}://${location.host}/ws`;
     }
     _ws = new WebSocket(wsUrl);
-    _ws.onopen = () => _syncPendingEvents();
+    _ws.onopen = () => { _wsRetryDelay = 3000; _syncPendingEvents(); };
     _ws.onmessage = e => { try { tick(JSON.parse(e.data)); } catch(_) {} };
-    _ws.onclose   = () => setTimeout(connectWS, 3000);
+    _ws.onerror = () => {};
+    _ws.onclose   = () => {
+      const delay = _wsRetryDelay;
+      _wsRetryDelay = Math.min(_wsRetryDelay * 1.5, 30000);
+      setTimeout(connectWS, delay);
+    };
   }
 
   // ── Offline event sync on reconnect ─────────────────────
@@ -1063,22 +1069,26 @@ const G = (() => {
   }
 
   function tick(s) {
+    if (!s || typeof s !== 'object') return;
     // Alert banner
     const banner = $('alert-banner');
+    const pipeDot = $('pipeline-dot');
+    const pipeLabel = $('pipeline-label');
+    const hudDot = $('hud-dot');
+    const hudLabel = $('hud-label');
     if (s.alert_active) {
-      banner.classList.add('visible');
-      $('pipeline-dot').className = 'hdr-dot alert';
-      $('pipeline-label').textContent = 'Alert';
-      $('hud-dot').className = 'hdr-dot alert';
-      $('hud-label').textContent = 'Alert';
-      // Alert activity is recorded server-side; heatmap updates via WS state
+      if (banner) banner.classList.add('visible');
+      if (pipeDot) pipeDot.className = 'hdr-dot alert';
+      if (pipeLabel) pipeLabel.textContent = 'Alert';
+      if (hudDot) hudDot.className = 'hdr-dot alert';
+      if (hudLabel) hudLabel.textContent = 'Alert';
     } else {
-      banner.classList.remove('visible');
-      $('pipeline-dot').className = 'hdr-dot online';
-      $('pipeline-label').textContent = 'Online';
-      $('hud-dot').className = 'hdr-dot online';
-      $('hud-label').textContent = 'Online';
-      if (_prevAlertActive) _lastDetInfo = ''; // reset so next alert adds fresh entries
+      if (banner) banner.classList.remove('visible');
+      if (pipeDot) pipeDot.className = 'hdr-dot online';
+      if (pipeLabel) pipeLabel.textContent = 'Online';
+      if (hudDot) hudDot.className = 'hdr-dot online';
+      if (hudLabel) hudLabel.textContent = 'Online';
+      if (_prevAlertActive) _lastDetInfo = '';
     }
 
     // Push notification on new alert
@@ -1902,6 +1912,15 @@ const G = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', G.init);
+
+// Global error handlers — prevent silent crashes during demo
+window.addEventListener('unhandledrejection', e => {
+  e.preventDefault();
+  console.warn('[Garuda] Unhandled promise:', e.reason);
+});
+window.addEventListener('error', e => {
+  console.warn('[Garuda] Runtime error:', e.message);
+});
 
 // Close modal on overlay click
 document.addEventListener('click', e => {

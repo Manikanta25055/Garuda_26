@@ -1501,7 +1501,9 @@ def get_state_dict():
         throttled = True
 
     # ── Security health ──
-    watchdog_ok = (time.time() - _last_heartbeat) < _DEADMAN_TIMEOUT
+    # If no HEARTBEAT_KEY is configured, watchdog is N/A (always OK)
+    _hb_key = os.environ.get("HEARTBEAT_KEY", "")
+    watchdog_ok = True if not _hb_key else (time.time() - _last_heartbeat) < _DEADMAN_TIMEOUT
     camera_blind = _blind_alert_sent
 
     return {
