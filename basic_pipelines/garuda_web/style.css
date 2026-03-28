@@ -44,9 +44,24 @@
 /* ── Reset ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Background — solid black, no grid ─────────────────── */
-html { background-color: #000; }
-body { background: #000; }
+/* ── Background ────────────────────────────────────────────
+      html: solid base fills overscroll/rubber-band areas
+      body: transparent so body::before isn't covered
+      body::before: position:fixed grid — never scrolls        ── */
+html { background-color: #08080d; }
+body { background: transparent; }
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: #08080d;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
 
 body {
   color: var(--t1);
