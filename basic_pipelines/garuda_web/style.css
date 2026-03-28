@@ -1030,31 +1030,42 @@ input[type=range]::-webkit-slider-thumb {
   margin-bottom: 10px;
 }
 
-/* ── Settings card — macOS System Preferences group ────── */
+/* ── Settings card — open layout, no box clipping ──────── */
 .settings-card {
-  background: var(--surface);
-  border: 0.5px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
+  background: none;
+  border: none;
+  border-radius: 0;
   padding: 0;
-  margin-bottom: 20px;
-  overflow: hidden;
+  margin-bottom: 28px;
+  border-bottom: 0.5px solid var(--border);
+  padding-bottom: 24px;
 }
+.settings-card:last-child { border-bottom: none; }
+.settings-card .input-group { margin-bottom: 14px; }
+.settings-card .input { max-width: 100%; }
+.settings-card .form-row { margin-top: 16px; }
+.settings-card .info-banner { margin-bottom: 18px; }
+.settings-card .tip-box { margin-bottom: 14px; }
+.settings-card .toggle-row { padding: 4px 0; }
+.settings-card .device-add-row { margin-top: 12px; }
+.settings-card .mk-create-block { margin-top: 12px; }
+.settings-card .mk-list { margin-bottom: 8px; }
 .settings-card-title {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.2px;
-  padding: 16px 20px 4px;
+  margin-bottom: 4px;
 }
 .settings-card-desc {
   font-size: 13px;
   color: var(--t3);
-  padding: 0 20px 12px;
+  margin-bottom: 12px;
 }
 .setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 12px 0;
   border-bottom: 0.5px solid var(--border);
   gap: 16px;
 }
@@ -1750,7 +1761,24 @@ input[type=range]::-webkit-slider-thumb {
 .log-pane.active { display: block; }
 
 /* ── Security Health Card ────────────────────────────────── */
-.sec-health-card { }
+/* Override: sec-health-card and logs card keep their card appearance */
+.sec-health-card {
+  background: var(--surface);
+  border: 0.5px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  padding: 20px;
+  border-bottom: none;
+  padding-bottom: 20px;
+}
+/* Logs card — keeps enclosed card look */
+.settings-card.logs-card {
+  background: var(--surface);
+  border: 0.5px solid rgba(255,255,255,0.06);
+  border-radius: 14px;
+  border-bottom: none;
+  padding: 0;
+  overflow: hidden;
+}
 .sec-health-badge {
   font-size: 11px;
   font-weight: 600;
@@ -2464,8 +2492,28 @@ input[type=range]::-webkit-slider-thumb {
   .page-inner  { padding: 18px 16px; flex: none; overflow: visible; }
   .two-col     { grid-template-columns: 1fr; }
   .admin-page  { padding: 18px 16px; flex: none; overflow: visible; max-width: 100%; }
+  .admin-page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
   .form-stack  { max-width: 100%; }
+  .form-row    { flex-direction: column; }
   .narada-log  { height: 180px; }
+
+  /* Device add row — stack on mobile */
+  .device-add-row { flex-direction: column; }
+  .device-add-row .input { min-width: 0; width: 100%; }
+  .device-add-row .btn { width: 100%; }
+
+  /* Master key forms — full width */
+  .mk-add-form { flex-direction: column; }
+  .mk-add-form .input { width: 100%; }
+  .mk-add-form .btn { width: 100%; }
+
+  /* Settings section title — stack when it has inline button */
+  .settings-section-title { flex-wrap: wrap; gap: 8px; }
+
+  /* Sec health card on mobile */
+  .sec-health-card { padding: 16px; }
+  .sec-health-row { flex-wrap: wrap; }
+  .sec-health-desc { word-break: break-word; }
 
   /* Modals */
   .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; }
@@ -2507,6 +2555,11 @@ input[type=range]::-webkit-slider-thumb {
     gap: 16px;
   }
   .modern-input { font-size: 16px; }
+
+  /* Log tabs scroll on mobile */
+  .log-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .log-tabs::-webkit-scrollbar { display: none; }
+  .log-tab { flex-shrink: 0; }
 
   /* Docs modal */
   .docs-term    { min-width: 100px; }
