@@ -42,7 +42,7 @@
 
   --shadow:      0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
   --shadow-sm:   0 2px 6px rgba(0,0,0,0.06);
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.05), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.03);
   --shadow-inset:inset 0 2px 6px rgba(0,0,0,0.06);
   --trans: 0.2s ease;
 
@@ -431,7 +431,7 @@ textarea:-webkit-autofill {
   flex-direction: column;
   overflow: auto;
   position: relative;
-  background: var(--bg);
+  background: transparent; /* let body::before grid show through */
 }
 
 /* Full-screen centered content */
@@ -1782,13 +1782,16 @@ input[type=range]::-webkit-slider-thumb {
 /* ── Security Status Card ───────────────────────────────── */
 .status-card {
   background: var(--surface);
-  border: 0.5px solid rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 28px 32px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  box-shadow: var(--shadow-card);
   transition: box-shadow 0.35s ease, background 0.35s ease, border-color 0.35s ease;
   text-align: center;
   position: relative;
+}
+[data-theme="dark"] .status-card {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
 }
 .status-card.alert {
   background: rgba(255,69,58,0.04);

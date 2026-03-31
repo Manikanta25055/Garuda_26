@@ -484,9 +484,10 @@ const G = (() => {
   }
 
   function stopCameraStream() {
+    if (_mjpegRetry) { clearTimeout(_mjpegRetry); _mjpegRetry = null; }
     const camImg   = $('cam-img');
     const camVideo = $('cam-video');
-    if (camImg)   { camImg.src = ''; camImg.style.display = 'none'; }
+    if (camImg)   { camImg.onload = null; camImg.onerror = null; camImg.src = ''; camImg.style.display = 'none'; }
     if (camVideo) { camVideo.srcObject = null; camVideo.style.display = 'none'; }
     if (_activePc) { _activePc.close(); _activePc = null; }
     if (_wsStream) { _wsStream.close(); _wsStream = null; }
@@ -572,26 +573,44 @@ const G = (() => {
     };
   }
 
+  let _mjpegRetry = null;
+
   function startMjpeg() {
-    const backend  = getBackend() || '';
-    const camImg   = $('cam-img');
+    const backend    = getBackend() || '';
+    const camImg     = $('cam-img');
     const camOffline = $('cam-offline');
     if (!camImg) return;
-    camImg.style.display = 'none';
-    if (camOffline) camOffline.style.display = 'flex';
+
+    // Clear any pending retry timer
+    if (_mjpegRetry) { clearTimeout(_mjpegRetry); _mjpegRetry = null; }
+
     _camSetStatus('Connecting…');
+
+    const streamToken = _token ? `?token=${encodeURIComponent(_token)}` : '';
+    const src = backend + '/stream' + streamToken;
+
+    // Remove old handlers before reassigning
+    camImg.onload  = null;
+    camImg.onerror = null;
+
     camImg.onload = () => {
       camImg.style.display = 'block';
       if (camOffline) camOffline.style.display = 'none';
-      _camSetStatus('Live · MJPEG');
+      _camSetStatus('Live');
     };
     camImg.onerror = () => {
       camImg.style.display = 'none';
       if (camOffline) camOffline.style.display = 'flex';
-      _camSetStatus('Unavailable');
+      _camSetStatus('Retrying…');
+      // Auto-retry every 3 s if camera button still active
+      const btn = $('cam-toggle-btn');
+      if (btn && btn.classList.contains('active')) {
+        _mjpegRetry = setTimeout(() => startMjpeg(), 3000);
+      }
     };
-    const streamToken = _token ? `&token=${encodeURIComponent(_token)}` : '';
-    camImg.src = backend + '/stream?t=' + Date.now() + streamToken;
+
+    // Set src — browser streams MJPEG natively with no per-frame JS overhead
+    camImg.src = src;
   }
 
   function toggleCamera() {
@@ -599,15 +618,10 @@ const G = (() => {
     const isActive = btn && btn.classList.contains('active');
     if (!isActive) {
       if (btn) btn.classList.add('active');
-      const camOffline = $('cam-offline');
-      if (camOffline) camOffline.style.display = 'flex';
-      _camSetStatus('Connecting…');
       switchCamTab('live');
-      if (typeof RTCPeerConnection !== 'undefined') {
-        startWebRTC();
-      } else {
-        startWsStream();
-      }
+      // MJPEG is the fastest and most reliable for Pi5 local streaming.
+      // Browser handles frame decoding natively — no JS per-frame overhead.
+      startMjpeg();
     } else {
       stopCameraStream();
       if (btn) btn.classList.remove('active');
