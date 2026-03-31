@@ -393,8 +393,9 @@ const G = (() => {
     // Activity date picker — default to all dates and wire change
     const datePicker = document.getElementById('activity-date');
     if (datePicker) {
-      datePicker.value = '';
-      datePicker.max = new Date().toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
+      datePicker.value = today;
+      datePicker.max = today;
       datePicker.addEventListener('change', _renderTimeline);
     }
     connectWS();
@@ -1126,7 +1127,13 @@ const G = (() => {
         requestAnimationFrame(() => { pg.style.opacity = '1'; });
       });
     }
-    if (navEl) { navEl.classList.add('active'); movePill(navEl); }
+    if (navEl) {
+      navEl.classList.add('active');
+      movePill(navEl);
+      if (window.innerWidth <= 768) {
+        navEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
     // Dynamic Island: update label per page
     _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
     _syncDIContext();
@@ -1275,10 +1282,12 @@ const G = (() => {
     if (card) {
       if (s.alert_active) {
         card.classList.add('alert');
+        card.classList.add('alert-active');
         setText('status-label', 'ALERT');
         setText('status-desc', s.danger_info || 'Threat detected');
       } else {
         card.classList.remove('alert');
+        card.classList.remove('alert-active');
         setText('status-label', 'ALL CLEAR');
         setText('status-desc', 'No threats detected');
       }

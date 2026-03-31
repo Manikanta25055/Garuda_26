@@ -659,6 +659,22 @@ textarea:-webkit-autofill {
 #top-hud.di-idle #hud-label {
   display: none;
 }
+@media (hover: hover) and (pointer: fine) {
+  #top-hud:hover {
+    transform: translateX(-50%) scale(1.028);
+    box-shadow:
+      0 14px 30px rgba(0,0,0,0.16),
+      0 4px 10px rgba(0,0,0,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  [data-theme="dark"] #top-hud:hover {
+    box-shadow:
+      0 16px 34px rgba(0,0,0,0.24),
+      0 4px 10px rgba(0,0,0,0.16),
+      0 0 0 1px rgba(255,255,255,0.05),
+      inset 0 1px 0 rgba(255,255,255,0.12);
+  }
+}
 @keyframes di-alert-pulse {
   0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
   20% { transform: translateX(-50%) translateY(-0.5px) scale(1.012); }
@@ -2742,13 +2758,15 @@ input[type=range]::-webkit-slider-thumb {
     bottom: 14px;
     padding: 5px 12px;
     max-width: calc(100vw - 32px);
-    overflow-x: hidden;
+    overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
-    justify-content: center;
+    justify-content: flex-start;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
   }
   #ios-nav::-webkit-scrollbar { display: none; }
-  .ios-item  { padding: 7px 10px; min-width: 46px; flex-shrink: 0; }
+  .ios-item  { padding: 7px 10px; min-width: 46px; flex-shrink: 0; scroll-snap-align: center; }
   .ios-label { font-size: 9px; }
 
   /* Heatmap + hardware stay side-by-side */
@@ -2815,9 +2833,28 @@ input[type=range]::-webkit-slider-thumb {
 
   /* Modals */
   .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; }
+  #m-docs .modal {
+    width: min(95vw, 640px);
+    max-height: calc(100vh - 28px);
+    padding: 20px 16px 18px;
+    gap: 14px;
+  }
+  #m-docs .docs-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  #m-docs .docs-tabs::-webkit-scrollbar { display: none; }
+  #m-docs .docs-section {
+    padding: 12px 0;
+  }
+  #m-docs .docs-stack-grid {
+    grid-template-columns: 1fr;
+  }
 
   /* Tables */
-  .t-wrap { overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+  .t-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table   { min-width: 480px; }
 
   /* Touch targets — min 44px */
@@ -2855,13 +2892,36 @@ input[type=range]::-webkit-slider-thumb {
   .modern-input { font-size: 16px; }
 
   /* Log tabs scroll on mobile */
-  .log-tabs { overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .log-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .log-tabs::-webkit-scrollbar { display: none; }
   .log-tab { flex-shrink: 0; }
 
   /* Docs modal */
   .docs-term    { min-width: 100px; }
   .fc-branch-row { gap: 14px; }
+
+  /* Admin headings are duplicated by the Dynamic Island on mobile */
+  .admin-page-header h2 { display: none; }
+  .admin-page-header {
+    margin-bottom: 12px;
+    min-height: 0;
+  }
+
+  /* Custom commands need horizontal room on small screens */
+  #page-a-cmds .settings-card { overflow: hidden; }
+  #page-a-cmds .t-wrap { overflow-x: auto; }
+  #page-a-cmds table { min-width: 640px; }
+
+  /* Activity date should remain readable without opening the picker */
+  .activity-date-picker {
+    min-width: 138px;
+    color: var(--t1);
+    text-align: right;
+  }
+  .activity-date-picker::-webkit-date-and-time-value {
+    text-align: right;
+    min-height: 1.2em;
+  }
 }
 
 @media (max-width: 600px) {
@@ -3391,6 +3451,9 @@ input:-webkit-autofill:focus {
   .sidebar-left, .sidebar-right, .center-stage { overflow: visible; min-height: 0; }
   .cam-main-card { min-height: 220px; }
   .activity-card-scroll { max-height: 340px; }
+  .status-card {
+    padding: 22px 20px;
+  }
   /* Tighter cards on mobile */
   .card { padding: 14px; border-radius: 16px; }
   .settings-card { padding: 14px; }
