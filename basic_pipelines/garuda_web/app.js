@@ -734,7 +734,6 @@ const G = (() => {
     const el = document.createElement('div');
     el.className = 'chat-msg assistant';
     el.innerHTML = `
-      <div class="chat-msg-avatar-gradient"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
       <div class="chat-msg-content">
         <div class="chat-msg-body"></div>
       </div>`;
@@ -844,7 +843,6 @@ const G = (() => {
     if (!box) return;
     box.innerHTML = `
       <div class="chat-msg assistant">
-        <div class="chat-msg-avatar-gradient"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <div class="chat-msg-content">
           <div class="chat-msg-body">Chat cleared. How can I help?</div>
         </div>
@@ -876,8 +874,12 @@ const G = (() => {
     if (!container) return;
 
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const CELL = 10, GAP = 3, COL_W = CELL + GAP;
     const NUM_WEEKS = 13;
+    const GAP = 5;
+    const labelWidth = 24;
+    const availableWidth = Math.max(container.clientWidth - labelWidth - ((NUM_WEEKS - 1) * GAP), 182);
+    const CELL = Math.max(13, Math.min(28, Math.floor(availableWidth / NUM_WEEKS)));
+    const COL_W = CELL + GAP;
 
     // Find start Sunday: go back to the Sunday that is ≤ (NUM_WEEKS-1)*7 days ago
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -918,6 +920,8 @@ const G = (() => {
     // Build DOM
     container.innerHTML = '';
     const outer = mk('div', 'hm-outer');
+    outer.style.setProperty('--hm-cell', `${CELL}px`);
+    outer.style.setProperty('--hm-gap', `${GAP}px`);
 
     // Left: day labels column
     const left = mk('div', 'hm-left');
@@ -1279,10 +1283,12 @@ const G = (() => {
     }
     el.innerHTML = items.map(item =>
       `<div class="timeline-item">
-        <div class="tl-dot ${item.type}"></div>
+        <div class="tl-rail">
+          <div class="tl-dot ${item.type}"></div>
+        </div>
         <div class="tl-body">
+          <div class="tl-meta">${item.time}</div>
           <div class="tl-title">${esc(item.text)}</div>
-          <div class="tl-time">${item.time}</div>
         </div>
       </div>`
     ).join('');
