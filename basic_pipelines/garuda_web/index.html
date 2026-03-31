@@ -198,7 +198,6 @@
   <div id="top-hud">
     <div class="hud-main">
       <div class="hud-leading">
-        <span class="hud-orb" id="hud-orb"></span>
         <div class="hud-copy">
           <div class="hud-brand" id="hud-brand">GARUDA</div>
           <div class="hud-detail" id="hud-detail">System online</div>
@@ -223,7 +222,12 @@
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
       </button>
-      <button class="hud-signout" onclick="G.logout()">Sign Out</button>
+      <button class="hud-signout" aria-label="Sign Out" title="Sign Out" onclick="G.logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v8"/>
+          <path d="M7.05 5.05a9 9 0 1 0 9.9 0"/>
+        </svg>
+      </button>
     </div>
   </div>
 

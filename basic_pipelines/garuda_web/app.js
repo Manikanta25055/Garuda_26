@@ -1111,6 +1111,7 @@ const G = (() => {
 
     hud.classList.toggle('di-expanded', isAlert || isThinking || page === 'narada');
     hud.classList.toggle('di-narada', page === 'narada' && !isAlert && !isThinking);
+    hud.classList.toggle('di-minimal-status', !isAlert && !isThinking && page !== 'narada');
 
     _setDILabel(_DI_LABELS[page] || 'GARUDA');
 
@@ -1133,7 +1134,7 @@ const G = (() => {
     }
 
     _setDIDetail(_DI_DETAILS[page] || 'System online');
-    if (hudLabel && (!hudLabel.textContent.trim() || hudLabel.textContent.trim() === '—')) hudLabel.textContent = 'Online';
+    if (hudLabel) hudLabel.textContent = '';
   }
 
   function _bindDynamicIsland() {
