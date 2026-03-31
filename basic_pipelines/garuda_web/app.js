@@ -373,6 +373,7 @@ const G = (() => {
     $('app').classList.add('logged-in');
     $('hdr-user').textContent = _session.display_name || _session.username;
     buildNav(_session.role);
+    $('main')?.classList.add('dash-active');
     nav('dashboard');
     _initChatInput();
     // Live uptime ticker — save ID so it can be cleared on logout
@@ -402,8 +403,9 @@ const G = (() => {
     const next = current === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('garuda_theme', next);
-    const btn = document.getElementById('theme-toggle-btn');
-    if (btn) btn.classList.toggle('is-dark', next === 'dark');
+    // Sync both toggle buttons (HUD + login page)
+    document.getElementById('theme-toggle-btn')?.classList.toggle('is-dark', next === 'dark');
+    document.getElementById('login-theme-toggle')?.classList.toggle('is-dark', next === 'dark');
   }
 
   async function logout() {
@@ -1054,6 +1056,9 @@ const G = (() => {
       }
     });
     document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
+    // Dashboard uses overflow:hidden on #main to avoid nav-bar gap
+    const mainEl = $('main');
+    if (mainEl) mainEl.classList.toggle('dash-active', pageId === 'dashboard');
     const pg = $('page-' + pageId);
     if (pg) {
       requestAnimationFrame(() => {
