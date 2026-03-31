@@ -12,6 +12,7 @@ def test_get_config_admin(app_client, admin_headers):
     assert r.status_code == 200
     d = r.json()
     assert 'detection_threshold' in d
+    assert 'danger_label' in d
     assert 'email_recipients' in d
     assert 'custom_voice_commands' in d
 
@@ -76,3 +77,26 @@ def test_config_persistence(app_client, admin_headers):
     cfg1 = app_client.get('/api/config', headers=admin_headers).json()
     cfg2 = app_client.get('/api/config', headers=admin_headers).json()
     assert cfg1['detection_threshold'] == cfg2['detection_threshold']
+
+
+def test_update_danger_label_round_trips(app_client, admin_headers):
+    """Danger label updates should be returned to the admin UI."""
+    r = app_client.post('/api/config', json={'danger_label': 'knife'}, headers=admin_headers)
+    assert r.status_code == 200
+    cfg = app_client.get('/api/config', headers=admin_headers).json()
+    assert cfg['danger_label'] == 'knife'
+    assert gw.DANGER_LABEL == 'knife'
+
+
+def test_update_secret_backed_config_fields(app_client, admin_headers):
+    """App password and Groq key should be accepted and persisted in runtime config."""
+    r = app_client.post(
+        '/api/config',
+        json={'email_sender_pass': 'app-pass-1234', 'groq_api_key': 'gsk_test_key'},
+        headers=admin_headers,
+    )
+    assert r.status_code == 200
+    assert gw.EMAIL_SENDER_PASS == 'app-pass-1234'
+    assert gw.GROQ_API_KEY == 'gsk_test_key'
+    cfg = app_client.get('/api/config', headers=admin_headers).json()
+    assert cfg['groq_configured'] is True

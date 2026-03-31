@@ -282,6 +282,11 @@ textarea:-webkit-autofill {
 .lv-panel input:-webkit-autofill {
   -webkit-box-shadow: 0 0 0 1000px #1C1C1E inset !important;
 }
+[data-theme="light"] .login-card input:-webkit-autofill,
+[data-theme="light"] .lv-panel input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset !important;
+  -webkit-text-fill-color: var(--t1) !important;
+}
 
 /* ── Mode badge — header pill ──────────────────────────── */
 .mode-pill {
@@ -2718,11 +2723,21 @@ input[type=range]::-webkit-slider-thumb {
 /* ── Mobile responsive ─────────────────────────────────── */
 @media (max-width: 768px) {
 
+  html, body, #app, #app-shell, #body, #main {
+    overflow-x: hidden;
+  }
+  body {
+    touch-action: manipulation;
+  }
+  button, a, input, textarea, select {
+    touch-action: manipulation;
+  }
+
   /* App shell: unlock fixed layout, allow scrolling */
-  #app           { height: auto; min-height: 100vh; overflow: visible; }
-  #app-shell     { overflow: visible; }
-  #body          { overflow: visible; flex-direction: column; }
-  #main          { overflow: visible; }
+  #app           { height: auto; min-height: 100vh; overflow-x: hidden; overflow-y: visible; }
+  #app-shell     { overflow-x: hidden; overflow-y: visible; }
+  #body          { overflow-x: hidden; overflow-y: visible; flex-direction: column; }
+  #main          { overflow-x: hidden; overflow-y: visible; }
   .page          { height: auto; }
   #page-dashboard { overflow: visible; height: auto; }
 
@@ -2732,10 +2747,15 @@ input[type=range]::-webkit-slider-thumb {
     top: 52px;
     left: 0; right: 0; bottom: 0;
     height: auto;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: hidden;
     z-index: 2;
   }
   #page-chat .chat-shell { height: 100%; }
+  #page-chat .chat-shell,
+  #page-chat .chat-messages {
+    overflow-x: hidden;
+  }
   #page-chat .chat-input-wrap {
     padding: 6px 6px 6px 14px;
     bottom: 92px;

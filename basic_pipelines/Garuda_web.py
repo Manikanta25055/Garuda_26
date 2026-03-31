@@ -121,6 +121,7 @@ last_email_sent_time = 0
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL   = "llama-3.3-70b-versatile"
+DANGER_LABEL = "scissors"
 
 ##############################################################################
 # GLOBALS & SETTINGS
@@ -242,7 +243,9 @@ _RATE_WINDOW = 60    # per N seconds
 
 def _check_rate_limit(request) -> bool:
     """Return True if request is within rate limit, False if exceeded."""
-    ip = request.client.host if request.client else "unknown"
+    forwarded_for = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-IP", "").strip()
+    ip = forwarded_for or real_ip or (request.client.host if request.client else "unknown")
     now = time.time()
     stamps = _rate_store[ip]
     stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
@@ -281,6 +284,7 @@ _pc_set: set = set()
 # Event-driven WS broadcaster
 _event_loop  = None        # asyncio loop ref (set in lifespan)
 _ws_trigger  = None        # asyncio.Event — set to push WS immediately
+_ws_broadcaster_task = None
 
 # Session store: token → {username, role, expires}
 _sessions = {}
@@ -334,8 +338,8 @@ def save_users():
 
 def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
-    global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
-    global KNOWN_DEVICES, WATCH_LABELS
+    global EMAIL_COOLDOWN, EMAIL_SENDER, EMAIL_SENDER_PASS, DETECTION_THRESHOLD
+    global KNOWN_DEVICES, WATCH_LABELS, GROQ_API_KEY, DANGER_LABEL
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
@@ -345,9 +349,12 @@ def load_config():
             EMAIL_RECIPIENTS = cfg.get("email_recipients", EMAIL_RECIPIENTS)
             EMAIL_COOLDOWN = cfg.get("email_cooldown", EMAIL_COOLDOWN)
             EMAIL_SENDER = cfg.get("email_sender", EMAIL_SENDER)
+            EMAIL_SENDER_PASS = cfg.get("email_sender_pass", EMAIL_SENDER_PASS)
+            GROQ_API_KEY = cfg.get("groq_api_key", GROQ_API_KEY)
             DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
             KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
             WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
+            DANGER_LABEL = cfg.get("danger_label", DANGER_LABEL)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
 
@@ -420,9 +427,12 @@ def save_config():
             "email_recipients": EMAIL_RECIPIENTS,
             "email_cooldown": EMAIL_COOLDOWN,
             "email_sender": EMAIL_SENDER,
+            "email_sender_pass": EMAIL_SENDER_PASS,
+            "groq_api_key": GROQ_API_KEY,
             "detection_threshold": DETECTION_THRESHOLD,
             "known_devices": KNOWN_DEVICES,
             "watch_labels": WATCH_LABELS,
+            "danger_label": DANGER_LABEL,
         }
         _atomic_json_write(CONFIG_FILE, cfg)
     except Exception as e:
@@ -829,7 +839,7 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.person_detected = False
-        self.danger_label = "scissors"
+        self.danger_label = DANGER_LABEL
         # Override with a threading-safe lock-based store
         # (base class uses multiprocessing.Queue which breaks across threads)
         self._frame = None
@@ -1593,18 +1603,22 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def _lifespan(app):
-    global _event_loop, _ws_trigger
+    global _event_loop, _ws_trigger, _ws_broadcaster_task
     _event_loop = asyncio.get_event_loop()
     _ws_trigger = asyncio.Event()
     _init_event_db()
     _load_alert_history()
     _load_presence_log()
     load_master_keys()
-    asyncio.ensure_future(_ws_broadcaster())
+    _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     threading.Thread(target=_deadman_monitor, daemon=True).start()
     threading.Thread(target=_connectivity_monitor, daemon=True).start()
     yield
+    if _ws_broadcaster_task is not None:
+        _ws_broadcaster_task.cancel()
+        await asyncio.gather(_ws_broadcaster_task, return_exceptions=True)
+        _ws_broadcaster_task = None
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
         await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)
@@ -1676,9 +1690,11 @@ class UpdateUserRequest(BaseModel):
 class ConfigUpdateRequest(BaseModel):
     detection_threshold: Optional[float] = None
     email_sender: Optional[str] = None
+    email_sender_pass: Optional[str] = None
     email_recipients: Optional[List[str]] = None
     email_cooldown: Optional[int] = None
     danger_label: Optional[str] = None
+    groq_api_key: Optional[str] = None
     privacy: Optional[bool] = None
     watch_labels: Optional[List[str]] = None
 
@@ -1783,7 +1799,7 @@ async def session_info(session=Depends(require_session)):
 
 @fastapi_app.post("/api/logout")
 async def logout(request: Request, response: Response):
-    token = request.cookies.get("garuda_session")
+    token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
     if token and token in _sessions:
         del _sessions[token]
     response.delete_cookie("garuda_session")
@@ -2053,6 +2069,7 @@ async def update_user(data: UpdateUserRequest, session=Depends(require_admin)):
 async def get_config(session=Depends(require_admin)):
     return {
         "detection_threshold": DETECTION_THRESHOLD,
+        "danger_label": DANGER_LABEL,
         "email_sender": EMAIL_SENDER,
         "email_recipients": EMAIL_RECIPIENTS,
         "email_cooldown": EMAIL_COOLDOWN,
@@ -2065,23 +2082,28 @@ async def get_config(session=Depends(require_admin)):
 
 @fastapi_app.post("/api/config")
 async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
-    global DETECTION_THRESHOLD, EMAIL_SENDER
-    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY
+    global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
+    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, GROQ_API_KEY, DANGER_LABEL
     if data.detection_threshold is not None:
         DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
     if data.email_sender is not None:
         EMAIL_SENDER = data.email_sender
+    if data.email_sender_pass is not None:
+        EMAIL_SENDER_PASS = data.email_sender_pass
     if data.email_recipients is not None:
         EMAIL_RECIPIENTS = data.email_recipients
     if data.email_cooldown is not None:
         EMAIL_COOLDOWN = data.email_cooldown
+    if data.groq_api_key is not None:
+        GROQ_API_KEY = data.groq_api_key
     if data.privacy is not None:
         with _mode_lock:
             MODE_PRIVACY = data.privacy
     if data.danger_label is not None:
+        DANGER_LABEL = data.danger_label.strip() or DANGER_LABEL
         # Update danger label in user_data if available
         if app_gst and hasattr(app_gst, 'user_data'):
-            app_gst.user_data.danger_label = data.danger_label
+            app_gst.user_data.danger_label = DANGER_LABEL
     if data.watch_labels is not None:
         global WATCH_LABELS
         WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
