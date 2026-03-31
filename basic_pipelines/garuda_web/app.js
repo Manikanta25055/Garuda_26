@@ -22,6 +22,7 @@ const G = (() => {
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
   let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
+  let _currentPage = 'dashboard';
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -389,10 +390,11 @@ const G = (() => {
     // Set logs unlock state from session (master key login sets this true)
     _logsUnlocked = !!_session.logs_unlocked;
     $('logs-gate')?.classList.add('hidden');
-    // Activity date picker — set today and wire change
+    // Activity date picker — default to all dates and wire change
     const datePicker = document.getElementById('activity-date');
     if (datePicker) {
-      datePicker.value = new Date().toISOString().split('T')[0];
+      datePicker.value = '';
+      datePicker.max = new Date().toISOString().split('T')[0];
       datePicker.addEventListener('change', _renderTimeline);
     }
     connectWS();
@@ -1075,15 +1077,32 @@ const G = (() => {
     if (el) el.textContent = label;
   }
 
+  function _syncDIContext() {
+    const hud = document.getElementById('top-hud');
+    const hudLabel = document.getElementById('hud-label');
+    if (!hud) return;
+    const thinking = hud.classList.contains('di-thinking');
+    const alerting = hud.classList.contains('di-alert');
+    const voice = _currentPage === 'narada' && !thinking && !alerting;
+    hud.classList.toggle('di-voice', voice);
+    if (!hudLabel) return;
+    if (alerting) hudLabel.textContent = 'Alert';
+    else if (thinking) hudLabel.textContent = 'Thinking';
+    else if (voice) hudLabel.textContent = 'Voice';
+    else hudLabel.textContent = 'Online';
+  }
+
   function _setDIState(state) {
     const hud = document.getElementById('top-hud');
     if (!hud) return;
     hud.classList.toggle('di-alert',    state === 'alert');
     hud.classList.toggle('di-thinking', state === 'thinking');
+    _syncDIContext();
   }
 
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
+    _currentPage = pageId;
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
     document.querySelectorAll('.page').forEach(p => {
@@ -1109,6 +1128,7 @@ const G = (() => {
     if (navEl) { navEl.classList.add('active'); movePill(navEl); }
     // Dynamic Island: update label per page
     _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
+    _syncDIContext();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
     if (pageId === 'a-logs') {
@@ -1215,25 +1235,20 @@ const G = (() => {
 
   function tick(s) {
     if (!s || typeof s !== 'object') return;
-    // Alert banner
-    const banner = $('alert-banner');
     const pipeDot = $('pipeline-dot');
     const pipeLabel = $('pipeline-label');
     const hudDot = $('hud-dot');
     const hudLabel = $('hud-label');
     if (s.alert_active) {
-      if (banner) banner.classList.add('visible');
       if (pipeDot) pipeDot.className = 'hdr-dot alert';
       if (pipeLabel) pipeLabel.textContent = 'Alert';
       if (hudDot) hudDot.className = 'hdr-dot alert';
       if (hudLabel) hudLabel.textContent = 'Alert';
       _setDIState('alert');
     } else {
-      if (banner) banner.classList.remove('visible');
       if (pipeDot) pipeDot.className = 'hdr-dot online';
       if (pipeLabel) pipeLabel.textContent = 'Online';
       if (hudDot) hudDot.className = 'hdr-dot online';
-      if (hudLabel) hudLabel.textContent = 'Online';
       if (_prevAlertActive) _lastDetInfo = '';
       // Only clear alert state if not thinking
       const hud = document.getElementById('top-hud');
