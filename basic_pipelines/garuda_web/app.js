@@ -374,6 +374,7 @@ const G = (() => {
     $('hdr-user').textContent = _session.display_name || _session.username;
     buildNav(_session.role);
     $('main')?.classList.add('dash-active');
+    _setDILabel('GARUDA');
     nav('dashboard');
     _initChatInput();
     // Live uptime ticker — save ID so it can be cleared on logout
@@ -791,11 +792,13 @@ const G = (() => {
     _chatBusy = true;
     if (btn) btn.disabled = true;
     _showThinking();
+    _setDIState('thinking');
 
     try {
       const res  = await api('POST', '/api/chat', { message: msg });
       const text = res.response || '…';
       _hideThinking();
+      _setDIState('');
       const bodyEl = _chatAddAssistant();
       // Typewriter: reveal chars at ~18ms each, then snap remaining on done
       let i = 0;
@@ -808,6 +811,7 @@ const G = (() => {
       requestAnimationFrame(tick);
     } catch(e) {
       _hideThinking();
+      _setDIState('');
       const bodyEl = _chatAddAssistant();
       if (bodyEl) bodyEl.textContent = 'Connection error — please try again.';
     } finally {
@@ -1043,6 +1047,29 @@ const G = (() => {
     }
   }
 
+  // ── Dynamic Island helpers ────────────────────────────────
+  const _DI_LABELS = {
+    'dashboard':   'GARUDA',
+    'narada':      'Narada',
+    'chat':        'Chat',
+    'a-email':     'Email',
+    'a-settings':  'Settings',
+    'a-logs':      'Logs',
+    'a-cmds':      'Commands',
+  };
+
+  function _setDILabel(label) {
+    const el = document.getElementById('hud-brand');
+    if (el) el.textContent = label;
+  }
+
+  function _setDIState(state) {
+    const hud = document.getElementById('top-hud');
+    if (!hud) return;
+    hud.classList.toggle('di-alert',    state === 'alert');
+    hud.classList.toggle('di-thinking', state === 'thinking');
+  }
+
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
@@ -1068,6 +1095,8 @@ const G = (() => {
       });
     }
     if (navEl) { navEl.classList.add('active'); movePill(navEl); }
+    // Dynamic Island: update label per page
+    _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
     if (pageId === 'a-logs') {
@@ -1186,6 +1215,7 @@ const G = (() => {
       if (pipeLabel) pipeLabel.textContent = 'Alert';
       if (hudDot) hudDot.className = 'hdr-dot alert';
       if (hudLabel) hudLabel.textContent = 'Alert';
+      _setDIState('alert');
     } else {
       if (banner) banner.classList.remove('visible');
       if (pipeDot) pipeDot.className = 'hdr-dot online';
@@ -1193,6 +1223,9 @@ const G = (() => {
       if (hudDot) hudDot.className = 'hdr-dot online';
       if (hudLabel) hudLabel.textContent = 'Online';
       if (_prevAlertActive) _lastDetInfo = '';
+      // Only clear alert state if not thinking
+      const hud = document.getElementById('top-hud');
+      if (hud && !hud.classList.contains('di-thinking')) _setDIState('');
     }
 
     // Push notification on new alert
