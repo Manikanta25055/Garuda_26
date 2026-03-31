@@ -1085,11 +1085,12 @@ const G = (() => {
     const alerting = hud.classList.contains('di-alert');
     const voice = _currentPage === 'narada' && !thinking && !alerting;
     hud.classList.toggle('di-voice', voice);
+    hud.classList.toggle('di-idle', !thinking && !alerting && !voice);
     if (!hudLabel) return;
     if (alerting) hudLabel.textContent = 'Alert';
     else if (thinking) hudLabel.textContent = 'Thinking';
     else if (voice) hudLabel.textContent = 'Voice';
-    else hudLabel.textContent = 'Online';
+    else hudLabel.textContent = '';
   }
 
   function _setDIState(state) {
