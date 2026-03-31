@@ -180,9 +180,6 @@
 <!-- ══════════════════ APP SHELL ══════════════════ -->
 <div id="app-shell">
 
-  <!-- Alert banner -->
-  <div id="alert-banner">DANGER DETECTED — CHECK CAMERA FEED</div>
-
   <!-- Header (hidden when logged in) -->
   <header id="header">
     <div class="header-brand">GARUDA</div>
@@ -199,10 +196,18 @@
 
   <!-- Floating HUD bar — visible when logged in -->
   <div id="top-hud">
-    <div class="hud-brand" id="hud-brand">GARUDA</div>
-    <div class="hud-status">
-      <div id="hud-dot" class="hdr-dot"></div>
-      <span id="hud-label">—</span>
+    <div class="hud-main">
+      <div class="hud-leading">
+        <span class="hud-orb" id="hud-orb"></span>
+        <div class="hud-copy">
+          <div class="hud-brand" id="hud-brand">GARUDA</div>
+          <div class="hud-detail" id="hud-detail">System online</div>
+        </div>
+      </div>
+      <div class="hud-status">
+        <div id="hud-dot" class="hdr-dot"></div>
+        <span id="hud-label">—</span>
+      </div>
     </div>
     <div class="hud-right">
       <span id="hdr-user" class="hud-user-lbl"></span>

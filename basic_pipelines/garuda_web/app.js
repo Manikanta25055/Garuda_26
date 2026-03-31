@@ -22,6 +22,8 @@ const G = (() => {
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
   let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
+  let _currentPage = 'dashboard';
+  let _diHoverBuzzAt = 0;
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -209,6 +211,8 @@ const G = (() => {
     document.documentElement.setAttribute('data-theme', savedTheme);
     const tBtn = document.getElementById('theme-toggle-btn');
     if (tBtn) tBtn.classList.toggle('is-dark', savedTheme === 'dark');
+    _bindDynamicIsland();
+    _syncDynamicIsland();
 
     buildSwatches('m-swatches');
     const backend = getBackend();
@@ -1072,9 +1076,76 @@ const G = (() => {
     'a-cmds':      'Commands',
   };
 
+  const _DI_DETAILS = {
+    'dashboard':  'System online',
+    'chat':       'Text channel ready',
+    'narada':     'Voice channel ready',
+    'a-email':    'Alert routing',
+    'a-settings': 'System controls',
+    'a-logs':     'Audit history',
+    'a-cmds':     'Automation controls',
+  };
+
   function _setDILabel(label) {
     const el = document.getElementById('hud-brand');
     if (el) el.textContent = label;
+  }
+
+  function _setDIDetail(detail) {
+    const el = document.getElementById('hud-detail');
+    if (el) el.textContent = detail || '';
+  }
+
+  function _buzz(pattern = 10) {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  function _syncDynamicIsland() {
+    const hud = document.getElementById('top-hud');
+    const hudLabel = document.getElementById('hud-label');
+    if (!hud) return;
+
+    const isThinking = hud.classList.contains('di-thinking');
+    const isAlert = _lastAlertState;
+    const page = _currentPage || 'dashboard';
+
+    hud.classList.toggle('di-expanded', isAlert || isThinking || page === 'narada');
+    hud.classList.toggle('di-narada', page === 'narada' && !isAlert && !isThinking);
+
+    _setDILabel(_DI_LABELS[page] || 'GARUDA');
+
+    if (isAlert) {
+      _setDIDetail(_lastDetInfo || 'Danger detected');
+      if (hudLabel) hudLabel.textContent = 'Alert';
+      return;
+    }
+
+    if (isThinking) {
+      _setDIDetail(page === 'narada' ? 'Narada is responding' : 'Narada is thinking');
+      if (hudLabel) hudLabel.textContent = 'Active';
+      return;
+    }
+
+    if (page === 'narada') {
+      _setDIDetail('Listening for voice activity');
+      if (hudLabel) hudLabel.textContent = 'Live';
+      return;
+    }
+
+    _setDIDetail(_DI_DETAILS[page] || 'System online');
+    if (hudLabel && (!hudLabel.textContent.trim() || hudLabel.textContent.trim() === '—')) hudLabel.textContent = 'Online';
+  }
+
+  function _bindDynamicIsland() {
+    const hud = document.getElementById('top-hud');
+    if (!hud || hud.dataset.bound === '1') return;
+    hud.dataset.bound = '1';
+    hud.addEventListener('mouseenter', () => {
+      const now = Date.now();
+      if (now - _diHoverBuzzAt < 250) return;
+      _diHoverBuzzAt = now;
+      _buzz(8);
+    });
   }
 
   function _setDIState(state) {
@@ -1082,10 +1153,12 @@ const G = (() => {
     if (!hud) return;
     hud.classList.toggle('di-alert',    state === 'alert');
     hud.classList.toggle('di-thinking', state === 'thinking');
+    _syncDynamicIsland();
   }
 
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
+    _currentPage = pageId;
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
     document.querySelectorAll('.page').forEach(p => {
@@ -1109,8 +1182,7 @@ const G = (() => {
       });
     }
     if (navEl) { navEl.classList.add('active'); movePill(navEl); }
-    // Dynamic Island: update label per page
-    _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
+    _syncDynamicIsland();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
     if (pageId === 'a-logs') {
@@ -1217,21 +1289,18 @@ const G = (() => {
 
   function tick(s) {
     if (!s || typeof s !== 'object') return;
-    // Alert banner
-    const banner = $('alert-banner');
     const pipeDot = $('pipeline-dot');
     const pipeLabel = $('pipeline-label');
     const hudDot = $('hud-dot');
     const hudLabel = $('hud-label');
     if (s.alert_active) {
-      if (banner) banner.classList.add('visible');
       if (pipeDot) pipeDot.className = 'hdr-dot alert';
       if (pipeLabel) pipeLabel.textContent = 'Alert';
       if (hudDot) hudDot.className = 'hdr-dot alert';
       if (hudLabel) hudLabel.textContent = 'Alert';
+      _lastDetInfo = s.danger_info || _lastDetInfo || 'Danger detected';
       _setDIState('alert');
     } else {
-      if (banner) banner.classList.remove('visible');
       if (pipeDot) pipeDot.className = 'hdr-dot online';
       if (pipeLabel) pipeLabel.textContent = 'Online';
       if (hudDot) hudDot.className = 'hdr-dot online';
