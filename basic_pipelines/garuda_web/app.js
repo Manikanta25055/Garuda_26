@@ -14,7 +14,6 @@ const G = (() => {
   let _privacyOn = true;
   let _allLogs      = [];
   let _presenceLogs = [];
-  let _cfg          = {};
   let _logsUnlocked = false;
   let _lastAlertState = false;
   let _uptimeBase = 0;          // seconds from backend
@@ -88,7 +87,6 @@ const G = (() => {
   const RING_CIRCUMFERENCE = 2 * Math.PI * 27; // 169.65
   function updateMetricRing(id, value, max, unit) {
     const ring = document.getElementById(id + '-ring');
-    const valEl = document.getElementById(id.replace('hw-','hwm-').replace('-tile',''));
     if (!ring) return;
     const pct = Math.min(value / max, 1);
     const offset = RING_CIRCUMFERENCE * (1 - pct);
@@ -1537,14 +1535,12 @@ const G = (() => {
   }
 
   // ── Admin: load config ────────────────────────────────────
-  async function loadCfg() {
-    try { _cfg = await api('GET', '/api/config'); } catch(_) {}
-  }
+  async function loadCfg() { try { await api('GET', '/api/config'); } catch(_) {} }
 
   // ── Admin: Email ──────────────────────────────────────────
   async function loadEmailCfg() {
     try {
-      const cfg = await api('GET', '/api/config'); _cfg = cfg;
+      const cfg = await api('GET', '/api/config');
       $('e-sender').value = cfg.email_sender || '';
       $('e-pass').value = '';
       $('e-recip').value = (cfg.email_recipients || []).join(', ');
@@ -1574,7 +1570,7 @@ const G = (() => {
   // ── Admin: System settings ────────────────────────────────
   async function loadSysCfg() {
     try {
-      const cfg = await api('GET', '/api/config'); _cfg = cfg;
+      const cfg = await api('GET', '/api/config');
       const t = Math.round((cfg.detection_threshold || 0.3) * 100);
       $('thr-slider').value = t;
       $('thr-val').textContent = (t / 100).toFixed(2);
@@ -1718,8 +1714,7 @@ const G = (() => {
     btn.classList.add('active');
     const section = document.getElementById(sectionId);
     if (section) section.classList.add('active');
-    const tabs = btn.parentElement;
-    if (tabs) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
     const modal = btn.closest('.modal');
     if (modal) modal.scrollTo({ top: 0, behavior: 'smooth' });
   }

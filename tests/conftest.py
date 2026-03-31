@@ -7,10 +7,12 @@ import sys
 import os
 import json
 import collections
+import asyncio
 import threading
 import time
 from unittest.mock import MagicMock, patch
 import pytest
+import httpx
 
 # ── Mock hardware modules BEFORE importing Garuda_web ─────────────────────────
 # Must be at module level so they intercept import-time code.
@@ -61,7 +63,79 @@ sys.modules.setdefault('av', MagicMock())
 # ── Import the app module ─────────────────────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines'))
 import Garuda_web as gw
-from starlette.testclient import TestClient
+
+
+class SyncASGIClient:
+    """Small sync wrapper around httpx.AsyncClient for ASGI app tests.
+
+    Starlette's TestClient currently stalls on this app's startup path in this
+    environment. Running a dedicated event loop thread keeps requests
+    synchronous for the existing test suite without changing test call sites.
+    """
+
+    def __init__(self, app, raise_server_exceptions=True):
+        self.app = app
+        self.raise_server_exceptions = raise_server_exceptions
+        self._loop = asyncio.new_event_loop()
+        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._ready = threading.Event()
+        self._thread.start()
+        if not self._ready.wait(timeout=10):
+            raise RuntimeError("Timed out starting ASGI test client.")
+        if getattr(self, "_startup_error", None):
+            raise self._startup_error
+
+    def _run_loop(self):
+        asyncio.set_event_loop(self._loop)
+        self._loop.run_until_complete(self._startup())
+        self._ready.set()
+        self._loop.run_forever()
+
+    async def _startup(self):
+        try:
+            self._lifespan = gw._lifespan(self.app)
+            await self._lifespan.__aenter__()
+            self._transport = httpx.ASGITransport(
+                app=self.app,
+                raise_app_exceptions=self.raise_server_exceptions,
+            )
+            self._client = httpx.AsyncClient(
+                transport=self._transport,
+                base_url="http://testserver",
+            )
+        except Exception as exc:
+            self._startup_error = exc
+
+    async def _request(self, method, url, **kwargs):
+        headers = dict(kwargs.pop("headers", {}) or {})
+        headers.setdefault("X-Forwarded-For", "127.0.0.1")
+        response = await self._client.request(method, url, headers=headers, **kwargs)
+        await response.aread()
+        return response
+
+    def request(self, method, url, **kwargs):
+        future = asyncio.run_coroutine_threadsafe(
+            self._request(method, url, **kwargs), self._loop
+        )
+        return future.result(timeout=10)
+
+    def get(self, url, **kwargs):
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url, **kwargs):
+        return self.request("POST", url, **kwargs)
+
+    def close(self):
+        future = asyncio.run_coroutine_threadsafe(self._shutdown(), self._loop)
+        future.result(timeout=10)
+        self._loop.call_soon_threadsafe(self._loop.stop)
+        self._thread.join(timeout=5)
+
+    async def _shutdown(self):
+        if hasattr(self, "_client"):
+            await self._client.aclose()
+        if hasattr(self, "_lifespan"):
+            await self._lifespan.__aexit__(None, None, None)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 _DEFAULT_USERS = {
@@ -81,6 +155,8 @@ _DEFAULT_USERS = {
     },
 }
 
+_SHARED_CLIENT = None
+
 
 @pytest.fixture(scope="function")
 def tmp_data(tmp_path):
@@ -88,8 +164,25 @@ def tmp_data(tmp_path):
     return tmp_path
 
 
+@pytest.fixture(scope="session")
+def shared_client():
+    global _SHARED_CLIENT
+    gw._presence_poller = lambda: None
+    gw._deadman_monitor = lambda: None
+    gw._connectivity_monitor = lambda: None
+    gw._hash_password = lambda pw: f'test-hash::{pw}'
+    gw._verify_password = lambda pw, stored: stored == pw or stored == f'test-hash::{pw}'
+    gw._perm_write = lambda filepath, line: None
+    gw._atomic_json_write = _fast_json_write
+    _SHARED_CLIENT = SyncASGIClient(gw.fastapi_app, raise_server_exceptions=True)
+    try:
+        yield _SHARED_CLIENT
+    finally:
+        _SHARED_CLIENT.close()
+
+
 @pytest.fixture(scope="function")
-def app_client(tmp_data, monkeypatch):
+def app_client(tmp_data, monkeypatch, shared_client):
     """
     Reset all global state, redirect file paths to tmp_data, mock SMTP,
     and yield a TestClient for the FastAPI app.
@@ -118,7 +211,6 @@ def app_client(tmp_data, monkeypatch):
     monkeypatch.setattr(gw, 'USER_FORGOT_OTP', None)
     monkeypatch.setattr(gw, '_forgot_otp_user', None)
     monkeypatch.setattr(gw, 'MASTER_KEY_OTP', None)
-    monkeypatch.setattr(gw, '_pending_mk', None)
     monkeypatch.setattr(gw, 'system_updates_log', [])
     monkeypatch.setattr(gw, 'voice_assistant_log', [])
     monkeypatch.setattr(gw, 'voice_responses', [])
@@ -132,7 +224,6 @@ def app_client(tmp_data, monkeypatch):
     monkeypatch.setattr(gw, 'MODE_PRIVACY',   True)
     monkeypatch.setattr(gw, '_alert_active',  False)
     monkeypatch.setattr(gw, '_alert_end_time', 0.0)
-    monkeypatch.setattr(gw, '_alert_flash_count', 0)
     monkeypatch.setattr(gw, '_danger_trigger_info', '')
     monkeypatch.setattr(gw, '_alert_history', {})
     monkeypatch.setattr(gw, '_presence_log',  [])
@@ -144,11 +235,8 @@ def app_client(tmp_data, monkeypatch):
     monkeypatch.setattr(gw, 'CUSTOM_VOICE_COMMANDS', {})
     monkeypatch.setattr(gw, 'KNOWN_DEVICES', [])
     monkeypatch.setattr(gw, '_app_start_time', time.time())
-
-    # ── Stub background threads (they start in lifespan) ──
-    monkeypatch.setattr(gw, '_presence_poller',     lambda: None)
-    monkeypatch.setattr(gw, '_deadman_monitor',     lambda: None)
-    monkeypatch.setattr(gw, '_connectivity_monitor', lambda: None)
+    monkeypatch.setattr(gw, '_RATE_WINDOW', 3600)
+    monkeypatch.setattr(gw, '_RATE_LIMIT', 30)
 
     # ── Mock SMTP so no real emails are sent ──
     smtp_mock = MagicMock()
@@ -156,9 +244,8 @@ def app_client(tmp_data, monkeypatch):
     smtp_mock.__exit__ = MagicMock(return_value=False)
     monkeypatch.setattr(gw.smtplib, 'SMTP_SSL', MagicMock(return_value=smtp_mock))
 
-    with TestClient(gw.fastapi_app, raise_server_exceptions=True) as client:
-        gw._init_event_db()   # ensure SQLite DB exists for each test
-        yield client
+    gw._init_event_db()   # ensure SQLite DB exists for each test
+    yield shared_client
 
 
 @pytest.fixture
@@ -191,3 +278,9 @@ def admin_headers(admin_token):
 @pytest.fixture
 def user_headers(user_token):
     return {'X-Garuda-Token': user_token}
+
+
+def _fast_json_write(filepath: str, data):
+    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)

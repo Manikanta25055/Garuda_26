@@ -164,9 +164,7 @@ NARADA_WAKE_WORD = "narada"
 CUSTOM_VOICE_COMMANDS = {}
 
 _alert_active = False
-_alert_flash_count = 0
 _alert_end_time     = 0.0   # epoch when current alert expires (3s visual banner)
-_alert_cooldown_until = 0.0 # epoch after which the next alert may fire (60s cooldown)
 _danger_trigger_info = ""   # detection text snapshot that fired the alert
 _last_danger_conf    = 0.0  # confidence of last danger detection (for logging)
 _app_start_time = time.time()
@@ -194,7 +192,6 @@ _alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
 _presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
 MASTER_KEYS: list    = ["cizduz-vudqa6-mynsoK"]   # master key bootstrap value
 MASTER_KEY_OTP: str | None = None
-_pending_mk: str | None    = None
 _owner_present   = False
 _owner_last_seen = 0.0
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
@@ -759,8 +756,7 @@ def _presence_poller():
 # ALERTS
 ##############################################################################
 def trigger_software_alert():
-    global _alert_active, _alert_flash_count, _last_alert_time
-    global _alert_end_time, _alert_cooldown_until
+    global _alert_active, _last_alert_time, _alert_end_time
     with _mode_lock:
         dnd = MODE_DND
         idle = MODE_IDLE
@@ -772,7 +768,6 @@ def trigger_software_alert():
         # Extend the 3s window every frame scissors is visible — alert stays on
         # while scissors is in frame and expires 3s after it disappears.
         _alert_active = True
-        _alert_flash_count = 3
         _alert_end_time = time.time() + 3
     if not was_active:
         # New alert starting: log, record, sound, email
@@ -1419,14 +1414,13 @@ def require_logs(request: Request):
 # STATE HELPER
 ##############################################################################
 def get_state_dict():
-    global _alert_active, _alert_flash_count, _danger_trigger_info, _alert_end_time
+    global _alert_active, _danger_trigger_info, _alert_end_time
     # Expire alert once the wall-clock timer runs out
     _just_cleared = False
     with _alert_lock:
         if _alert_active and _alert_end_time > 0 and time.time() >= _alert_end_time:
             _alert_active = False
             _alert_end_time = 0.0
-            _alert_flash_count = 0
             _danger_trigger_info = ""
             _just_cleared = True
     if _just_cleared:
