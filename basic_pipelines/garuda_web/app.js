@@ -1717,6 +1717,10 @@ const G = (() => {
     btn.classList.add('active');
     const section = document.getElementById(sectionId);
     if (section) section.classList.add('active');
+    const tabs = btn.parentElement;
+    if (tabs) btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const modal = btn.closest('.modal');
+    if (modal) modal.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function exportLogs() {

@@ -661,16 +661,16 @@ textarea:-webkit-autofill {
 }
 @media (hover: hover) and (pointer: fine) {
   #top-hud:hover {
-    transform: translateX(-50%) scale(1.028);
+    transform: translateX(-50%) scale(1.014);
     box-shadow:
-      0 14px 30px rgba(0,0,0,0.16),
-      0 4px 10px rgba(0,0,0,0.10),
+      0 12px 26px rgba(0,0,0,0.14),
+      0 3px 8px rgba(0,0,0,0.08),
       inset 0 1px 0 rgba(255,255,255,0.08);
   }
   [data-theme="dark"] #top-hud:hover {
     box-shadow:
-      0 16px 34px rgba(0,0,0,0.24),
-      0 4px 10px rgba(0,0,0,0.16),
+      0 14px 28px rgba(0,0,0,0.22),
+      0 3px 8px rgba(0,0,0,0.14),
       0 0 0 1px rgba(255,255,255,0.05),
       inset 0 1px 0 rgba(255,255,255,0.12);
   }
@@ -1925,6 +1925,7 @@ input[type=range]::-webkit-slider-thumb {
   transition: color 0.35s;
 }
 .status-card.alert .status-label { color: var(--danger); }
+.status-card.alert .status-desc  { color: var(--danger); }
 .status-desc { font-size: 14px; color: var(--t2); margin-top: 3px; line-height: 1.4; }
 .status-foot {
   display: flex; justify-content: center; align-items: center;
@@ -2735,7 +2736,47 @@ input[type=range]::-webkit-slider-thumb {
     z-index: 2;
   }
   #page-chat .chat-shell { height: 100%; }
-  #page-chat .chat-input-wrap { padding-bottom: 90px; }
+  #page-chat .chat-input-wrap {
+    padding: 6px 6px 6px 14px;
+    bottom: 92px;
+    left: 12px;
+    right: 12px;
+  }
+  #page-chat .chat-input-box { gap: 8px; }
+  #page-chat .chat-textarea {
+    font-size: 15px;
+    line-height: 1.4;
+    max-height: 72px;
+    padding: 1px 0;
+  }
+  #page-chat .chat-send-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* Voice page should behave like a full-height mobile sheet */
+  #page-narada {
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    overflow: hidden;
+    z-index: 2;
+  }
+  #page-narada .narada-shell {
+    height: 100%;
+  }
+  #page-narada .narada-feed {
+    padding: 16px 16px 12px;
+  }
+  #page-narada .narada-cmds-section {
+    margin-top: auto;
+    padding: 12px 16px calc(90px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 0%, var(--bg) 72%, transparent 100%);
+    border-top: none;
+  }
 
   /* Login */
   .login-wordmark  { font-size: 48px; letter-spacing: 4px; }
@@ -2832,7 +2873,7 @@ input[type=range]::-webkit-slider-thumb {
   .sec-health-desc { word-break: break-word; }
 
   /* Modals */
-  .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; }
+  .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; overscroll-behavior: contain; }
   #m-docs .modal {
     width: min(95vw, 640px);
     max-height: calc(100vh - 28px);
@@ -2840,6 +2881,8 @@ input[type=range]::-webkit-slider-thumb {
     gap: 14px;
   }
   #m-docs .docs-tabs {
+    display: flex;
+    flex-wrap: nowrap;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
@@ -3453,6 +3496,11 @@ input:-webkit-autofill:focus {
   .activity-card-scroll { max-height: 340px; }
   .status-card {
     padding: 22px 20px;
+  }
+  .status-card.alert {
+    background: rgba(255,69,58,0.07);
+    border-color: rgba(255,69,58,0.30);
+    box-shadow: 0 12px 26px rgba(255,69,58,0.10), inset 0 0 0 1px rgba(255,69,58,0.05);
   }
   /* Tighter cards on mobile */
   .card { padding: 14px; border-radius: 16px; }
