@@ -1,15 +1,14 @@
 {
-  "version": 2,
-  "builds": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": false,
+  "rewrites": [
     {
-      "src": "basic_pipelines/garuda_web/**",
-      "use": "@vercel/static"
+      "source": "/static/:path*",
+      "destination": "/basic_pipelines/garuda_web/:path*"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/basic_pipelines/garuda_web/index.html"
     }
-  ],
-  "routes": [
-    { "src": "/static/style\\.css", "dest": "/basic_pipelines/garuda_web/style.css" },
-    { "src": "/static/app\\.js",    "dest": "/basic_pipelines/garuda_web/app.js"    },
-    { "src": "/static/(.*)",        "dest": "/basic_pipelines/garuda_web/$1"        },
-    { "src": "/(.*)",               "dest": "/basic_pipelines/garuda_web/index.html" }
   ]
 }
