@@ -218,7 +218,12 @@
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
       </button>
-      <button class="hud-signout" onclick="G.logout()">Sign Out</button>
+      <button class="hud-signout" aria-label="Power Off" title="Power Off" onclick="G.logout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 3v8"/>
+          <path d="M7.05 5.05a9 9 0 1 0 9.9 0"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -509,9 +514,6 @@
           <!-- Messages -->
           <div class="chat-messages" id="chat-messages">
             <div class="chat-msg assistant">
-              <div class="chat-msg-avatar-gradient">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              </div>
               <div class="chat-msg-content">
                 <div class="chat-msg-body">Hi, I'm <strong>Narada</strong> — your AI security assistant. I have full context on your detection pipeline, system modes, alert history, and hardware. Ask me anything or give me a command.</div>
               </div>

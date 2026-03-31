@@ -122,7 +122,10 @@
       html: solid base fills overscroll/rubber-band areas
       body: transparent so body::before isn't covered
       body::before: position:fixed grid — never scrolls        ── */
-html { background-color: var(--grid-base, #F4F5F7); }
+html {
+  background-color: var(--grid-base, #F4F5F7);
+  overflow-x: hidden;
+}
 body { background: transparent; }
 
 body::before {
@@ -144,13 +147,23 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Scrollbar — thin style */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 6px; height: 0; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--t4); }
+
+#app,
+#app-shell,
+#body,
+#main,
+.page {
+  max-width: 100%;
+  overflow-x: clip;
+}
 
 /* ── Utilities ─────────────────────────────────────────── */
 .hidden { display: none !important; }
@@ -620,9 +633,20 @@ textarea:-webkit-autofill {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 5px 14px 5px 16px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.14),
+    0 2px 6px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.05);
   white-space: nowrap;
   transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+[data-theme="dark"] #top-hud {
+  border-color: rgba(255,255,255,0.14);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.16),
+    0 2px 6px rgba(0,0,0,0.10),
+    0 0 0 1px rgba(255,255,255,0.04),
+    inset 0 1px 0 rgba(255,255,255,0.10);
 }
 /* Dynamic Island — alert state */
 #top-hud.di-alert {
@@ -654,11 +678,15 @@ textarea:-webkit-autofill {
 .hud-right { display: flex; align-items: center; gap: 10px; margin-left: 4px; }
 .hud-user-lbl { font-size: 11px; color: var(--t2); }
 .hud-signout {
-  background: none; border: none; cursor: pointer;
-  font-size: 11px; color: rgba(255,69,58,0.65); font-family: var(--font);
-  padding: 0; transition: color 0.15s;
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: 999px; cursor: pointer;
+  color: rgba(255,69,58,0.68);
+  padding: 0; transition: color 0.15s, background 0.15s, transform 0.15s;
 }
-.hud-signout:hover { color: var(--danger); }
+.hud-signout svg { width: 15px; height: 15px; }
+.hud-signout:hover { color: var(--danger); background: rgba(255,69,58,0.08); }
+.hud-signout:active { transform: scale(0.96); }
 
 /* Body */
 #body { flex: 1; display: flex; overflow: hidden; }
@@ -1052,7 +1080,7 @@ textarea:-webkit-autofill {
 .sep { height: 0.5px; background: var(--border); margin: 24px 0; }
 
 /* Table — clean macOS list style */
-.t-wrap { overflow-x: auto; }
+.t-wrap { overflow-x: hidden; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th {
   padding: 8px 14px; text-align: left;
@@ -1625,25 +1653,26 @@ input[type=range]::-webkit-slider-thumb {
 
 /* Console card */
 .dash-console-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
   border-radius: var(--r-lg);
   overflow: hidden;
+  box-shadow: none;
 }
 [data-theme="dark"] .dash-console-card {
-  background: rgba(0,0,0,0.60);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-color: rgba(255,255,255,0.06);
+  background: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 .dash-console-card .console-header {
-  padding: 10px 14px 0;
+  padding: 10px 2px 4px;
   font-size: 10px; font-weight: 600; letter-spacing: 0.6px;
   text-transform: uppercase; color: var(--t3);
 }
-.dash-console-card .console { height: 120px; padding: 6px 14px 10px; }
+.dash-console-card .console { height: 120px; padding: 2px 2px 0; }
 .console {
-  background: var(--surface-2);
+  background: transparent;
   color: var(--console-color);
   font-family: var(--mono);
   font-size: 11px;
@@ -1655,7 +1684,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 /* ── Heatmap (GitHub-style) ─────────────────────────────── */
-.hm-outer { display: flex; gap: 4px; overflow-x: auto; }
+.hm-outer { display: flex; gap: 4px; overflow-x: hidden; }
 .hm-left {
   display: flex; flex-direction: column;
   gap: 3px; padding-top: 18px; flex-shrink: 0;
@@ -1912,6 +1941,20 @@ input[type=range]::-webkit-slider-thumb {
 }
 .log-tab:hover { color: var(--t2); }
 .log-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.logs-page .section-card,
+#a-vlog.section-card {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+#a-syslog,
+#a-detlog,
+#a-preslog,
+#a-vlog {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
 .log-tab-badge {
   display: inline-block;
   background: var(--surface-2);
@@ -2242,11 +2285,7 @@ input[type=range]::-webkit-slider-thumb {
 /* Assistant — left, with avatar */
 .chat-msg.assistant { align-items: flex-start; }
 .chat-msg-avatar-gradient {
-  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
-  background: linear-gradient(135deg, #0A84FF, #5e5ce6);
-  display: flex; align-items: center; justify-content: center;
-  color: #fff;
-  margin-top: 2px;
+  display: none;
 }
 .chat-msg-content { flex: 1; min-width: 0; }
 .chat-msg-body {
@@ -2278,7 +2317,7 @@ input[type=range]::-webkit-slider-thumb {
   font-family: var(--mono); font-size: 12px;
   background: rgba(0,0,0,0.5); border: 0.5px solid var(--border);
   border-radius: 10px; padding: 14px 16px; margin: 8px 0;
-  overflow-x: auto; color: #a8d8a8; line-height: 1.5;
+  overflow-x: hidden; color: #a8d8a8; line-height: 1.5;
   white-space: pre;
 }
 
@@ -2455,7 +2494,7 @@ input[type=range]::-webkit-slider-thumb {
   gap: 0;
   border-bottom: 0.5px solid var(--border);
   margin-bottom: 20px;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 .docs-tab {
   padding: 10px 16px;
@@ -2646,17 +2685,17 @@ input[type=range]::-webkit-slider-thumb {
     bottom: 14px;
     padding: 5px 12px;
     max-width: calc(100vw - 32px);
-    overflow-x: auto;
+    overflow-x: hidden;
     overflow-y: hidden;
     scrollbar-width: none;
-    justify-content: flex-start;
+    justify-content: center;
   }
   #ios-nav::-webkit-scrollbar { display: none; }
   .ios-item  { padding: 7px 10px; min-width: 46px; flex-shrink: 0; }
   .ios-label { font-size: 9px; }
 
   /* Heatmap + hardware stay side-by-side */
-  .hm-hw-row { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; }
+  .hm-hw-row { flex-direction: row; flex-wrap: nowrap; overflow-x: hidden; }
   .hm-hw-row .hm-card { flex: 0 0 auto; min-width: 0; }
   .hm-hw-row .dash-card:not(.hm-card) { flex: 1; min-width: 120px; }
 
@@ -2721,7 +2760,7 @@ input[type=range]::-webkit-slider-thumb {
   .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; }
 
   /* Tables */
-  .t-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .t-wrap { overflow-x: hidden; -webkit-overflow-scrolling: touch; }
   table   { min-width: 480px; }
 
   /* Touch targets — min 44px */
@@ -2759,7 +2798,7 @@ input[type=range]::-webkit-slider-thumb {
   .modern-input { font-size: 16px; }
 
   /* Log tabs scroll on mobile */
-  .log-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .log-tabs { overflow-x: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .log-tabs::-webkit-scrollbar { display: none; }
   .log-tab { flex-shrink: 0; }
 

@@ -730,7 +730,6 @@ const G = (() => {
     const el = document.createElement('div');
     el.className = 'chat-msg assistant';
     el.innerHTML = `
-      <div class="chat-msg-avatar-gradient"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
       <div class="chat-msg-content">
         <div class="chat-msg-body"></div>
       </div>`;
@@ -840,7 +839,6 @@ const G = (() => {
     if (!box) return;
     box.innerHTML = `
       <div class="chat-msg assistant">
-        <div class="chat-msg-avatar-gradient"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
         <div class="chat-msg-content">
           <div class="chat-msg-body">Chat cleared. How can I help?</div>
         </div>
