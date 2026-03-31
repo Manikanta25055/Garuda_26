@@ -58,12 +58,29 @@ const G = (() => {
     if (s.inference_fps != null) setText('hwm-fps', Math.round(s.inference_fps));
     if (s.disk_percent != null) setText('hwm-disk', Math.round(s.disk_percent) + '%');
 
-    // Update metric rings
+    // Update metric rings (kept for any legacy consumers)
     if (s.cpu_percent != null) updateMetricRing('hw-cpu', s.cpu_percent, 100, '%');
     if (s.ram_percent != null) updateMetricRing('hw-ram', s.ram_percent, 100, '%');
     if (s.cpu_temp != null) updateMetricRing('hw-temp', s.cpu_temp, 85, '\u00b0C');
     if (s.inference_fps != null) updateMetricRing('hw-fps', s.inference_fps, 60, 'fps');
     if (s.disk_percent != null) updateMetricRing('hw-disk', s.disk_percent, 100, '%');
+
+    // Update horizontal health bars
+    _updateBar('hub-bar-cpu',  s.cpu_percent,   100);
+    _updateBar('hub-bar-ram',  s.ram_percent,   100);
+    _updateBar('hub-bar-temp', s.cpu_temp,       85);
+    _updateBar('hub-bar-fps',  s.inference_fps,  60);
+    _updateBar('hub-bar-disk', s.disk_percent,  100);
+  }
+
+  function _updateBar(id, value, max) {
+    const el = document.getElementById(id);
+    if (!el || value == null) return;
+    const pct = Math.min(Math.max(value / max, 0), 1) * 100;
+    el.style.width = pct.toFixed(1) + '%';
+    el.classList.remove('warn', 'crit');
+    if (pct > 90) el.classList.add('crit');
+    else if (pct > 70) el.classList.add('warn');
   }
 
   // ── Hardware metric ring updater ───────────────────────────
@@ -187,6 +204,12 @@ const G = (() => {
 
   // ── Boot ─────────────────────────────────────────────────
   async function init() {
+    // Theme: apply saved preference before rendering (light is HTML default)
+    const savedTheme = localStorage.getItem('garuda_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    const tBtn = document.getElementById('theme-toggle-btn');
+    if (tBtn) tBtn.classList.toggle('is-dark', savedTheme === 'dark');
+
     buildSwatches('m-swatches');
     const backend = getBackend();
     updateBackendStatus(backend);
@@ -364,8 +387,23 @@ const G = (() => {
     // Set logs unlock state from session (master key login sets this true)
     _logsUnlocked = !!_session.logs_unlocked;
     $('logs-gate')?.classList.add('hidden');
+    // Activity date picker — set today and wire change
+    const datePicker = document.getElementById('activity-date');
+    if (datePicker) {
+      datePicker.value = new Date().toISOString().split('T')[0];
+      datePicker.addEventListener('change', _renderTimeline);
+    }
     connectWS();
     if (_session.role === 'admin') loadCfg();
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('garuda_theme', next);
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) btn.classList.toggle('is-dark', next === 'dark');
   }
 
   async function logout() {
@@ -554,15 +592,14 @@ const G = (() => {
   }
 
   function toggleCamera() {
-    const overlay = $('camera-overlay');
-    if (!overlay) return;
-    const isHidden = overlay.classList.contains('hidden');
-    if (isHidden) {
-      overlay.classList.remove('hidden');
+    const btn = $('cam-toggle-btn');
+    const isActive = btn && btn.classList.contains('active');
+    if (!isActive) {
+      if (btn) btn.classList.add('active');
       const camOffline = $('cam-offline');
       if (camOffline) camOffline.style.display = 'flex';
       _camSetStatus('Connecting…');
-      // Try WebRTC first if available
+      switchCamTab('live');
       if (typeof RTCPeerConnection !== 'undefined') {
         startWebRTC();
       } else {
@@ -570,7 +607,28 @@ const G = (() => {
       }
     } else {
       stopCameraStream();
-      overlay.classList.add('hidden');
+      if (btn) btn.classList.remove('active');
+      _camSetStatus('Offline');
+      const camOffline = $('cam-offline');
+      if (camOffline) camOffline.style.display = 'flex';
+    }
+  }
+
+  function switchCamTab(tab) {
+    const live      = $('cam-view-live');
+    const floor     = $('cam-view-floor');
+    const tabLive   = $('cam-tab-live');
+    const tabFloor  = $('cam-tab-floor');
+    if (tab === 'live') {
+      live?.classList.remove('hidden');
+      floor?.classList.add('hidden');
+      tabLive?.classList.add('active');
+      tabFloor?.classList.remove('active');
+    } else {
+      floor?.classList.remove('hidden');
+      live?.classList.add('hidden');
+      tabFloor?.classList.add('active');
+      tabLive?.classList.remove('active');
     }
   }
 
@@ -1068,6 +1126,47 @@ const G = (() => {
     } catch(_) {}
   }
 
+  // ── Activity Timeline ─────────────────────────────────────
+  let _timelineItems = [];
+
+  function _updateTimeline(s) {
+    const log = s.system_log || [];
+    _timelineItems = log.map(entry => {
+      const timeMatch = entry.match(/^\[([\d\-: ]+)\]/);
+      const time = timeMatch ? timeMatch[1].trim() : '';
+      const text = entry.replace(/^\[[\d\-: ]+\]\s*/, '');
+      let type = '';
+      if (text.includes('[TAMPER]') || text.includes('Alert triggered')) type = 'danger';
+      else if (text.includes('[WATCH]')) type = 'watch';
+      else if (text.includes('[PRESENCE]') || text.includes('[OWNER]')) type = 'presence';
+      else if (/\[MODE\]|mode (on|off)/i.test(text)) type = 'warn';
+      return { time, text, type, dateKey: time.split(' ')[0] || '' };
+    }).reverse(); // newest first
+    _renderTimeline();
+  }
+
+  function _renderTimeline() {
+    const el = $('activity-timeline');
+    if (!el) return;
+    const filter = ($('activity-date')?.value) || null;
+    const items = filter
+      ? _timelineItems.filter(i => i.dateKey === filter)
+      : _timelineItems.slice(0, 50);
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">\u25CB</div><span>No activity for this date</span></div>';
+      return;
+    }
+    el.innerHTML = items.map(item =>
+      `<div class="timeline-item">
+        <div class="tl-dot ${item.type}"></div>
+        <div class="tl-body">
+          <div class="tl-title">${esc(item.text)}</div>
+          <div class="tl-time">${item.time}</div>
+        </div>
+      </div>`
+    ).join('');
+  }
+
   function tick(s) {
     if (!s || typeof s !== 'object') return;
     // Alert banner
@@ -1167,8 +1266,9 @@ const G = (() => {
       }
     }
 
-    // Activity feed
+    // Activity feed (legacy hidden element) + new timeline
     _updateActivityFeed(s);
+    _updateTimeline(s);
 
     // Log badge counts
     const lcSys = document.getElementById('log-count-system');
@@ -1897,6 +1997,7 @@ const G = (() => {
     nav, toggleMode, emergencyStop,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
+    toggleTheme, switchCamTab,
     toggleCamera, openDocs, sendChat, clearChat, toggleRateLimitInfo,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,

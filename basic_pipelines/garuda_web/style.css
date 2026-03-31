@@ -1,31 +1,35 @@
 /* ============================================================
-   GARUDA — macOS Sequoia Design System
-   Exact Apple HIG dark-mode tokens & components
+   GARUDA — Dual-Theme Design System
+   Light (Soft UI) default · Dark (Apple HIG) via [data-theme="dark"]
    ============================================================ */
+
+/* ── Light theme (default) ──────────────────────────────── */
 :root {
-  --bg:        #000000;
-  --surface:   #1C1C1E;
-  --surface-2: #2C2C2E;
-  --surface-3: #3A3A3C;
-  --glass:     rgba(255,255,255,0.04);
-  --glass-h:   rgba(255,255,255,0.07);
-  --border:    rgba(255,255,255,0.08);
-  --border-2:  rgba(255,255,255,0.06);
+  --bg:        #F4F5F7;
+  --surface:   #FFFFFF;
+  --surface-2: #F0F1F4;
+  --surface-3: #E4E6EB;
+  --glass:     rgba(255,255,255,0.70);
+  --glass-h:   rgba(255,255,255,0.92);
+  --border:    rgba(0,0,0,0.06);
+  --border-2:  rgba(0,0,0,0.04);
 
-  --accent:    #0A84FF;
-  --accent-d:  rgba(10,132,255,0.12);
-  --danger:    #FF453A;
-  --danger-d:  rgba(255,69,58,0.12);
-  --success:   #30D158;
-  --warn:      #FF9F0A;
-  --warn-d:    rgba(255,159,10,0.12);
+  --accent:    #4F7EFF;
+  --accent-d:  rgba(79,126,255,0.10);
+  --danger:    #EF4444;
+  --danger-d:  rgba(239,68,68,0.10);
+  --success:   #22C55E;
+  --warn:      #F59E0B;
+  --warn-d:    rgba(245,158,11,0.10);
   --mk-orange: #E8854A;
-  --purple:    #BF5AF2;
+  --purple:    #7C3AED;
+  --accent-mint:   #BCF0DA;
+  --accent-purple: #E0D8F7;
 
-  --t1: #F5F5F7;
-  --t2: #A1A1A6;
-  --t3: #6E6E73;
-  --t4: #48484A;
+  --t1: #1A1D23;
+  --t2: #6B7280;
+  --t3: #9CA3AF;
+  --t4: #D1D5DB;
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display",
           "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -36,9 +40,79 @@
   --r-lg: 14px;
   --r-xl: 22px;
 
-  --shadow:    0 8px 32px rgba(0,0,0,0.65);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
+  --shadow:      0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+  --shadow-sm:   0 2px 6px rgba(0,0,0,0.06);
+  --shadow-card: 0px 8px 24px rgba(0,0,0,0.04), 0px 1px 4px rgba(0,0,0,0.03);
+  --shadow-inset:inset 0 2px 6px rgba(0,0,0,0.06);
   --trans: 0.2s ease;
+
+  /* Theme-aware glass/overlay values */
+  --header-bg:        rgba(255,255,255,0.85);
+  --header-border:    rgba(0,0,0,0.06);
+  --nav-bg:           rgba(255,255,255,0.85);
+  --nav-border:       rgba(0,0,0,0.08);
+  --nav-pill:         rgba(0,0,0,0.07);
+  --nav-item-color:   rgba(0,0,0,0.35);
+  --nav-item-active:  #1A1D23;
+  --btn-ghost-bg:     rgba(0,0,0,0.05);
+  --btn-ghost-hover:  rgba(0,0,0,0.09);
+  --overlay-bg:       rgba(0,0,0,0.45);
+  --room-bg:          rgba(0,0,0,0.05);
+  --console-color:    #2d7a2d;
+  --table-hover:      rgba(0,0,0,0.02);
+  --log-color:        #1a5230;
+  --grid-line:        rgba(0,0,0,0.035);
+  --grid-base:        #F4F5F7;
+}
+
+/* ── Dark theme override ─────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:        #000000;
+  --surface:   #1C1C1E;
+  --surface-2: #2C2C2E;
+  --surface-3: #3A3A3C;
+  --glass:     rgba(28,28,30,0.72);
+  --glass-h:   rgba(28,28,30,0.92);
+  --border:    rgba(255,255,255,0.08);
+  --border-2:  rgba(255,255,255,0.06);
+
+  --accent:    #0A84FF;
+  --accent-d:  rgba(10,132,255,0.12);
+  --danger:    #FF453A;
+  --danger-d:  rgba(255,69,58,0.12);
+  --success:   #30D158;
+  --warn:      #FF9F0A;
+  --warn-d:    rgba(255,159,10,0.12);
+  --purple:    #BF5AF2;
+  --accent-mint:   #30D158;
+  --accent-purple: rgba(191,90,242,0.20);
+
+  --t1: #F5F5F7;
+  --t2: #A1A1A6;
+  --t3: #6E6E73;
+  --t4: #48484A;
+
+  --shadow:      0 8px 32px rgba(0,0,0,0.65);
+  --shadow-sm:   0 2px 8px rgba(0,0,0,0.35);
+  --shadow-card: none;
+  --shadow-inset:none;
+
+  --header-bg:        rgba(0,0,0,0.80);
+  --header-border:    rgba(255,255,255,0.06);
+  --nav-bg:           rgba(28,28,30,0.78);
+  --nav-border:       rgba(255,255,255,0.10);
+  --nav-pill:         rgba(255,255,255,0.10);
+  --nav-item-color:   rgba(255,255,255,0.35);
+  --nav-item-active:  #FFFFFF;
+  --btn-ghost-bg:     rgba(255,255,255,0.06);
+  --btn-ghost-hover:  rgba(255,255,255,0.10);
+  --overlay-bg:       rgba(0,0,0,0.55);
+  --room-bg:          rgba(255,255,255,0.04);
+  --console-color:    rgba(48,209,88,0.85);
+  --table-hover:      rgba(255,255,255,0.03);
+  --log-color:        rgba(48,209,88,0.85);
+  --grid-line:        rgba(255,255,255,0.03);
+  --grid-base:        #08080d;
 }
 
 /* ── Reset ─────────────────────────────────────────────── */
@@ -48,7 +122,7 @@
       html: solid base fills overscroll/rubber-band areas
       body: transparent so body::before isn't covered
       body::before: position:fixed grid — never scrolls        ── */
-html { background-color: #08080d; }
+html { background-color: var(--grid-base, #F4F5F7); }
 body { background: transparent; }
 
 body::before {
@@ -56,10 +130,10 @@ body::before {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background-color: #08080d;
+  background-color: var(--grid-base, #F4F5F7);
   background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    linear-gradient(var(--grid-line, rgba(0,0,0,0.035)) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line, rgba(0,0,0,0.035)) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
@@ -72,11 +146,11 @@ body {
   min-height: 100vh;
 }
 
-/* Scrollbar — macOS style */
+/* Scrollbar — thin style */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--t4); }
 
 /* ── Utilities ─────────────────────────────────────────── */
 .hidden { display: none !important; }
@@ -114,12 +188,21 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
   background-clip: text;
 }
 
-/* ── Frosted glass surface — macOS vibrancy ────────────── */
+/* ── Frosted glass surface ─────────────────────────────── */
 .glass {
-  background: rgba(28,28,30,0.72);
+  background: var(--glass);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 0.5px solid var(--border);
+}
+
+/* ── Universal card ──────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  padding: 18px;
 }
 
 /* ── Buttons — macOS rounded rect ──────────────────────── */
@@ -140,11 +223,11 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 .btn-danger   { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #e63e35; }
 .btn-ghost    {
-  background: rgba(255,255,255,0.06);
+  background: var(--btn-ghost-bg);
   color: var(--t1);
   border: 0.5px solid var(--border);
 }
-.btn-ghost:hover { background: rgba(255,255,255,0.10); }
+.btn-ghost:hover { background: var(--btn-ghost-hover); }
 /* Sign Out — subtle red tint */
 #header .btn-ghost[onclick*="logout"],
 .hud-signout { color: rgba(255,69,58,0.70); }
@@ -499,10 +582,10 @@ textarea:-webkit-autofill {
 /* Header — macOS toolbar style */
 #header {
   height: 52px;
-  background: rgba(0,0,0,0.80);
+  background: var(--header-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 0.5px solid rgba(255,255,255,0.06);
+  border-bottom: 0.5px solid var(--header-border);
   display: flex; align-items: center;
   padding: 0 24px; gap: 16px;
   flex-shrink: 0; position: relative; z-index: 5;
@@ -549,7 +632,7 @@ textarea:-webkit-autofill {
   position: relative;
 }
 
-/* ── iOS Bottom Navigation — macOS Dock style ──────────── */
+/* ── iOS Bottom Navigation — Dock style ─────────────────── */
 #ios-nav {
   position: fixed;
   bottom: 16px;
@@ -559,19 +642,20 @@ textarea:-webkit-autofill {
   align-items: center;
   gap: 0;
   padding: 6px 14px;
-  background: rgba(28,28,30,0.78);
+  background: var(--nav-bg);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border: 0.5px solid rgba(255,255,255,0.10);
+  border: 0.5px solid var(--nav-border);
   border-radius: 22px;
   box-shadow:
-    0 4px 12px rgba(0,0,0,0.35),
-    0 16px 40px rgba(0,0,0,0.45);
+    0 4px 12px rgba(0,0,0,0.12),
+    0 16px 40px rgba(0,0,0,0.15);
   z-index: 90;
   white-space: nowrap;
   overflow: visible;
 }
 #app.logged-in #ios-nav { display: flex; }
+#app.logged-in #top-hud { display: flex; }
 
 /* Sliding selection pill */
 #ios-pill {
@@ -580,7 +664,7 @@ textarea:-webkit-autofill {
   left: 0;
   width: 68px;
   height: calc(100% - 12px);
-  background: rgba(255,255,255,0.10);
+  background: var(--nav-pill);
   border-radius: 16px;
   transform: translateX(6px);
   transition: transform 0.36s cubic-bezier(0.34, 1.38, 0.64, 1),
@@ -602,7 +686,7 @@ textarea:-webkit-autofill {
   min-width: 60px;
   border: none;
   background: none;
-  color: rgba(255,255,255,0.35);
+  color: var(--nav-item-color);
   font-family: var(--font);
   cursor: pointer;
   border-radius: 16px;
@@ -612,9 +696,11 @@ textarea:-webkit-autofill {
   outline: none;
 }
 .ios-item:active { transform: scale(0.88); transition: transform 0.08s ease; }
-.ios-item.active  { color: #ffffff; }
-.ios-item.ios-danger       { color: rgba(255,69,58,0.50); }
-.ios-item.ios-danger.active { color: #ff453a; }
+.ios-item.active  { color: var(--nav-item-active); }
+.ios-item.ios-danger       { color: rgba(239,68,68,0.55); }
+.ios-item.ios-danger.active { color: var(--danger); }
+[data-theme="dark"] .ios-item.ios-danger { color: rgba(255,69,58,0.50); }
+[data-theme="dark"] .ios-item.ios-danger.active { color: #ff453a; }
 .ios-icon  { font-size: 0; line-height: 0; display: flex; align-items: center; }
 .ios-icon svg { width: 18px; height: 18px; display: block; }
 .ios-label { font-size: 10px; font-weight: 500; letter-spacing: 0.1px; line-height: 1; }
@@ -736,7 +822,7 @@ textarea:-webkit-autofill {
 /* Console */
 .dash-console {
   flex-shrink: 0;
-  background: #000;
+  background: var(--surface-2);
   border-top: 0.5px solid var(--border);
 }
 .console-header {
@@ -746,7 +832,7 @@ textarea:-webkit-autofill {
 }
 .console {
   background: transparent;
-  color: rgba(48,209,88,0.85);
+  color: var(--console-color);
   font-family: var(--mono);
   font-size: 11px;
   padding: 6px 18px 10px;
@@ -776,7 +862,7 @@ textarea:-webkit-autofill {
 .narada-header {
   padding: 16px 20px;
   border-bottom: 0.5px solid var(--border);
-  background: rgba(0,0,0,0.40);
+  background: var(--glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   flex-shrink: 0;
@@ -922,7 +1008,7 @@ thead th {
 }
 tbody td { padding: 12px 14px; border-bottom: 0.5px solid var(--border); }
 tbody tr:last-child td { border-bottom: none; }
-tbody tr:hover td { background: rgba(255,255,255,0.03); }
+tbody tr:hover td { background: var(--table-hover); }
 
 .color-dot {
   width: 18px; height: 18px; border-radius: 50%;
@@ -961,7 +1047,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 .modal {
   background: var(--surface);
-  border: 0.5px solid rgba(255,255,255,0.10);
+  border: 0.5px solid var(--border);
   border-radius: var(--r-lg);
   padding: 28px;
   width: 400px; max-width: 95vw;
@@ -1010,7 +1096,7 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── Settings tip box ────────────────────────────────────── */
 .tip-box {
-  background: rgba(255,255,255,0.03);
+  background: var(--room-bg);
   border: 0.5px solid var(--border);
   border-radius: var(--r);
   padding: 10px 14px;
@@ -2570,3 +2656,480 @@ input[type=range]::-webkit-slider-thumb {
   .hw-metrics { flex-wrap: wrap; gap: 6px; }
   .hw-tile { flex: 1 1 calc(50% - 6px); }
 }
+
+/* ════════════════════════════════════════════════════════════
+   SOFT UI REDESIGN — New Components (v43)
+   ════════════════════════════════════════════════════════════ */
+
+/* ── Theme toggle button ─────────────────────────────────── */
+.theme-toggle-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-2);
+  color: var(--t2);
+  cursor: pointer;
+  transition: background var(--trans), color var(--trans), transform 0.3s ease;
+  flex-shrink: 0;
+}
+.theme-toggle-btn:hover { background: var(--surface-3); color: var(--t1); }
+.theme-toggle-btn:active { transform: rotate(20deg); }
+.theme-toggle-btn svg { width: 16px; height: 16px; display: block; }
+/* sun rays: visible in dark, hidden in light */
+.theme-toggle-btn .t-sun { display: none; }
+.theme-toggle-btn .t-moon { display: block; }
+[data-theme="dark"] .theme-toggle-btn .t-sun { display: block; }
+[data-theme="dark"] .theme-toggle-btn .t-moon { display: none; }
+
+/* ── 3-Column Dashboard Layout ───────────────────────────── */
+#page-dashboard {
+  display: none;
+  overflow: hidden;
+  height: 100%;
+}
+#page-dashboard.active { display: block; }
+
+.app-shell-dash {
+  display: grid;
+  grid-template-columns: 260px 1fr 280px;
+  grid-template-rows: 1fr;
+  gap: 14px;
+  padding: 14px;
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.sidebar-left, .sidebar-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.center-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Camera main card (center) ───────────────────────────── */
+.cam-main-card {
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cam-tab-bar {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.cam-tab-btn {
+  padding: 7px 16px;
+  border-radius: 8px 8px 0 0;
+  border: none;
+  background: none;
+  color: var(--t3);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--trans), background var(--trans);
+}
+.cam-tab-btn.active {
+  color: var(--accent);
+  background: var(--accent-d);
+}
+.cam-tab-spacer { flex: 1; }
+
+.cam-view {
+  flex: 1;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
+.cam-view.hidden { display: none; }
+.cam-view img, .cam-view video {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.cam-view object {
+  width: 100%; height: 100%;
+  display: block;
+}
+
+/* HUD overlay on camera */
+.cam-hud-overlay {
+  position: absolute;
+  top: 10px; left: 10px; right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 2;
+}
+.cam-hud-left {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,0.50);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.cam-live-pulse {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--danger);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.cam-hud-fps {
+  font-size: 11px; font-weight: 600; color: #fff;
+  font-family: var(--mono);
+}
+.cam-hud-time {
+  font-size: 11px; color: rgba(255,255,255,0.7);
+  font-family: var(--mono);
+  background: rgba(0,0,0,0.50);
+  backdrop-filter: blur(8px);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+/* Cam offline state */
+.cam-view-offline {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+  color: var(--t3); font-size: 13px;
+  background: var(--surface-2);
+}
+.cam-view-offline svg { opacity: 0.3; }
+
+/* Alert status bar below camera */
+.alert-status-bar {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.alert-status-bar.alerting {
+  background: var(--danger-d);
+  border-color: var(--danger);
+}
+.asb-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--success); flex-shrink: 0;
+}
+.alert-status-bar.alerting .asb-dot {
+  background: var(--danger);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+.asb-label {
+  font-size: 13px; font-weight: 600; color: var(--t1);
+  flex: 1;
+}
+.asb-time { font-size: 11px; color: var(--t3); font-family: var(--mono); }
+
+/* ── Hub Health bars (left sidebar) ─────────────────────── */
+.hub-health-wrap { display: flex; flex-direction: column; gap: 9px; }
+.hub-health-row  { display: flex; align-items: center; gap: 8px; }
+.hub-health-label {
+  width: 32px;
+  font-size: 11px; font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase; letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+.hub-health-track {
+  flex: 1; height: 6px;
+  background: var(--surface-2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.hub-health-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--accent);
+  transition: width 0.6s ease;
+  width: 0%;
+}
+.hub-health-fill.warn { background: var(--warn); }
+.hub-health-fill.crit { background: var(--danger); }
+.hub-health-val {
+  width: 38px; text-align: right;
+  font-size: 11px; font-family: var(--mono);
+  color: var(--t3);
+}
+
+/* ── Card title / header ─────────────────────────────────── */
+.sidebar-card {
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  padding: 16px;
+  flex-shrink: 0;
+}
+.sidebar-card-title {
+  font-size: 12px; font-weight: 600;
+  color: var(--t3); text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+
+/* ── System status mini-stats ────────────────────────────── */
+.mini-stats { display: flex; flex-direction: column; gap: 1px; }
+.mini-stat-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.mini-stat-row:last-child { border-bottom: none; }
+.mini-stat-label { color: var(--t3); }
+.mini-stat-val   { color: var(--t1); font-family: var(--mono); font-weight: 500; }
+
+/* ── Mode pill toggles (left sidebar) ───────────────────── */
+.mode-pills-list { display: flex; flex-direction: column; gap: 6px; }
+.mode-pill-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background var(--trans), opacity var(--trans);
+  user-select: none;
+}
+.mode-pill-row:hover { background: var(--surface-3); }
+.mode-pill-row.pill-active {
+  background: color-mix(in srgb, var(--accent-mint) 40%, var(--surface));
+}
+[data-theme="dark"] .mode-pill-row.pill-active {
+  background: rgba(48,209,88,0.12);
+}
+.mode-pill-row.pill-danger.pill-active {
+  background: color-mix(in srgb, var(--danger-d) 60%, var(--surface));
+}
+[data-theme="dark"] .mode-pill-row.pill-danger.pill-active {
+  background: rgba(255,69,58,0.12);
+}
+.mode-pill-row.pill-warn.pill-active {
+  background: color-mix(in srgb, var(--warn-d) 60%, var(--surface));
+}
+.mode-pill-icon {
+  font-size: 15px; width: 24px; flex-shrink: 0;
+  text-align: center;
+}
+.mode-pill-label {
+  flex: 1; margin-left: 6px;
+  font-size: 13px; font-weight: 500;
+  color: var(--t2);
+}
+.mode-pill-row.pill-active .mode-pill-label { color: var(--t1); }
+/* Small macOS-style toggle inside pill row */
+.mode-pill-toggle {
+  width: 34px; height: 20px; border-radius: 10px;
+  background: var(--surface-3); flex-shrink: 0;
+  position: relative;
+  transition: background 0.2s ease;
+}
+.mode-pill-toggle.on { background: var(--success); }
+.mode-pill-toggle::after {
+  content: '';
+  position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+.mode-pill-toggle.on::after { transform: translateX(14px); }
+
+/* ── Activity Timeline (right sidebar) ──────────────────── */
+.activity-timeline-wrap {
+  display: flex; flex-direction: column;
+  gap: 0;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  max-height: 320px;
+}
+.activity-card-scroll {
+  background: var(--surface);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.activity-card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-card-header-title {
+  font-size: 12px; font-weight: 600;
+  color: var(--t3); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.activity-date-picker {
+  background: var(--surface-2);
+  border: none;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--t2);
+  font-family: var(--font);
+  cursor: pointer;
+}
+.activity-date-picker:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
+
+.timeline-list {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0;
+}
+.timeline-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 16px;
+  transition: background var(--trans);
+}
+.timeline-item .tl-dot { margin-top: 4px; }
+.timeline-item:hover { background: var(--surface-2); }
+.tl-dot-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 0;
+  flex-shrink: 0; padding-top: 3px;
+}
+.tl-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+.tl-dot.danger { background: var(--danger); }
+.tl-dot.warn   { background: var(--warn); }
+.tl-dot.watch  { background: var(--purple); }
+.tl-dot.presence { background: var(--success); }
+.tl-line {
+  width: 1px; flex: 1; min-height: 8px;
+  background: var(--border);
+  margin-top: 3px;
+}
+.tl-body { flex: 1; min-width: 0; }
+.tl-title {
+  font-size: 12px; font-weight: 500;
+  color: var(--t1); line-height: 1.4;
+  word-break: break-word;
+}
+.tl-time { font-size: 10px; color: var(--t3); margin-top: 2px; }
+
+/* ── Recent detections (right sidebar) ──────────────────── */
+.det-card {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border);
+  padding: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Narada chat bubbles (updated for dual theme) ────────── */
+.chat-msg.user .chat-msg-pill {
+  background: var(--surface-2) !important;
+  color: var(--t1) !important;
+  border-radius: 20px 20px 4px 20px !important;
+}
+.chat-msg.assistant .chat-msg-content .chat-msg-body {
+  color: var(--t1);
+}
+[data-theme="dark"] .chat-msg.user .chat-msg-pill {
+  background: var(--surface-2) !important;
+}
+/* Narada response bubble accent */
+.chat-msg.assistant .chat-msg-avatar-gradient {
+  background: var(--accent-purple) !important;
+  color: var(--accent) !important;
+}
+[data-theme="dark"] .chat-msg.assistant .chat-msg-avatar-gradient {
+  background: var(--accent-d) !important;
+  color: var(--accent) !important;
+}
+
+/* ── Chat header glass ───────────────────────────────────── */
+.chat-header {
+  background: var(--glass) !important;
+}
+
+/* ── Sign out button light mode ──────────────────────────── */
+#header .btn-ghost[onclick*="logout"],
+.hud-signout { color: var(--danger) !important; opacity: 0.7; }
+
+/* ── Autofill fix (light mode) ───────────────────────────── */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset !important;
+  -webkit-text-fill-color: var(--t1) !important;
+  caret-color: var(--t1);
+}
+
+/* ── Log line colors for light mode ─────────────────────── */
+.log-line { color: var(--log-color) !important; }
+
+/* ── Heatmap cells light mode ────────────────────────────── */
+.hm-0 { background: var(--surface-2); }
+.hm-1 { background: rgba(79,126,255,0.25); }
+.hm-2 { background: rgba(79,126,255,0.50); }
+.hm-3 { background: rgba(79,126,255,0.75); }
+.hm-4 { background: var(--accent); }
+[data-theme="dark"] .hm-0 { background: var(--surface-3); }
+[data-theme="dark"] .hm-1 { background: rgba(10,132,255,0.25); }
+[data-theme="dark"] .hm-2 { background: rgba(10,132,255,0.50); }
+[data-theme="dark"] .hm-3 { background: rgba(10,132,255,0.75); }
+[data-theme="dark"] .hm-4 { background: var(--accent); }
+
+/* ── Security status card light mode ────────────────────── */
+.status-card { border: 1px solid var(--border) !important; }
+
+/* ── Mobile: 3-column collapses ──────────────────────────── */
+@media (max-width: 1023px) {
+  .app-shell-dash {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    flex: none;
+    overflow: visible;
+    padding-bottom: 88px;
+  }
+  .sidebar-left, .sidebar-right, .center-stage { overflow: visible; min-height: 0; }
+  .cam-main-card { min-height: 240px; }
+  .activity-card-scroll { max-height: 400px; }
+}
+
+/* ── Mode row highlight for light theme ──────────────────── */
+.mode-row:hover { background: var(--room-bg); }
+.mode-row.on { background: color-mix(in srgb, rgba(48,209,88,0.10) 100%, var(--surface)); }
+[data-theme="dark"] .mode-row.on { background: rgba(48,209,88,0.06); }

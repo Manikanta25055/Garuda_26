@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=42"/>
+  <link rel="stylesheet" href="/static/style.css?v=43"/>
 </head>
 <body>
 <div id="app">
@@ -189,6 +189,24 @@
       <div id="hud-dot" class="hdr-dot"></div>
       <span id="hud-label" style="font-size:11px;color:var(--t3);font-family:var(--mono)">—</span>
     </div>
+    <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle theme" onclick="G.toggleTheme()">
+      <!-- Sun icon (shown in dark mode — click to go light) -->
+      <svg class="t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="5"/>
+        <line x1="12" y1="1" x2="12" y2="3"/>
+        <line x1="12" y1="21" x2="12" y2="23"/>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+        <line x1="1" y1="12" x2="3" y2="12"/>
+        <line x1="21" y1="12" x2="23" y2="12"/>
+        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+      </svg>
+      <!-- Moon icon (shown in light mode — click to go dark) -->
+      <svg class="t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
     <button class="hud-signout" onclick="G.logout()">Sign Out</button>
   </div>
 
@@ -200,12 +218,12 @@
 
       <!-- ── DASHBOARD ── -->
       <div id="page-dashboard" class="page">
-        <div class="dash-layout">
+        <div class="app-shell-dash">
 
-          <!-- Left: main content column -->
-          <div class="dash-main">
+          <!-- ── LEFT SIDEBAR ── -->
+          <aside class="sidebar-left">
 
-            <!-- Security Status Hero -->
+            <!-- Security Status -->
             <div id="status-card" class="card status-card">
               <div class="status-state">
                 <div class="status-pulse-ring" id="status-pulse-ring"></div>
@@ -216,144 +234,11 @@
                   <button class="owner-refresh-btn" title="Refresh presence" onclick="G.refreshPresence()">↻</button>
                 </span>
               </div>
-              <div class="status-foot">
-                <span class="status-foot-lbl">Last alert</span>
-                <span class="status-foot-val" id="status-last">Never</span>
-              </div>
-            </div>
-
-            <!-- Hardware Metric Tiles -->
-            <div class="hw-metrics">
-              <div class="hw-tile" id="hw-cpu-tile">
-                <div class="hw-ring-wrap">
-                  <svg viewBox="0 0 64 64">
-                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
-                    <circle class="hw-ring-fg" id="hw-cpu-ring" cx="32" cy="32" r="27"
-                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
-                  </svg>
-                  <div class="hw-ring-val" id="hwm-cpu">—</div>
-                </div>
-                <div class="hw-tile-label">CPU</div>
-              </div>
-              <div class="hw-tile" id="hw-ram-tile">
-                <div class="hw-ring-wrap">
-                  <svg viewBox="0 0 64 64">
-                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
-                    <circle class="hw-ring-fg" id="hw-ram-ring" cx="32" cy="32" r="27"
-                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
-                  </svg>
-                  <div class="hw-ring-val" id="hwm-ram">—</div>
-                </div>
-                <div class="hw-tile-label">Memory</div>
-              </div>
-              <div class="hw-tile" id="hw-temp-tile">
-                <div class="hw-ring-wrap">
-                  <svg viewBox="0 0 64 64">
-                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
-                    <circle class="hw-ring-fg" id="hw-temp-ring" cx="32" cy="32" r="27"
-                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
-                  </svg>
-                  <div class="hw-ring-val" id="hwm-temp">—</div>
-                </div>
-                <div class="hw-tile-label">Temp</div>
-              </div>
-              <div class="hw-tile" id="hw-fps-tile">
-                <div class="hw-ring-wrap">
-                  <svg viewBox="0 0 64 64">
-                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
-                    <circle class="hw-ring-fg" id="hw-fps-ring" cx="32" cy="32" r="27"
-                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
-                  </svg>
-                  <div class="hw-ring-val" id="hwm-fps">—</div>
-                </div>
-                <div class="hw-tile-label">FPS</div>
-              </div>
-              <div class="hw-tile" id="hw-disk-tile">
-                <div class="hw-ring-wrap">
-                  <svg viewBox="0 0 64 64">
-                    <circle class="hw-ring-bg" cx="32" cy="32" r="27"/>
-                    <circle class="hw-ring-fg" id="hw-disk-ring" cx="32" cy="32" r="27"
-                            stroke-dasharray="169.65" stroke-dashoffset="169.65"/>
-                  </svg>
-                  <div class="hw-ring-val" id="hwm-disk">—</div>
-                </div>
-                <div class="hw-tile-label">Disk</div>
-              </div>
-            </div>
-
-            <!-- Heatmap + Recent Detections row -->
-            <div class="hm-hw-row">
-
-              <!-- Alert Activity heatmap -->
-              <div class="card hm-card">
-                <div class="dash-card-hdr">
-                  <div>
-                    <div class="dash-card-title">Alert Activity</div>
-                    <div class="dash-card-meta">13 weeks · local</div>
-                  </div>
-                  <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">Camera</button>
-                </div>
-                <div id="heatmap"></div>
-                <div class="hm-legend">
-                  <span class="hm-legend-lbl">Fewer</span>
-                  <div class="hm-swatch hm-0"></div>
-                  <div class="hm-swatch hm-1"></div>
-                  <div class="hm-swatch hm-2"></div>
-                  <div class="hm-swatch hm-3"></div>
-                  <div class="hm-swatch hm-4"></div>
-                  <span class="hm-legend-lbl">More</span>
-                </div>
-              </div>
-
-              <!-- Recent Detections -->
-              <div class="card hm-det-card">
-                <div class="dash-card-hdr">
-                  <div class="dash-card-title">Recent Detections</div>
-                  <div id="det-live-dot" class="det-live"></div>
-                </div>
-                <div id="recent-dets" class="det-timeline">
-                  <div class="det-empty">No detections yet this session</div>
-                </div>
-              </div>
-
-            </div>
-
-            <!-- Activity Feed -->
-            <div class="card" id="activity-feed-card">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Activity Feed</div>
-                <div class="dash-card-meta" id="activity-count">Live</div>
-              </div>
-              <div id="activity-feed" class="activity-feed">
-                <div class="empty-state">
-                  <div class="empty-state-icon">○</div>
-                  <span>No activity yet this session</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- System Console — admin only -->
-            <div id="dash-console-wrap" class="card dash-console-card hidden">
-              <div class="console-header">System Console</div>
-              <div id="sys-console" class="console"></div>
-            </div>
-
-          </div><!-- /dash-main -->
-
-          <!-- Right: stats + modes -->
-          <div class="dash-side">
-
-            <!-- System status cards -->
-            <div class="dash-card">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">System Status</div>
-              </div>
-              <div class="stat-rows">
+              <div class="stat-rows" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
                 <div class="stat-row">
                   <span class="stat-lbl">Uptime</span>
                   <span class="stat-val" id="s-uptime">—</span>
                 </div>
-
                 <div class="stat-row">
                   <span class="stat-lbl">Last Alert</span>
                   <span class="stat-val" id="s-alert">None</span>
@@ -367,37 +252,173 @@
                   <span class="stat-val" id="s-pipeline">—</span>
                 </div>
               </div>
+              <div class="status-foot">
+                <span class="status-foot-lbl">Last alert</span>
+                <span class="status-foot-val" id="status-last">Never</span>
+              </div>
             </div>
 
-            <!-- System modes -->
-            <div class="dash-card">
+            <!-- System Modes -->
+            <div class="card">
               <div class="dash-card-hdr">
                 <div class="dash-card-title">System Modes</div>
               </div>
               <div id="modes-pills" class="modes-list"></div>
             </div>
 
-          </div><!-- /dash-side -->
+            <!-- Hub Health -->
+            <div class="card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Hub Health</div>
+              </div>
+              <div class="hub-health-wrap">
+                <div class="hub-health-row">
+                  <span class="hub-health-label">CPU</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-cpu" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-cpu">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">RAM</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-ram" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-ram">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">Temp</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-temp" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-temp">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">FPS</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-fps" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-fps">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">Disk</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-disk" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-disk">—</span>
+                </div>
+              </div>
+            </div>
 
-        </div><!-- /dash-layout -->
+          </aside><!-- /sidebar-left -->
 
-        <!-- Camera overlay (fixed, hidden by default) -->
+          <!-- ── CENTER STAGE ── -->
+          <div class="center-stage">
+
+            <!-- Camera main card -->
+            <div class="cam-main-card card">
+              <div class="cam-tab-bar">
+                <button class="cam-tab-btn active" id="cam-tab-live" onclick="G.switchCamTab('live')">Live</button>
+                <button class="cam-tab-btn" id="cam-tab-floor" onclick="G.switchCamTab('floor')">Floor Plan</button>
+                <div class="cam-tab-spacer"></div>
+                <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">
+                  <span class="cam-live-dot"></span>Camera
+                </button>
+                <span id="cam-status-txt" class="cam-ov-meta" style="font-size:11px;color:var(--t3);padding-left:6px">Offline</span>
+              </div>
+              <!-- Live feed -->
+              <div class="cam-view" id="cam-view-live">
+                <video id="cam-video" autoplay playsinline muted style="display:none"></video>
+                <img id="cam-img" alt="Camera Feed" style="display:none"/>
+                <div id="cam-offline" class="cam-offline">
+                  <div class="cam-icon">◯</div>
+                  <span>Camera feed unavailable</span>
+                </div>
+                <div class="cam-hud-overlay">
+                  <div class="cam-hud-left">
+                    <div class="cam-live-pulse"></div>
+                    <span class="cam-hud-fps" id="hud-fps">-- fps</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Floor plan -->
+              <div class="cam-view hidden" id="cam-view-floor">
+                <object id="floorplan-svg" data="/static/floorplan.svg" type="image/svg+xml"></object>
+              </div>
+            </div>
+
+            <!-- Alert Activity heatmap -->
+            <div class="card">
+              <div class="dash-card-hdr">
+                <div>
+                  <div class="dash-card-title">Alert Activity</div>
+                  <div class="dash-card-meta">13 weeks · local</div>
+                </div>
+              </div>
+              <div id="heatmap"></div>
+              <div class="hm-legend">
+                <span class="hm-legend-lbl">Fewer</span>
+                <div class="hm-swatch hm-0"></div>
+                <div class="hm-swatch hm-1"></div>
+                <div class="hm-swatch hm-2"></div>
+                <div class="hm-swatch hm-3"></div>
+                <div class="hm-swatch hm-4"></div>
+                <span class="hm-legend-lbl">More</span>
+              </div>
+            </div>
+
+            <!-- System Console — admin only -->
+            <div id="dash-console-wrap" class="card dash-console-card hidden">
+              <div class="console-header">System Console</div>
+              <div id="sys-console" class="console"></div>
+            </div>
+
+          </div><!-- /center-stage -->
+
+          <!-- ── RIGHT SIDEBAR ── -->
+          <aside class="sidebar-right">
+
+            <!-- Activity Timeline -->
+            <div class="card activity-card-scroll">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Activity</div>
+                <input type="date" id="activity-date" class="activity-date-picker"/>
+              </div>
+              <div id="activity-timeline" class="timeline-list">
+                <div class="empty-state">
+                  <div class="empty-state-icon">○</div>
+                  <span>No activity yet</span>
+                </div>
+              </div>
+              <!-- Hidden legacy elements for JS compatibility -->
+              <div id="activity-feed" class="hidden"></div>
+              <div id="activity-feed-card" class="hidden"></div>
+              <div id="activity-count" class="hidden">Live</div>
+            </div>
+
+            <!-- Recent Detections -->
+            <div class="card">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Recent Detections</div>
+                <div id="det-live-dot" class="det-live"></div>
+              </div>
+              <div id="recent-dets" class="det-timeline">
+                <div class="det-empty">No detections yet this session</div>
+              </div>
+            </div>
+
+          </aside><!-- /sidebar-right -->
+
+        </div><!-- /app-shell-dash -->
+
+        <!-- Camera overlay — kept for JS compatibility, hidden by default -->
         <div id="camera-overlay" class="camera-overlay hidden">
           <div class="cam-ov-bar">
             <div class="cam-ov-title">
               <span class="cam-live-dot"></span>
               LIVE CAMERA
             </div>
-            <span id="cam-status-txt" class="cam-ov-meta">Connecting...</span>
             <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">Close</button>
-          </div>
-          <div class="cam-ov-body">
-            <video id="cam-video" autoplay playsinline muted style="display:none"></video>
-            <img id="cam-img" alt="Camera Feed" style="display:none"/>
-            <div id="cam-offline" class="cam-offline">
-              <div class="cam-icon">◯</div>
-              <span>Camera feed unavailable</span>
-            </div>
           </div>
         </div>
 
@@ -931,6 +952,6 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=34"></script>
+<script src="/static/app.js?v=35"></script>
 </body>
 </html>
