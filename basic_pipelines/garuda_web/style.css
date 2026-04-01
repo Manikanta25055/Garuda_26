@@ -2630,8 +2630,8 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── Docs modal ─────────────────────────────────────────── */
 .docs-modal {
-  width: 540px; max-width: 96vw;
-  max-height: 88vh;
+  width: min(700px, 96vw);
+  max-height: 90vh;
   display: flex; flex-direction: column;
   padding: 0;
   gap: 0;
@@ -2650,7 +2650,7 @@ input[type=range]::-webkit-slider-thumb {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 22px 22px 16px;
+  padding: 20px 22px 14px;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, rgba(255,255,255,0.08));
   background: linear-gradient(180deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.02) 100%);
   flex-shrink: 0;
@@ -2665,8 +2665,8 @@ input[type=range]::-webkit-slider-thumb {
   line-height: 1.45;
 }
 .docs-close-btn {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface-2) 86%, rgba(255,255,255,0.12));
@@ -2679,7 +2679,7 @@ input[type=range]::-webkit-slider-thumb {
   transition: transform 0.16s ease, background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
 .docs-close-btn span {
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1;
   transform: translateY(-1px);
 }
@@ -2694,10 +2694,21 @@ input[type=range]::-webkit-slider-thumb {
 }
 .docs-body {
   overflow-y: auto; flex: 1;
-  padding: 0 22px 22px;
+  padding: 0 24px 16px;
   min-height: 0;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+.docs-footer {
+  padding: 14px 22px 20px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, rgba(255,255,255,0.08));
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.10) 100%);
+  flex-shrink: 0;
+}
+.docs-footer-close {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 14px;
 }
 
 /* Docs tabs */
@@ -3035,21 +3046,28 @@ input[type=range]::-webkit-slider-thumb {
   /* Modals */
   .modal       { width: 95vw; padding: 20px; max-height: 90vh; overflow-y: auto; overscroll-behavior: contain; }
   #m-docs .modal {
-    width: min(95vw, 640px);
-    max-height: calc(100vh - 28px);
+    width: min(96vw, 720px);
+    max-height: calc(100vh - 18px);
     padding: 0;
     gap: 0;
+    border-radius: 20px;
   }
   #m-docs .docs-body {
-    padding: 0 16px 18px;
+    padding: 0 16px 12px;
     min-height: 0;
   }
   #m-docs .docs-topbar {
-    padding: 18px 16px 14px;
+    padding: 16px 16px 12px;
   }
   #m-docs .docs-close-btn {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
+  }
+  #m-docs .docs-close-btn span {
+    font-size: 16px;
+  }
+  #m-docs .docs-footer {
+    padding: 12px 16px 16px;
   }
   #m-docs .docs-tabs {
     display: flex;
