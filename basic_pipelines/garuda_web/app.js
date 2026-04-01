@@ -2138,6 +2138,8 @@ document.addEventListener('DOMContentLoaded', G.init);
 // NOTE: This IIFE is outside the G closure. Use G.getSession() and G._apiFn()
 // to access session and API — never reference G-internal variables directly.
 (function() {
+  const _prevAfterLoginHook = G._afterLoginHook || null;
+  const _prevFbOnLogout = G._fbOnLogout || null;
   let _fbOpen   = false;
   let _fbRating = 0;
   let _fbCat    = 'general';
@@ -2179,7 +2181,6 @@ document.addEventListener('DOMContentLoaded', G.init);
   function _applyRole() {
     const admin = _isAdmin();
     const sendTab  = document.getElementById('fb-tab-send');
-    const inboxTab = document.getElementById('fb-tab-inbox');
     const tabBar   = document.getElementById('fb-tabs');
     // Tab bar is never shown — each role gets exactly one view
     if (tabBar) tabBar.style.display = 'none';
@@ -2221,10 +2222,14 @@ document.addEventListener('DOMContentLoaded', G.init);
   });
 
   // ── After-login hook (called from afterLogin in G) ────────
-  G._afterLoginHook = function() { _applyRole(); };
+  G._afterLoginHook = function(session) {
+    if (_prevAfterLoginHook) _prevAfterLoginHook(session);
+    _applyRole();
+  };
 
   // ── Logout hook (called from logout in G) ─────────────────
   G._fbOnLogout = function() {
+    if (_prevFbOnLogout) _prevFbOnLogout();
     _fbOpen = false;
     _fbRating = 0; _fbCat = 'general'; _fbInbox = []; _fbFilter = 'all';
     document.getElementById('fb-panel').classList.remove('open');
@@ -2350,12 +2355,19 @@ document.addEventListener('DOMContentLoaded', G.init);
 
   // ── Reset send form ───────────────────────────────────────
   function _resetForm(btn) {
-    document.getElementById('fb-form-body').style.display = '';
-    document.getElementById('fb-success').classList.remove('show');
-    document.getElementById('fb-msg').value  = '';
-    document.getElementById('fb-name').value = '';
-    document.getElementById('fb-char').textContent = '0 / 1000';
-    document.getElementById('fb-char').className   = 'fb-char-count';
+    const body = document.getElementById('fb-form-body');
+    const success = document.getElementById('fb-success');
+    const msg = document.getElementById('fb-msg');
+    const name = document.getElementById('fb-name');
+    const char = document.getElementById('fb-char');
+    if (body) body.style.display = '';
+    if (success) success.classList.remove('show');
+    if (msg) msg.value = '';
+    if (name) name.value = '';
+    if (char) {
+      char.textContent = '0 / 1000';
+      char.className = 'fb-char-count';
+    }
     _fbRating = 0; _fbCat = 'general';
     _previewStars(0);
     document.querySelectorAll('#fb-tab-send .fb-cat')
@@ -2363,49 +2375,46 @@ document.addEventListener('DOMContentLoaded', G.init);
     if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
   }
 
+  function _showFeedbackSuccess(btn) {
+    const body = document.getElementById('fb-form-body');
+    const success = document.getElementById('fb-success');
+    const panel = document.getElementById('fb-panel');
+    const bubble = document.getElementById('fb-bubble');
+    if (body) body.style.display = 'none';
+    if (success) success.classList.add('show');
+    setTimeout(() => {
+      _fbOpen = false;
+      if (panel) panel.classList.remove('open');
+      if (bubble) bubble.classList.remove('is-open');
+      setTimeout(() => _resetForm(btn), 400);
+    }, 1400);
+  }
+
   // ── Submit ────────────────────────────────────────────────
   G.submitFeedback = async function() {
-    const msgVal  = document.getElementById('fb-msg').value.trim();
-    const nameVal = document.getElementById('fb-name').value.trim();
-    if (!msgVal) { document.getElementById('fb-msg').focus(); return; }
+    const msgEl = document.getElementById('fb-msg');
+    const nameEl = document.getElementById('fb-name');
+    const msgVal  = msgEl ? msgEl.value.trim() : '';
+    const nameVal = nameEl ? nameEl.value.trim() : '';
+    if (!msgVal) { if (msgEl) msgEl.focus(); return; }
 
     const btn = document.getElementById('fb-submit');
-    btn.disabled = true;
-    btn.textContent = 'Sending…';
-
-    const controller = new AbortController();
-    const timeoutId  = setTimeout(() => controller.abort(), 7000);
     const payload    = { message: msgVal, category: _fbCat, rating: _fbRating, name: nameVal };
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+    }
 
     try {
-      const res = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        credentials: 'include',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        G.showToast(err.detail || 'Failed to send feedback.', 'error');
-        btn.disabled = false; btn.textContent = 'Send';
-        return;
-      }
-      // Show success then close
-      document.getElementById('fb-form-body').style.display = 'none';
-      document.getElementById('fb-success').classList.add('show');
-      setTimeout(() => {
-        _fbOpen = false;
-        document.getElementById('fb-panel').classList.remove('open');
-        document.getElementById('fb-bubble').classList.remove('is-open');
-        setTimeout(() => _resetForm(btn), 400);
-      }, 1400);
+      await G._apiFn('POST', '/api/feedback', payload);
+      _showFeedbackSuccess(btn);
     } catch(err) {
-      clearTimeout(timeoutId);
-      const msg = err.name === 'AbortError' ? 'Request timed out. Try again.' : 'Network error. Please try again.';
-      G.showToast(msg, 'error');
-      btn.disabled = false; btn.textContent = 'Send';
+      const detail = (err && (err.detail || err.message)) || 'Failed to send feedback.';
+      G.showToast(detail, 'error');
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Send';
+      }
     }
   };
 })();
