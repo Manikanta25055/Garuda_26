@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=49"/>
+  <link rel="stylesheet" href="/static/style.css?v=50"/>
 </head>
 <body>
 <div id="app">
@@ -955,18 +955,15 @@
   <!-- Panel -->
   <div class="fb-panel" id="fb-panel" role="dialog" aria-label="Feedback">
 
-    <!-- Tab bar (Inbox tab injected by JS when admin) -->
-    <div class="fb-tabs" id="fb-tabs">
-      <button class="fb-tab active" data-tab="send" onclick="G.fbSwitchTab('send')">Send</button>
-      <!-- Inbox tab added by JS for admin only -->
-    </div>
+    <!-- Admin tabs injected by JS -->
+    <div class="fb-tabs" id="fb-tabs"></div>
 
     <!-- ── Send tab ── -->
     <div id="fb-tab-send">
       <div id="fb-form-body" style="display:flex;flex-direction:column;gap:14px">
         <!-- Star rating -->
         <div>
-          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How am i Doing</div>
+          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How am I doing?</div>
           <div class="fb-stars" id="fb-stars" role="group" aria-label="Star rating">
             <span class="fb-star" data-v="1" role="radio" tabindex="0" aria-label="1 star">★</span>
             <span class="fb-star" data-v="2" role="radio" tabindex="0" aria-label="2 stars">★</span>
@@ -1026,6 +1023,6 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=45"></script>
+<script src="/static/app.js?v=46"></script>
 </body>
 </html>

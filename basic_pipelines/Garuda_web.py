@@ -1711,6 +1711,7 @@ fastapi_app.add_middleware(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ],
+    allow_origin_regex=r"^https://([a-z0-9-]+\.)*veeramanikanta\.in$|^https://[a-z0-9-]+\.vercel\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "X-Garuda-Token"],

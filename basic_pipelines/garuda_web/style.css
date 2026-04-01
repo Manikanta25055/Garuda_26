@@ -2913,8 +2913,8 @@ input[type=range]::-webkit-slider-thumb {
 
   /* iOS nav mobile */
   #ios-nav {
-    bottom: 14px;
-    padding: 5px 12px;
+    bottom: 10px;
+    padding: 4px 10px;
     max-width: calc(100vw - 32px);
     overflow-x: auto;
     overflow-y: hidden;
@@ -2924,8 +2924,9 @@ input[type=range]::-webkit-slider-thumb {
     -webkit-overflow-scrolling: touch;
   }
   #ios-nav::-webkit-scrollbar { display: none; }
-  .ios-item  { padding: 7px 10px; min-width: 46px; flex-shrink: 0; scroll-snap-align: center; }
-  .ios-label { font-size: 9px; }
+  .ios-item  { padding: 6px 9px; min-width: 42px; flex-shrink: 0; scroll-snap-align: center; border-radius: 14px; }
+  .ios-label { font-size: 8.5px; }
+  .ios-icon svg { width: 16px; height: 16px; }
 
   /* Heatmap + hardware stay side-by-side */
   .hm-hw-row { flex-direction: row; flex-wrap: nowrap; overflow-x: hidden; }
@@ -3899,6 +3900,9 @@ input:-webkit-autofill:focus {
   border-radius: var(--r);
   padding: 3px;
 }
+.fb-tabs:empty {
+  display: none;
+}
 .fb-tab {
   flex: 1;
   padding: 5px 10px;
@@ -4031,14 +4035,14 @@ input:-webkit-autofill:focus {
 
 /* Mobile — panel sits above the bottom nav (68px tall) */
 @media (max-width: 768px) {
-  .fb-wrap { bottom: 24px; right: 16px; }
+  .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
   .fb-panel { width: min(320px, calc(100vw - 32px)); max-height: min(68vh, 520px); overflow-y: auto; }
   .fb-textarea { height: 70px; }
   .fb-bubble { width: 46px; height: 46px; }
 }
 /* Very small screens — go full width */
 @media (max-width: 400px) {
-  .fb-wrap { bottom: 24px; right: 12px; left: auto; }
+  .fb-wrap { bottom: calc(88px + env(safe-area-inset-bottom)); right: 12px; left: auto; }
   .fb-bubble { align-self: flex-end; }
   .fb-panel { width: min(320px, calc(100vw - 24px)); }
   .fb-stars { gap: 6px; }
