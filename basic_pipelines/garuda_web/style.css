@@ -4104,8 +4104,11 @@ input:-webkit-autofill:focus {
 @media (max-width: 768px) {
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
   #app:not(.logged-in) .fb-wrap {
-    bottom: calc(16px + env(safe-area-inset-bottom));
-    right: 16px;
+    top: auto;
+    left: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    right: 12px;
+    align-items: flex-end;
   }
   .fb-panel { width: min(320px, calc(100vw - 32px)); max-height: min(68vh, 520px); overflow-y: auto; }
   .fb-textarea { height: 70px; }
@@ -4115,9 +4118,11 @@ input:-webkit-autofill:focus {
 @media (max-width: 400px) {
   .fb-wrap { bottom: calc(88px + env(safe-area-inset-bottom)); right: 12px; left: auto; }
   #app:not(.logged-in) .fb-wrap {
-    bottom: calc(14px + env(safe-area-inset-bottom));
+    top: auto;
+    bottom: calc(10px + env(safe-area-inset-bottom));
     right: 12px;
     left: auto;
+    align-items: flex-end;
   }
   .fb-bubble { align-self: flex-end; }
   .fb-panel { width: min(320px, calc(100vw - 24px)); }
