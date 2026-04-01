@@ -22,6 +22,7 @@ const G = (() => {
   let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
   let _currentPage = 'dashboard';
+  let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -398,6 +399,12 @@ const G = (() => {
     }
     connectWS();
     if (_session.role === 'admin') loadCfg();
+    // Haptic feedback on Dynamic Island tap
+    const hudEl = document.getElementById('top-hud');
+    if (hudEl && !hudEl._hapticBound) {
+      hudEl._hapticBound = true;
+      hudEl.addEventListener('click', () => { if (navigator.vibrate) navigator.vibrate(8); });
+    }
   }
 
   function toggleTheme() {
@@ -1081,22 +1088,31 @@ const G = (() => {
     const hudLabel = document.getElementById('hud-label');
     if (!hud) return;
     const thinking = hud.classList.contains('di-thinking');
-    const alerting = hud.classList.contains('di-alert');
-    const voice = _currentPage === 'narada' && !thinking && !alerting;
+    const alerting  = hud.classList.contains('di-alert');
+    const allclear  = hud.classList.contains('di-allclear');
+    const voice = _currentPage === 'narada' && !thinking && !alerting && !allclear;
     hud.classList.toggle('di-voice', voice);
-    hud.classList.toggle('di-idle', !thinking && !alerting && !voice);
+    hud.classList.toggle('di-idle', !thinking && !alerting && !voice && !allclear);
     if (!hudLabel) return;
-    if (alerting) hudLabel.textContent = 'Alert';
-    else if (thinking) hudLabel.textContent = 'Thinking';
-    else if (voice) hudLabel.textContent = 'Voice';
-    else hudLabel.textContent = '';
+    if (alerting)       hudLabel.textContent = 'Alert';
+    else if (thinking)  hudLabel.textContent = 'Thinking';
+    else if (allclear)  hudLabel.textContent = 'All Clear';
+    else if (voice)     hudLabel.textContent = 'Voice';
+    else                hudLabel.textContent = '';
   }
 
   function _setDIState(state) {
     const hud = document.getElementById('top-hud');
     if (!hud) return;
+    // Cancel any pending allclear auto-dismiss
+    if (_diAllclearTimer) { clearTimeout(_diAllclearTimer); _diAllclearTimer = null; }
     hud.classList.toggle('di-alert',    state === 'alert');
     hud.classList.toggle('di-thinking', state === 'thinking');
+    hud.classList.toggle('di-allclear', state === 'allclear');
+    // Auto-dismiss "All Clear" after 2.5s
+    if (state === 'allclear') {
+      _diAllclearTimer = setTimeout(() => { _diAllclearTimer = null; _setDIState(''); }, 2500);
+    }
     _syncDIContext();
   }
 
@@ -1244,21 +1260,25 @@ const G = (() => {
     const pipeDot = $('pipeline-dot');
     const pipeLabel = $('pipeline-label');
     const hudDot = $('hud-dot');
-    const hudLabel = $('hud-label');
     if (s.alert_active) {
       if (pipeDot) pipeDot.className = 'hdr-dot alert';
       if (pipeLabel) pipeLabel.textContent = 'Alert';
       if (hudDot) hudDot.className = 'hdr-dot alert';
-      if (hudLabel) hudLabel.textContent = 'Alert';
       _setDIState('alert');
     } else {
       if (pipeDot) pipeDot.className = 'hdr-dot online';
       if (pipeLabel) pipeLabel.textContent = 'Online';
       if (hudDot) hudDot.className = 'hdr-dot online';
-      if (_prevAlertActive) _lastDetInfo = '';
-      // Only clear alert state if not thinking
-      const hud = document.getElementById('top-hud');
-      if (hud && !hud.classList.contains('di-thinking')) _setDIState('');
+      if (_prevAlertActive) {
+        // Alert just cleared — show "All Clear" briefly in DI
+        _lastDetInfo = '';
+        _setDIState('allclear');
+      } else {
+        const hud = document.getElementById('top-hud');
+        if (hud && !hud.classList.contains('di-thinking') && !hud.classList.contains('di-allclear')) {
+          _setDIState('');
+        }
+      }
     }
 
     // Push notification on new alert

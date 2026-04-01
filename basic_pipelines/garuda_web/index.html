@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=46"/>
+  <link rel="stylesheet" href="/static/style.css?v=47"/>
 </head>
 <body>
 <div id="app">
@@ -197,6 +197,35 @@
   <!-- Floating HUD bar — visible when logged in -->
   <div id="top-hud">
     <div class="hud-brand" id="hud-brand">GARUDA</div>
+
+    <!-- iOS-style Dynamic Island expanded states -->
+    <div class="di-live" id="di-live" aria-hidden="true">
+      <!-- Alert: pulsing red pip + label -->
+      <div class="di-cnt di-cnt-alert">
+        <span class="di-pip di-r"></span>
+        <span class="di-lbl">Alert</span>
+      </div>
+      <!-- Thinking: 3 bouncing dots -->
+      <div class="di-cnt di-cnt-think">
+        <span class="di-bdot"></span>
+        <span class="di-bdot"></span>
+        <span class="di-bdot"></span>
+      </div>
+      <!-- All Clear: green pip + label -->
+      <div class="di-cnt di-cnt-allclear">
+        <span class="di-pip di-g"></span>
+        <span class="di-lbl">All Clear</span>
+      </div>
+      <!-- Voice: animated waveform bars -->
+      <div class="di-cnt di-cnt-voice">
+        <span class="di-vbar"></span>
+        <span class="di-vbar"></span>
+        <span class="di-vbar"></span>
+        <span class="di-vbar"></span>
+        <span class="di-vbar"></span>
+      </div>
+    </div>
+
     <div class="hud-status">
       <div id="hud-dot" class="hdr-dot"></div>
       <span id="hud-label">—</span>
@@ -920,6 +949,6 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=38"></script>
+<script src="/static/app.js?v=39"></script>
 </body>
 </html>
