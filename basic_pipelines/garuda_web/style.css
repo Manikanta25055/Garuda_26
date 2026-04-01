@@ -3754,8 +3754,9 @@ input:-webkit-autofill:focus {
   text-align: center;
   user-select: none;
 }
-.fb-star:hover, .fb-star.lit { color: var(--warn); transform: scale(1.2); }
-.fb-star.lit ~ .fb-star { color: var(--t4); transform: scale(1); }
+.fb-star:hover { color: var(--warn); transform: scale(1.2); }
+.fb-star.lit    { color: var(--warn); transform: scale(1.1); }
+.fb-star.hover-preview { color: var(--warn); transform: scale(1.2); }
 
 /* Category pills */
 .fb-cats {
@@ -3804,11 +3805,20 @@ input:-webkit-autofill:focus {
 }
 .fb-input::placeholder, .fb-textarea::placeholder { color: var(--t3); }
 
+.fb-textarea-wrap {
+  position: relative;
+}
+.fb-textarea-wrap .fb-textarea {
+  padding-bottom: 22px; /* space for char counter */
+}
 .fb-char-count {
-  font-size: 11px;
+  position: absolute;
+  bottom: 6px;
+  right: 9px;
+  font-size: 10px;
   color: var(--t3);
-  text-align: right;
-  margin-top: -8px;
+  pointer-events: none;
+  line-height: 1;
 }
 .fb-char-count.near { color: var(--warn); }
 .fb-char-count.over { color: var(--danger); }
@@ -4000,9 +4010,17 @@ input:-webkit-autofill:focus {
   word-break: break-word;
 }
 
-/* On mobile, panel aligns to screen width */
+/* Mobile — panel sits above the bottom nav (68px tall) */
+@media (max-width: 768px) {
+  .fb-wrap { bottom: 80px; right: 16px; }
+  .fb-panel { width: 290px; }
+  .fb-textarea { height: 70px; }
+}
+/* Very small screens — go full width */
 @media (max-width: 400px) {
-  .fb-wrap { bottom: 80px; right: 14px; left: 14px; align-items: stretch; }
+  .fb-wrap { bottom: 80px; right: 12px; left: 12px; align-items: stretch; }
   .fb-bubble { align-self: flex-end; }
   .fb-panel { width: 100%; }
+  .fb-stars { gap: 6px; }
+  .fb-star  { width: 32px; height: 32px; font-size: 26px; }
 }

@@ -433,6 +433,7 @@ const G = (() => {
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
     if (_chatInputController) { _chatInputController.abort(); _chatInputController = null; }
     _wsAllowed = false;   // prevent reconnect after logout
+    if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
     localStorage.removeItem('garuda_token');
@@ -2241,17 +2242,20 @@ document.addEventListener('DOMContentLoaded', G.init);
     }).join('');
   }
 
-  // ── Star rating ────────────────────────────────────────────
+  // ── Star rating — fully JS-managed, no CSS sibling tricks ──
   document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.fb-star').forEach(s => {
+    const stars = document.querySelectorAll('.fb-star');
+    stars.forEach(s => {
       const v = parseInt(s.dataset.v);
-      s.addEventListener('pointerenter', () => _highlightStars(v));
-      s.addEventListener('pointerleave', () => _highlightStars(_fbRating));
-      s.addEventListener('click', () => { _fbRating = v; _highlightStars(v); });
-      s.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { _fbRating = v; _highlightStars(v); } });
+      s.addEventListener('pointerenter', () => _previewStars(v));
+      s.addEventListener('pointerleave', () => _previewStars(0));   // restore committed state
+      s.addEventListener('click', () => { _fbRating = v; _previewStars(0); });
+      s.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { _fbRating = v; _previewStars(0); }
+      });
     });
 
-    // Send-tab category pills only (not inbox filter pills — those use onclick)
+    // Send-tab category pills only
     document.querySelectorAll('#fb-tab-send .fb-cat').forEach(el => {
       el.addEventListener('click', () => {
         document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.remove('sel'));
@@ -2272,13 +2276,31 @@ document.addEventListener('DOMContentLoaded', G.init);
     }
   });
 
-  function _highlightStars(upTo) {
+  // preview=0 means "show committed _fbRating"; preview>0 means hovering that value
+  function _previewStars(preview) {
+    const show = preview > 0 ? preview : _fbRating;
     document.querySelectorAll('.fb-star').forEach(s => {
-      s.classList.toggle('lit', parseInt(s.dataset.v) <= upTo);
+      const v = parseInt(s.dataset.v);
+      s.classList.toggle('lit',           !preview && v <= show);
+      s.classList.toggle('hover-preview',  preview  && v <= show);
     });
   }
 
-  // ── Submit ─────────────────────────────────────────────────
+  // ── Inbox tab cleanup on logout (called from logout()) ─────
+  G._fbOnLogout = function() {
+    const inboxBtn = document.querySelector('#fb-tabs [data-tab="inbox"]');
+    if (inboxBtn) inboxBtn.remove();
+    // Switch back to send tab silently
+    _fbTab = 'send';
+    _fbInbox = [];
+    const sendTab = document.getElementById('fb-tab-send');
+    const inboxTab = document.getElementById('fb-tab-inbox');
+    if (sendTab) sendTab.style.display = '';
+    if (inboxTab) inboxTab.style.display = 'none';
+    document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'send'));
+  };
+
+  // ── Submit with 7s timeout ─────────────────────────────────
   G.submitFeedback = async function() {
     const msg = document.getElementById('fb-msg').value.trim();
     const name = document.getElementById('fb-name').value.trim();
@@ -2288,12 +2310,17 @@ document.addEventListener('DOMContentLoaded', G.init);
     btn.disabled = true;
     btn.textContent = 'Sending…';
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
+
     try {
       const r = await fetch('/api/feedback', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ message: msg, category: _fbCat, rating: _fbRating, name })
+        body: JSON.stringify({ message: msg, category: _fbCat, rating: _fbRating, name }),
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
         showToast(err.detail || 'Failed to send feedback.', 'error');
@@ -2314,13 +2341,15 @@ document.addEventListener('DOMContentLoaded', G.init);
           document.getElementById('fb-char').textContent = '0 / 1000';
           document.getElementById('fb-char').className = 'fb-char-count';
           _fbRating = 0; _fbCat = 'general';
-          _highlightStars(0);
+          _previewStars(0);
           document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.cat === 'general'));
           btn.disabled = false; btn.textContent = 'Send';
         }, 400);
       }, 2800);
-    } catch {
-      showToast('Network error. Please try again.', 'error');
+    } catch(err) {
+      clearTimeout(timeoutId);
+      const msg = err.name === 'AbortError' ? 'Request timed out. Try again.' : 'Network error. Please try again.';
+      showToast(msg, 'error');
       btn.disabled = false; btn.textContent = 'Send';
     }
   };

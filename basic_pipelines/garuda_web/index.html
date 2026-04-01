@@ -964,7 +964,7 @@
       <div id="fb-form-body" style="display:flex;flex-direction:column;gap:14px">
         <!-- Star rating -->
         <div>
-          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How are we doing?</div>
+          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How am I Doing?</div>
           <div class="fb-stars" id="fb-stars" role="group" aria-label="Star rating">
             <span class="fb-star" data-v="1" role="radio" tabindex="0" aria-label="1 star">★</span>
             <span class="fb-star" data-v="2" role="radio" tabindex="0" aria-label="2 stars">★</span>
@@ -984,7 +984,7 @@
           </div>
         </div>
         <!-- Message -->
-        <div>
+        <div class="fb-textarea-wrap">
           <textarea id="fb-msg" class="fb-textarea" placeholder="Tell us what you think…" maxlength="1000" aria-label="Feedback message"></textarea>
           <div class="fb-char-count" id="fb-char">0 / 1000</div>
         </div>
@@ -1027,8 +1027,10 @@
 
   <!-- Bubble toggle -->
   <button class="fb-bubble" id="fb-bubble" onclick="G.toggleFeedback()" aria-label="Open feedback" title="Send feedback">
+    <!-- Shield with signal — security system feedback icon -->
     <svg class="fb-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <polyline points="9 12 11 14 15 10"/>
     </svg>
     <svg class="fb-icon-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1039,6 +1041,6 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=43"></script>
+<script src="/static/app.js?v=44"></script>
 </body>
 </html>

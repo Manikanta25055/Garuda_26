@@ -459,6 +459,10 @@ def save_master_keys():
     except Exception:
         pass
 
+async def _async_save_config():
+    """Run save_config in a thread so it never blocks the async event loop (fsync is slow on RPi SD)."""
+    await asyncio.to_thread(save_config)
+
 def save_config():
     # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are intentionally excluded —
     # credentials must not be stored in plaintext JSON on disk.
@@ -2102,7 +2106,7 @@ async def set_mode(data: ModeRequest, session=Depends(require_admin)):
             MODE_DND = False
         if MODE_NIGHT:
             MODE_DND = False
-    save_config()
+    await _async_save_config()
     log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
     push_urgent_ws()
     return {"ok": True, "modes": get_state_dict()["modes"]}
@@ -2202,20 +2206,20 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.watch_labels is not None:
         global WATCH_LABELS
         WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
-    save_config()
+    await _async_save_config()
     log_system_update("Config updated.")
     return {"ok": True}
 
 @fastapi_app.post("/api/config/command/add")
 async def add_command(data: CustomCommandRequest, session=Depends(require_admin)):
     CUSTOM_VOICE_COMMANDS[data.phrase.lower()] = data.response
-    save_config()
+    await _async_save_config()
     return {"ok": True}
 
 @fastapi_app.post("/api/config/command/delete")
 async def delete_command(data: DeleteCommandRequest, session=Depends(require_admin)):
     CUSTOM_VOICE_COMMANDS.pop(data.phrase.lower(), None)
-    save_config()
+    await _async_save_config()
     return {"ok": True}
 
 @fastapi_app.get("/api/devices")
@@ -2277,7 +2281,7 @@ async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
     if any(d['mac'].lower() == mac for d in KNOWN_DEVICES):
         raise HTTPException(400, "Device with this MAC already registered")
     KNOWN_DEVICES.append({"name": data.name.strip(), "mac": mac})
-    save_config()
+    await _async_save_config()
     log_system_update(f"Known device added: {data.name.strip()} ({mac})")
     return {"ok": True, "devices": KNOWN_DEVICES}
 
@@ -2288,7 +2292,7 @@ async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin
     KNOWN_DEVICES[:] = [d for d in KNOWN_DEVICES if d['mac'].lower() != mac]
     if len(KNOWN_DEVICES) == before:
         raise HTTPException(404, "Device not found")
-    save_config()
+    await _async_save_config()
     log_system_update(f"Known device removed: {mac}")
     return {"ok": True, "devices": KNOWN_DEVICES}
 
@@ -2576,10 +2580,14 @@ async def submit_feedback(data: FeedbackRequest, request: Request):
         "message": msg,
         "ip": ip,
     }
-    with _feedback_lock:
-        entries = _load_feedback()
-        entries.append(entry)
-        _save_feedback(entries)
+
+    def _write_entry():
+        with _feedback_lock:
+            entries = _load_feedback()
+            entries.append(entry)
+            _save_feedback(entries)
+
+    await asyncio.to_thread(_write_entry)
     log_system_update(f"Feedback received [{category}] from {name or 'Anonymous'}")
     return {"ok": True}
 
