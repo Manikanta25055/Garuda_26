@@ -1287,6 +1287,11 @@ const G = (() => {
         new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/favicon.ico' });
       }
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      // On mobile, scroll status card into view so alert is visible
+      if (window.innerWidth <= 1023) {
+        const sc = $('status-card');
+        if (sc) sc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
     _lastAlertState = s.alert_active;
 
