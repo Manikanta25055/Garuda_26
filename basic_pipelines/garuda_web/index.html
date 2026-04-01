@@ -948,9 +948,97 @@
   </div>
 </div>
 
+<!-- Feedback widget -->
+<div class="fb-wrap" id="fb-wrap">
+  <!-- Panel -->
+  <div class="fb-panel" id="fb-panel" role="dialog" aria-label="Feedback">
+
+    <!-- Tab bar (Inbox tab injected by JS when admin) -->
+    <div class="fb-tabs" id="fb-tabs">
+      <button class="fb-tab active" data-tab="send" onclick="G.fbSwitchTab('send')">Send</button>
+      <!-- Inbox tab added by JS for admin only -->
+    </div>
+
+    <!-- ── Send tab ── -->
+    <div id="fb-tab-send">
+      <div id="fb-form-body" style="display:flex;flex-direction:column;gap:14px">
+        <!-- Star rating -->
+        <div>
+          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How are we doing?</div>
+          <div class="fb-stars" id="fb-stars" role="group" aria-label="Star rating">
+            <span class="fb-star" data-v="1" role="radio" tabindex="0" aria-label="1 star">★</span>
+            <span class="fb-star" data-v="2" role="radio" tabindex="0" aria-label="2 stars">★</span>
+            <span class="fb-star" data-v="3" role="radio" tabindex="0" aria-label="3 stars">★</span>
+            <span class="fb-star" data-v="4" role="radio" tabindex="0" aria-label="4 stars">★</span>
+            <span class="fb-star" data-v="5" role="radio" tabindex="0" aria-label="5 stars">★</span>
+          </div>
+        </div>
+        <!-- Category pills -->
+        <div>
+          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">Category</div>
+          <div class="fb-cats">
+            <span class="fb-cat sel" data-cat="general">General</span>
+            <span class="fb-cat" data-cat="bug">Bug</span>
+            <span class="fb-cat" data-cat="feature">Feature Request</span>
+            <span class="fb-cat" data-cat="other">Other</span>
+          </div>
+        </div>
+        <!-- Message -->
+        <div>
+          <textarea id="fb-msg" class="fb-textarea" placeholder="Tell us what you think…" maxlength="1000" aria-label="Feedback message"></textarea>
+          <div class="fb-char-count" id="fb-char">0 / 1000</div>
+        </div>
+        <!-- Optional name -->
+        <input id="fb-name" class="fb-input" type="text" placeholder="Your name (optional)" maxlength="64" aria-label="Your name" autocomplete="off">
+        <div class="fb-footer">
+          <small>Stored on device</small>
+          <button class="fb-submit" id="fb-submit" onclick="G.submitFeedback()">Send</button>
+        </div>
+      </div>
+      <!-- Success state -->
+      <div class="fb-success" id="fb-success">
+        <div class="fb-success-icon">✓</div>
+        <h4>Thanks for the feedback!</h4>
+        <p>It helps us make Garuda better.</p>
+      </div>
+    </div>
+
+    <!-- ── Inbox tab (admin only, hidden by default) ── -->
+    <div id="fb-tab-inbox" style="display:none">
+      <div class="fb-inbox-toolbar">
+        <div class="fb-inbox-summary" id="fb-inbox-summary">Loading…</div>
+        <button class="fb-inbox-refresh" onclick="G.fbLoadInbox()" title="Refresh">↻</button>
+      </div>
+      <!-- Filter pills -->
+      <div class="fb-cats" id="fb-inbox-filters" style="margin-bottom:8px">
+        <span class="fb-cat sel" data-filter="all" onclick="G.fbFilterInbox(this)">All</span>
+        <span class="fb-cat" data-filter="bug" onclick="G.fbFilterInbox(this)">Bug</span>
+        <span class="fb-cat" data-filter="feature" onclick="G.fbFilterInbox(this)">Feature</span>
+        <span class="fb-cat" data-filter="general" onclick="G.fbFilterInbox(this)">General</span>
+        <span class="fb-cat" data-filter="other" onclick="G.fbFilterInbox(this)">Other</span>
+      </div>
+      <!-- Cards list -->
+      <div class="fb-inbox-list" id="fb-inbox-list">
+        <div class="fb-inbox-empty">No feedback yet.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bubble toggle -->
+  <button class="fb-bubble" id="fb-bubble" onclick="G.toggleFeedback()" aria-label="Open feedback" title="Send feedback">
+    <svg class="fb-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <svg class="fb-icon-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+</div>
+
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=41"></script>
+<script src="/static/app.js?v=43"></script>
 </body>
 </html>

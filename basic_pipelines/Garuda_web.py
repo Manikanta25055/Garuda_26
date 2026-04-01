@@ -143,6 +143,7 @@ MASTER_KEYS_FILE     = str(_BASE / "system_logs" / "master_keys.json")
 PERM_SYSTEM_LOG      = str(_BASE / "system_logs" / "perm_system_log.txt")
 PERM_VOICE_LOG       = str(_BASE / "system_logs" / "perm_voice_log.txt")
 PERM_DETECTION_LOG   = str(_BASE / "system_logs" / "perm_detection_log.txt")
+FEEDBACK_FILE        = str(_BASE / "system_logs" / "feedback.json")
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -1784,6 +1785,12 @@ class CustomCommandRequest(BaseModel):
 class DeleteCommandRequest(BaseModel):
     phrase: str
 
+class FeedbackRequest(BaseModel):
+    message: str
+    category: str = "general"   # bug | feature | general | other
+    rating: int   = 0           # 1-5 stars, 0 = not rated
+    name: str     = ""          # optional, anonymous if blank
+
 class OTPRequest(BaseModel):
     username: str
     password: str
@@ -2517,6 +2524,71 @@ async def events_stats(session=Depends(require_session)):
         except Exception:
             pass
     return {"pending": pending, "total": total, "online": _net_online}
+
+# ── Feedback ─────────────────────────────────────────────────────────────────
+_feedback_lock = threading.Lock()
+
+def _load_feedback() -> list:
+    try:
+        if os.path.exists(FEEDBACK_FILE):
+            with open(FEEDBACK_FILE) as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return []
+
+def _save_feedback(entries: list):
+    try:
+        _atomic_json_write(FEEDBACK_FILE, entries)
+    except Exception as e:
+        log_system_update(f"Failed to save feedback: {e}")
+
+@fastapi_app.post("/api/feedback")
+async def submit_feedback(data: FeedbackRequest, request: Request):
+    """Public endpoint — no auth required. Rate-limited to 5 per hour per IP."""
+    ip = _get_client_ip(request)
+    now = time.time()
+    # Reuse _rate_store but with a separate key to avoid conflating with API limits
+    fb_key = f"fb:{ip}"
+    stamps = _rate_store[fb_key]
+    stamps[:] = [t for t in stamps if now - t < 3600]
+    if len(stamps) >= 5:
+        raise HTTPException(429, "Too many feedback submissions. Try again later.")
+    stamps.append(now)
+
+    msg = data.message.strip()
+    if not msg:
+        raise HTTPException(400, "Message cannot be empty.")
+    if len(msg) > 1000:
+        raise HTTPException(400, "Message too long (max 1000 chars).")
+    rating = max(0, min(5, int(data.rating)))
+    category = data.category.strip().lower()
+    if category not in ("bug", "feature", "general", "other"):
+        category = "general"
+    name = data.name.strip()[:64] if data.name else ""
+
+    entry = {
+        "id": int(time.time() * 1000),
+        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "category": category,
+        "rating": rating,
+        "name": name or "Anonymous",
+        "message": msg,
+        "ip": ip,
+    }
+    with _feedback_lock:
+        entries = _load_feedback()
+        entries.append(entry)
+        _save_feedback(entries)
+    log_system_update(f"Feedback received [{category}] from {name or 'Anonymous'}")
+    return {"ok": True}
+
+@fastapi_app.get("/api/feedback")
+async def get_feedback(session=Depends(require_admin)):
+    """Admin-only — returns all stored feedback entries."""
+    with _feedback_lock:
+        entries = _load_feedback()
+    return {"feedback": entries, "count": len(entries)}
 
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
 # Uses _frame_seq to detect new frames only — avoids re-sending duplicate

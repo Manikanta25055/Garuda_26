@@ -413,6 +413,8 @@ const G = (() => {
       hudEl._hapticBound = true;
       hudEl.addEventListener('click', () => { if (navigator.vibrate) navigator.vibrate(8); });
     }
+    // Notify feedback widget so it can inject admin Inbox tab
+    if (G._afterLoginHook) G._afterLoginHook(_session);
   }
 
   function toggleTheme() {
@@ -2127,6 +2129,203 @@ const G = (() => {
 document.addEventListener('DOMContentLoaded', G.init);
 
 // Global error handlers — prevent silent crashes during demo
+// ── Feedback widget ───────────────────────────────────────────────────────────
+(function() {
+  let _fbOpen    = false;
+  let _fbRating  = 0;
+  let _fbCat     = 'general';
+  let _fbTab     = 'send';       // 'send' | 'inbox'
+  let _fbInbox   = [];           // cached inbox entries
+  let _fbFilter  = 'all';
+
+  // ── Open/close ────────────────────────────────────────────
+  G.toggleFeedback = function() {
+    _fbOpen = !_fbOpen;
+    document.getElementById('fb-panel').classList.toggle('open', _fbOpen);
+    document.getElementById('fb-bubble').classList.toggle('is-open', _fbOpen);
+    if (_fbOpen) {
+      if (_fbTab === 'send') document.getElementById('fb-msg').focus();
+      else G.fbLoadInbox();
+    }
+  };
+
+  // Close on outside click
+  document.addEventListener('pointerdown', e => {
+    if (!_fbOpen) return;
+    const wrap = document.getElementById('fb-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      _fbOpen = false;
+      document.getElementById('fb-panel').classList.remove('open');
+      document.getElementById('fb-bubble').classList.remove('is-open');
+    }
+  });
+
+  // ── Inject Inbox tab for admin after login ─────────────────
+  // Called from afterLogin() by hooking into G
+  const _origAfterLogin = G._afterLoginHook || null;
+  G._afterLoginHook = function(session) {
+    if (_origAfterLogin) _origAfterLogin(session);
+    if (session && session.role === 'admin') {
+      const tabs = document.getElementById('fb-tabs');
+      if (tabs && !tabs.querySelector('[data-tab="inbox"]')) {
+        const btn = document.createElement('button');
+        btn.className = 'fb-tab';
+        btn.dataset.tab = 'inbox';
+        btn.textContent = 'Inbox';
+        btn.onclick = () => G.fbSwitchTab('inbox');
+        tabs.appendChild(btn);
+      }
+    }
+  };
+
+  // ── Tab switching ──────────────────────────────────────────
+  G.fbSwitchTab = function(tab) {
+    _fbTab = tab;
+    document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+    document.getElementById('fb-tab-send').style.display  = tab === 'send'  ? '' : 'none';
+    document.getElementById('fb-tab-inbox').style.display = tab === 'inbox' ? '' : 'none';
+    if (tab === 'inbox') G.fbLoadInbox();
+  };
+
+  // ── Inbox ──────────────────────────────────────────────────
+  G.fbLoadInbox = async function() {
+    const btn = document.querySelector('.fb-inbox-refresh');
+    if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 600); }
+    try {
+      const data = await api('GET', '/api/feedback');
+      _fbInbox = (data.feedback || []).reverse(); // newest first
+      _fbFilter = 'all';
+      document.querySelectorAll('#fb-inbox-filters .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.filter === 'all'));
+      _fbRenderInbox();
+    } catch {
+      document.getElementById('fb-inbox-summary').textContent = 'Failed to load.';
+    }
+  };
+
+  G.fbFilterInbox = function(el) {
+    _fbFilter = el.dataset.filter;
+    document.querySelectorAll('#fb-inbox-filters .fb-cat').forEach(c => c.classList.toggle('sel', c === el));
+    _fbRenderInbox();
+  };
+
+  function _fbRenderInbox() {
+    const list    = document.getElementById('fb-inbox-list');
+    const summary = document.getElementById('fb-inbox-summary');
+    const entries = _fbFilter === 'all' ? _fbInbox : _fbInbox.filter(e => e.category === _fbFilter);
+
+    // Summary stats
+    const total = _fbInbox.length;
+    const rated = _fbInbox.filter(e => e.rating > 0);
+    const avg   = rated.length ? (rated.reduce((s, e) => s + e.rating, 0) / rated.length).toFixed(1) : null;
+    summary.textContent = total + ' entr' + (total === 1 ? 'y' : 'ies') + (avg ? ' · avg ' + avg + ' ★' : '');
+
+    if (!entries.length) {
+      list.innerHTML = '<div class="fb-inbox-empty">' + (_fbFilter === 'all' ? 'No feedback yet.' : 'No entries for this category.') + '</div>';
+      return;
+    }
+
+    list.innerHTML = entries.map(e => {
+      const stars = e.rating > 0 ? '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating) : '';
+      const catCls = 'fb-card-cat ' + esc(e.category);
+      return `<div class="fb-card">
+        <div class="fb-card-header">
+          <span class="fb-card-name">${esc(e.name || 'Anonymous')}</span>
+          ${stars ? `<span class="fb-card-stars">${stars}</span>` : ''}
+        </div>
+        <div class="fb-card-meta">
+          <span class="${catCls}">${esc(e.category)}</span>
+          <span class="fb-card-time">${esc(e.timestamp)}</span>
+        </div>
+        <div class="fb-card-msg">${esc(e.message)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Star rating ────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.fb-star').forEach(s => {
+      const v = parseInt(s.dataset.v);
+      s.addEventListener('pointerenter', () => _highlightStars(v));
+      s.addEventListener('pointerleave', () => _highlightStars(_fbRating));
+      s.addEventListener('click', () => { _fbRating = v; _highlightStars(v); });
+      s.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { _fbRating = v; _highlightStars(v); } });
+    });
+
+    // Send-tab category pills only (not inbox filter pills — those use onclick)
+    document.querySelectorAll('#fb-tab-send .fb-cat').forEach(el => {
+      el.addEventListener('click', () => {
+        document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.remove('sel'));
+        el.classList.add('sel');
+        _fbCat = el.dataset.cat;
+      });
+    });
+
+    // Char counter
+    const msg = document.getElementById('fb-msg');
+    const counter = document.getElementById('fb-char');
+    if (msg && counter) {
+      msg.addEventListener('input', () => {
+        const n = msg.value.length;
+        counter.textContent = n + ' / 1000';
+        counter.className = 'fb-char-count' + (n > 900 ? (n >= 1000 ? ' over' : ' near') : '');
+      });
+    }
+  });
+
+  function _highlightStars(upTo) {
+    document.querySelectorAll('.fb-star').forEach(s => {
+      s.classList.toggle('lit', parseInt(s.dataset.v) <= upTo);
+    });
+  }
+
+  // ── Submit ─────────────────────────────────────────────────
+  G.submitFeedback = async function() {
+    const msg = document.getElementById('fb-msg').value.trim();
+    const name = document.getElementById('fb-name').value.trim();
+    if (!msg) { document.getElementById('fb-msg').focus(); return; }
+
+    const btn = document.getElementById('fb-submit');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    try {
+      const r = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: msg, category: _fbCat, rating: _fbRating, name })
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        showToast(err.detail || 'Failed to send feedback.', 'error');
+        btn.disabled = false; btn.textContent = 'Send';
+        return;
+      }
+      document.getElementById('fb-form-body').style.display = 'none';
+      document.getElementById('fb-success').classList.add('show');
+      setTimeout(() => {
+        _fbOpen = false;
+        document.getElementById('fb-panel').classList.remove('open');
+        document.getElementById('fb-bubble').classList.remove('is-open');
+        setTimeout(() => {
+          document.getElementById('fb-form-body').style.display = '';
+          document.getElementById('fb-success').classList.remove('show');
+          document.getElementById('fb-msg').value = '';
+          document.getElementById('fb-name').value = '';
+          document.getElementById('fb-char').textContent = '0 / 1000';
+          document.getElementById('fb-char').className = 'fb-char-count';
+          _fbRating = 0; _fbCat = 'general';
+          _highlightStars(0);
+          document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.cat === 'general'));
+          btn.disabled = false; btn.textContent = 'Send';
+        }, 400);
+      }, 2800);
+    } catch {
+      showToast('Network error. Please try again.', 'error');
+      btn.disabled = false; btn.textContent = 'Send';
+    }
+  };
+})();
+
 window.addEventListener('unhandledrejection', e => {
   console.warn('[Garuda] Unhandled promise:', e.reason);
 });
