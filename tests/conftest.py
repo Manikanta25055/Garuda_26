@@ -195,6 +195,8 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw, 'ALERT_HISTORY_FILE',  str(tmp_data / 'system_logs/alert_history.json'))
     monkeypatch.setattr(gw, 'PRESENCE_LOG_FILE',   str(tmp_data / 'system_logs/presence_log.json'))
     monkeypatch.setattr(gw, 'MASTER_KEYS_FILE',    str(tmp_data / 'system_logs/master_keys.json'))
+    monkeypatch.setattr(gw, 'FEEDBACK_FILE',       str(tmp_data / 'system_logs/feedback.json'))
+    monkeypatch.setattr(gw, 'FEEDBACK_BACKUP_FILE', str(tmp_data / 'system_logs/feedback.backup.json'))
     monkeypatch.setattr(gw, 'EVENTS_DB',           str(tmp_data / 'system_logs/garuda_events.db'))
     monkeypatch.setattr(gw, 'PERM_SYSTEM_LOG',     str(tmp_data / 'system_logs/perm_system_log.txt'))
     monkeypatch.setattr(gw, 'PERM_VOICE_LOG',      str(tmp_data / 'system_logs/perm_voice_log.txt'))

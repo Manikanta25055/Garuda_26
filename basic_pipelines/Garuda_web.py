@@ -144,6 +144,7 @@ PERM_SYSTEM_LOG      = str(_BASE / "system_logs" / "perm_system_log.txt")
 PERM_VOICE_LOG       = str(_BASE / "system_logs" / "perm_voice_log.txt")
 PERM_DETECTION_LOG   = str(_BASE / "system_logs" / "perm_detection_log.txt")
 FEEDBACK_FILE        = str(_BASE / "system_logs" / "feedback.json")
+FEEDBACK_BACKUP_FILE = str(_BASE / "system_logs" / "feedback.backup.json")
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -240,6 +241,15 @@ def _atomic_json_write(filepath: str, data):
         except OSError:
             pass
         raise
+
+def _safe_json_load(filepath: str, default):
+    try:
+        if os.path.exists(filepath):
+            with open(filepath, encoding="utf-8") as f:
+                return json.load(f)
+    except Exception as e:
+        log_system_update(f"Failed to read {os.path.basename(filepath)}: {e}")
+    return default
 
 # ── Rate limiter (in-memory, per-IP) ────────────────────
 _rate_store: dict = defaultdict(list)   # IP → [timestamps]
@@ -2534,17 +2544,23 @@ async def events_stats(session=Depends(require_session)):
 _feedback_lock = threading.Lock()
 
 def _load_feedback() -> list:
-    try:
-        if os.path.exists(FEEDBACK_FILE):
-            with open(FEEDBACK_FILE) as f:
-                return json.load(f)
-    except Exception:
-        pass
+    entries = _safe_json_load(FEEDBACK_FILE, None)
+    if isinstance(entries, list):
+        return entries
+    backup_entries = _safe_json_load(FEEDBACK_BACKUP_FILE, [])
+    if isinstance(backup_entries, list):
+        if backup_entries:
+            try:
+                _atomic_json_write(FEEDBACK_FILE, backup_entries)
+            except Exception as e:
+                log_system_update(f"Failed to restore feedback from backup: {e}")
+        return backup_entries
     return []
 
 def _save_feedback(entries: list):
     try:
         _atomic_json_write(FEEDBACK_FILE, entries)
+        _atomic_json_write(FEEDBACK_BACKUP_FILE, entries)
     except Exception as e:
         log_system_update(f"Failed to save feedback: {e}")
 

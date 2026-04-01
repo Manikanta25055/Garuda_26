@@ -107,3 +107,42 @@ def test_webrtc_offer_returns_501_when_webrtc_disabled(app_client, user_headers,
     monkeypatch.setattr(gw, '_WEBRTC_AVAILABLE', False)
     r = app_client.post('/webrtc/offer', json={'sdp': 'offer', 'type': 'offer'}, headers=user_headers)
     assert r.status_code == 501
+
+
+def test_feedback_is_persisted_to_primary_and_backup_files(app_client):
+    r = app_client.post('/api/feedback', json={
+        'message': 'Keep this permanently',
+        'category': 'general',
+        'rating': 5,
+        'name': 'Tester',
+    })
+    assert r.status_code == 200
+    assert r.json() == {'ok': True}
+
+    primary = gw._safe_json_load(gw.FEEDBACK_FILE, [])
+    backup = gw._safe_json_load(gw.FEEDBACK_BACKUP_FILE, [])
+    assert len(primary) == 1
+    assert len(backup) == 1
+    assert primary[0]['message'] == 'Keep this permanently'
+    assert backup[0]['message'] == 'Keep this permanently'
+
+
+def test_feedback_load_recovers_from_backup_when_primary_is_invalid(app_client):
+    entries = [{
+        'id': 1,
+        'timestamp': '2026-04-01 12:00:00',
+        'category': 'general',
+        'rating': 4,
+        'name': 'Tester',
+        'message': 'Recovered from backup',
+        'ip': '127.0.0.1',
+    }]
+    gw._atomic_json_write(gw.FEEDBACK_BACKUP_FILE, entries)
+    with open(gw.FEEDBACK_FILE, 'w', encoding='utf-8') as f:
+        f.write('{broken json')
+
+    loaded = gw._load_feedback()
+    restored_primary = gw._safe_json_load(gw.FEEDBACK_FILE, [])
+
+    assert loaded == entries
+    assert restored_primary == entries
