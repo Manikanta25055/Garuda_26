@@ -885,32 +885,47 @@
     <div class="docs-body">
       <div class="docs-tabs">
         <button class="docs-tab active" onclick="G.switchDocsTab(this,'docs-overview')">Overview</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-dashboard')">Dashboard</button>
         <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-detection')">Detection</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-auth')">Authentication</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-narada')">Narada</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-admin')">Admin</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-access')">Access</button>
         <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-stack')">Stack</button>
       </div>
 
       <div id="docs-overview" class="docs-section active">
         <h3>Garuda Security System</h3>
-        <p>AI-powered home security running on Raspberry Pi 5 with Hailo-8L neural processor. Real-time object detection at 30+ FPS with configurable danger alerts.</p>
-        <h4>Detection Pipeline</h4>
+        <p>Garuda is a full-stack AI security console built for Raspberry Pi 5 and Hailo-8L. It combines live detection, mode control, owner presence, admin operations, Narada AI assistance, logs, and feedback in one interface.</p>
+        <h4>Main Surfaces</h4>
         <div class="docs-flow">
-          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Camera capture</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Sign in</div>
           <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">2</span> Hailo inference</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span> Dashboard</div>
           <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Post-processing</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Narada / Chat</div>
           <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">4</span> Alert logic</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">4</span> Admin tools</div>
         </div>
-        <h4>System Modes</h4>
-        <p>Control system behavior with toggleable modes: <code>Privacy Blur</code> obscures faces, <code>Night Mode</code> enables high-priority alerts, <code>DND</code> suppresses all alerts, <code>Emergency</code> overrides DND for critical situations.</p>
+        <h4>What the app includes</h4>
+        <p>Live camera and floor plan views, Dynamic Island system states, alert history heatmap, activity timeline, recent detections, voice quick commands, LLM chat, email alerts, known-device presence detection, logs export, custom Narada phrases, master-key access, and a server-side feedback inbox for admin.</p>
+      </div>
+
+      <div id="docs-dashboard" class="docs-section">
+        <h3>Dashboard</h3>
+        <h4>Live monitoring</h4>
+        <p>The dashboard is the main operational view. It shows the current security state, live uptime, last alert time, threshold, pipeline status, and owner-home status.</p>
+        <h4>Center stage</h4>
+        <p>The camera card supports <code>Live</code> and <code>Floor Plan</code> tabs. Below it, the <strong>Alert Activity</strong> heatmap visualizes detections over recent weeks.</p>
+        <h4>Side panels</h4>
+        <p>The left column exposes <strong>System Modes</strong> and <strong>Hub Health</strong> for CPU, RAM, temperature, FPS, and disk. The right column shows the date-filtered <strong>Activity</strong> timeline and <strong>Recent Detections</strong>.</p>
+        <h4>Dynamic Island</h4>
+        <p>The top Dynamic Island reflects key real-time states such as alerts, all clear, Narada activity, and chat thinking, so the app status remains visible across pages.</p>
       </div>
 
       <div id="docs-detection" class="docs-section">
-        <h3>Detection System</h3>
-        <h4>How it works</h4>
-        <p>YOLOv6n model runs on the Hailo-8L at 30+ FPS. Each frame is analyzed for objects matching COCO class labels. Detections above the confidence threshold are logged.</p>
+        <h3>Detection and Alerting</h3>
+        <h4>Pipeline</h4>
+        <p>YOLOv6n runs on the Hailo-8L and processes camera frames in real time. Detected classes above the configured confidence threshold are evaluated against alert rules and watch rules.</p>
         <h4>Alert Logic</h4>
         <div class="docs-flow">
           <div class="docs-flow-step"><span class="docs-flow-num">1</span> Object detected</div>
@@ -921,14 +936,41 @@
           <span class="docs-flow-arrow">→</span>
           <div class="docs-flow-step"><span class="docs-flow-num">4</span> Send email</div>
         </div>
-        <h4>Categories</h4>
-        <p><strong>Danger labels</strong> (default: <code>scissors</code>) trigger visual + audio + email alerts. <strong>Watch labels</strong> (e.g. <code>person</code>, <code>backpack</code>) are silently logged without triggering alerts.</p>
-        <p>Detection threshold (0.05–0.95) controls sensitivity. Lower values detect more objects but may produce false positives.</p>
+        <h4>Detection controls</h4>
+        <p><strong>Danger Label</strong> defines the object that triggers an alert. <strong>Watch Labels</strong> are logged silently without escalating. <strong>Detection Threshold</strong> controls model sensitivity from 0.05 to 0.95.</p>
+        <h4>Operational modes</h4>
+        <p><code>Privacy Blur</code> obscures faces, <code>Night Mode</code> increases alert readiness, <code>DND</code> suppresses disturbances, <code>Idle</code> changes system behavior for standby, <code>Email Alerts Off</code> disables email delivery, and <code>Emergency</code> overrides quieter modes.</p>
       </div>
 
-      <div id="docs-auth" class="docs-section">
-        <h3>Authentication</h3>
-        <h4>Login Flow</h4>
+      <div id="docs-narada" class="docs-section">
+        <h3>Narada Assistant</h3>
+        <h4>Voice page</h4>
+        <p>The Narada page is optimized for quick spoken control. It presents voice activity output and one-tap quick commands for common mode changes such as DND, Night, Emergency, Idle, and Privacy.</p>
+        <h4>Chat page</h4>
+        <p>The dedicated chat interface supports natural-language requests. Narada can answer questions about the pipeline, settings, hardware, and recent app context, and can also execute supported control commands.</p>
+        <h4>Configuration</h4>
+        <p>Narada uses a Groq API key configured in admin settings. The UI also includes a model/rate-limit explainer so operators understand quota limits for different LLM tiers.</p>
+        <h4>Custom commands</h4>
+        <p>Admins can teach Narada additional phrases and canned responses from the <strong>Custom Commands</strong> page. These become reusable voice/chat shortcuts inside the app.</p>
+      </div>
+
+      <div id="docs-admin" class="docs-section">
+        <h3>Admin Controls</h3>
+        <h4>Email Settings</h4>
+        <p>Configure the sender Gmail account, app password, recipients, and alert cooldown. A built-in <code>Send Test Email</code> action validates delivery from the UI.</p>
+        <h4>System Settings</h4>
+        <p>The admin settings page includes security-health checks, detection threshold, danger label, privacy toggle, known-device management, Groq API key storage, watch labels, and master-key administration.</p>
+        <h4>Known Devices</h4>
+        <p>Owner presence is tracked using known MAC addresses. The app includes network scanning helpers and mobile-device guidance for private/random MAC settings.</p>
+        <h4>Logs and exports</h4>
+        <p>The logs page separates <strong>System</strong>, <strong>Detection</strong>, <strong>Presence</strong>, and <strong>Voice</strong> logs. Admins can filter the current session, export the session log, or download the full combined log archive.</p>
+        <h4>Feedback</h4>
+        <p>The feedback widget stores submissions on the server only. Normal users can submit feedback, while admins can review the inbox from the app. Feedback is persisted on disk with backup recovery.</p>
+      </div>
+
+      <div id="docs-access" class="docs-section">
+        <h3>Access and Security</h3>
+        <h4>Login flows</h4>
         <div class="docs-flow">
           <div class="docs-flow-step"><span class="docs-flow-num">1</span> Credentials</div>
           <span class="docs-flow-arrow">→</span>
@@ -936,9 +978,11 @@
           <span class="docs-flow-arrow">→</span>
           <div class="docs-flow-step"><span class="docs-flow-num">3</span> Session token</div>
         </div>
-        <p><strong>Users</strong> log in with username + password. <strong>Admins</strong> require an additional OTP sent via email. <strong>Master Keys</strong> provide instant admin access and unlock the logs page.</p>
+        <p><strong>Users</strong> sign in with username and password. <strong>Admins</strong> authenticate with credentials plus OTP. <strong>Master Keys</strong> can grant instant admin access and are also used to unlock the logs area.</p>
         <h4>Session Management</h4>
         <p>Sessions expire after 1 hour (admin) or 5 days (user with "Remember me"). Tokens are stored as HTTP-only cookies for same-origin requests and in localStorage for cross-origin access.</p>
+        <h4>Additional safeguards</h4>
+        <p>The app enforces per-IP rate limits on sensitive routes, keeps admin-only endpoints protected, and separates public data from privileged settings and logs.</p>
       </div>
 
       <div id="docs-stack" class="docs-section">
@@ -949,8 +993,13 @@
           <div class="docs-stack-item"><strong>YOLOv6n</strong><span>Lightweight object detection model optimized for edge</span></div>
           <div class="docs-stack-item"><strong>GStreamer</strong><span>Media pipeline for camera capture and processing</span></div>
           <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python web framework with WebSocket support</span></div>
+          <div class="docs-stack-item"><strong>WebSockets + SSE</strong><span>Real-time state and streamed chat updates in the UI</span></div>
+          <div class="docs-stack-item"><strong>Groq</strong><span>External LLM provider for Narada voice and chat intelligence</span></div>
+          <div class="docs-stack-item"><strong>Local JSON persistence</strong><span>Server-side storage for users, config, logs, alert history, and feedback</span></div>
           <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Secure remote access without port forwarding</span></div>
         </div>
+        <h4>Frontend capabilities</h4>
+        <p>The web UI includes theme switching, a responsive dashboard, mobile-adapted bottom navigation, interactive logs, an AI chat shell, and live status surfaces coordinated with the backend state.</p>
       </div>
     </div>
 
