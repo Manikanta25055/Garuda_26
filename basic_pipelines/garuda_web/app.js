@@ -1133,8 +1133,8 @@ const G = (() => {
   function _syncFeedbackVisibility() {
     const appEl = $('app');
     if (!appEl) return;
-    const hideOnMobile = !appEl.classList.contains('logged-in') || _currentPage === 'chat';
-    appEl.classList.toggle('fb-hide-mobile', hideOnMobile);
+    const shouldHide = !appEl.classList.contains('logged-in') || _currentPage === 'chat';
+    appEl.classList.toggle('fb-hidden', shouldHide);
   }
 
   // ── Navigation ────────────────────────────────────────────
@@ -2458,4 +2458,4 @@ document.addEventListener('keydown', e => {
   else if (lv3 && !lv3.classList.contains('hidden')) G.verifyAdminOTP();
 });
 
-document.getElementById('app')?.classList.add('fb-hide-mobile');
+document.getElementById('app')?.classList.add('fb-hidden');
