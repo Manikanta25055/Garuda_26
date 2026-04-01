@@ -2300,8 +2300,15 @@ async def master_key_login(data: dict, request: Request, response: Response):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
     key = (data.get("key") or "").strip()
-    if not key or key not in MASTER_KEYS:
+    # Also accept the bootstrap env var key in case keys file hasn't been written yet
+    _env_key = os.environ.get("MASTER_KEY", "").strip()
+    valid_keys = set(MASTER_KEYS) | ({_env_key} if _env_key else set())
+    if not key or key not in valid_keys:
         raise HTTPException(401, "Invalid master key.")
+    # Persist env key to file so future restarts find it
+    if key not in MASTER_KEYS:
+        MASTER_KEYS.append(key)
+        save_master_keys()
     token = create_master_session()
     response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
     log_system_update("Master key login.")
