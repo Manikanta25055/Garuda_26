@@ -53,7 +53,7 @@ if is_sourced; then
         # Get the directory of the current script
         SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
         # Check if we are in the defined virtual environment
-        if [[ "$VIRTUAL_ENV" == *"$VENV_NAME"* ]]; then
+        if [[ "${VIRTUAL_ENV:-}" == *"$VENV_NAME"* ]]; then
             echo "You are in the $VENV_NAME virtual environment."
         else
             echo "You are not in the $VENV_NAME virtual environment."
@@ -70,7 +70,7 @@ if is_sourced; then
         TAPPAS_POST_PROC_DIR=$(pkg-config --variable=tappas_postproc_lib_dir hailo-tappas-core)
     else
         # Check if we are in the defined virtual environment
-        if [[ "$VIRTUAL_ENV" == *"$VENV_NAME"* ]]; then
+        if [[ "${VIRTUAL_ENV:-}" == *"$VENV_NAME"* ]]; then
             echo "You are in the $VENV_NAME virtual environment."
         else
             echo "You are not in the $VENV_NAME virtual environment."

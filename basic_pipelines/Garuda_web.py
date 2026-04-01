@@ -119,6 +119,8 @@ EMAIL_SENDER_PASS = os.environ.get("EMAIL_SENDER_PASS", "")
 EMAIL_RECIPIENTS = ["amarmanikantan@gmail.com"]
 EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
+_email_lock = threading.Lock()
+_danger_active = False   # True while danger label is continuously detected
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL   = "llama-3.3-70b-versatile"
@@ -349,6 +351,7 @@ def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
     global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
     global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABEL
+    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
     # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are NOT loaded from config.json —
     # they live exclusively in .env / environment variables for security.
     if os.path.exists(CONFIG_FILE):
@@ -364,6 +367,14 @@ def load_config():
             KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
             WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
             DANGER_LABEL = cfg.get("danger_label", DANGER_LABEL)
+            # Restore persisted mode states
+            modes = cfg.get("modes", {})
+            MODE_DND       = bool(modes.get("dnd",       MODE_DND))
+            MODE_EMAIL_OFF = bool(modes.get("email_off", MODE_EMAIL_OFF))
+            MODE_IDLE      = bool(modes.get("idle",      MODE_IDLE))
+            MODE_NIGHT     = bool(modes.get("night",     MODE_NIGHT))
+            MODE_EMERGENCY = bool(modes.get("emergency", MODE_EMERGENCY))
+            MODE_PRIVACY   = bool(modes.get("privacy",   MODE_PRIVACY))
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
 
@@ -373,7 +384,20 @@ def _load_alert_history():
     try:
         if os.path.exists(ALERT_HISTORY_FILE):
             with open(ALERT_HISTORY_FILE) as f:
-                _alert_history = json.load(f)
+                data = json.load(f)
+            if isinstance(data, dict):
+                _alert_history = data
+            elif isinstance(data, list):
+                # Legacy list format — migrate to {date: count} by counting entries per day
+                migrated: dict = {}
+                for entry in data:
+                    if isinstance(entry, dict) and "timestamp" in entry:
+                        day = entry["timestamp"][:10]
+                        migrated[day] = migrated.get(day, 0) + 1
+                _alert_history = migrated
+                _atomic_json_write(ALERT_HISTORY_FILE, _alert_history)
+            else:
+                _alert_history = {}
     except Exception:
         _alert_history = {}
 
@@ -448,14 +472,39 @@ def save_config():
             "known_devices": KNOWN_DEVICES,
             "watch_labels": WATCH_LABELS,
             "danger_label": DANGER_LABEL,
+            "modes": {
+                "dnd":       MODE_DND,
+                "email_off": MODE_EMAIL_OFF,
+                "idle":      MODE_IDLE,
+                "night":     MODE_NIGHT,
+                "emergency": MODE_EMERGENCY,
+                "privacy":   MODE_PRIVACY,
+            },
         }
         _atomic_json_write(CONFIG_FILE, cfg)
     except Exception as e:
         log_system_update(f"Failed to save config: {e}")
 
+def _load_logs_from_disk():
+    """Populate in-memory log lists from permanent files on startup (last 500 lines each)."""
+    global system_updates_log, voice_assistant_log, _detection_log
+    def _tail(path, n=500):
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            return [l.rstrip("\n") for l in lines[-n:]]
+        except FileNotFoundError:
+            return []
+        except Exception:
+            return []
+    system_updates_log[:] = _tail(PERM_SYSTEM_LOG)
+    voice_assistant_log[:] = _tail(PERM_VOICE_LOG)
+    _detection_log[:] = _tail(PERM_DETECTION_LOG)
+
 load_users()
 load_config()
 load_master_keys()
+_load_logs_from_disk()
 
 ##############################################################################
 # HELPERS
@@ -815,10 +864,11 @@ def send_email_alert():
         night = MODE_NIGHT
     if email_off or idle:
         return
-    current_time = time.time()
-    if (current_time - last_email_sent_time) < EMAIL_COOLDOWN:
-        return
-    last_email_sent_time = current_time
+    with _email_lock:
+        current_time = time.time()
+        if (current_time - last_email_sent_time) < EMAIL_COOLDOWN:
+            return
+        last_email_sent_time = current_time
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     subject = "Scissors Detected Alert"
     if emergency:
@@ -945,21 +995,27 @@ def app_callback(pad, info, user_data):
     if det_count > 0:
         _detections_today += det_count
 
+    global _danger_active
     if danger_detected:
         global _danger_trigger_info
         _danger_trigger_info = text_info   # snapshot the frame that triggered
         _captured_conf = _last_danger_conf
         _captured_label = user_data.danger_label
         threading.Thread(target=trigger_software_alert, daemon=True).start()
-        threading.Thread(target=send_email_alert, daemon=True).start()
-        # Log danger to permanent log at most once per 60s to avoid per-frame spam
-        _danger_key = "__danger__"
-        _now = time.time()
-        if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
-            _watch_last_logged[_danger_key] = _now
-            threading.Thread(target=log_scissors_detection, daemon=True).start()
-            threading.Thread(target=lambda: _append_detection_perm(
-                "DANGER", _captured_label, _captured_conf, "alert triggered"), daemon=True).start()
+        if not _danger_active:
+            # Rising edge: first frame where danger is seen — send one email
+            _danger_active = True
+            threading.Thread(target=send_email_alert, daemon=True).start()
+            # Log to permanent log at most once per 60s
+            _danger_key = "__danger__"
+            _now = time.time()
+            if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
+                _watch_last_logged[_danger_key] = _now
+                threading.Thread(target=log_scissors_detection, daemon=True).start()
+                threading.Thread(target=lambda: _append_detection_perm(
+                    "DANGER", _captured_label, _captured_conf, "alert triggered"), daemon=True).start()
+    else:
+        _danger_active = False  # Reset when danger clears; next detection gets a fresh email
 
     user_data.person_detected = any(d.get_label() == "person" for d in detections)
 
@@ -1172,6 +1228,7 @@ def apply_rule_based_command(user_input_lower):
             MODE_PRIVACY = False; response = "Privacy masking disabled."
 
     if response:
+        save_config()
         return response
     if "time" in user_input_lower or "clock" in user_input_lower:
         return f"The time is {datetime.datetime.now().strftime('%I:%M %p')}."
@@ -1328,6 +1385,7 @@ def _apply_llm_result(llm_result):
             globals()["MODE_DND"] = False
         if MODE_NIGHT:
             globals()["MODE_DND"] = False
+    save_config()
     push_urgent_ws()
     return llm_result.get("response") or "Done."
 
@@ -2037,6 +2095,7 @@ async def set_mode(data: ModeRequest, session=Depends(require_admin)):
             MODE_DND = False
         if MODE_NIGHT:
             MODE_DND = False
+    save_config()
     log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
     push_urgent_ws()
     return {"ok": True, "modes": get_state_dict()["modes"]}
