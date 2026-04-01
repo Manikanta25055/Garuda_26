@@ -455,6 +455,7 @@ def save_config():
 
 load_users()
 load_config()
+load_master_keys()
 
 ##############################################################################
 # HELPERS
