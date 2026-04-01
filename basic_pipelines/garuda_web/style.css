@@ -4105,27 +4105,18 @@ input:-webkit-autofill:focus {
 /* Mobile — panel sits above the bottom nav (68px tall) */
 @media (max-width: 768px) {
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
-  #app:not(.logged-in) .fb-wrap {
-    top: auto;
-    left: auto;
-    bottom: calc(12px + env(safe-area-inset-bottom));
-    right: 12px;
-    align-items: flex-end;
-  }
+  /* Always hide feedback bubble on mobile for login screen and chat page */
+  #app:not(.logged-in) .fb-wrap,
+  #app.fb-hidden .fb-wrap { display: none !important; }
   .fb-panel { width: min(320px, calc(100vw - 32px)); max-height: min(68vh, 520px); overflow-y: auto; }
   .fb-textarea { height: 70px; }
   .fb-bubble { width: 46px; height: 46px; }
+  /* Prevent iOS zoom on all inputs */
+  input, textarea, select { font-size: 16px !important; }
 }
 /* Very small screens — go full width */
 @media (max-width: 400px) {
   .fb-wrap { bottom: calc(88px + env(safe-area-inset-bottom)); right: 12px; left: auto; }
-  #app:not(.logged-in) .fb-wrap {
-    top: auto;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-    right: 12px;
-    left: auto;
-    align-items: flex-end;
-  }
   .fb-bubble { align-self: flex-end; }
   .fb-panel { width: min(320px, calc(100vw - 24px)); }
   .fb-stars { gap: 6px; }

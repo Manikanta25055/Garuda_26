@@ -1133,7 +1133,10 @@ const G = (() => {
   function _syncFeedbackVisibility() {
     const appEl = $('app');
     if (!appEl) return;
-    const shouldHide = !appEl.classList.contains('logged-in') || _currentPage === 'chat';
+    const isMobile = window.innerWidth <= 768;
+    // Hide when not logged in; on mobile also hide on chat page (overlaps send button)
+    const shouldHide = !appEl.classList.contains('logged-in') ||
+                       (isMobile && _currentPage === 'chat');
     appEl.classList.toggle('fb-hidden', shouldHide);
   }
 
@@ -1553,17 +1556,27 @@ const G = (() => {
     const hpills = $('header-pills');
     if (!grid) return;
 
-    // Dashboard list rows
-    grid.innerHTML = '';
+    // Update rows in-place (preserves CSS transitions); create if first render
     MODE_CFG.forEach(m => {
       const isOn = !!modes[m.key];
-      const row = mk('div', `mode-row${isOn ? ' on' : ''} ${m.cls}`);
-      row.innerHTML = `
-        <div class="mode-row-icon">${m.icon}</div>
-        <span class="mode-row-label">${m.label}</span>
-        <div class="mode-toggle${isOn ? ' on' : ''}"></div>`;
-      row.onclick = () => toggleMode(m.key, isOn);
-      grid.appendChild(row);
+      let row = grid.querySelector(`[data-mode="${m.key}"]`);
+      if (!row) {
+        row = mk('div', `mode-row ${m.cls}`);
+        row.dataset.mode = m.key;
+        row.innerHTML = `
+          <div class="mode-row-icon">${m.icon}</div>
+          <span class="mode-row-label">${m.label}</span>
+          <div class="mode-toggle"></div>`;
+        row.addEventListener('click', () => {
+          const currentOn = row.classList.contains('on');
+          toggleMode(m.key, currentOn);
+        });
+        grid.appendChild(row);
+      }
+      // Smooth in-place state update (CSS transitions play)
+      row.classList.toggle('on', isOn);
+      const toggle = row.querySelector('.mode-toggle');
+      if (toggle) toggle.classList.toggle('on', isOn);
     });
 
     // Header pills — only active modes
@@ -1577,9 +1590,26 @@ const G = (() => {
     }
   }
 
-  async function toggleMode(mode, currentVal) {
-    try { await api('POST', '/api/modes', { mode, value: !currentVal }); }
-    catch(e) { console.error(e); }
+  async function toggleMode(mode, currentOn) {
+    // Optimistic update — flip immediately without waiting for WS tick
+    const row = $('modes-pills')?.querySelector(`[data-mode="${mode}"]`);
+    if (row) {
+      row.classList.toggle('on', !currentOn);
+      const toggle = row.querySelector('.mode-toggle');
+      if (toggle) toggle.classList.toggle('on', !currentOn);
+    }
+    try {
+      await api('POST', '/api/modes', { mode, value: !currentOn });
+    } catch(e) {
+      console.error(e);
+      // Revert on failure
+      if (row) {
+        row.classList.toggle('on', currentOn);
+        const toggle = row.querySelector('.mode-toggle');
+        if (toggle) toggle.classList.toggle('on', currentOn);
+      }
+      showToast('Failed to update mode.', 'error');
+    }
   }
 
   // ── Admin: Email ──────────────────────────────────────────
