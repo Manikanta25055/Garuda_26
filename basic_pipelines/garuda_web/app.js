@@ -1275,7 +1275,7 @@ const G = (() => {
         <div class="tl-dot ${item.type}"></div>
         <div class="tl-body">
           <div class="tl-title">${esc(item.text)}</div>
-          <div class="tl-time">${item.time}</div>
+          <div class="tl-time">${esc(item.time)}</div>
         </div>
       </div>`
     ).join('');
