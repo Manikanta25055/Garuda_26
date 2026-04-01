@@ -39,6 +39,7 @@ import subprocess
 import asyncio
 import threading
 import hashlib
+import hmac
 import tempfile
 import re
 from pathlib import Path
@@ -128,17 +129,18 @@ DANGER_LABEL = "scissors"
 ##############################################################################
 app_gst = None  # GStreamer app instance
 
-SCISSORS_LOG_FILE = "danger_sightings.txt"
-NIGHT_MODE_LOG_FILE = "night_mode_findings.txt"
-LLM_LOG_FILE = "system_logs/llm_reasoning.json"
-USERS_FILE = "system_logs/users.json"
-CONFIG_FILE          = "system_logs/config.json"
-ALERT_HISTORY_FILE   = "system_logs/alert_history.json"
-PRESENCE_LOG_FILE    = "system_logs/presence_log.json"
-MASTER_KEYS_FILE     = "system_logs/master_keys.json"
-PERM_SYSTEM_LOG      = "system_logs/perm_system_log.txt"
-PERM_VOICE_LOG       = "system_logs/perm_voice_log.txt"
-PERM_DETECTION_LOG   = "system_logs/perm_detection_log.txt"
+_BASE = Path(__file__).parent
+SCISSORS_LOG_FILE    = str(_BASE / "danger_sightings.txt")
+NIGHT_MODE_LOG_FILE  = str(_BASE / "night_mode_findings.txt")
+LLM_LOG_FILE         = str(_BASE / "system_logs" / "llm_reasoning.json")
+USERS_FILE           = str(_BASE / "system_logs" / "users.json")
+CONFIG_FILE          = str(_BASE / "system_logs" / "config.json")
+ALERT_HISTORY_FILE   = str(_BASE / "system_logs" / "alert_history.json")
+PRESENCE_LOG_FILE    = str(_BASE / "system_logs" / "presence_log.json")
+MASTER_KEYS_FILE     = str(_BASE / "system_logs" / "master_keys.json")
+PERM_SYSTEM_LOG      = str(_BASE / "system_logs" / "perm_system_log.txt")
+PERM_VOICE_LOG       = str(_BASE / "system_logs" / "perm_voice_log.txt")
+PERM_DETECTION_LOG   = str(_BASE / "system_logs" / "perm_detection_log.txt")
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -147,8 +149,11 @@ _detection_log: List[str] = []   # in-memory recent detection events (danger + w
 latest_detection_info = ""
 
 ADMIN_OTP = None
+_admin_otp_user: str | None = None   # server-side stored username for OTP step 2
+_admin_otp_ts: float = 0             # epoch when admin OTP was generated
 USER_FORGOT_OTP = None
 _forgot_otp_user = None
+_forgot_otp_ts: float = 0            # epoch when forgot-password OTP was generated
 
 # Modes
 MODE_DND = False
@@ -190,7 +195,7 @@ _perm_lock = threading.Lock()
 KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
 _alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
 _presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
-MASTER_KEYS: list    = ["cizduz-vudqa6-mynsoK"]   # master key bootstrap value
+MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
 MASTER_KEY_OTP: str | None = None
 _owner_present   = False
 _owner_last_seen = 0.0
@@ -238,11 +243,18 @@ _rate_store: dict = defaultdict(list)   # IP → [timestamps]
 _RATE_LIMIT = 30     # max requests
 _RATE_WINDOW = 60    # per N seconds
 
+def _get_client_ip(request) -> str:
+    """Return the real client IP, trusting X-Forwarded-For only from local proxies."""
+    client = request.client.host if request.client else "unknown"
+    if client in ("127.0.0.1", "::1", "localhost"):
+        # Request arrived from a local proxy (nginx/cloudflared) — trust forwarded header
+        fwd = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        return fwd or client
+    return client
+
 def _check_rate_limit(request) -> bool:
     """Return True if request is within rate limit, False if exceeded."""
-    forwarded_for = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-    real_ip = request.headers.get("X-Real-IP", "").strip()
-    ip = forwarded_for or real_ip or (request.client.host if request.client else "unknown")
+    ip = _get_client_ip(request)
     now = time.time()
     stamps = _rate_store[ip]
     stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
@@ -335,8 +347,10 @@ def save_users():
 
 def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
-    global EMAIL_COOLDOWN, EMAIL_SENDER, EMAIL_SENDER_PASS, DETECTION_THRESHOLD
-    global KNOWN_DEVICES, WATCH_LABELS, GROQ_API_KEY, DANGER_LABEL
+    global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
+    global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABEL
+    # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are NOT loaded from config.json —
+    # they live exclusively in .env / environment variables for security.
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
@@ -346,8 +360,6 @@ def load_config():
             EMAIL_RECIPIENTS = cfg.get("email_recipients", EMAIL_RECIPIENTS)
             EMAIL_COOLDOWN = cfg.get("email_cooldown", EMAIL_COOLDOWN)
             EMAIL_SENDER = cfg.get("email_sender", EMAIL_SENDER)
-            EMAIL_SENDER_PASS = cfg.get("email_sender_pass", EMAIL_SENDER_PASS)
-            GROQ_API_KEY = cfg.get("groq_api_key", GROQ_API_KEY)
             DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
             KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
             WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
@@ -417,6 +429,8 @@ def save_master_keys():
         pass
 
 def save_config():
+    # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are intentionally excluded —
+    # credentials must not be stored in plaintext JSON on disk.
     try:
         cfg = {
             "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
@@ -424,8 +438,6 @@ def save_config():
             "email_recipients": EMAIL_RECIPIENTS,
             "email_cooldown": EMAIL_COOLDOWN,
             "email_sender": EMAIL_SENDER,
-            "email_sender_pass": EMAIL_SENDER_PASS,
-            "groq_api_key": GROQ_API_KEY,
             "detection_threshold": DETECTION_THRESHOLD,
             "known_devices": KNOWN_DEVICES,
             "watch_labels": WATCH_LABELS,
@@ -782,7 +794,8 @@ def trigger_software_alert():
         log_system_update("Alert triggered.")
         push_urgent_ws()
         try:
-            os.system("aplay /usr/share/sounds/alsa/Front_Center.wav &")
+            subprocess.Popen(["aplay", "/usr/share/sounds/alsa/Front_Center.wav"],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             pass
 
@@ -1804,7 +1817,7 @@ async def admin_send_otp(data: OTPRequest, request: Request, response: Response)
     """Admin login step 1: verify credentials, send OTP."""
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP
+    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts
     u = data.username.strip()
     p = data.password.strip()
     if u not in USERS or not _verify_password(p, USERS[u]["password"]) or USERS[u]["role"] != "admin":
@@ -1814,6 +1827,8 @@ async def admin_send_otp(data: OTPRequest, request: Request, response: Response)
         USERS[u]["password"] = _hash_password(p)
         save_users()
     ADMIN_OTP = generate_otp_code(6)
+    _admin_otp_user = u          # store server-side so step 2 cannot be hijacked
+    _admin_otp_ts = time.time()  # for expiry check
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
     ok, err = send_otp_via_email(dest, ADMIN_OTP)
     if not ok:
@@ -1825,17 +1840,25 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     """Admin login step 2: verify OTP, issue session."""
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP
-    if data.otp.strip() != ADMIN_OTP:
+    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts
+    if not ADMIN_OTP or not _admin_otp_user:
+        raise HTTPException(401, "No OTP pending. Please restart login.")
+    if time.time() - _admin_otp_ts > 300:
+        ADMIN_OTP = None; _admin_otp_user = None
+        raise HTTPException(401, "OTP expired. Please request a new one.")
+    if not hmac.compare_digest(data.otp.strip(), ADMIN_OTP):
         raise HTTPException(401, "Invalid OTP.")
-    ADMIN_OTP = None
-    token = create_session(data.username)
+    u = _admin_otp_user   # use server-stored username, not client-supplied
+    ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_ts = 0
+    if u not in USERS or USERS[u]["role"] != "admin":
+        raise HTTPException(401, "Account not authorised.")
+    token = create_session(u)
     response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
-    log_system_update(f"Admin login: {data.username}")
+    log_system_update(f"Admin login: {u}")
     return {
         "role": "admin",
-        "username": data.username,
-        "display_name": USERS[data.username].get("display_name", data.username),
+        "username": u,
+        "display_name": USERS[u].get("display_name", u),
         "token": token,   # for cross-origin clients
     }
 
@@ -1843,12 +1866,13 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
 async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global USER_FORGOT_OTP, _forgot_otp_user
+    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts
     u = data.username.strip()
     if u not in USERS:
         raise HTTPException(404, "User not found.")
     USER_FORGOT_OTP = generate_otp_code(6)
     _forgot_otp_user = u
+    _forgot_otp_ts = time.time()
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
     ok, err = send_otp_via_email(dest, USER_FORGOT_OTP)
     if not ok:
@@ -1859,16 +1883,20 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
 async def forgot_reset(data: ForgotPasswordRequest, request: Request):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global USER_FORGOT_OTP, _forgot_otp_user
-    if data.otp.strip() != USER_FORGOT_OTP or not _forgot_otp_user:
+    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts
+    if not USER_FORGOT_OTP or not _forgot_otp_user:
+        raise HTTPException(401, "No OTP pending.")
+    if time.time() - _forgot_otp_ts > 300:
+        USER_FORGOT_OTP = None; _forgot_otp_user = None
+        raise HTTPException(401, "OTP expired. Please request a new one.")
+    if not hmac.compare_digest(data.otp.strip(), USER_FORGOT_OTP):
         raise HTTPException(401, "Invalid OTP.")
     if not data.new_password.strip():
         raise HTTPException(400, "Password cannot be empty.")
     USERS[_forgot_otp_user]["password"] = _hash_password(data.new_password.strip())
     save_users()
     log_system_update(f"Password reset for {_forgot_otp_user}.")
-    USER_FORGOT_OTP = None
-    _forgot_otp_user = None
+    USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_ts = 0
     return {"ok": True}
 
 @fastapi_app.get("/api/state")
@@ -1987,7 +2015,7 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
     )
 
 @fastapi_app.post("/api/modes")
-async def set_mode(data: ModeRequest, session=Depends(require_session)):
+async def set_mode(data: ModeRequest, session=Depends(require_admin)):
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
     mode_map = {
         "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
@@ -2161,7 +2189,7 @@ def _do_presence_check():
         log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
 
 @fastapi_app.post("/api/presence_refresh")
-async def presence_refresh(session=Depends(require_session)):
+async def presence_refresh(session=Depends(require_admin)):
     """Trigger an immediate ARP presence check without waiting for the 30s poller."""
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _do_presence_check)
@@ -2279,9 +2307,8 @@ async def master_key_login(data: dict, request: Request, response: Response):
     }
 
 @fastapi_app.post("/api/master_key/verify")
-async def master_key_verify(data: dict, request: Request):
+async def master_key_verify(data: dict, request: Request, session=Depends(require_admin)):
     """Unlock logs on an existing admin session by verifying a master key."""
-    require_admin(request)
     key = (data.get("key") or "").strip()
     if not key or key not in MASTER_KEYS:
         raise HTTPException(401, "Invalid master key.")
@@ -2382,7 +2409,7 @@ async def heartbeat(request: Request, key: Optional[str] = None):
     return {"ok": True, "uptime": int(time.time() - _app_start_time)}
 
 @fastapi_app.post("/api/emergency-stop")
-async def emergency_stop(session=Depends(require_session)):
+async def emergency_stop(session=Depends(require_admin)):
     log_system_update(f"Emergency stop by {session['username']}.")
     threading.Thread(target=stop_app, daemon=True).start()
     return {"ok": True}

@@ -23,6 +23,7 @@ const G = (() => {
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
   let _currentPage = 'dashboard';
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
+  let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -40,7 +41,14 @@ const G = (() => {
     if (!container) return;
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${message}</span><button class="toast-dismiss" onclick="this.parentElement.classList.add('removing');setTimeout(()=>this.parentElement.remove(),200)">&times;</button>`;
+    const span = document.createElement('span');
+    span.textContent = message;
+    const btn = document.createElement('button');
+    btn.className = 'toast-dismiss';
+    btn.innerHTML = '&times;';
+    btn.onclick = () => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 200); };
+    toast.appendChild(span);
+    toast.appendChild(btn);
     container.appendChild(toast);
     if (container.children.length > 3) container.firstChild.remove();
     setTimeout(() => {
@@ -129,9 +137,9 @@ const G = (() => {
     }
     feed.innerHTML = _activityItems.map(item =>
       `<div class="activity-item">
-        <div class="activity-dot ${item.type}"></div>
-        <div class="activity-text">${item.text}</div>
-        <div class="activity-time">${item.time}</div>
+        <div class="activity-dot ${esc(item.type)}"></div>
+        <div class="activity-text">${esc(item.text)}</div>
+        <div class="activity-time">${esc(item.time)}</div>
       </div>`
     ).join('');
   }
@@ -397,8 +405,8 @@ const G = (() => {
       datePicker.max = today;
       datePicker.addEventListener('change', _renderTimeline);
     }
+    _wsAllowed = true;
     connectWS();
-    if (_session.role === 'admin') loadCfg();
     // Haptic feedback on Dynamic Island tap
     const hudEl = document.getElementById('top-hud');
     if (hudEl && !hudEl._hapticBound) {
@@ -422,6 +430,7 @@ const G = (() => {
     // Clear uptime interval and chat listeners before resetting state
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
     if (_chatInputController) { _chatInputController.abort(); _chatInputController = null; }
+    _wsAllowed = false;   // prevent reconnect after logout
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
     localStorage.removeItem('garuda_token');
@@ -1170,6 +1179,7 @@ const G = (() => {
 
   // ── WebSocket ─────────────────────────────────────────────
   function connectWS() {
+    if (!_wsAllowed) return;   // don't reconnect after logout
     if (_ws) _ws.close();
     const base = getBackend();
     const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
@@ -1182,7 +1192,7 @@ const G = (() => {
     }
     _ws = new WebSocket(wsUrl);
     _ws.onopen = () => { _wsRetryDelay = 3000; _syncPendingEvents(); };
-    _ws.onmessage = e => { try { tick(JSON.parse(e.data)); } catch(_) {} };
+    _ws.onmessage = e => { try { tick(JSON.parse(e.data)); } catch(err) { console.warn('[Garuda] WS parse error', err); } };
     _ws.onerror = () => {};
     _ws.onclose   = () => {
       const delay = _wsRetryDelay;
@@ -1558,9 +1568,6 @@ const G = (() => {
     try { await api('POST', '/api/modes', { mode, value: !currentVal }); }
     catch(e) { console.error(e); }
   }
-
-  // ── Admin: load config ────────────────────────────────────
-  async function loadCfg() { try { await api('GET', '/api/config'); } catch(_) {} }
 
   // ── Admin: Email ──────────────────────────────────────────
   async function loadEmailCfg() {
@@ -1983,8 +1990,13 @@ const G = (() => {
         tr.innerHTML = `
           <td style="font-family:var(--mono);font-size:12px;color:var(--accent)">${esc(phrase)}</td>
           <td style="color:var(--t2)">${esc(resp)}</td>
-          <td><button class="btn btn-ghost btn-sm"
-            onclick='G._delCmd(${JSON.stringify(phrase)})'>Delete</button></td>`;
+          <td></td>`;
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn btn-ghost btn-sm';
+        delBtn.textContent = 'Delete';
+        delBtn.dataset.phrase = phrase;
+        delBtn.addEventListener('click', () => G._delCmd(delBtn.dataset.phrase));
+        tr.cells[2].appendChild(delBtn);
         tb.appendChild(tr);
       });
     } catch(e) {}
@@ -2116,7 +2128,6 @@ document.addEventListener('DOMContentLoaded', G.init);
 
 // Global error handlers — prevent silent crashes during demo
 window.addEventListener('unhandledrejection', e => {
-  e.preventDefault();
   console.warn('[Garuda] Unhandled promise:', e.reason);
 });
 window.addEventListener('error', e => {
