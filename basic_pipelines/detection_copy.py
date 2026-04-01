@@ -18,17 +18,6 @@ from hailo_rpi_common import (
     app_callback_class,
 )
 
-# Import threading for thread-safe operations
-import threading
-from gpiozero import DistanceSensor, LED
-
-# Initialize global variables for motion detection and threading
-motion_detected_flag = False
-state_lock = threading.Lock()
-user_data = None
-led = None
-sensor = None
-
 # -----------------------------------------------------------------------------------------------
 # User-defined class to be used in the callback function
 # -----------------------------------------------------------------------------------------------
@@ -37,7 +26,6 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.new_variable = 42  # New variable example
-        self.person_detected = False  # Flag for person detection
     
     def new_function(self):  # New function example
         return "The meaning of life is: "
@@ -73,7 +61,6 @@ def app_callback(pad, info, user_data):
     
     # Parse the detections
     detection_count = 0
-    person_detected_in_frame = False  # Flag to check if person is detected in the current frame
     for detection in detections:
         label = detection.get_label()
         bbox = detection.get_bbox()
@@ -81,13 +68,6 @@ def app_callback(pad, info, user_data):
         if label == "person":
             string_to_print += f"Detection: {label} {confidence:.2f}\n"
             detection_count += 1
-            person_detected_in_frame = True  # Person detected
-    
-    # Update the person_detected flag in user_data
-    with state_lock:
-        user_data.person_detected = person_detected_in_frame
-    update_led_state()  # Update the LED state based on detections and motion
-
     if user_data.use_frame:
         # Note: using imshow will not work here, as the callback function is not running in the main thread
         # Let's print the detection count to the frame
@@ -103,31 +83,6 @@ def app_callback(pad, info, user_data):
     return Gst.PadProbeReturn.OK
     
 
-# Function to update the LED state based on person and motion detection
-def update_led_state():
-    with state_lock:
-        if user_data.person_detected and motion_detected_flag:
-            led.on()
-            print("LED on")
-        else:
-            led.off()
-            print("LED off")
-
-# Function to handle motion detection
-def motion_detected():
-    global motion_detected_flag
-    print("Motion detected!")
-    with state_lock:
-        motion_detected_flag = True
-    update_led_state()
-
-def no_motion_detected():
-    global motion_detected_flag
-    print("No motion detected")
-    with state_lock:
-        motion_detected_flag = False
-    update_led_state()
-    
 # -----------------------------------------------------------------------------------------------
 # User Gstreamer Application
 # -----------------------------------------------------------------------------------------------
@@ -245,22 +200,8 @@ class GStreamerDetectionApp(GStreamerApp):
         return pipeline_string
 
 if __name__ == "__main__":
-    import time
-    # No need for global declaration here
-    # Initialize 'user_data' and 'led' variables
-
     # Create an instance of the user app callback class
     user_data = user_app_callback_class()
-
-    # Initialize the HC-SR04 sensor and LED
-    sensor = DistanceSensor(echo=24, trigger=18, max_distance=2, threshold_distance=0.5)
-    led = LED(17)  # LED connected to GPIO 17
-
-    # Attach the functions to the sensor's in-range and out-of-range detection
-    sensor.when_in_range = motion_detected
-    sensor.when_out_of_range = no_motion_detected
-
-    # Set up parser and args
     parser = get_default_parser()
     # Add additional arguments here
     parser.add_argument(
@@ -277,7 +218,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--labels-json",
         default=None,
-        help="Path to custom labels JSON file",
+        help="Path to costume labels JSON file",
     )
     args = parser.parse_args()
     app = GStreamerDetectionApp(args, user_data)
