@@ -419,8 +419,14 @@ def load_master_keys():
                 data = json.load(f)
             if isinstance(data.get("keys"), list) and data["keys"]:
                 MASTER_KEYS[:] = data["keys"]
+                return
     except Exception:
         pass
+    # If no key file, seed from MASTER_KEY env var (set in .env)
+    bootstrap = os.environ.get("MASTER_KEY", "").strip()
+    if bootstrap:
+        MASTER_KEYS[:] = [bootstrap]
+        save_master_keys()  # persist to file for future runs
 
 def save_master_keys():
     try:
