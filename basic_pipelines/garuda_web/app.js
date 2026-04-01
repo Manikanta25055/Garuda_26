@@ -2125,6 +2125,9 @@ const G = (() => {
     switchLogTab,
     switchDocsTab,
     showToast,
+    // Exposed for the feedback widget (separate IIFE, needs access to session + api)
+    getSession: () => _session,
+    _apiFn: api,
   };
 })();
 
@@ -2132,73 +2135,77 @@ document.addEventListener('DOMContentLoaded', G.init);
 
 // Global error handlers — prevent silent crashes during demo
 // ── Feedback widget ───────────────────────────────────────────────────────────
+// NOTE: This IIFE is outside the G closure. Use G.getSession() and G._apiFn()
+// to access session and API — never reference G-internal variables directly.
 (function() {
-  let _fbOpen    = false;
-  let _fbRating  = 0;
-  let _fbCat     = 'general';
-  let _fbTab     = 'send';       // 'send' | 'inbox'
-  let _fbInbox   = [];           // cached inbox entries
-  let _fbFilter  = 'all';
+  let _fbOpen   = false;
+  let _fbRating = 0;
+  let _fbCat    = 'general';
+  let _fbInbox  = [];
+  let _fbFilter = 'all';
 
-  function _fbIsAdmin() {
-    return !!(_session && _session.role === 'admin');
+  function _isAdmin() {
+    const s = G.getSession ? G.getSession() : null;
+    return !!(s && s.role === 'admin');
   }
 
-  function _fbSyncTabs() {
-    const tabs = document.getElementById('fb-tabs');
-    if (!tabs) return;
-    tabs.innerHTML = '';
-    if (!_fbIsAdmin()) return;
-    const mkTab = (tab, label) => {
-      const btn = document.createElement('button');
-      btn.className = 'fb-tab';
-      btn.dataset.tab = tab;
-      btn.textContent = label;
-      btn.onclick = () => G.fbSwitchTab(tab);
-      return btn;
-    };
-    tabs.appendChild(mkTab('send', 'Send'));
-    tabs.appendChild(mkTab('inbox', 'Inbox'));
-  }
-
-  function _fbEnsureInboxUI() {
+  // ── Build inbox DOM once (lazy) ───────────────────────────
+  function _ensureInbox() {
+    if (document.getElementById('fb-tab-inbox')) return;
     const panel = document.getElementById('fb-panel');
-    if (!panel || document.getElementById('fb-tab-inbox')) return;
-    const inbox = document.createElement('div');
-    inbox.id = 'fb-tab-inbox';
-    inbox.style.display = 'none';
-    inbox.innerHTML = `
-      <div class="fb-inbox-toolbar">
-        <div class="fb-inbox-summary" id="fb-inbox-summary">Loading…</div>
-        <button class="fb-inbox-refresh" onclick="G.fbLoadInbox()" title="Refresh">↻</button>
-      </div>
-      <div class="fb-cats" id="fb-inbox-filters" style="margin-bottom:8px">
-        <span class="fb-cat sel" data-filter="all" onclick="G.fbFilterInbox(this)">All</span>
-        <span class="fb-cat" data-filter="bug" onclick="G.fbFilterInbox(this)">Bug</span>
-        <span class="fb-cat" data-filter="feature" onclick="G.fbFilterInbox(this)">Feature</span>
-        <span class="fb-cat" data-filter="general" onclick="G.fbFilterInbox(this)">General</span>
-        <span class="fb-cat" data-filter="other" onclick="G.fbFilterInbox(this)">Other</span>
-      </div>
-      <div class="fb-inbox-list" id="fb-inbox-list">
-        <div class="fb-inbox-empty">No feedback yet.</div>
-      </div>`;
-    panel.appendChild(inbox);
+    if (!panel) return;
+    const d = document.createElement('div');
+    d.id = 'fb-tab-inbox';
+    d.style.display = 'none';
+    d.innerHTML =
+      '<div class="fb-inbox-toolbar">' +
+        '<div class="fb-inbox-summary" id="fb-inbox-summary">Loading…</div>' +
+        '<button class="fb-inbox-refresh" onclick="G.fbLoadInbox()" title="Refresh">↻</button>' +
+      '</div>' +
+      '<div class="fb-cats" id="fb-inbox-filters" style="margin-bottom:8px">' +
+        '<span class="fb-cat sel" data-filter="all" onclick="G.fbFilterInbox(this)">All</span>' +
+        '<span class="fb-cat" data-filter="bug" onclick="G.fbFilterInbox(this)">Bug</span>' +
+        '<span class="fb-cat" data-filter="feature" onclick="G.fbFilterInbox(this)">Feature</span>' +
+        '<span class="fb-cat" data-filter="general" onclick="G.fbFilterInbox(this)">General</span>' +
+        '<span class="fb-cat" data-filter="other" onclick="G.fbFilterInbox(this)">Other</span>' +
+      '</div>' +
+      '<div class="fb-inbox-list" id="fb-inbox-list">' +
+        '<div class="fb-inbox-empty">No feedback yet.</div>' +
+      '</div>';
+    panel.appendChild(d);
   }
 
-  function _feedbackUrl() {
-    const base = getBackend();
-    return base ? base.replace(/\/$/, '') + '/api/feedback' : '/api/feedback';
+  // ── Show correct view for current role ────────────────────
+  function _applyRole() {
+    const admin = _isAdmin();
+    const sendTab  = document.getElementById('fb-tab-send');
+    const inboxTab = document.getElementById('fb-tab-inbox');
+    const tabBar   = document.getElementById('fb-tabs');
+    // Tab bar is never shown — each role gets exactly one view
+    if (tabBar) tabBar.style.display = 'none';
+    if (admin) {
+      _ensureInbox();
+      if (sendTab)  sendTab.style.display  = 'none';
+      const it = document.getElementById('fb-tab-inbox');
+      if (it) it.style.display = '';
+    } else {
+      if (sendTab)  sendTab.style.display  = '';
+      const it = document.getElementById('fb-tab-inbox');
+      if (it) it.style.display = 'none';
+    }
   }
 
-  // ── Open/close ────────────────────────────────────────────
+  // ── Open / close ──────────────────────────────────────────
   G.toggleFeedback = function() {
     _fbOpen = !_fbOpen;
     document.getElementById('fb-panel').classList.toggle('open', _fbOpen);
     document.getElementById('fb-bubble').classList.toggle('is-open', _fbOpen);
     if (_fbOpen) {
-      if (_fbTab === 'send') document.getElementById('fb-msg').focus();
-      else if (_fbIsAdmin()) G.fbLoadInbox();
-      else G.fbSwitchTab('send');
+      if (_isAdmin()) G.fbLoadInbox();
+      else {
+        const m = document.getElementById('fb-msg');
+        if (m) m.focus();
+      }
     }
   };
 
@@ -2213,45 +2220,52 @@ document.addEventListener('DOMContentLoaded', G.init);
     }
   });
 
-  // ── Inject Inbox tab for admin after login ─────────────────
-  // Called from afterLogin() by hooking into G
-  const _origAfterLogin = G._afterLoginHook || null;
-  G._afterLoginHook = function(session) {
-    if (_origAfterLogin) _origAfterLogin(session);
-    if (session && session.role === 'admin') {
-      _fbSyncTabs();
-      _fbEnsureInboxUI();
-      G.fbSwitchTab(_fbTab);
-    } else {
-      _fbSyncTabs();
-      G.fbSwitchTab('send');
-    }
-  };
+  // ── After-login hook (called from afterLogin in G) ────────
+  G._afterLoginHook = function() { _applyRole(); };
 
-  // ── Tab switching ──────────────────────────────────────────
-  G.fbSwitchTab = function(tab) {
-    if (tab === 'inbox' && !_fbIsAdmin()) tab = 'send';
-    _fbTab = tab;
-    document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-    document.getElementById('fb-tab-send').style.display  = tab === 'send'  ? '' : 'none';
+  // ── Logout hook (called from logout in G) ─────────────────
+  G._fbOnLogout = function() {
+    _fbOpen = false;
+    _fbRating = 0; _fbCat = 'general'; _fbInbox = []; _fbFilter = 'all';
+    document.getElementById('fb-panel').classList.remove('open');
+    document.getElementById('fb-bubble').classList.remove('is-open');
+    // Reset to send view for next login
+    const sendTab  = document.getElementById('fb-tab-send');
     const inboxTab = document.getElementById('fb-tab-inbox');
-    if (inboxTab) inboxTab.style.display = tab === 'inbox' ? '' : 'none';
-    if (tab === 'inbox' && _fbIsAdmin()) G.fbLoadInbox();
+    if (sendTab)  sendTab.style.display  = '';
+    if (inboxTab) inboxTab.style.display = 'none';
+    // Clear send form
+    const msgEl = document.getElementById('fb-msg');
+    const nameEl = document.getElementById('fb-name');
+    const charEl = document.getElementById('fb-char');
+    const bodyEl = document.getElementById('fb-form-body');
+    const succEl = document.getElementById('fb-success');
+    if (msgEl)  msgEl.value  = '';
+    if (nameEl) nameEl.value = '';
+    if (charEl) { charEl.textContent = '0 / 1000'; charEl.className = 'fb-char-count'; }
+    if (bodyEl) bodyEl.style.display = '';
+    if (succEl) succEl.classList.remove('show');
+    _previewStars(0);
   };
 
-  // ── Inbox ──────────────────────────────────────────────────
+  // ── Tab switching (kept for G.fbSwitchTab compatibility) ──
+  G.fbSwitchTab = function() {}; // no-op — roles are fixed per session
+
+  // ── Inbox load ────────────────────────────────────────────
   G.fbLoadInbox = async function() {
-    if (!_fbIsAdmin()) return;
+    if (!_isAdmin()) return;
     const btn = document.querySelector('.fb-inbox-refresh');
     if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 600); }
     try {
-      const data = await api('GET', '/api/feedback');
-      _fbInbox = (data.feedback || []).reverse(); // newest first
+      const data = await G._apiFn('GET', '/api/feedback');
+      _fbInbox = (data.feedback || []).slice().reverse();
       _fbFilter = 'all';
-      document.querySelectorAll('#fb-inbox-filters .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.filter === 'all'));
+      document.querySelectorAll('#fb-inbox-filters .fb-cat')
+        .forEach(c => c.classList.toggle('sel', c.dataset.filter === 'all'));
       _fbRenderInbox();
-    } catch {
-      document.getElementById('fb-inbox-summary').textContent = 'Failed to load.';
+    } catch(e) {
+      const el = document.getElementById('fb-inbox-summary');
+      if (el) el.textContent = 'Failed to load.';
     }
   };
 
@@ -2264,58 +2278,49 @@ document.addEventListener('DOMContentLoaded', G.init);
   function _fbRenderInbox() {
     const list    = document.getElementById('fb-inbox-list');
     const summary = document.getElementById('fb-inbox-summary');
+    if (!list || !summary) return;
     const entries = _fbFilter === 'all' ? _fbInbox : _fbInbox.filter(e => e.category === _fbFilter);
-
-    // Summary stats
     const total = _fbInbox.length;
     const rated = _fbInbox.filter(e => e.rating > 0);
     const avg   = rated.length ? (rated.reduce((s, e) => s + e.rating, 0) / rated.length).toFixed(1) : null;
     summary.textContent = total + ' entr' + (total === 1 ? 'y' : 'ies') + (avg ? ' · avg ' + avg + ' ★' : '');
-
     if (!entries.length) {
-      list.innerHTML = '<div class="fb-inbox-empty">' + (_fbFilter === 'all' ? 'No feedback yet.' : 'No entries for this category.') + '</div>';
+      list.innerHTML = '<div class="fb-inbox-empty">' +
+        (_fbFilter === 'all' ? 'No feedback yet.' : 'No entries for this category.') + '</div>';
       return;
     }
-
+    // Use G.showToast's esc helper via the exposed escHtml or reimplement inline
+    function esc(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
     list.innerHTML = entries.map(e => {
       const stars = e.rating > 0 ? '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating) : '';
-      const catCls = 'fb-card-cat ' + esc(e.category);
-      return `<div class="fb-card">
-        <div class="fb-card-header">
-          <span class="fb-card-name">${esc(e.name || 'Anonymous')}</span>
-          ${stars ? `<span class="fb-card-stars">${stars}</span>` : ''}
-        </div>
-        <div class="fb-card-meta">
-          <span class="${catCls}">${esc(e.category)}</span>
-          <span class="fb-card-time">${esc(e.timestamp)}</span>
-        </div>
-        <div class="fb-card-msg">${esc(e.message)}</div>
-      </div>`;
+      return '<div class="fb-card">' +
+        '<div class="fb-card-header">' +
+          '<span class="fb-card-name">' + esc(e.name || 'Anonymous') + '</span>' +
+          (stars ? '<span class="fb-card-stars">' + stars + '</span>' : '') +
+        '</div>' +
+        '<div class="fb-card-meta">' +
+          '<span class="fb-card-cat ' + esc(e.category) + '">' + esc(e.category) + '</span>' +
+          '<span class="fb-card-time">' + esc(e.timestamp) + '</span>' +
+        '</div>' +
+        '<div class="fb-card-msg">' + esc(e.message) + '</div>' +
+      '</div>';
     }).join('');
   }
 
-  // ── Star rating — fully JS-managed, no CSS sibling tricks ──
+  // ── Stars (fully JS-managed) ──────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
-    const stars = document.querySelectorAll('.fb-star');
-    stars.forEach(s => {
+    document.querySelectorAll('.fb-star').forEach(s => {
       const v = parseInt(s.dataset.v);
       s.addEventListener('pointerenter', () => _previewStars(v));
-      s.addEventListener('pointerleave', () => _previewStars(0));   // restore committed state
-      s.addEventListener('click', e => {
-        e.preventDefault();
-        _fbRating = v;
-        _previewStars(0);
-      });
+      s.addEventListener('pointerleave', () => _previewStars(0));
+      s.addEventListener('click', e => { e.preventDefault(); _fbRating = v; _previewStars(0); });
       s.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          _fbRating = v;
-          _previewStars(0);
-        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); _fbRating = v; _previewStars(0); }
       });
     });
-
-    // Send-tab category pills only
     document.querySelectorAll('#fb-tab-send .fb-cat').forEach(el => {
       el.addEventListener('click', () => {
         document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.remove('sel'));
@@ -2323,8 +2328,6 @@ document.addEventListener('DOMContentLoaded', G.init);
         _fbCat = el.dataset.cat;
       });
     });
-
-    // Char counter
     const msg = document.getElementById('fb-msg');
     const counter = document.getElementById('fb-char');
     if (msg && counter) {
@@ -2336,117 +2339,72 @@ document.addEventListener('DOMContentLoaded', G.init);
     }
   });
 
-  // preview=0 means "show committed _fbRating"; preview>0 means hovering that value
   function _previewStars(preview) {
     const show = preview > 0 ? preview : _fbRating;
     document.querySelectorAll('.fb-star').forEach(s => {
       const v = parseInt(s.dataset.v);
-      s.classList.toggle('lit',           !preview && v <= show);
-      s.classList.toggle('hover-preview',  preview  && v <= show);
+      s.classList.toggle('lit',          !preview && v <= show);
+      s.classList.toggle('hover-preview', preview  && v <= show);
     });
   }
 
-  // ── Inbox tab cleanup on logout (called from logout()) ─────
-  G._fbOnLogout = function() {
-    _fbSyncTabs();
-    // Switch back to send tab silently
-    _fbTab = 'send';
-    _fbInbox = [];
-    const sendTab = document.getElementById('fb-tab-send');
-    const inboxTab = document.getElementById('fb-tab-inbox');
-    if (sendTab) sendTab.style.display = '';
-    if (inboxTab) inboxTab.style.display = 'none';
-    document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'send'));
-  };
-
-  async function _submitFeedbackRequest(payload, signal) {
-    const res = await fetch(_feedbackUrl(), {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-      credentials: getBackend() ? 'omit' : 'include',
-      keepalive: true,
-      signal
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to send feedback.');
-    }
-    return true;
+  // ── Reset send form ───────────────────────────────────────
+  function _resetForm(btn) {
+    document.getElementById('fb-form-body').style.display = '';
+    document.getElementById('fb-success').classList.remove('show');
+    document.getElementById('fb-msg').value  = '';
+    document.getElementById('fb-name').value = '';
+    document.getElementById('fb-char').textContent = '0 / 1000';
+    document.getElementById('fb-char').className   = 'fb-char-count';
+    _fbRating = 0; _fbCat = 'general';
+    _previewStars(0);
+    document.querySelectorAll('#fb-tab-send .fb-cat')
+      .forEach(c => c.classList.toggle('sel', c.dataset.cat === 'general'));
+    if (btn) { btn.disabled = false; btn.textContent = 'Send'; }
   }
 
-  function _submitFeedbackBeacon(payload) {
-    if (!navigator.sendBeacon) return false;
-    try {
-      const body = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-      return navigator.sendBeacon(_feedbackUrl(), body);
-    } catch(_) {
-      return false;
-    }
-  }
-
-  // ── Submit feedback ────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────
   G.submitFeedback = async function() {
-    const msg = document.getElementById('fb-msg').value.trim();
-    const name = document.getElementById('fb-name').value.trim();
-    if (!msg) { document.getElementById('fb-msg').focus(); return; }
+    const msgVal  = document.getElementById('fb-msg').value.trim();
+    const nameVal = document.getElementById('fb-name').value.trim();
+    if (!msgVal) { document.getElementById('fb-msg').focus(); return; }
 
     const btn = document.getElementById('fb-submit');
     btn.disabled = true;
     btn.textContent = 'Sending…';
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
-    const payload = { message: msg, category: _fbCat, rating: _fbRating, name };
+    const timeoutId  = setTimeout(() => controller.abort(), 7000);
+    const payload    = { message: msgVal, category: _fbCat, rating: _fbRating, name: nameVal };
 
     try {
-      await _submitFeedbackRequest(payload, controller.signal);
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+        signal: controller.signal
+      });
       clearTimeout(timeoutId);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        G.showToast(err.detail || 'Failed to send feedback.', 'error');
+        btn.disabled = false; btn.textContent = 'Send';
+        return;
+      }
+      // Show success then close
       document.getElementById('fb-form-body').style.display = 'none';
       document.getElementById('fb-success').classList.add('show');
       setTimeout(() => {
         _fbOpen = false;
         document.getElementById('fb-panel').classList.remove('open');
         document.getElementById('fb-bubble').classList.remove('is-open');
-        setTimeout(() => {
-          document.getElementById('fb-form-body').style.display = '';
-          document.getElementById('fb-success').classList.remove('show');
-          document.getElementById('fb-msg').value = '';
-          document.getElementById('fb-name').value = '';
-          document.getElementById('fb-char').textContent = '0 / 1000';
-          document.getElementById('fb-char').className = 'fb-char-count';
-          _fbRating = 0; _fbCat = 'general';
-          _previewStars(0);
-          document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.cat === 'general'));
-          btn.disabled = false; btn.textContent = 'Send';
-        }, 400);
-      }, 1200);
+        setTimeout(() => _resetForm(btn), 400);
+      }, 1400);
     } catch(err) {
       clearTimeout(timeoutId);
-      if (_submitFeedbackBeacon(payload)) {
-        document.getElementById('fb-form-body').style.display = 'none';
-        document.getElementById('fb-success').classList.add('show');
-        setTimeout(() => {
-          _fbOpen = false;
-          document.getElementById('fb-panel').classList.remove('open');
-          document.getElementById('fb-bubble').classList.remove('is-open');
-          setTimeout(() => {
-            document.getElementById('fb-form-body').style.display = '';
-            document.getElementById('fb-success').classList.remove('show');
-            document.getElementById('fb-msg').value = '';
-            document.getElementById('fb-name').value = '';
-            document.getElementById('fb-char').textContent = '0 / 1000';
-            document.getElementById('fb-char').className = 'fb-char-count';
-            _fbRating = 0; _fbCat = 'general';
-            _previewStars(0);
-            document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.cat === 'general'));
-            btn.disabled = false; btn.textContent = 'Send';
-          }, 400);
-        }, 1200);
-        return;
-      }
-      const msg = err.name === 'AbortError' ? 'Request timed out. Try again.' : (err.message || 'Network error. Please try again.');
-      showToast(msg, 'error');
+      const msg = err.name === 'AbortError' ? 'Request timed out. Try again.' : 'Network error. Please try again.';
+      G.showToast(msg, 'error');
       btn.disabled = false; btn.textContent = 'Send';
     }
   };
