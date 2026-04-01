@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=48"/>
+  <link rel="stylesheet" href="/static/style.css?v=49"/>
 </head>
 <body>
 <div id="app">
@@ -872,75 +872,77 @@
 
 <!-- ══════════════ DOCS MODAL ══════════════ -->
 <div id="m-docs" class="modal-overlay hidden">
-  <div class="modal" style="max-width:640px">
+  <div class="modal docs-modal" style="max-width:640px">
     <h2>Documentation</h2>
-    <div class="docs-tabs">
-      <button class="docs-tab active" onclick="G.switchDocsTab(this,'docs-overview')">Overview</button>
-      <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-detection')">Detection</button>
-      <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-auth')">Authentication</button>
-      <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-stack')">Stack</button>
-    </div>
-
-    <div id="docs-overview" class="docs-section active">
-      <h3>Garuda Security System</h3>
-      <p>AI-powered home security running on Raspberry Pi 5 with Hailo-8L neural processor. Real-time object detection at 30+ FPS with configurable danger alerts.</p>
-      <h4>Detection Pipeline</h4>
-      <div class="docs-flow">
-        <div class="docs-flow-step"><span class="docs-flow-num">1</span> Camera capture</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">2</span> Hailo inference</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">3</span> Post-processing</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">4</span> Alert logic</div>
+    <div class="docs-body">
+      <div class="docs-tabs">
+        <button class="docs-tab active" onclick="G.switchDocsTab(this,'docs-overview')">Overview</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-detection')">Detection</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-auth')">Authentication</button>
+        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-stack')">Stack</button>
       </div>
-      <h4>System Modes</h4>
-      <p>Control system behavior with toggleable modes: <code>Privacy Blur</code> obscures faces, <code>Night Mode</code> enables high-priority alerts, <code>DND</code> suppresses all alerts, <code>Emergency</code> overrides DND for critical situations.</p>
-    </div>
 
-    <div id="docs-detection" class="docs-section">
-      <h3>Detection System</h3>
-      <h4>How it works</h4>
-      <p>YOLOv6n model runs on the Hailo-8L at 30+ FPS. Each frame is analyzed for objects matching COCO class labels. Detections above the confidence threshold are logged.</p>
-      <h4>Alert Logic</h4>
-      <div class="docs-flow">
-        <div class="docs-flow-step"><span class="docs-flow-num">1</span> Object detected</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">2</span> Matches danger label?</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">3</span> Trigger alert</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">4</span> Send email</div>
+      <div id="docs-overview" class="docs-section active">
+        <h3>Garuda Security System</h3>
+        <p>AI-powered home security running on Raspberry Pi 5 with Hailo-8L neural processor. Real-time object detection at 30+ FPS with configurable danger alerts.</p>
+        <h4>Detection Pipeline</h4>
+        <div class="docs-flow">
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Camera capture</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span> Hailo inference</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Post-processing</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">4</span> Alert logic</div>
+        </div>
+        <h4>System Modes</h4>
+        <p>Control system behavior with toggleable modes: <code>Privacy Blur</code> obscures faces, <code>Night Mode</code> enables high-priority alerts, <code>DND</code> suppresses all alerts, <code>Emergency</code> overrides DND for critical situations.</p>
       </div>
-      <h4>Categories</h4>
-      <p><strong>Danger labels</strong> (default: <code>scissors</code>) trigger visual + audio + email alerts. <strong>Watch labels</strong> (e.g. <code>person</code>, <code>backpack</code>) are silently logged without triggering alerts.</p>
-      <p>Detection threshold (0.05–0.95) controls sensitivity. Lower values detect more objects but may produce false positives.</p>
-    </div>
 
-    <div id="docs-auth" class="docs-section">
-      <h3>Authentication</h3>
-      <h4>Login Flow</h4>
-      <div class="docs-flow">
-        <div class="docs-flow-step"><span class="docs-flow-num">1</span> Credentials</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">2</span> OTP via email</div>
-        <span class="docs-flow-arrow">→</span>
-        <div class="docs-flow-step"><span class="docs-flow-num">3</span> Session token</div>
+      <div id="docs-detection" class="docs-section">
+        <h3>Detection System</h3>
+        <h4>How it works</h4>
+        <p>YOLOv6n model runs on the Hailo-8L at 30+ FPS. Each frame is analyzed for objects matching COCO class labels. Detections above the confidence threshold are logged.</p>
+        <h4>Alert Logic</h4>
+        <div class="docs-flow">
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Object detected</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span> Matches danger label?</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Trigger alert</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">4</span> Send email</div>
+        </div>
+        <h4>Categories</h4>
+        <p><strong>Danger labels</strong> (default: <code>scissors</code>) trigger visual + audio + email alerts. <strong>Watch labels</strong> (e.g. <code>person</code>, <code>backpack</code>) are silently logged without triggering alerts.</p>
+        <p>Detection threshold (0.05–0.95) controls sensitivity. Lower values detect more objects but may produce false positives.</p>
       </div>
-      <p><strong>Users</strong> log in with username + password. <strong>Admins</strong> require an additional OTP sent via email. <strong>Master Keys</strong> provide instant admin access and unlock the logs page.</p>
-      <h4>Session Management</h4>
-      <p>Sessions expire after 1 hour (admin) or 5 days (user with "Remember me"). Tokens are stored as HTTP-only cookies for same-origin requests and in localStorage for cross-origin access.</p>
-    </div>
 
-    <div id="docs-stack" class="docs-section">
-      <h3>Technology Stack</h3>
-      <div class="docs-stack-grid">
-        <div class="docs-stack-item"><strong>Hailo-8L</strong><span>13 TOPS neural processor for real-time AI inference</span></div>
-        <div class="docs-stack-item"><strong>Raspberry Pi 5</strong><span>Quad-core Arm Cortex-A76 @ 2.4GHz host</span></div>
-        <div class="docs-stack-item"><strong>YOLOv6n</strong><span>Lightweight object detection model optimized for edge</span></div>
-        <div class="docs-stack-item"><strong>GStreamer</strong><span>Media pipeline for camera capture and processing</span></div>
-        <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python web framework with WebSocket support</span></div>
-        <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Secure remote access without port forwarding</span></div>
+      <div id="docs-auth" class="docs-section">
+        <h3>Authentication</h3>
+        <h4>Login Flow</h4>
+        <div class="docs-flow">
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Credentials</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span> OTP via email</div>
+          <span class="docs-flow-arrow">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Session token</div>
+        </div>
+        <p><strong>Users</strong> log in with username + password. <strong>Admins</strong> require an additional OTP sent via email. <strong>Master Keys</strong> provide instant admin access and unlock the logs page.</p>
+        <h4>Session Management</h4>
+        <p>Sessions expire after 1 hour (admin) or 5 days (user with "Remember me"). Tokens are stored as HTTP-only cookies for same-origin requests and in localStorage for cross-origin access.</p>
+      </div>
+
+      <div id="docs-stack" class="docs-section">
+        <h3>Technology Stack</h3>
+        <div class="docs-stack-grid">
+          <div class="docs-stack-item"><strong>Hailo-8L</strong><span>13 TOPS neural processor for real-time AI inference</span></div>
+          <div class="docs-stack-item"><strong>Raspberry Pi 5</strong><span>Quad-core Arm Cortex-A76 @ 2.4GHz host</span></div>
+          <div class="docs-stack-item"><strong>YOLOv6n</strong><span>Lightweight object detection model optimized for edge</span></div>
+          <div class="docs-stack-item"><strong>GStreamer</strong><span>Media pipeline for camera capture and processing</span></div>
+          <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python web framework with WebSocket support</span></div>
+          <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Secure remote access without port forwarding</span></div>
+        </div>
       </div>
     </div>
 
@@ -964,7 +966,7 @@
       <div id="fb-form-body" style="display:flex;flex-direction:column;gap:14px">
         <!-- Star rating -->
         <div>
-          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How am I Doing?</div>
+          <div style="font-size:11.5px;color:var(--t2);margin-bottom:6px;font-weight:500">How am i Doing</div>
           <div class="fb-stars" id="fb-stars" role="group" aria-label="Star rating">
             <span class="fb-star" data-v="1" role="radio" tabindex="0" aria-label="1 star">★</span>
             <span class="fb-star" data-v="2" role="radio" tabindex="0" aria-label="2 stars">★</span>
@@ -1003,34 +1005,17 @@
       </div>
     </div>
 
-    <!-- ── Inbox tab (admin only, hidden by default) ── -->
-    <div id="fb-tab-inbox" style="display:none">
-      <div class="fb-inbox-toolbar">
-        <div class="fb-inbox-summary" id="fb-inbox-summary">Loading…</div>
-        <button class="fb-inbox-refresh" onclick="G.fbLoadInbox()" title="Refresh">↻</button>
-      </div>
-      <!-- Filter pills -->
-      <div class="fb-cats" id="fb-inbox-filters" style="margin-bottom:8px">
-        <span class="fb-cat sel" data-filter="all" onclick="G.fbFilterInbox(this)">All</span>
-        <span class="fb-cat" data-filter="bug" onclick="G.fbFilterInbox(this)">Bug</span>
-        <span class="fb-cat" data-filter="feature" onclick="G.fbFilterInbox(this)">Feature</span>
-        <span class="fb-cat" data-filter="general" onclick="G.fbFilterInbox(this)">General</span>
-        <span class="fb-cat" data-filter="other" onclick="G.fbFilterInbox(this)">Other</span>
-      </div>
-      <!-- Cards list -->
-      <div class="fb-inbox-list" id="fb-inbox-list">
-        <div class="fb-inbox-empty">No feedback yet.</div>
-      </div>
-    </div>
+    <!-- Admin inbox injected dynamically -->
 
   </div>
 
   <!-- Bubble toggle -->
   <button class="fb-bubble" id="fb-bubble" onclick="G.toggleFeedback()" aria-label="Open feedback" title="Send feedback">
-    <!-- Shield with signal — security system feedback icon -->
+    <!-- Chat bubble + signal arc -->
     <svg class="fb-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      <polyline points="9 12 11 14 15 10"/>
+      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 0 1 11.5 3H13"/>
+      <path d="M17.5 4.5a3 3 0 0 1 3 3"/>
+      <path d="M15.5 6.5a5 5 0 0 1 5 5"/>
     </svg>
     <svg class="fb-icon-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -1041,6 +1026,6 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=44"></script>
+<script src="/static/app.js?v=45"></script>
 </body>
 </html>

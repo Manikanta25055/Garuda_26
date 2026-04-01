@@ -1749,9 +1749,10 @@ const G = (() => {
     btn.classList.add('active');
     const section = document.getElementById(sectionId);
     if (section) section.classList.add('active');
-    btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    const modal = btn.closest('.modal');
-    if (modal) modal.scrollTo({ top: 0, behavior: 'smooth' });
+    const behavior = window.innerWidth <= 768 ? 'auto' : 'smooth';
+    btn.scrollIntoView({ behavior, inline: 'center', block: 'nearest' });
+    const body = btn.closest('.docs-body');
+    if (body) body.scrollTo({ top: 0, behavior });
   }
 
   function exportLogs() {
@@ -2139,6 +2140,39 @@ document.addEventListener('DOMContentLoaded', G.init);
   let _fbInbox   = [];           // cached inbox entries
   let _fbFilter  = 'all';
 
+  function _fbIsAdmin() {
+    return !!(_session && _session.role === 'admin');
+  }
+
+  function _fbEnsureInboxUI() {
+    const panel = document.getElementById('fb-panel');
+    if (!panel || document.getElementById('fb-tab-inbox')) return;
+    const inbox = document.createElement('div');
+    inbox.id = 'fb-tab-inbox';
+    inbox.style.display = 'none';
+    inbox.innerHTML = `
+      <div class="fb-inbox-toolbar">
+        <div class="fb-inbox-summary" id="fb-inbox-summary">Loading…</div>
+        <button class="fb-inbox-refresh" onclick="G.fbLoadInbox()" title="Refresh">↻</button>
+      </div>
+      <div class="fb-cats" id="fb-inbox-filters" style="margin-bottom:8px">
+        <span class="fb-cat sel" data-filter="all" onclick="G.fbFilterInbox(this)">All</span>
+        <span class="fb-cat" data-filter="bug" onclick="G.fbFilterInbox(this)">Bug</span>
+        <span class="fb-cat" data-filter="feature" onclick="G.fbFilterInbox(this)">Feature</span>
+        <span class="fb-cat" data-filter="general" onclick="G.fbFilterInbox(this)">General</span>
+        <span class="fb-cat" data-filter="other" onclick="G.fbFilterInbox(this)">Other</span>
+      </div>
+      <div class="fb-inbox-list" id="fb-inbox-list">
+        <div class="fb-inbox-empty">No feedback yet.</div>
+      </div>`;
+    panel.appendChild(inbox);
+  }
+
+  function _feedbackUrl() {
+    const base = getBackend();
+    return base ? base.replace(/\/$/, '') + '/api/feedback' : '/api/feedback';
+  }
+
   // ── Open/close ────────────────────────────────────────────
   G.toggleFeedback = function() {
     _fbOpen = !_fbOpen;
@@ -2146,7 +2180,8 @@ document.addEventListener('DOMContentLoaded', G.init);
     document.getElementById('fb-bubble').classList.toggle('is-open', _fbOpen);
     if (_fbOpen) {
       if (_fbTab === 'send') document.getElementById('fb-msg').focus();
-      else G.fbLoadInbox();
+      else if (_fbIsAdmin()) G.fbLoadInbox();
+      else G.fbSwitchTab('send');
     }
   };
 
@@ -2167,6 +2202,7 @@ document.addEventListener('DOMContentLoaded', G.init);
   G._afterLoginHook = function(session) {
     if (_origAfterLogin) _origAfterLogin(session);
     if (session && session.role === 'admin') {
+      _fbEnsureInboxUI();
       const tabs = document.getElementById('fb-tabs');
       if (tabs && !tabs.querySelector('[data-tab="inbox"]')) {
         const btn = document.createElement('button');
@@ -2181,15 +2217,18 @@ document.addEventListener('DOMContentLoaded', G.init);
 
   // ── Tab switching ──────────────────────────────────────────
   G.fbSwitchTab = function(tab) {
+    if (tab === 'inbox' && !_fbIsAdmin()) tab = 'send';
     _fbTab = tab;
     document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
     document.getElementById('fb-tab-send').style.display  = tab === 'send'  ? '' : 'none';
-    document.getElementById('fb-tab-inbox').style.display = tab === 'inbox' ? '' : 'none';
-    if (tab === 'inbox') G.fbLoadInbox();
+    const inboxTab = document.getElementById('fb-tab-inbox');
+    if (inboxTab) inboxTab.style.display = tab === 'inbox' ? '' : 'none';
+    if (tab === 'inbox' && _fbIsAdmin()) G.fbLoadInbox();
   };
 
   // ── Inbox ──────────────────────────────────────────────────
   G.fbLoadInbox = async function() {
+    if (!_fbIsAdmin()) return;
     const btn = document.querySelector('.fb-inbox-refresh');
     if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 600); }
     try {
@@ -2249,9 +2288,17 @@ document.addEventListener('DOMContentLoaded', G.init);
       const v = parseInt(s.dataset.v);
       s.addEventListener('pointerenter', () => _previewStars(v));
       s.addEventListener('pointerleave', () => _previewStars(0));   // restore committed state
-      s.addEventListener('click', () => { _fbRating = v; _previewStars(0); });
+      s.addEventListener('click', e => {
+        e.preventDefault();
+        _fbRating = v;
+        _previewStars(0);
+      });
       s.addEventListener('keydown', e => {
-        if (e.key === 'Enter' || e.key === ' ') { _fbRating = v; _previewStars(0); }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          _fbRating = v;
+          _previewStars(0);
+        }
       });
     });
 
@@ -2300,7 +2347,7 @@ document.addEventListener('DOMContentLoaded', G.init);
     document.querySelectorAll('.fb-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'send'));
   };
 
-  // ── Submit with 7s timeout ─────────────────────────────────
+  // ── Submit feedback ────────────────────────────────────────
   G.submitFeedback = async function() {
     const msg = document.getElementById('fb-msg').value.trim();
     const name = document.getElementById('fb-name').value.trim();
@@ -2311,13 +2358,14 @@ document.addEventListener('DOMContentLoaded', G.init);
     btn.textContent = 'Sending…';
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
 
     try {
-      const r = await fetch('/api/feedback', {
+      const r = await fetch(_feedbackUrl(), {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ message: msg, category: _fbCat, rating: _fbRating, name }),
+        credentials: getBackend() ? 'omit' : 'include',
         signal: controller.signal
       });
       clearTimeout(timeoutId);
@@ -2345,7 +2393,7 @@ document.addEventListener('DOMContentLoaded', G.init);
           document.querySelectorAll('#fb-tab-send .fb-cat').forEach(c => c.classList.toggle('sel', c.dataset.cat === 'general'));
           btn.disabled = false; btn.textContent = 'Send';
         }, 400);
-      }, 2800);
+      }, 1200);
     } catch(err) {
       clearTimeout(timeoutId);
       const msg = err.name === 'AbortError' ? 'Request timed out. Try again.' : 'Network error. Please try again.';
