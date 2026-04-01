@@ -873,7 +873,15 @@
 <!-- ══════════════ DOCS MODAL ══════════════ -->
 <div id="m-docs" class="modal-overlay hidden">
   <div class="modal docs-modal" style="max-width:640px">
-    <h2>Documentation</h2>
+    <div class="docs-topbar">
+      <div>
+        <h2>Documentation</h2>
+        <div class="docs-subtitle">Garuda system overview and reference</div>
+      </div>
+      <button class="docs-close-btn" aria-label="Close documentation" onclick="document.getElementById('m-docs').classList.add('hidden')">
+        <span>&times;</span>
+      </button>
+    </div>
     <div class="docs-body">
       <div class="docs-tabs">
         <button class="docs-tab active" onclick="G.switchDocsTab(this,'docs-overview')">Overview</button>
@@ -946,7 +954,6 @@
       </div>
     </div>
 
-    <button class="btn btn-ghost" style="margin-top:16px;width:100%" onclick="document.getElementById('m-docs').classList.add('hidden')">Close</button>
   </div>
 </div>
 
