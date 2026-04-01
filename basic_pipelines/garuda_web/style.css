@@ -4102,6 +4102,7 @@ input:-webkit-autofill:focus {
 
 /* Mobile — panel sits above the bottom nav (68px tall) */
 @media (max-width: 768px) {
+  #app.fb-hide-mobile .fb-wrap { display: none; }
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
   #app:not(.logged-in) .fb-wrap {
     top: auto;

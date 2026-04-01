@@ -415,6 +415,7 @@ const G = (() => {
     }
     // Notify feedback widget so it can inject admin Inbox tab
     if (G._afterLoginHook) G._afterLoginHook(_session);
+    _syncFeedbackVisibility();
   }
 
   function toggleTheme() {
@@ -440,6 +441,7 @@ const G = (() => {
     localStorage.removeItem('garuda_remember');
     if (_ws) { _ws.close(); _ws = null; }
     $('app').classList.remove('logged-in');
+    _syncFeedbackVisibility();
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
     // Stop all camera streams (WebRTC / WS / MJPEG)
     stopCameraStream();
@@ -1128,6 +1130,13 @@ const G = (() => {
     _syncDIContext();
   }
 
+  function _syncFeedbackVisibility() {
+    const appEl = $('app');
+    if (!appEl) return;
+    const hideOnMobile = !appEl.classList.contains('logged-in') || _currentPage === 'chat';
+    appEl.classList.toggle('fb-hide-mobile', hideOnMobile);
+  }
+
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
     _currentPage = pageId;
@@ -1163,6 +1172,7 @@ const G = (() => {
     // Dynamic Island: update label per page
     _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
     _syncDIContext();
+    _syncFeedbackVisibility();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') loadSysCfg();
     if (pageId === 'a-logs') {
@@ -2447,3 +2457,5 @@ document.addEventListener('keydown', e => {
   else if (lv2 && !lv2.classList.contains('hidden')) G.sendAdminOTP();
   else if (lv3 && !lv3.classList.contains('hidden')) G.verifyAdminOTP();
 });
+
+document.getElementById('app')?.classList.add('fb-hide-mobile');
