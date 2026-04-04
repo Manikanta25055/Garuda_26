@@ -1519,6 +1519,8 @@ def require_session(request: Request):
     session = get_session(token)
     if not session:
         raise HTTPException(401, "Not authenticated")
+    # Sliding window — extend session on every authenticated request (keeps active users logged in)
+    session["expires"] = time.time() + 3600
     # Inject token so endpoints can exclude the current session during invalidation
     session["token"] = token
     return session

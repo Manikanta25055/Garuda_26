@@ -2534,6 +2534,9 @@ input[type=range]::-webkit-slider-thumb {
 /* Input — floating pill (Dynamic Island style) */
 .chat-shell { position: relative; }
 
+/* Chat input sits above the feedback bubble (z-index 900) on desktop */
+#page-chat .chat-input-wrap { bottom: 84px; z-index: 950; }
+
 .chat-input-wrap {
   position: absolute;
   bottom: 16px; left: 16px; right: 16px;
@@ -3741,8 +3744,6 @@ input:-webkit-autofill:focus {
 }
 
 #app.fb-hidden .fb-wrap { display: none !important; }
-/* On chat page, push button above the floating input bar */
-#app.page-chat .fb-wrap { bottom: 110px; }
 
 /* Bubble trigger button */
 .fb-bubble {
@@ -4107,8 +4108,8 @@ input:-webkit-autofill:focus {
 /* Mobile — panel sits above the bottom nav (68px tall) */
 @media (max-width: 768px) {
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
-  /* On chat page, push above the chat input bar */
-  #app.page-chat .fb-wrap { bottom: calc(168px + env(safe-area-inset-bottom)); }
+  /* On chat page, input bar moves up (z-index 950) — keep feedback at normal position */
+  #page-chat .chat-input-wrap { bottom: calc(156px + env(safe-area-inset-bottom)); z-index: 950; }
   /* Always hide feedback bubble on mobile for login screen */
   #app:not(.logged-in) .fb-wrap,
   #app.fb-hidden .fb-wrap { display: none !important; }

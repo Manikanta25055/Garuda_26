@@ -1591,8 +1591,12 @@ const G = (() => {
   }
 
   async function toggleMode(mode, currentOn) {
-    // Optimistic update — flip immediately without waiting for WS tick
     const row = $('modes-pills')?.querySelector(`[data-mode="${mode}"]`);
+    // Prevent double-click mid-request
+    if (row?.dataset.pending === '1') return;
+    if (row) row.dataset.pending = '1';
+
+    // Optimistic update — flip immediately without waiting for WS tick
     if (row) {
       row.classList.toggle('on', !currentOn);
       const toggle = row.querySelector('.mode-toggle');
@@ -1601,14 +1605,16 @@ const G = (() => {
     try {
       await api('POST', '/api/modes', { mode, value: !currentOn });
     } catch(e) {
-      console.error(e);
       // Revert on failure
       if (row) {
         row.classList.toggle('on', currentOn);
         const toggle = row.querySelector('.mode-toggle');
         if (toggle) toggle.classList.toggle('on', currentOn);
       }
-      showToast('Failed to update mode.', 'error');
+      const detail = e?.detail || e?.message || JSON.stringify(e);
+      showToast(`Mode error: ${detail}`, 'error');
+    } finally {
+      if (row) delete row.dataset.pending;
     }
   }
 
