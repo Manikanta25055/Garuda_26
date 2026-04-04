@@ -155,9 +155,11 @@ latest_detection_info = ""
 ADMIN_OTP = None
 _admin_otp_user: str | None = None   # server-side stored username for OTP step 2
 _admin_otp_ts: float = 0             # epoch when admin OTP was generated
+_admin_otp_attempts: int = 0         # failed verify attempts; cleared on success or expiry
 USER_FORGOT_OTP = None
 _forgot_otp_user = None
 _forgot_otp_ts: float = 0            # epoch when forgot-password OTP was generated
+_forgot_otp_attempts: int = 0        # failed verify attempts
 
 # Modes
 MODE_DND = False
@@ -210,10 +212,12 @@ _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_
 WATCH_LABELS: list = ['person', 'backpack', 'suitcase']  # log silently, no alert
 
 # ── Password hashing (PBKDF2-SHA256) ────────────────────
+_PBKDF2_ITERS = 600000  # OWASP 2024 recommendation for PBKDF2-SHA256
+
 def _hash_password(pw: str) -> str:
     salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, 260000)
-    return f"pbkdf2:sha256:260000:{salt.hex()}:{dk.hex()}"
+    dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, _PBKDF2_ITERS)
+    return f"pbkdf2:sha256:{_PBKDF2_ITERS}:{salt.hex()}:{dk.hex()}"
 
 def _verify_password(pw: str, stored: str) -> bool:
     if stored.startswith("pbkdf2:"):
@@ -224,6 +228,33 @@ def _verify_password(pw: str, stored: str) -> bool:
         dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
         return dk.hex() == dk_hex
     return pw == stored  # plaintext fallback for migration
+
+def _validate_password_strength(pw: str) -> str | None:
+    """Return an error string if password fails requirements, else None."""
+    if not pw or not pw.strip():
+        return "Password cannot be empty."
+    p = pw.strip()
+    if len(p) < 8:
+        return "Password must be at least 8 characters."
+    if len(p) > 256:
+        return "Password must be at most 256 characters."
+    if not any(c.isupper() for c in p):
+        return "Password must contain at least one uppercase letter."
+    if not any(c.islower() for c in p):
+        return "Password must contain at least one lowercase letter."
+    if not any(c.isdigit() for c in p):
+        return "Password must contain at least one digit."
+    return None
+
+def _invalidate_user_sessions(username: str, except_token: str | None = None) -> int:
+    """Remove all active sessions for a user. Returns count removed."""
+    to_delete = [
+        t for t, s in _sessions.items()
+        if s.get("username") == username and t != except_token
+    ]
+    for t in to_delete:
+        del _sessions[t]
+    return len(to_delete)
 
 # ── Atomic JSON write ────────────────────────────────────
 def _atomic_json_write(filepath: str, data):
@@ -695,7 +726,7 @@ def stop_app():
 # OTP / EMAIL
 ##############################################################################
 def generate_otp_code(length=6):
-    return "".join(random.choice(string.digits) for _ in range(length))
+    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
 def send_otp_via_email(email, otp_code):
     body = f"Hello,\n\nYour OTP code is: {otp_code}\n\nUse this to complete your login."
@@ -1454,7 +1485,7 @@ def voice_assistant_loop(stop_event, current_user=None):
 # SESSION MANAGEMENT
 ##############################################################################
 def create_session(username, duration=3600):
-    token = secrets.token_hex(32)
+    token = secrets.token_hex(64)
     _sessions[token] = {
         "username": username,
         "role": USERS[username]["role"],
@@ -1465,7 +1496,7 @@ def create_session(username, duration=3600):
 
 def create_master_session(duration=3600):
     """Create an admin session via master key — logs unlocked immediately."""
-    token = secrets.token_hex(32)
+    token = secrets.token_hex(64)
     _sessions[token] = {
         "username": "admin",
         "role": "admin",
@@ -1488,6 +1519,8 @@ def require_session(request: Request):
     session = get_session(token)
     if not session:
         raise HTTPException(401, "Not authenticated")
+    # Inject token so endpoints can exclude the current session during invalidation
+    session["token"] = token
     return session
 
 def require_admin(request: Request):
@@ -1727,6 +1760,20 @@ fastapi_app.add_middleware(
     allow_headers=["Content-Type", "X-Garuda-Token"],
 )
 
+# Global rate-limit middleware — applied to all API endpoints
+# Endpoints that do their own per-action rate limiting (login, OTP) keep their
+# individual checks; this catches everything else.
+_RATE_EXEMPT_PREFIXES = ("/static/", "/ws", "/stream")
+
+@fastapi_app.middleware("http")
+async def global_rate_limit(request: Request, call_next):
+    path = request.url.path
+    if not any(path.startswith(p) for p in _RATE_EXEMPT_PREFIXES):
+        if not _check_rate_limit(request):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
+    return await call_next(request)
+
 # Security headers middleware
 @fastapi_app.middleware("http")
 async def security_headers(request: Request, call_next):
@@ -1927,16 +1974,20 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     """Admin login step 2: verify OTP, issue session."""
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts
+    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts, _admin_otp_attempts
     if not ADMIN_OTP or not _admin_otp_user:
         raise HTTPException(401, "No OTP pending. Please restart login.")
     if time.time() - _admin_otp_ts > 300:
-        ADMIN_OTP = None; _admin_otp_user = None
+        ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
         raise HTTPException(401, "OTP expired. Please request a new one.")
+    if _admin_otp_attempts >= 3:
+        ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
+        raise HTTPException(401, "Too many incorrect attempts. Please restart login.")
     if not hmac.compare_digest(data.otp.strip(), ADMIN_OTP):
+        _admin_otp_attempts += 1
         raise HTTPException(401, "Invalid OTP.")
     u = _admin_otp_user   # use server-stored username, not client-supplied
-    ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_ts = 0
+    ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_ts = 0; _admin_otp_attempts = 0
     if u not in USERS or USERS[u]["role"] != "admin":
         raise HTTPException(401, "Account not authorised.")
     token = create_session(u)
@@ -1953,16 +2004,20 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
 async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts
+    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts, _forgot_otp_attempts
     u = data.username.strip()
+    # Always return the same response regardless of whether user exists
+    # to prevent account enumeration attacks
     if u not in USERS:
-        raise HTTPException(404, "User not found.")
+        return {"ok": True}
     USER_FORGOT_OTP = generate_otp_code(6)
     _forgot_otp_user = u
     _forgot_otp_ts = time.time()
+    _forgot_otp_attempts = 0
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
     ok, err = send_otp_via_email(dest, USER_FORGOT_OTP)
     if not ok:
+        USER_FORGOT_OTP = None; _forgot_otp_user = None
         return {"ok": False, "error": err}
     return {"ok": True}
 
@@ -1970,20 +2025,26 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
 async def forgot_reset(data: ForgotPasswordRequest, request: Request):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts
+    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts, _forgot_otp_attempts
     if not USER_FORGOT_OTP or not _forgot_otp_user:
         raise HTTPException(401, "No OTP pending.")
     if time.time() - _forgot_otp_ts > 300:
-        USER_FORGOT_OTP = None; _forgot_otp_user = None
+        USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_attempts = 0
         raise HTTPException(401, "OTP expired. Please request a new one.")
+    if _forgot_otp_attempts >= 3:
+        USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_attempts = 0
+        raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
     if not hmac.compare_digest(data.otp.strip(), USER_FORGOT_OTP):
+        _forgot_otp_attempts += 1
         raise HTTPException(401, "Invalid OTP.")
-    if not data.new_password.strip():
-        raise HTTPException(400, "Password cannot be empty.")
+    err = _validate_password_strength(data.new_password)
+    if err:
+        raise HTTPException(400, err)
     USERS[_forgot_otp_user]["password"] = _hash_password(data.new_password.strip())
+    _invalidate_user_sessions(_forgot_otp_user)
     save_users()
     log_system_update(f"Password reset for {_forgot_otp_user}.")
-    USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_ts = 0
+    USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_ts = 0; _forgot_otp_attempts = 0
     return {"ok": True}
 
 @fastapi_app.get("/api/state")
@@ -2102,7 +2163,7 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
     )
 
 @fastapi_app.post("/api/modes")
-async def set_mode(data: ModeRequest, session=Depends(require_admin)):
+async def set_mode(data: ModeRequest, session=Depends(require_session)):
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
     mode_map = {
         "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
@@ -2137,17 +2198,23 @@ async def list_users(session=Depends(require_admin)):
 async def add_user(data: AddUserRequest, session=Depends(require_admin)):
     if data.username in USERS:
         raise HTTPException(400, "Username already exists.")
-    if not data.username.strip() or not data.password.strip():
-        raise HTTPException(400, "Username and password required.")
-    USERS[data.username] = {
-        "password": _hash_password(data.password),
+    un = (data.username or "").strip()
+    if not un:
+        raise HTTPException(400, "Username required.")
+    if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', un):
+        raise HTTPException(400, "Username must be 3-32 chars, alphanumeric, underscore or hyphen only.")
+    err = _validate_password_strength(data.password)
+    if err:
+        raise HTTPException(400, err)
+    USERS[un] = {
+        "password": _hash_password(data.password.strip()),
         "role": data.role,
-        "display_name": data.display_name or data.username.capitalize(),
+        "display_name": data.display_name or un.capitalize(),
         "box_color": data.box_color,
         "history": {"logins": [], "narada_activity": []},
     }
     save_users()
-    log_system_update(f"User added: {data.username}")
+    log_system_update(f"User added: {un}")
     return {"ok": True}
 
 @fastapi_app.post("/api/users/delete")
@@ -2166,7 +2233,12 @@ async def update_user(data: UpdateUserRequest, session=Depends(require_admin)):
     if data.username not in USERS:
         raise HTTPException(404, "User not found.")
     if data.new_password:
-        USERS[data.username]["password"] = _hash_password(data.new_password)
+        err = _validate_password_strength(data.new_password)
+        if err:
+            raise HTTPException(400, err)
+        USERS[data.username]["password"] = _hash_password(data.new_password.strip())
+        current_token = session.get("token")
+        _invalidate_user_sessions(data.username, except_token=current_token)
     if data.display_name is not None:
         USERS[data.username]["display_name"] = data.display_name
     if data.box_color is not None:
@@ -2201,8 +2273,15 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.email_sender_pass is not None:
         EMAIL_SENDER_PASS = data.email_sender_pass
     if data.email_recipients is not None:
+        if len(data.email_recipients) > 10:
+            raise HTTPException(400, "Maximum 10 email recipients allowed.")
+        for addr in data.email_recipients:
+            if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', addr):
+                raise HTTPException(400, f"Invalid email address: {addr}")
         EMAIL_RECIPIENTS = data.email_recipients
     if data.email_cooldown is not None:
+        if not (5 <= data.email_cooldown <= 3600):
+            raise HTTPException(400, "Email cooldown must be between 5 and 3600 seconds.")
         EMAIL_COOLDOWN = data.email_cooldown
     if data.groq_api_key is not None:
         GROQ_API_KEY = data.groq_api_key
@@ -2223,7 +2302,16 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
 
 @fastapi_app.post("/api/config/command/add")
 async def add_command(data: CustomCommandRequest, session=Depends(require_admin)):
-    CUSTOM_VOICE_COMMANDS[data.phrase.lower()] = data.response
+    phrase = (data.phrase or "").strip()
+    if not phrase:
+        raise HTTPException(400, "Command phrase cannot be empty.")
+    if len(phrase) > 200:
+        raise HTTPException(400, "Command phrase must be 200 characters or fewer.")
+    if len(data.response or "") > 500:
+        raise HTTPException(400, "Command response must be 500 characters or fewer.")
+    if len(CUSTOM_VOICE_COMMANDS) >= 100 and phrase.lower() not in CUSTOM_VOICE_COMMANDS:
+        raise HTTPException(400, "Maximum 100 custom commands reached.")
+    CUSTOM_VOICE_COMMANDS[phrase.lower()] = data.response
     await _async_save_config()
     return {"ok": True}
 

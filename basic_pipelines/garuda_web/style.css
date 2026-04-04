@@ -3740,7 +3740,9 @@ input:-webkit-autofill:focus {
   pointer-events: none;
 }
 
-#app.fb-hidden .fb-wrap { display: none; }
+#app.fb-hidden .fb-wrap { display: none !important; }
+/* On chat page, push button above the floating input bar */
+#app.page-chat .fb-wrap { bottom: 110px; }
 
 /* Bubble trigger button */
 .fb-bubble {
@@ -4105,7 +4107,9 @@ input:-webkit-autofill:focus {
 /* Mobile — panel sits above the bottom nav (68px tall) */
 @media (max-width: 768px) {
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
-  /* Always hide feedback bubble on mobile for login screen and chat page */
+  /* On chat page, push above the chat input bar */
+  #app.page-chat .fb-wrap { bottom: calc(168px + env(safe-area-inset-bottom)); }
+  /* Always hide feedback bubble on mobile for login screen */
   #app:not(.logged-in) .fb-wrap,
   #app.fb-hidden .fb-wrap { display: none !important; }
   .fb-panel { width: min(320px, calc(100vw - 32px)); max-height: min(68vh, 520px); overflow-y: auto; }
