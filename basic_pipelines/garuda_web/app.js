@@ -1133,10 +1133,9 @@ const G = (() => {
   function _syncFeedbackVisibility() {
     const appEl = $('app');
     if (!appEl) return;
-    const isMobile = window.innerWidth <= 768;
-    // Hide when not logged in; on mobile also hide on chat page (overlaps send button)
+    // Hide when not logged in, or on the chat page (overlaps send button on all screen sizes)
     const shouldHide = !appEl.classList.contains('logged-in') ||
-                       (isMobile && _currentPage === 'chat');
+                       _currentPage === 'chat';
     appEl.classList.toggle('fb-hidden', shouldHide);
   }
 
@@ -1556,6 +1555,8 @@ const G = (() => {
     const hpills = $('header-pills');
     if (!grid) return;
 
+    const isAdmin = _session?.role === 'admin';
+
     // Update rows in-place (preserves CSS transitions); create if first render
     MODE_CFG.forEach(m => {
       const isOn = !!modes[m.key];
@@ -1567,10 +1568,16 @@ const G = (() => {
           <div class="mode-row-icon">${m.icon}</div>
           <span class="mode-row-label">${m.label}</span>
           <div class="mode-toggle"></div>`;
-        row.addEventListener('click', () => {
-          const currentOn = row.classList.contains('on');
-          toggleMode(m.key, currentOn);
-        });
+        if (isAdmin) {
+          row.addEventListener('click', () => {
+            const currentOn = row.classList.contains('on');
+            toggleMode(m.key, currentOn);
+          });
+        } else {
+          row.style.cursor = 'default';
+          row.style.opacity = '0.6';
+          row.title = 'Admin access required';
+        }
         grid.appendChild(row);
       }
       // Smooth in-place state update (CSS transitions play)
