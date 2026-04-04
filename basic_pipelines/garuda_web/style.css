@@ -2533,15 +2533,22 @@ input[type=range]::-webkit-slider-thumb {
 .think-line-out { opacity: 0; transform: translateY(-6px); }
 
 /* Input pill — floats above feedback bubble on desktop */
-/* feedback: bottom:24px + 48px tall = 72px; input at 84px clears it with 12px gap */
-/* Input sits at bottom:16px by default; on chat page raise it above the feedback bubble */
+/* Base desktop: raise input above iOS nav (bottom:16px, ~68px tall) */
 #page-chat .chat-input-wrap { bottom: 84px; z-index: 950; }
 /* messages padding = input bottom (84px) + input height (~52px) + 12px gap */
 #page-chat .chat-messages { padding-bottom: 148px; }
 
-/* ── Move feedback bubble above chat input when chat page is active ── */
-/* desktop: input at 84px + ~52px tall → bubble sits at 144px        */
-body:has(#page-chat.active) .fb-wrap { bottom: 144px; }
+/* Desktop: when chat page is active, raise input above feedback bubble
+   (feedback: fixed bottom:24px, 48px tall → top at 72px from viewport)
+   Input raised by feedback height (48px) + gap (12px) = bottom:132px in shell */
+@media (min-width: 769px) {
+  body:has(#page-chat.active) #page-chat .chat-input-wrap {
+    bottom: 132px;
+  }
+  body:has(#page-chat.active) #page-chat .chat-messages {
+    padding-bottom: 200px; /* 132px + ~52px input + 16px gap */
+  }
+}
 
 .chat-input-wrap {
   position: absolute;
