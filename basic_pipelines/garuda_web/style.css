@@ -2296,6 +2296,7 @@ input[type=range]::-webkit-slider-thumb {
 .chat-shell {
   display: flex; flex-direction: column;
   height: 100%; max-height: 100%;
+  padding-bottom: 80px; /* clear fixed feedback bubble (bottom:24px + 48px tall) */
 }
 
 /* Header — hidden, replaced by Dynamic Island */
@@ -2902,7 +2903,7 @@ input[type=range]::-webkit-slider-thumb {
   }
   #page-chat .chat-shell {
     height: 100%;
-    padding-bottom: 80px; /* clear iOS nav pill */
+    padding-bottom: 148px; /* clear iOS nav pill + feedback bubble (92px+46px+10px gap) */
     overflow-x: hidden;
   }
   #page-chat .chat-messages { overflow-x: hidden; }
@@ -3709,8 +3710,7 @@ input:-webkit-autofill:focus {
   .admin-page-header h2 { display: none; }
   .admin-page-header { min-height: 0; margin-bottom: 8px; }
   .dash-card-title { font-size: 12px; }
-  /* Chat input on mobile — above dock */
-  .chat-input-wrap { bottom: 92px; left: 12px; right: 12px; }
+  /* Chat input is a flex child — no absolute positioning needed */
   /* Narada feed */
   .narada-feed { padding-bottom: 12px; }
   /* Page padding-top reduction on mobile for tighter feel */
@@ -4103,9 +4103,8 @@ input:-webkit-autofill:focus {
 /* Mobile — panel sits above the bottom nav (68px tall) */
 @media (max-width: 768px) {
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
-  /* On chat page, input bar moves up (z-index 950) — keep feedback at normal position */
-  #page-chat .chat-input-wrap { bottom: calc(156px + env(safe-area-inset-bottom)); z-index: 950; }
-  #page-chat .chat-messages { padding-bottom: calc(248px + env(safe-area-inset-bottom)); }
+  /* Chat input is flex child — shell padding handles clearance */
+  #page-chat .chat-input-wrap { z-index: 950; }
   /* Always hide feedback bubble on mobile for login screen */
   #app:not(.logged-in) .fb-wrap,
   #app.fb-hidden .fb-wrap { display: none !important; }
