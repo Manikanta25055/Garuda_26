@@ -2296,7 +2296,7 @@ input[type=range]::-webkit-slider-thumb {
 .chat-shell {
   display: flex; flex-direction: column;
   height: 100%; max-height: 100%;
-  padding-bottom: 80px; /* clear fixed feedback bubble (bottom:24px + 48px tall) */
+  position: relative; /* anchor for absolute-positioned input pill */
 }
 
 /* Header — hidden, replaced by Dynamic Island */
@@ -2532,13 +2532,15 @@ input[type=range]::-webkit-slider-thumb {
 .think-line-in  { opacity: 1; transform: translateY(0); }
 .think-line-out { opacity: 0; transform: translateY(-6px); }
 
-/* Input pill — in-flow flex child */
-
-/* Input is a flex child — no absolute positioning needed */
-#page-chat .chat-input-wrap { z-index: 950; }
+/* Input pill — floats above feedback bubble on desktop */
+/* feedback: bottom:24px + 48px tall = 72px; input at 84px clears it with 12px gap */
+#page-chat .chat-input-wrap { bottom: 84px; z-index: 950; }
+/* messages padding = input bottom (84px) + input height (~52px) + 8px gap + feedback bubble (48px) */
+#page-chat .chat-messages { padding-bottom: 196px; }
 
 .chat-input-wrap {
-  margin: 8px 16px 16px;
+  position: absolute;
+  bottom: 16px; left: 16px; right: 16px;
   background: rgba(255,255,255,0.82);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
@@ -2550,7 +2552,6 @@ input[type=range]::-webkit-slider-thumb {
   align-items: center;
   gap: 8px;
   z-index: 10;
-  flex-shrink: 0;
 }
 [data-theme="dark"] .chat-input-wrap {
   background: rgba(28,28,30,0.82);
@@ -2901,15 +2902,12 @@ input[type=range]::-webkit-slider-thumb {
     overflow-y: hidden;
     z-index: 2;
   }
-  #page-chat .chat-shell {
-    height: 100%;
-    padding-bottom: 148px; /* clear iOS nav pill + feedback bubble (92px+46px+10px gap) */
-    overflow-x: hidden;
-  }
-  #page-chat .chat-messages { overflow-x: hidden; }
+  #page-chat .chat-shell { height: 100%; overflow-x: hidden; }
+  /* messages padding = input bottom (92px) + input height (~48px) + feedback bubble (46px) + gap */
+  #page-chat .chat-messages { overflow-x: hidden; padding-bottom: 200px; }
   #page-chat .chat-input-wrap {
+    bottom: 92px; left: 12px; right: 12px;
     padding: 6px 6px 6px 14px;
-    margin: 6px 12px 12px;
   }
   #page-chat .chat-input-box { gap: 8px; }
   #page-chat .chat-textarea {
