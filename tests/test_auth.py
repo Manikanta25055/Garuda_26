@@ -111,9 +111,9 @@ def test_session_with_invalid_token(app_client):
 
 # ── TC-A13: GET /api/session with expired token → 401 ────────────────────────
 def test_session_expired(app_client):
-    # Create session with 1-second duration then wait
-    token = gw.create_session('user', duration=1)
-    time.sleep(1.1)
+    # Create session then back-date its expiry to the past (no sleep needed)
+    token = gw.create_session('user', duration=3600)
+    gw._sessions[token]['expires'] = time.time() - 1
     r = app_client.get('/api/session', headers={'X-Garuda-Token': token})
     assert r.status_code == 401
 
@@ -139,10 +139,10 @@ def test_forgot_reset_correct_otp(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/forgot/send-otp', json={'username': 'user'})
     otp = gw.USER_FORGOT_OTP
-    r = app_client.post('/api/forgot/reset', json={'otp': otp, 'new_password': 'newpass123'})
+    r = app_client.post('/api/forgot/reset', json={'otp': otp, 'new_password': 'NewPass123'})
     assert r.status_code == 200
     # Now login with new password should work
-    r2 = app_client.post('/api/login', json={'username': 'user', 'password': 'newpass123'})
+    r2 = app_client.post('/api/login', json={'username': 'user', 'password': 'NewPass123'})
     assert r2.status_code == 200
 
 

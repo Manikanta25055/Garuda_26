@@ -41,12 +41,12 @@ def test_chat_stream_without_groq_key_emits_sse_tokens(app_client, user_headers,
     assert '"type": "done"' in body
 
 
-def test_presence_refresh_reports_result(app_client, user_headers, monkeypatch):
+def test_presence_refresh_reports_result(app_client, admin_headers, monkeypatch):
     def fake_refresh():
         gw._owner_present = True
 
     monkeypatch.setattr(gw, '_do_presence_check', fake_refresh)
-    r = app_client.post('/api/presence_refresh', headers=user_headers)
+    r = app_client.post('/api/presence_refresh', headers=admin_headers)
     assert r.status_code == 200
     assert r.json() == {'owner_present': True}
 
@@ -76,13 +76,17 @@ def test_master_key_login_rejects_invalid_key(app_client):
 
 
 def test_master_keys_are_masked_for_admin(app_client, admin_headers):
+    original = list(gw.MASTER_KEYS)
     gw.MASTER_KEYS[:] = ['Abcd-1234-Secret!']
-    r = app_client.get('/api/master_keys', headers=admin_headers)
-    assert r.status_code == 200
-    data = r.json()
-    assert data['count'] == 1
-    assert data['keys'][0].endswith('ret!')
-    assert 'Abcd' not in data['keys'][0]
+    try:
+        r = app_client.get('/api/master_keys', headers=admin_headers)
+        assert r.status_code == 200
+        data = r.json()
+        assert data['count'] == 1
+        assert data['keys'][0].endswith('ret!')
+        assert 'Abcd' not in data['keys'][0]
+    finally:
+        gw.MASTER_KEYS[:] = original
 
 
 def test_master_key_delete_rejects_last_remaining_key(app_client, admin_headers):

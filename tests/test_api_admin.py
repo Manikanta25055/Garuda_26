@@ -30,7 +30,7 @@ def test_list_users_no_auth(app_client):
 def test_add_user(app_client, admin_headers):
     """TC-AD04: Admin adds new user → 200, user appears in list."""
     r = app_client.post('/api/users/add',
-                        json={'username': 'newuser', 'password': 'pass123', 'role': 'user'},
+                        json={'username': 'newuser', 'password': 'ValidPass1', 'role': 'user'},
                         headers=admin_headers)
     assert r.status_code == 200
     users = app_client.get('/api/users', headers=admin_headers).json()
@@ -40,10 +40,10 @@ def test_add_user(app_client, admin_headers):
 def test_add_duplicate_user(app_client, admin_headers):
     """TC-AD05: Adding duplicate username → 400."""
     app_client.post('/api/users/add',
-                    json={'username': 'dupuser', 'password': 'x', 'role': 'user'},
+                    json={'username': 'dupuser', 'password': 'ValidPass1', 'role': 'user'},
                     headers=admin_headers)
     r = app_client.post('/api/users/add',
-                        json={'username': 'dupuser', 'password': 'x', 'role': 'user'},
+                        json={'username': 'dupuser', 'password': 'ValidPass1', 'role': 'user'},
                         headers=admin_headers)
     assert r.status_code == 400
 
@@ -57,7 +57,7 @@ def test_delete_admin_account_forbidden(app_client, admin_headers):
 def test_delete_user(app_client, admin_headers):
     """TC-AD07: Delete newly added user → 200, no longer in list."""
     app_client.post('/api/users/add',
-                    json={'username': 'todelete', 'password': 'x', 'role': 'user'},
+                    json={'username': 'todelete', 'password': 'ValidPass1', 'role': 'user'},
                     headers=admin_headers)
     r = app_client.post('/api/users/delete', json={'username': 'todelete'}, headers=admin_headers)
     assert r.status_code == 200

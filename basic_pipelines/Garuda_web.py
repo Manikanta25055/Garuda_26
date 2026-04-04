@@ -2176,6 +2176,8 @@ async def set_mode(data: ModeRequest, session=Depends(require_session)):
         raise HTTPException(400, f"Unknown mode: {data.mode}")
     with _mode_lock:
         globals()[mode_map[data.mode]] = data.value
+        if data.mode == "emergency" and data.value:
+            MODE_DND = False
     await _async_save_config()
     log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
     push_urgent_ws()

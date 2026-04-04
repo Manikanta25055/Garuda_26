@@ -89,8 +89,11 @@ def test_concurrent_event_queue_inserts(app_client):
     assert gw.get_pending_count() == start + N
 
 
-def test_rapid_login_logout(app_client):
+def test_rapid_login_logout(app_client, monkeypatch):
     """TC-CON04: Rapid login/logout cycles → session always reflects correct state."""
+    import collections
+    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw, '_RATE_LIMIT', 200)  # well above 10×3 requests
     for _ in range(10):
         r_login = app_client.post('/api/login',
                                   json={'username': 'user', 'password': 'user'})
@@ -131,12 +134,12 @@ def test_high_frequency_state_requests(app_client, user_headers):
 def test_rate_limiter_enforces_limit(app_client, monkeypatch):
     """TC-CON06: Rate limiter — 35 requests → some 429 responses."""
     import collections
+    # Fresh store + lower limit to make the test deterministic on any hardware
     monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw, '_RATE_LIMIT', 10)
     codes = []
-    for _ in range(35):
+    for _ in range(15):
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'wrong'})
         codes.append(r.status_code)
-    # Must have at least one 429
     assert 429 in codes, f"Rate limit not enforced. All codes: {set(codes)}"
-    # Must have at least one non-429 (first requests succeed)
     assert any(c != 429 for c in codes[:5])

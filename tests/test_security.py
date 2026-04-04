@@ -10,14 +10,15 @@ import Garuda_web as gw
 
 def test_heartbeat_with_wrong_key_doesnt_reset_deadman(app_client, monkeypatch):
     """TC-SEC01: Heartbeat with wrong key does NOT reset the deadman timer."""
-    old_hb = gw._last_heartbeat
+    # Freeze _last_heartbeat at a known value (long in the past)
+    frozen_time = time.time() - 300
+    monkeypatch.setattr(gw, '_last_heartbeat', frozen_time)
     monkeypatch.setenv('HEARTBEAT_KEY', 'correct-key')
-    time.sleep(0.01)
     # Wrong key — timer should NOT update
     r = app_client.get('/api/heartbeat?key=wrong-key')
     assert r.status_code == 200
-    # _last_heartbeat must not have been updated past our recorded value by this call
-    assert gw._last_heartbeat <= old_hb + 0.1  # minimal drift allowed
+    # _last_heartbeat must remain at the frozen value (not updated to now)
+    assert gw._last_heartbeat < frozen_time + 1.0  # unchanged
 
 
 def test_heartbeat_with_correct_key_resets_deadman(app_client, monkeypatch):
@@ -39,15 +40,15 @@ def test_heartbeat_public_when_no_key_configured(app_client, monkeypatch):
 
 
 def test_session_token_format(app_client, user_token):
-    """TC-SEC02: Token is 64-char hex string (secrets.token_hex(32))."""
-    assert len(user_token) == 64
+    """TC-SEC02: Token is 128-char hex string (secrets.token_hex(64))."""
+    assert len(user_token) == 128, f"Expected 128, got {len(user_token)}"
     assert all(c in '0123456789abcdef' for c in user_token)
 
 
 def test_user_cannot_add_admin(app_client, user_headers):
     """TC-SEC03: User cannot add admin-role accounts."""
     r = app_client.post('/api/users/add',
-                        json={'username': 'evil', 'password': 'x', 'role': 'admin'},
+                        json={'username': 'evil', 'password': 'ValidPass1', 'role': 'admin'},
                         headers=user_headers)
     assert r.status_code == 403
 
@@ -101,8 +102,8 @@ def test_bypass_otp_absent_from_responses(app_client, monkeypatch):
 
 def test_expired_token_rejected(app_client):
     """TC-SEC09: Expired session token → 401."""
-    token = gw.create_session('user', duration=1)
-    time.sleep(1.1)
+    token = gw.create_session('user', duration=3600)
+    gw._sessions[token]['expires'] = time.time() - 1  # back-date, no sleep
     r = app_client.get('/api/state', headers={'X-Garuda-Token': token})
     assert r.status_code == 401
 
