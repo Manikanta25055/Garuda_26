@@ -2536,6 +2536,8 @@ input[type=range]::-webkit-slider-thumb {
 
 /* Chat input sits above the feedback bubble (z-index 900) on desktop */
 #page-chat .chat-input-wrap { bottom: 84px; z-index: 950; }
+/* Messages must clear input bar (~44px tall at 84px) + feedback bubble (48px) */
+#page-chat .chat-messages { padding-bottom: 176px; }
 
 .chat-input-wrap {
   position: absolute;
@@ -4110,6 +4112,7 @@ input:-webkit-autofill:focus {
   .fb-wrap { bottom: calc(92px + env(safe-area-inset-bottom)); right: 16px; }
   /* On chat page, input bar moves up (z-index 950) — keep feedback at normal position */
   #page-chat .chat-input-wrap { bottom: calc(156px + env(safe-area-inset-bottom)); z-index: 950; }
+  #page-chat .chat-messages { padding-bottom: calc(248px + env(safe-area-inset-bottom)); }
   /* Always hide feedback bubble on mobile for login screen */
   #app:not(.logged-in) .fb-wrap,
   #app.fb-hidden .fb-wrap { display: none !important; }
