@@ -2447,7 +2447,7 @@ input[type=range]::-webkit-slider-thumb {
   padding: 10px 16px;
   border-radius: 20px 20px 4px 20px;
   font-size: 14px; line-height: 1.55;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Assistant — left, with avatar */
@@ -2459,7 +2459,7 @@ input[type=range]::-webkit-slider-thumb {
 .chat-msg-body {
   font-size: 14px; line-height: 1.65;
   color: var(--t1);
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Markdown elements */
@@ -2468,6 +2468,7 @@ input[type=range]::-webkit-slider-thumb {
 .chat-heading {
   display: block; font-size: 13px; font-weight: 700;
   color: var(--t1); margin: 10px 0 4px; letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 .chat-li {
   display: block; padding-left: 14px; position: relative;
@@ -2485,7 +2486,7 @@ input[type=range]::-webkit-slider-thumb {
   font-family: var(--mono); font-size: 12px;
   background: rgba(0,0,0,0.5); border: 0.5px solid var(--border);
   border-radius: 10px; padding: 14px 16px; margin: 8px 0;
-  overflow-x: hidden; color: #a8d8a8; line-height: 1.5;
+  overflow-x: auto; color: #a8d8a8; line-height: 1.5;
   white-space: pre;
 }
 
@@ -2561,7 +2562,7 @@ input[type=range]::-webkit-slider-thumb {
   padding: 8px 8px 8px 18px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   z-index: 10;
 }

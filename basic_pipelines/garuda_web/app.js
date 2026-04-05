@@ -674,6 +674,8 @@ const G = (() => {
   // ── Chat ──────────────────────────────────────────────────
   let _chatBusy    = false;
   let _thinkTimer  = null;
+  let _measureCanvas = null; // reused offscreen canvas for pretext-style text measurement
+  let _chatRo      = null;   // ResizeObserver for input wrap → messages padding sync
 
   function toggleRateLimitInfo() {
     const bubble = $('chat-ratelimit-bubble');
@@ -877,10 +879,38 @@ const G = (() => {
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
     }, sig);
-    input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 140) + 'px';
-    }, sig);
+
+    // Pretext-inspired: measure text height via canvas.measureText(), not scrollHeight.
+    // scrollHeight forces a synchronous layout reflow; canvas measurement is pure arithmetic.
+    if (!_measureCanvas) _measureCanvas = document.createElement('canvas');
+    function _resizeTextarea() {
+      const style  = getComputedStyle(input);
+      const lineH  = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.55;
+      const padV   = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
+      const ctx    = _measureCanvas.getContext('2d');
+      ctx.font     = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+      const availW = input.clientWidth || 240;
+      let lines    = 0;
+      for (const line of (input.value || '').split('\n')) {
+        lines += line ? Math.max(1, Math.ceil(ctx.measureText(line).width / availW)) : 1;
+      }
+      input.style.height = Math.min(Math.max(lines, 1) * lineH + padV, 140) + 'px';
+    }
+    input.addEventListener('input', _resizeTextarea, sig);
+
+    // ResizeObserver on the input wrap: dynamically sync messages padding-bottom
+    // instead of hardcoded magic-number estimates in CSS.
+    if (_chatRo) _chatRo.disconnect();
+    const wrap = input.closest('.chat-input-wrap');
+    const msgs = $('chat-messages');
+    if (wrap && msgs) {
+      _chatRo = new ResizeObserver(([entry]) => {
+        const wrapH    = entry.contentRect.height;
+        const bottomPx = parseInt(getComputedStyle(wrap).bottom) || 16;
+        msgs.style.paddingBottom = (bottomPx + wrapH + 12) + 'px';
+      });
+      _chatRo.observe(wrap);
+    }
   }
 
   // ── Alert activity heatmap (backend-stored, lifetime-persistent) ────────
