@@ -298,11 +298,6 @@ const G = (() => {
       if ($('adm-otp')) $('adm-otp').value = '';
       $('adm-err-2')?.classList.add('hidden');
       showLoginView('lv-admin-2');
-      // Dev-only OTP fallback (only shown on localhost)
-      if (r && !r.ok && r.bypass_otp && location.hostname === 'localhost') {
-        const e2 = $('adm-err-2');
-        if (e2) { e2.textContent = 'Email failed. Dev code: ' + r.bypass_otp; e2.classList.remove('hidden'); }
-      }
       setTimeout(() => $('adm-otp')?.focus(), 50);
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -471,9 +466,8 @@ const G = (() => {
     const un = ($('fp-user')?.value || '').trim();
     if (!un) { showEl('fp-msg', 'Enter your username.', false); return; }
     try {
-      const r = await api('POST', '/api/forgot/send-otp', { username: un });
-      if (r.bypass_otp && location.hostname === 'localhost') showEl('fp-msg', `Dev OTP: ${r.bypass_otp}`, false);
-      else showEl('fp-msg', 'OTP sent to alert email.', true);
+      await api('POST', '/api/forgot/send-otp', { username: un });
+      showEl('fp-msg', 'OTP sent to alert email.', true);
       const fpBlock = $('fp-otp-block');
       if (fpBlock) { fpBlock.classList.remove('hidden'); fpBlock.style.display = 'flex'; }
       if ($('fp-btn')) {
@@ -484,11 +478,12 @@ const G = (() => {
   }
 
   async function doReset() {
+    const un  = ($('fp-user')?.value || '').trim();
     const otp = ($('fp-otp')?.value || '').trim();
     const pw  = $('fp-newpass')?.value || '';
-    if (!otp || !pw) { showEl('fp-msg', 'Enter OTP and new password.', false); return; }
+    if (!un || !otp || !pw) { showEl('fp-msg', 'Enter OTP and new password.', false); return; }
     try {
-      await api('POST', '/api/forgot/reset', { otp, new_password: pw });
+      await api('POST', '/api/forgot/reset', { username: un, otp, new_password: pw });
       showEl('fp-msg', 'Password reset! You can now sign in.', true);
       setTimeout(() => showLoginView('lv-main'), 2000);
     } catch(e) { showEl('fp-msg', e.detail || 'Invalid OTP.', false); }
@@ -1302,7 +1297,7 @@ const G = (() => {
     }
     el.innerHTML = items.map(item =>
       `<div class="timeline-item">
-        <div class="tl-dot ${item.type}"></div>
+        <div class="tl-dot ${esc(item.type)}"></div>
         <div class="tl-body">
           <div class="tl-title">${esc(item.text)}</div>
           <div class="tl-time">${esc(item.time)}</div>

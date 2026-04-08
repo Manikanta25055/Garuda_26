@@ -36,66 +36,75 @@ sensor = None
 class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
-        self.new_variable = 42  # New variable example
-        self.person_detected = False  # Flag for person detection
-    
-    def new_function(self):  # New function example
+        self.new_variable = 42
+        self.person_detected = False
+        self._person_frame_count = 0    # consecutive frames with person
+        self._no_person_frame_count = 0  # consecutive frames without person
+
+    def new_function(self):
         return "The meaning of life is: "
 
 # -----------------------------------------------------------------------------------------------
 # User-defined callback function
 # -----------------------------------------------------------------------------------------------
 
+# Frames of consistent detection before confirming a person is present
+PERSON_CONFIRM_FRAMES = 3
+# Frames of absence before clearing the person-detected flag
+PERSON_CLEAR_FRAMES = 5
+
 # This is the callback function that will be called when data is available from the pipeline
 def app_callback(pad, info, user_data):
-    # Get the GstBuffer from the probe info
     buffer = info.get_buffer()
-    # Check if the buffer is valid
     if buffer is None:
         return Gst.PadProbeReturn.OK
-        
-    # Using the user_data to count the number of frames
+
     user_data.increment()
     string_to_print = f"Frame count: {user_data.get_count()}\n"
-    
-    # Get the caps from the pad
-    format, width, height = get_caps_from_pad(pad)
 
-    # If the user_data.use_frame is set to True, we can get the video frame from the buffer
+    format, width, height = get_caps_from_pad(pad)
     frame = None
     if user_data.use_frame and format is not None and width is not None and height is not None:
-        # Get video frame
         frame = get_numpy_from_buffer(buffer, format, width, height)
 
-    # Get the detections from the buffer
     roi = hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
-    
-    # Parse the detections
+
     detection_count = 0
-    person_detected_in_frame = False  # Flag to check if person is detected in the current frame
+    person_detected_in_frame = False
     for detection in detections:
         label = detection.get_label()
-        bbox = detection.get_bbox()
         confidence = detection.get_confidence()
         if label == "person":
             string_to_print += f"Detection: {label} {confidence:.2f}\n"
             detection_count += 1
-            person_detected_in_frame = True  # Person detected
-    
-    # Update the person_detected flag in user_data
-    with state_lock:
-        user_data.person_detected = person_detected_in_frame
-    update_led_state()  # Update the LED state based on detections and motion
+            person_detected_in_frame = True
 
-    if user_data.use_frame:
-        # Note: using imshow will not work here, as the callback function is not running in the main thread
-        # Let's print the detection count to the frame
+    # Temporal filtering: require N consecutive frames before setting/clearing flag.
+    # Snapshot current LED state under the same lock to eliminate the race window.
+    with state_lock:
+        if person_detected_in_frame:
+            user_data._person_frame_count += 1
+            user_data._no_person_frame_count = 0
+            if user_data._person_frame_count >= PERSON_CONFIRM_FRAMES:
+                user_data.person_detected = True
+        else:
+            user_data._no_person_frame_count += 1
+            user_data._person_frame_count = 0
+            if user_data._no_person_frame_count >= PERSON_CLEAR_FRAMES:
+                user_data.person_detected = False
+        should_led_on = user_data.person_detected and motion_detected_flag
+
+    # GPIO ops must not block the GStreamer pad-probe thread — dispatch to daemon thread
+    if led is not None:
+        threading.Thread(
+            target=lambda v=should_led_on: led.on() if v else led.off(),
+            daemon=True
+        ).start()
+
+    if user_data.use_frame and frame is not None:
         cv2.putText(frame, f"Detections: {detection_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Example of how to use the new_variable and new_function from the user_data
-        # Let's print the new_variable and the result of the new_function to the frame
         cv2.putText(frame, f"{user_data.new_function()} {user_data.new_variable}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        # Convert the frame to BGR
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         user_data.set_frame(frame)
 
@@ -105,13 +114,13 @@ def app_callback(pad, info, user_data):
 
 # Function to update the LED state based on person and motion detection
 def update_led_state():
+    if led is None or user_data is None:
+        return
     with state_lock:
         if user_data.person_detected and motion_detected_flag:
             led.on()
-            print("LED on")
         else:
             led.off()
-            print("LED off")
 
 # Function to handle motion detection
 def motion_detected():
@@ -139,11 +148,11 @@ class GStreamerDetectionApp(GStreamerApp):
         super().__init__(args, user_data)
         # Additional initialization code can be added here
         # Set Hailo parameters these parameters should be set based on the model used
-        self.batch_size = 2
+        self.batch_size = 1
         self.network_width = 640
         self.network_height = 640
         self.network_format = "RGB"
-        nms_score_threshold = 0.3 
+        nms_score_threshold = 0.25
         nms_iou_threshold = 0.45
         
         # Temporary code: new postprocess will be merged to TAPPAS.
@@ -193,7 +202,7 @@ class GStreamerDetectionApp(GStreamerApp):
         if self.source_type == "rpi":
             source_element = (
                 "libcamerasrc name=src_0 auto-focus-mode=2 ! "
-                f"video/x-raw, format={self.network_format}, width=1536, height=864 ! "
+                "video/x-raw, width=1536, height=864 ! "
                 + QUEUE("queue_src_scale")
                 + "videoscale ! "
                 f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, framerate=30/1 ! "
@@ -224,14 +233,12 @@ class GStreamerDetectionApp(GStreamerApp):
             + "hmux.sink_0 "
             + "t. ! "
             + QUEUE("queue_hailonet")
-            + "videoconvert n-threads=3 ! "
-            f"hailonet hef-path={self.hef_path} batch-size={self.batch_size} {self.thresholds_str} force-writable=true ! "
+            + f"hailonet hef-path={self.hef_path} batch-size={self.batch_size} {self.thresholds_str} force-writable=true ! "
             + QUEUE("queue_hailofilter")
             + f"hailofilter so-path={self.default_postprocess_so} {self.labels_config} qos=false ! "
             + QUEUE("queue_hmuc")
             + "hmux.sink_1 "
             + "hmux. ! "
-            + QUEUE("queue_hailo_python")
             + QUEUE("queue_user_callback")
             + "identity name=identity_callback ! "
             + QUEUE("queue_hailooverlay")
@@ -265,7 +272,7 @@ if __name__ == "__main__":
     # Add additional arguments here
     parser.add_argument(
         "--network",
-        default="yolov6n",
+        default="yolov8s",
         choices=['yolov6n', 'yolov8s', 'yolox_s_leaky'],
         help="Which Network to use, default is yolov6n",
     )

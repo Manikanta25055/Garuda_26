@@ -254,14 +254,13 @@ def handle_rgb(map_info, width, height):
     return np.ndarray(shape=(height, width, 3), dtype=np.uint8, buffer=map_info.data).copy()
 
 def handle_nv12(map_info, width, height):
-    y_plane_size = width * height
-    uv_plane_size = width * height // 2
-    y_plane = np.ndarray(shape=(height, width), dtype=np.uint8, buffer=map_info.data[:y_plane_size]).copy()
-    uv_plane = np.ndarray(shape=(height//2, width//2, 2), dtype=np.uint8, buffer=map_info.data[y_plane_size:]).copy()
-    return y_plane, uv_plane
+    total = width * height * 3 // 2
+    raw = np.ndarray(shape=(height * 3 // 2, width), dtype=np.uint8, buffer=map_info.data[:total]).copy()
+    return cv2.cvtColor(raw, cv2.COLOR_YUV2RGB_NV12)
 
 def handle_yuyv(map_info, width, height):
-    return np.ndarray(shape=(height, width, 2), dtype=np.uint8, buffer=map_info.data).copy()
+    raw = np.ndarray(shape=(height, width, 2), dtype=np.uint8, buffer=map_info.data).copy()
+    return cv2.cvtColor(raw, cv2.COLOR_YUV2RGB_YUY2)
 
 FORMAT_HANDLERS = {
     'RGB': handle_rgb,

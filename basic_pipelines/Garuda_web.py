@@ -116,7 +116,7 @@ from hailo_rpi_common import (
 ##############################################################################
 EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "")
 EMAIL_SENDER_PASS = os.environ.get("EMAIL_SENDER_PASS", "")
-EMAIL_RECIPIENTS = ["amarmanikantan@gmail.com"]
+EMAIL_RECIPIENTS = [r.strip() for r in os.environ.get("EMAIL_RECIPIENTS", "amarmanikantan@gmail.com").split(",") if r.strip()]
 EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 _email_lock = threading.Lock()
@@ -156,10 +156,7 @@ ADMIN_OTP = None
 _admin_otp_user: str | None = None   # server-side stored username for OTP step 2
 _admin_otp_ts: float = 0             # epoch when admin OTP was generated
 _admin_otp_attempts: int = 0         # failed verify attempts; cleared on success or expiry
-USER_FORGOT_OTP = None
-_forgot_otp_user = None
-_forgot_otp_ts: float = 0            # epoch when forgot-password OTP was generated
-_forgot_otp_attempts: int = 0        # failed verify attempts
+_forgot_otp_store: dict = {}  # username → {otp, ts, attempts}  (per-user, no race condition)
 
 # Modes
 MODE_DND = False
@@ -226,8 +223,8 @@ def _verify_password(pw: str, stored: str) -> bool:
             return False
         _, algo, iters, salt_hex, dk_hex = parts
         dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
-        return dk.hex() == dk_hex
-    return pw == stored  # plaintext fallback for migration
+        return hmac.compare_digest(dk.hex(), dk_hex)
+    return hmac.compare_digest(pw, stored)  # plaintext fallback for migration
 
 def _validate_password_strength(pw: str) -> str | None:
     """Return an error string if password fails requirements, else None."""
@@ -308,22 +305,7 @@ def _check_rate_limit(request) -> bool:
     return True
 
 
-USERS = {
-    "user": {
-        "password": "user",
-        "role": "user",
-        "display_name": "User",
-        "box_color": "#1565c0",
-        "history": {"logins": [], "narada_activity": []}
-    },
-    "admin": {
-        "password": "root",
-        "role": "admin",
-        "display_name": "Admin",
-        "box_color": "#e65100",
-        "history": {"logins": [], "narada_activity": []}
-    }
-}
+USERS: dict = {}  # populated from users.json at startup; no hardcoded defaults
 
 # MJPEG / WebRTC frame buffer
 _frame_buffer = None
@@ -584,12 +566,16 @@ def log_system_update(message):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     system_updates_log.append(entry)
+    if len(system_updates_log) > 500:
+        system_updates_log[:] = system_updates_log[-500:]
     _perm_write(PERM_SYSTEM_LOG, entry)
 
 def append_voice_log(message, user_name=None):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     voice_assistant_log.append(entry)
+    if len(voice_assistant_log) > 500:
+        voice_assistant_log[:] = voice_assistant_log[-500:]
     _perm_write(PERM_VOICE_LOG, entry)
     if user_name and user_name in USERS:
         USERS[user_name]["history"]["narada_activity"].append(entry)
@@ -1486,10 +1472,13 @@ def voice_assistant_loop(stop_event, current_user=None):
 ##############################################################################
 def create_session(username, duration=3600):
     token = secrets.token_hex(64)
+    now = time.time()
     _sessions[token] = {
         "username": username,
         "role": USERS[username]["role"],
-        "expires": time.time() + duration,
+        "expires": now + duration,
+        "created_at": now,
+        "max_lifetime": now + 86400,  # absolute 24-hour hard limit
         "logs_unlocked": False,
     }
     return token
@@ -1497,10 +1486,13 @@ def create_session(username, duration=3600):
 def create_master_session(duration=3600):
     """Create an admin session via master key — logs unlocked immediately."""
     token = secrets.token_hex(64)
+    now = time.time()
     _sessions[token] = {
         "username": "admin",
         "role": "admin",
-        "expires": time.time() + duration,
+        "expires": now + duration,
+        "created_at": now,
+        "max_lifetime": now + 28800,  # absolute 8-hour hard limit for master sessions
         "logs_unlocked": True,
     }
     return token
@@ -1509,9 +1501,21 @@ def get_session(token):
     if not token:
         return None
     s = _sessions.get(token)
-    if s and s["expires"] > time.time():
-        return s
-    return None
+    if not s:
+        return None
+    now = time.time()
+    if s["expires"] <= now or now >= s.get("max_lifetime", now + 1):
+        del _sessions[token]
+        return None
+    return s
+
+def _prune_expired_sessions():
+    """Remove sessions that have expired or exceeded their absolute lifetime."""
+    now = time.time()
+    dead = [t for t, s in _sessions.items()
+            if s["expires"] <= now or now >= s.get("max_lifetime", now + 1)]
+    for t in dead:
+        del _sessions[t]
 
 def require_session(request: Request):
     # X-Garuda-Token header takes priority (cross-origin API); cookie is browser fallback
@@ -1519,8 +1523,9 @@ def require_session(request: Request):
     session = get_session(token)
     if not session:
         raise HTTPException(401, "Not authenticated")
-    # Sliding window — extend session on every authenticated request (keeps active users logged in)
-    session["expires"] = time.time() + 3600
+    # Sliding window — but never beyond absolute max_lifetime
+    now = time.time()
+    session["expires"] = min(now + 3600, session.get("max_lifetime", now + 3600))
     # Inject token so endpoints can exclude the current session during invalidation
     session["token"] = token
     return session
@@ -1783,6 +1788,7 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline'; "
@@ -1864,6 +1870,7 @@ class VerifyOTPRequest(BaseModel):
     otp: str
 
 class ForgotPasswordRequest(BaseModel):
+    username: str
     otp: str
     new_password: str
 
@@ -1914,7 +1921,7 @@ async def login(data: LoginRequest, request: Request, response: Response):
             save_users()
         duration = 5 * 24 * 3600 if data.remember_me else 3600
         token = create_session(u, duration)
-        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=duration)
+        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=True, max_age=duration)
         log_system_update(f"Login: {u}")
         USERS[u]["history"]["logins"].append(
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -1993,7 +2000,7 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     if u not in USERS or USERS[u]["role"] != "admin":
         raise HTTPException(401, "Account not authorised.")
     token = create_session(u)
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
+    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=True, max_age=3600)
     log_system_update(f"Admin login: {u}")
     return {
         "role": "admin",
@@ -2006,20 +2013,17 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
 async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts, _forgot_otp_attempts
     u = data.username.strip()
-    # Always return the same response regardless of whether user exists
-    # to prevent account enumeration attacks
+    # Always return the same response regardless of whether user exists (anti-enumeration)
     if u not in USERS:
         return {"ok": True}
-    USER_FORGOT_OTP = generate_otp_code(6)
-    _forgot_otp_user = u
-    _forgot_otp_ts = time.time()
-    _forgot_otp_attempts = 0
-    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, USER_FORGOT_OTP)
+    otp = generate_otp_code(6)
+    _forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
+    # Send to the user's own email if stored, else fall back to admin recipient
+    dest = USERS[u].get("email") or (EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER)
+    ok, err = send_otp_via_email(dest, otp)
     if not ok:
-        USER_FORGOT_OTP = None; _forgot_otp_user = None
+        _forgot_otp_store.pop(u, None)
         return {"ok": False, "error": err}
     return {"ok": True}
 
@@ -2027,26 +2031,29 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
 async def forgot_reset(data: ForgotPasswordRequest, request: Request):
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global USER_FORGOT_OTP, _forgot_otp_user, _forgot_otp_ts, _forgot_otp_attempts
-    if not USER_FORGOT_OTP or not _forgot_otp_user:
+    u = data.username.strip()
+    state = _forgot_otp_store.get(u)
+    if not state:
         raise HTTPException(401, "No OTP pending.")
-    if time.time() - _forgot_otp_ts > 300:
-        USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_attempts = 0
+    if time.time() - state["ts"] > 300:
+        _forgot_otp_store.pop(u, None)
         raise HTTPException(401, "OTP expired. Please request a new one.")
-    if _forgot_otp_attempts >= 3:
-        USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_attempts = 0
+    if state["attempts"] >= 3:
+        _forgot_otp_store.pop(u, None)
         raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
-    if not hmac.compare_digest(data.otp.strip(), USER_FORGOT_OTP):
-        _forgot_otp_attempts += 1
+    if not hmac.compare_digest(data.otp.strip(), state["otp"]):
+        state["attempts"] += 1
         raise HTTPException(401, "Invalid OTP.")
     err = _validate_password_strength(data.new_password)
     if err:
         raise HTTPException(400, err)
-    USERS[_forgot_otp_user]["password"] = _hash_password(data.new_password.strip())
-    _invalidate_user_sessions(_forgot_otp_user)
+    if u not in USERS:
+        raise HTTPException(404, "User not found.")
+    USERS[u]["password"] = _hash_password(data.new_password.strip())
+    _invalidate_user_sessions(u)
     save_users()
-    log_system_update(f"Password reset for {_forgot_otp_user}.")
-    USER_FORGOT_OTP = None; _forgot_otp_user = None; _forgot_otp_ts = 0; _forgot_otp_attempts = 0
+    log_system_update(f"Password reset for {u}.")
+    _forgot_otp_store.pop(u, None)
     return {"ok": True}
 
 @fastapi_app.get("/api/state")
@@ -2196,19 +2203,21 @@ async def list_users(session=Depends(require_admin)):
 
 @fastapi_app.post("/api/users/add")
 async def add_user(data: AddUserRequest, session=Depends(require_admin)):
-    if data.username in USERS:
-        raise HTTPException(400, "Username already exists.")
     un = (data.username or "").strip()
     if not un:
         raise HTTPException(400, "Username required.")
+    if un in USERS:
+        raise HTTPException(400, "Username already exists.")
     if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', un):
         raise HTTPException(400, "Username must be 3-32 chars, alphanumeric, underscore or hyphen only.")
+    if data.role not in ("user",):
+        raise HTTPException(400, "Role must be 'user'. Admins cannot be created via this endpoint.")
     err = _validate_password_strength(data.password)
     if err:
         raise HTTPException(400, err)
     USERS[un] = {
         "password": _hash_password(data.password.strip()),
-        "role": data.role,
+        "role": "user",
         "display_name": data.display_name or un.capitalize(),
         "box_color": data.box_color,
         "history": {"logins": [], "narada_activity": []},
@@ -2471,15 +2480,15 @@ async def master_key_login(data: dict, request: Request, response: Response):
     key = (data.get("key") or "").strip()
     # Also accept the bootstrap env var key in case keys file hasn't been written yet
     _env_key = os.environ.get("MASTER_KEY", "").strip()
-    valid_keys = set(MASTER_KEYS) | ({_env_key} if _env_key else set())
-    if not key or key not in valid_keys:
+    valid_keys = list(MASTER_KEYS) + ([_env_key] if _env_key else [])
+    if not key or not any(hmac.compare_digest(key, k) for k in valid_keys):
         raise HTTPException(401, "Invalid master key.")
     # Persist env key to file so future restarts find it
     if key not in MASTER_KEYS:
         MASTER_KEYS.append(key)
         save_master_keys()
     token = create_master_session()
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", max_age=3600)
+    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=True, max_age=3600)
     log_system_update("Master key login.")
     return {
         "role": "admin",
@@ -2493,7 +2502,7 @@ async def master_key_login(data: dict, request: Request, response: Response):
 async def master_key_verify(data: dict, request: Request, session=Depends(require_admin)):
     """Unlock logs on an existing admin session by verifying a master key."""
     key = (data.get("key") or "").strip()
-    if not key or key not in MASTER_KEYS:
+    if not key or not any(hmac.compare_digest(key, k) for k in MASTER_KEYS):
         raise HTTPException(401, "Invalid master key.")
     token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token")
     if token and token in _sessions:
@@ -2601,6 +2610,7 @@ async def emergency_stop(session=Depends(require_admin)):
 @fastapi_app.get("/api/events/since")
 async def events_since(since: str = "", limit: int = 500, session=Depends(require_session)):
     """Return events after the given ISO timestamp, oldest-first."""
+    limit = min(limit, 500)
     events = get_events_since(since, limit)
     return {"events": events, "count": len(events)}
 
@@ -2793,12 +2803,18 @@ async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
 
 async def _ws_broadcaster():
     """Background task: push state immediately on events, or every 2s as heartbeat."""
+    _prune_counter = 0
     while True:
         try:
             await asyncio.wait_for(_ws_trigger.wait(), timeout=2.0)
         except asyncio.TimeoutError:
             pass
         _ws_trigger.clear()
+        # Prune expired sessions every ~5 minutes (150 ticks × 2s)
+        _prune_counter += 1
+        if _prune_counter >= 150:
+            _prune_expired_sessions()
+            _prune_counter = 0
         payload = get_state_dict()   # always run — handles alert expiry even without clients
         if not _ws_clients:
             continue
@@ -2873,10 +2889,13 @@ def run_web_app(args):
 
     print("\n" + "="*60)
     print("  Garuda Web UI is running at http://localhost:8080")
+    print("  (Cloudflare tunnel handles external access)")
     print("="*60 + "\n")
 
-    # Run uvicorn on the MAIN thread so the process stays alive
-    uvicorn.run(fastapi_app, host="0.0.0.0", port=8080, log_level="warning")
+    # Bind to 127.0.0.1 only — external access goes via Cloudflare tunnel,
+    # which already terminates TLS. Binding to 0.0.0.0 would expose the HTTP
+    # port on all network interfaces including LAN.
+    uvicorn.run(fastapi_app, host="127.0.0.1", port=8080, log_level="warning")
 
 
 if __name__ == "__main__":
