@@ -24,6 +24,7 @@ const G = (() => {
   let _currentPage = 'dashboard';
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
   let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
+  let _clipRecording = false;  // true while a server-side clip is being recorded
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -218,6 +219,11 @@ const G = (() => {
     const tBtn = document.getElementById('theme-toggle-btn');
     if (tBtn) tBtn.classList.toggle('is-dark', savedTheme === 'dark');
 
+    // Register service worker for PWA installability
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+
     buildSwatches('m-swatches');
     const backend = getBackend();
     updateBackendStatus(backend);
@@ -408,6 +414,10 @@ const G = (() => {
       hudEl._hapticBound = true;
       hudEl.addEventListener('click', () => { if (navigator.vibrate) navigator.vibrate(8); });
     }
+    // Request browser notification permission (needed for alert popups)
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
     // Notify feedback widget so it can inject admin Inbox tab
     if (G._afterLoginHook) G._afterLoginHook(_session);
     _syncFeedbackVisibility();
@@ -498,6 +508,17 @@ const G = (() => {
   function _camSetStatus(txt) {
     const el = $('cam-status-txt');
     if (el) el.textContent = txt;
+    // Update connect button: green dot + "Live" when streaming, red + "Connect" otherwise
+    const dot   = $('cam-live-dot');
+    const label = $('cam-btn-label');
+    const isLive = txt === 'Live';
+    if (dot)   dot.className = 'cam-live-dot ' + (isLive ? 'cam-dot-live' : 'cam-dot-off');
+    if (label) label.textContent = isLive ? 'Live' : 'Connect';
+    // Show/hide snapshot + record buttons
+    const snapBtn = $('cam-snapshot-btn');
+    const recBtn  = $('cam-record-btn');
+    if (snapBtn) snapBtn.style.display = isLive ? '' : 'none';
+    if (recBtn)  recBtn.style.display  = isLive ? '' : 'none';
   }
 
   function stopCameraStream() {
@@ -646,6 +667,42 @@ const G = (() => {
       const camOffline = $('cam-offline');
       if (camOffline) camOffline.style.display = 'flex';
     }
+  }
+
+  async function takeSnapshot() {
+    try {
+      const backend = getBackend() || '';
+      const tok = _token ? `?token=${encodeURIComponent(_token)}` : '';
+      const url = backend + '/api/snapshot' + tok;
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) { showToast('No frame available.', 'error'); return; }
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const cd = res.headers.get('Content-Disposition') || '';
+      const m = cd.match(/filename="([^"]+)"/);
+      a.download = m ? m[1] : 'garuda_snapshot.jpg';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast('Snapshot saved.', 'success');
+    } catch(e) { showToast('Snapshot failed.', 'error'); }
+  }
+
+  async function toggleClip() {
+    const btn = $('cam-record-btn');
+    try {
+      if (!_clipRecording) {
+        await api('POST', '/api/clip/start');
+        _clipRecording = true;
+        if (btn) { btn.textContent = '\u23F9'; btn.classList.add('recording'); }
+        showToast('Recording started — auto-stops at 60 s.', 'success');
+      } else {
+        const r = await api('POST', '/api/clip/stop');
+        _clipRecording = false;
+        if (btn) { btn.textContent = '\u23FA'; btn.classList.remove('recording'); }
+        showToast('Clip saved: ' + (r.path || ''), 'success');
+      }
+    } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
   }
 
   function switchCamTab(tab) {
@@ -1345,8 +1402,14 @@ const G = (() => {
       }
     }
     _lastAlertState = s.alert_active;
-
     _prevAlertActive = !!s.alert_active;
+
+    // Sync clip recording state — reset button if server auto-stopped
+    if (typeof s.clip_recording === 'boolean' && _clipRecording && !s.clip_recording) {
+      _clipRecording = false;
+      const recBtn = $('cam-record-btn');
+      if (recBtn) { recBtn.textContent = '\u23FA'; recBtn.classList.remove('recording'); }
+    }
 
     // Modes
     renderModes(s.modes);
@@ -1688,9 +1751,32 @@ const G = (() => {
       if (dl) dl.value = cfg.danger_label || '';
       const gk = $('groq-api-key');
       if (gk) gk.value = '';
+      // Scheduled modes
+      const sched = cfg.mode_schedule || {};
+      _loadSchedField('night', sched.night);
+      _loadSchedField('dnd',   sched.dnd);
+      _loadSchedField('idle',  sched.idle);
     } catch(e) {}
     loadDevices();
     loadMasterKeys();
+  }
+
+  function _loadSchedField(mode, sched) {
+    const s = $('sched-' + mode + '-start');
+    const e = $('sched-' + mode + '-end');
+    if (s) s.value = (sched && sched.start) || '';
+    if (e) e.value = (sched && sched.end)   || '';
+  }
+
+  function _buildSchedule() {
+    const modes = ['night', 'dnd', 'idle'];
+    const out = {};
+    for (const m of modes) {
+      const s = ($('sched-' + m + '-start') || {}).value || '';
+      const e = ($('sched-' + m + '-end')   || {}).value || '';
+      if (s && e) out[m] = { start: s, end: e };
+    }
+    return out;
   }
 
   function togglePrivacy() {
@@ -1712,6 +1798,8 @@ const G = (() => {
         ...(dl ? { danger_label: dl } : {}),
       };
       if (groqKey) payload.groq_api_key = groqKey;
+      const sched = _buildSchedule();
+      if (Object.keys(sched).length > 0) payload.mode_schedule = sched;
       await api('POST', '/api/config', payload);
       showToast('Settings saved.', 'success');
     } catch(e) { showToast(e.detail || 'Failed to save settings.', 'error'); }
@@ -2185,7 +2273,7 @@ const G = (() => {
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,
-    toggleCamera, openDocs, sendChat, clearChat, toggleRateLimitInfo,
+    toggleCamera, takeSnapshot, toggleClip, openDocs, sendChat, clearChat, toggleRateLimitInfo,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, saveSettings,
     filterLogs, exportLogs, downloadFullLog,

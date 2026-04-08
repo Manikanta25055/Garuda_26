@@ -6,8 +6,10 @@
   <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="theme-color" content="#6e6af0"/>
+  <link rel="manifest" href="/manifest.json"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=54"/>
+  <link rel="stylesheet" href="/static/style.css?v=55"/>
 </head>
 <body>
 <div id="app">
@@ -365,8 +367,14 @@
                 <button class="cam-tab-btn" id="cam-tab-floor" onclick="G.switchCamTab('floor')">Floor Plan</button>
                 <div class="cam-tab-right">
                   <span id="cam-status-txt" class="cam-status-txt">Offline</span>
-                  <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()">
-                    <span class="cam-live-dot"></span>Camera
+                  <button class="cam-action-btn" id="cam-snapshot-btn" onclick="G.takeSnapshot()" title="Save snapshot" style="display:none" aria-label="Download snapshot">
+                    &#x1F4F7;
+                  </button>
+                  <button class="cam-action-btn" id="cam-record-btn" onclick="G.toggleClip()" title="Record clip" style="display:none" aria-label="Record 60-second clip">
+                    &#x23FA;
+                  </button>
+                  <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()" aria-label="Connect camera feed">
+                    <span class="cam-live-dot" id="cam-live-dot"></span><span id="cam-btn-label">Connect</span>
                   </button>
                 </div>
               </div>
@@ -719,7 +727,33 @@
             <div style="font-size:11px;color:var(--t3);margin-top:4px">Comma-separated YOLO class names to silently log (no alert triggered).</div>
           </div>
 
-          <!-- Card 6: Master Keys -->
+          <!-- Card 6: Scheduled Modes -->
+          <div class="settings-card">
+            <div class="settings-section-title">Scheduled Modes <span style="font-size:11px;color:var(--t3);font-weight:400">(auto-activate by time)</span></div>
+            <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Leave start/end blank to disable scheduling for that mode.</div>
+            <div class="sched-grid">
+              <div class="sched-row">
+                <span class="sched-label">Night</span>
+                <input id="sched-night-start" class="input input-sm" type="time" placeholder="22:00" aria-label="Night mode start"/>
+                <span class="sched-sep">to</span>
+                <input id="sched-night-end"   class="input input-sm" type="time" placeholder="06:00" aria-label="Night mode end"/>
+              </div>
+              <div class="sched-row">
+                <span class="sched-label">DND</span>
+                <input id="sched-dnd-start" class="input input-sm" type="time" aria-label="DND mode start"/>
+                <span class="sched-sep">to</span>
+                <input id="sched-dnd-end"   class="input input-sm" type="time" aria-label="DND mode end"/>
+              </div>
+              <div class="sched-row">
+                <span class="sched-label">Idle</span>
+                <input id="sched-idle-start" class="input input-sm" type="time" aria-label="Idle mode start"/>
+                <span class="sched-sep">to</span>
+                <input id="sched-idle-end"   class="input input-sm" type="time" aria-label="Idle mode end"/>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 7: Master Keys -->
           <div class="settings-card">
             <div class="settings-section-title">Master Keys</div>
             <div style="font-size:12px;color:var(--t3);margin-bottom:10px">

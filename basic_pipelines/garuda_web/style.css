@@ -1016,10 +1016,27 @@ textarea:-webkit-autofill {
   display: flex; align-items: center; gap: 5px;
 }
 .cam-live-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: var(--danger);
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--danger); flex-shrink: 0;
+  transition: background 0.3s;
+}
+.cam-live-dot.cam-dot-live {
+  background: #22c55e;
   animation: pulse 1.4s ease-in-out infinite;
 }
+.cam-live-dot.cam-dot-off {
+  background: #ef4444;
+  animation: none;
+}
+/* Snapshot / Record action buttons in camera tab bar */
+.cam-action-btn {
+  background: rgba(255,255,255,0.06); border: 0.5px solid var(--border);
+  border-radius: var(--r); color: var(--t2); font-size: 14px;
+  padding: 4px 8px; cursor: pointer; line-height: 1;
+  transition: background var(--trans), color var(--trans);
+}
+.cam-action-btn:hover { background: rgba(255,255,255,0.14); color: var(--t1); }
+.cam-action-btn.recording { color: #ef4444; animation: pulse 1s ease-in-out infinite; }
 
 /* Right info panel */
 .info-pane {
@@ -4141,3 +4158,13 @@ input:-webkit-autofill:focus {
   .fb-stars { gap: 6px; }
   .fb-star  { width: 32px; height: 32px; font-size: 26px; }
 }
+
+/* ── Scheduled modes UI ─────────────────────────────────── */
+.sched-grid { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+.sched-row  { display: flex; align-items: center; gap: 8px; }
+.sched-label {
+  width: 52px; font-size: 12px; font-weight: 600;
+  color: var(--t2); flex-shrink: 0;
+}
+.sched-sep  { font-size: 11px; color: var(--t4); flex-shrink: 0; }
+.input-sm   { flex: 1; min-width: 0; padding: 5px 8px; font-size: 12px; }

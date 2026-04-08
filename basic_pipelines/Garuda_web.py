@@ -198,6 +198,18 @@ _total_frames = 0          # total inference frames (for avg FPS)
 _watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
 _perm_lock = threading.Lock()
 
+# ── False positive reduction ──────────────────────────────
+_label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
+
+# ── Scheduled modes ───────────────────────────────────────
+MODE_SCHEDULE: dict = {}   # {"night": {"start": "22:00", "end": "06:00"}, ...}
+
+# ── Clip recording ────────────────────────────────────────
+_clip_writer     = None
+_clip_lock       = threading.Lock()
+_clip_start_time = 0.0
+_clip_path       = ""
+
 # ── Phone presence detection ──────────────────────────────
 KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
 _alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
@@ -403,6 +415,8 @@ def load_config():
             MODE_NIGHT     = bool(modes.get("night",     MODE_NIGHT))
             MODE_EMERGENCY = bool(modes.get("emergency", MODE_EMERGENCY))
             MODE_PRIVACY   = bool(modes.get("privacy",   MODE_PRIVACY))
+            global MODE_SCHEDULE
+            MODE_SCHEDULE  = cfg.get("mode_schedule", MODE_SCHEDULE)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
 
@@ -512,6 +526,7 @@ def save_config():
                 "emergency": MODE_EMERGENCY,
                 "privacy":   MODE_PRIVACY,
             },
+            "mode_schedule": MODE_SCHEDULE,
         }
         _atomic_json_write(CONFIG_FILE, cfg)
     except Exception as e:
@@ -958,7 +973,8 @@ class user_app_callback_class(app_callback_class):
 def app_callback(pad, info, user_data):
     global latest_detection_info, DETECTION_THRESHOLD, MODE_PRIVACY
     global _detections_today, _frame_buffer, _total_frames, _class_counts_today
-    global _last_danger_conf
+    global _last_danger_conf, _label_consec_frames
+    global _clip_writer, _clip_start_time   # assigned (set to None) on auto-stop
     buffer = info.get_buffer()
     if buffer is None:
         return Gst.PadProbeReturn.OK
@@ -1018,7 +1034,9 @@ def app_callback(pad, info, user_data):
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
             if label == user_data.danger_label:
-                danger_detected = True
+                _label_consec_frames[label] = _label_consec_frames.get(label, 0) + 1
+                if _label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
+                    danger_detected = True
                 _last_danger_conf = confidence
             elif label in WATCH_LABELS and label != user_data.danger_label:
                 # WATCH: log silently with 30s cooldown to avoid per-frame spam
@@ -1027,6 +1045,12 @@ def app_callback(pad, info, user_data):
                     _watch_last_logged[label] = now_t
                     log_system_update(f"[WATCH] {label} ({confidence:.2f})")
                     _append_detection_perm("WATCH", label, confidence)
+
+    # Reset consecutive counts for labels not seen (or below threshold) this frame
+    seen_above_thr = {d.get_label() for d in detections if d.get_confidence() >= threshold}
+    for k in list(_label_consec_frames):
+        if k not in seen_above_thr:
+            _label_consec_frames[k] = 0
 
     if det_count > 0:
         _detections_today += det_count
@@ -1069,6 +1093,22 @@ def app_callback(pad, info, user_data):
             _frame_raw    = frame_bgr
             _frame_seq += 1
         user_data.set_frame(frame_bgr)
+
+        # Clip recording — write current frame if active
+        _clip_autostopped = False
+        with _clip_lock:
+            if _clip_writer is not None:
+                try:
+                    _clip_writer.write(frame_bgr)
+                except Exception:
+                    pass
+                if time.time() - _clip_start_time > 60:
+                    _clip_writer.release()
+                    _clip_writer = None
+                    _clip_autostopped = True
+        if _clip_autostopped:
+            log_system_update("Clip auto-stopped after 60 s.")
+            push_urgent_ws()   # notify JS so it can reset the record button
 
     latest_detection_info = text_info
     return Gst.PadProbeReturn.OK
@@ -1698,6 +1738,8 @@ def get_state_dict():
         # Offline queue
         "net_online": _net_online,
         "pending_sync": get_pending_count(),
+        # Clip recording state (lets JS reset button when server auto-stops)
+        "clip_recording": _clip_writer is not None,
     }
 
 ##############################################################################
@@ -1728,6 +1770,46 @@ def _deadman_monitor():
                 log_system_update(f"[TAMPER] Failed to send alert email: {e}")
 
 ##############################################################################
+# SCHEDULED MODES
+##############################################################################
+def _time_in_range(start: str, end: str, current: str) -> bool:
+    """Return True if current (HH:MM) is in [start, end] — handles midnight wrap."""
+    if start <= end:
+        return start <= current <= end
+    return current >= start or current <= end
+
+def _schedule_monitor():
+    """Background thread: enforce scheduled mode transitions.
+
+    Checks every 30 s and immediately on first run so startup catches the
+    correct state without a 60-s blind window.  Takes a dict snapshot before
+    iterating so a concurrent update_config() call can't cause a RuntimeError.
+    """
+    mode_map = {
+        "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
+        "idle": "MODE_IDLE", "night": "MODE_NIGHT",
+    }
+    while True:
+        sched_snap = dict(MODE_SCHEDULE)   # snapshot outside lock — avoids racing with update_config
+        if sched_snap:
+            now_str = datetime.datetime.now().strftime("%H:%M")
+            changed = False
+            with _mode_lock:
+                for mode_name, sched in sched_snap.items():
+                    start = sched.get("start", "")
+                    end   = sched.get("end", "")
+                    if not start or not end or mode_name not in mode_map:
+                        continue
+                    in_range = _time_in_range(start, end, now_str)
+                    gkey = mode_map[mode_name]
+                    if globals().get(gkey) != in_range:
+                        globals()[gkey] = in_range
+                        changed = True
+            if changed:
+                push_urgent_ws()
+        time.sleep(30)   # sleep AFTER check so first run is immediate; 30 s ≤ worst-case lag
+
+##############################################################################
 # FASTAPI APP
 ##############################################################################
 from contextlib import asynccontextmanager
@@ -1745,6 +1827,7 @@ async def _lifespan(app):
     threading.Thread(target=_presence_poller, daemon=True).start()
     threading.Thread(target=_deadman_monitor, daemon=True).start()
     threading.Thread(target=_connectivity_monitor, daemon=True).start()
+    threading.Thread(target=_schedule_monitor, daemon=True).start()
     yield
     if _ws_broadcaster_task is not None:
         _ws_broadcaster_task.cancel()
@@ -1844,6 +1927,7 @@ class ConfigUpdateRequest(BaseModel):
     groq_api_key: Optional[str] = None
     privacy: Optional[bool] = None
     watch_labels: Optional[List[str]] = None
+    mode_schedule: Optional[dict] = None
 
 class DeviceAddRequest(BaseModel):
     name: str
@@ -1896,6 +1980,17 @@ async def index():
     if html_path.exists():
         return HTMLResponse(html_path.read_text())
     return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
+
+@fastapi_app.get("/manifest.json")
+async def pwa_manifest():
+    p = _static_dir / "manifest.json"
+    return FileResponse(str(p), media_type="application/manifest+json") if p.exists() else JSONResponse({})
+
+@fastapi_app.get("/sw.js")
+async def service_worker():
+    p = _static_dir / "sw.js"
+    return FileResponse(str(p), media_type="application/javascript",
+                        headers={"Service-Worker-Allowed": "/"}) if p.exists() else Response("", media_type="application/javascript")
 
 @fastapi_app.get("/api/users-public")
 async def users_public():
@@ -2273,6 +2368,7 @@ async def get_config(session=Depends(require_admin)):
         "custom_modes": CUSTOM_MODES,
         "watch_labels": WATCH_LABELS,
         "groq_configured": bool(GROQ_API_KEY),
+        "mode_schedule": MODE_SCHEDULE,
     }
 
 @fastapi_app.post("/api/config")
@@ -2309,6 +2405,18 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.watch_labels is not None:
         global WATCH_LABELS
         WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
+    if data.mode_schedule is not None:
+        global MODE_SCHEDULE
+        # Validate structure: {mode: {start: HH:MM, end: HH:MM}}
+        valid_modes = {"dnd", "email_off", "idle", "night"}
+        clean = {}
+        for k, v in data.mode_schedule.items():
+            if k in valid_modes and isinstance(v, dict):
+                s = v.get("start", "")
+                e = v.get("end", "")
+                if re.match(r'^\d{2}:\d{2}$', s) and re.match(r'^\d{2}:\d{2}$', e):
+                    clean[k] = {"start": s, "end": e}
+        MODE_SCHEDULE = clean
     await _async_save_config()
     log_system_update("Config updated.")
     return {"ok": True}
@@ -2737,7 +2845,15 @@ async def mjpeg_stream(request: Request, token: Optional[str] = None):
                 seq = _frame_seq
                 raw = _frame_raw if seq != last_seq else None
             if raw is not None and (now - last_sent) >= 0.033:
-                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 75])
+                # Adaptive quality: reduce JPEG quality under CPU pressure
+                _q = 75
+                if psutil:
+                    _cpu = psutil.cpu_percent(interval=None)
+                    if _cpu > 80:
+                        _q = 45
+                    elif _cpu > 65:
+                        _q = 60
+                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, _q])
                 last_seq = seq
                 last_sent = now
                 yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
@@ -2747,6 +2863,64 @@ async def mjpeg_stream(request: Request, token: Optional[str] = None):
         generate(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+# ── Snapshot ──────────────────────────────────────────────────────────────────
+@fastapi_app.get("/api/snapshot")
+async def snapshot(request: Request, token: Optional[str] = None):
+    session_token = request.cookies.get("garuda_session") or token
+    if not get_session(session_token):
+        raise HTTPException(401, "Not authenticated")
+    with _frame_lock:
+        raw = _frame_raw
+    if raw is None:
+        raise HTTPException(503, "No frame available yet")
+    _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    return Response(
+        content=jpeg.tobytes(), media_type="image/jpeg",
+        headers={"Content-Disposition": f'attachment; filename="garuda_{ts}.jpg"'}
+    )
+
+# ── Clip recording ────────────────────────────────────────────────────────────
+@fastapi_app.post("/api/clip/start")
+async def clip_start(session=Depends(require_session)):
+    global _clip_writer, _clip_start_time, _clip_path
+    # Fast check — avoid I/O if already recording
+    with _clip_lock:
+        if _clip_writer is not None:
+            return {"ok": True, "already_recording": True, "path": _clip_path}
+    # Read frame dims and create VideoWriter OUTSIDE the lock (file I/O must not block event loop)
+    with _frame_lock:
+        raw = _frame_raw
+    if raw is None:
+        raise HTTPException(503, "No frame available yet")
+    h, w = raw.shape[:2]
+    ts = int(time.time())
+    new_path = str(_BASE / "system_logs" / f"clip_{ts}.mp4")
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    writer = cv2.VideoWriter(new_path, fourcc, 15.0, (w, h))
+    # Assign atomically — re-check in case a concurrent request beat us
+    with _clip_lock:
+        if _clip_writer is not None:
+            writer.release()
+            return {"ok": True, "already_recording": True, "path": _clip_path}
+        _clip_writer = writer
+        _clip_path = new_path
+        _clip_start_time = time.time()
+    log_system_update(f"Clip recording started by {session['username']}.")
+    return {"ok": True, "path": _clip_path}
+
+@fastapi_app.post("/api/clip/stop")
+async def clip_stop(session=Depends(require_session)):
+    global _clip_writer, _clip_path
+    with _clip_lock:
+        if _clip_writer is None:
+            return {"ok": True, "was_recording": False}
+        _clip_writer.release()
+        _clip_writer = None
+        path = _clip_path
+    log_system_update(f"Clip saved: {path}")
+    return {"ok": True, "path": path}
 
 # ── WebRTC offer/answer ───────────────────────────────────────────────────────
 @fastapi_app.post("/webrtc/offer")
