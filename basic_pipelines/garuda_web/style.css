@@ -3787,17 +3787,17 @@ input:-webkit-autofill:focus {
 
 /* Panel */
 .fb-panel {
-  width: 304px;
+  width: 344px;
   background: var(--glass-h);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 0.5px solid var(--border);
   border-radius: var(--r-xl);
   box-shadow: var(--shadow), 0 0 0 0.5px var(--border);
-  padding: 20px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   transform-origin: bottom right;
   transform: scale(0.88) translateY(8px);
   opacity: 0;
@@ -3890,10 +3890,10 @@ input:-webkit-autofill:focus {
 }
 .fb-input { padding: 8px 11px; }
 .fb-textarea {
-  padding: 9px 11px;
+  padding: 10px 12px;
   resize: none;
   line-height: 1.5;
-  height: 80px;
+  height: 96px;
 }
 .fb-input:focus, .fb-textarea:focus {
   border-color: var(--accent);
@@ -4054,10 +4054,10 @@ input:-webkit-autofill:focus {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 10px 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 .fb-card-header {
   display: flex;
@@ -4123,8 +4123,8 @@ input:-webkit-autofill:focus {
   /* Always hide feedback bubble on mobile for login screen */
   #app:not(.logged-in) .fb-wrap,
   #app.fb-hidden .fb-wrap { display: none !important; }
-  .fb-panel { width: min(320px, calc(100vw - 32px)); max-height: min(68vh, 520px); overflow-y: auto; }
-  .fb-textarea { height: 70px; }
+  .fb-panel { width: min(344px, calc(100vw - 32px)); max-height: min(68vh, 520px); overflow-y: auto; }
+  .fb-textarea { height: 80px; }
   .fb-bubble { width: 46px; height: 46px; }
   /* Prevent iOS zoom on all inputs */
   input, textarea, select { font-size: 16px !important; }
