@@ -117,6 +117,10 @@ from hailo_rpi_common import (
 EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "")
 EMAIL_SENDER_PASS = os.environ.get("EMAIL_SENDER_PASS", "")
 EMAIL_RECIPIENTS = [r.strip() for r in os.environ.get("EMAIL_RECIPIENTS", "amarmanikantan@gmail.com").split(",") if r.strip()]
+
+# Set SECURE_COOKIES=1 in .env when serving behind HTTPS (Cloudflare tunnel).
+# Leave unset for direct http://localhost access — secure=True drops cookies on plain HTTP.
+_COOKIE_SECURE = os.environ.get("SECURE_COOKIES", "0").lower() in ("1", "true", "yes")
 EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 _email_lock = threading.Lock()
@@ -1921,7 +1925,7 @@ async def login(data: LoginRequest, request: Request, response: Response):
             save_users()
         duration = 5 * 24 * 3600 if data.remember_me else 3600
         token = create_session(u, duration)
-        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=True, max_age=duration)
+        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=duration)
         log_system_update(f"Login: {u}")
         USERS[u]["history"]["logins"].append(
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -2000,7 +2004,7 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     if u not in USERS or USERS[u]["role"] != "admin":
         raise HTTPException(401, "Account not authorised.")
     token = create_session(u)
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=True, max_age=3600)
+    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=3600)
     log_system_update(f"Admin login: {u}")
     return {
         "role": "admin",
@@ -2488,7 +2492,7 @@ async def master_key_login(data: dict, request: Request, response: Response):
         MASTER_KEYS.append(key)
         save_master_keys()
     token = create_master_session()
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=True, max_age=3600)
+    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=3600)
     log_system_update("Master key login.")
     return {
         "role": "admin",
