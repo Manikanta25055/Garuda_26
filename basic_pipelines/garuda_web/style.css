@@ -3,6 +3,10 @@
    Light (Soft UI) default · Dark (Apple HIG) via [data-theme="dark"]
    ============================================================ */
 
+/* Disable browser text-selection highlight globally */
+::selection      { background: transparent; }
+::-moz-selection { background: transparent; }
+
 /* ── Light theme (default) ──────────────────────────────── */
 :root {
   --bg:        #F4F5F7;
