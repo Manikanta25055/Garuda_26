@@ -3741,7 +3741,7 @@ input:-webkit-autofill:focus {
   position: fixed;
   bottom: 24px;
   right: 24px;
-  z-index: 900;
+  z-index: 960;
   display: flex;
   flex-direction: column;
   align-items: flex-end;

@@ -1076,11 +1076,11 @@ class GStreamerDetectionApp(GStreamerApp):
         args.use_frame = True
         args.show_fps = False
         super().__init__(args, user_data)
-        self.batch_size = 2
+        self.batch_size = 1
         self.network_width = 640
         self.network_height = 640
         self.network_format = "RGB"
-        nms_score_threshold = 0.3
+        nms_score_threshold = 0.25
         nms_iou_threshold = 0.45
 
         new_postprocess_path = os.path.join(self.current_path, '../resources/libyolo_hailortpp_post.so')
