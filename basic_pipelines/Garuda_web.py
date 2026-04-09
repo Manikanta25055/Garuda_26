@@ -357,6 +357,9 @@ def _is_login_locked(ip: str) -> bool:
     entry = _login_failures.get(ip)
     if not entry:
         return False
+    if entry["lockout_until"] == 0.0:
+        # Failures accumulating but threshold not yet reached
+        return False
     if time.time() < entry["lockout_until"]:
         return True
     # Lockout expired — clear it

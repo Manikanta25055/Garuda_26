@@ -118,6 +118,8 @@ def test_rate_limit_resets_after_window(app_client, monkeypatch):
     # Force-expire all timestamps to simulate window passing
     for ip in list(gw._rate_store.keys()):
         gw._rate_store[ip] = []
+    # Also clear brute-force lockout so we're only testing rate-limit expiry
+    gw._login_failures.clear()
     # Now a fresh request should succeed (not 429)
     r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
     assert r.status_code in (200, 401)  # Not 429
