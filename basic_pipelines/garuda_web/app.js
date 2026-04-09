@@ -23,6 +23,7 @@ const G = (() => {
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
   let _currentPage = 'dashboard';
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
+  let _alarmInterval  = null; // setInterval ID for repeating alarm beep
   let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
   let _clipRecording = false;  // true while a server-side clip is being recorded
 
@@ -414,6 +415,7 @@ const G = (() => {
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
     if (_chatInputController) { _chatInputController.abort(); _chatInputController = null; }
     _wsAllowed = false;   // prevent reconnect after logout
+    _stopAlarm();
     if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
@@ -1172,6 +1174,32 @@ const G = (() => {
     else                hudLabel.textContent = '';
   }
 
+  function _startAlarm() {
+    if (_alarmInterval) return;
+    function _beep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
+        osc.onended = () => ctx.close();
+      } catch(e) {}
+    }
+    _beep();
+    _alarmInterval = setInterval(_beep, 1400);
+  }
+
+  function _stopAlarm() {
+    if (_alarmInterval) { clearInterval(_alarmInterval); _alarmInterval = null; }
+  }
+
   function _setDIState(state) {
     const hud = document.getElementById('top-hud');
     if (!hud) return;
@@ -1364,18 +1392,20 @@ const G = (() => {
       }
     }
 
-    // Push notification on new alert
+    // Push notification + alarm on new alert
     if (s.alert_active && !_lastAlertState) {
       if (Notification.permission === 'granted') {
         new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/favicon.ico' });
       }
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      _startAlarm();
       // On mobile, scroll status card into view so alert is visible
       if (window.innerWidth <= 1023) {
         const sc = $('status-card');
         if (sc) sc.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
+    if (!s.alert_active && _lastAlertState) _stopAlarm();
     _lastAlertState = s.alert_active;
     _prevAlertActive = !!s.alert_active;
 
