@@ -577,4 +577,4 @@ Built on the [Hailo RPi5 Examples](https://github.com/hailo-ai/hailo-rpi5-exampl
 
 ---
 
-*Project Garuda — Manikanta, Electronics & Communication Engineering, 2024–2026*
+*Project Garuda — Manikanta @ 2025
