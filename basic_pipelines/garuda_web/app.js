@@ -230,25 +230,6 @@ const G = (() => {
     const isLocal = ['localhost','127.0.0.1'].includes(location.hostname);
     if (backend) _token = localStorage.getItem('garuda_token') || null;
 
-    // Check remember-me token (user-only, 5-day device token)
-    const remRaw = localStorage.getItem('garuda_remember');
-    if (remRaw) {
-      try {
-        const rem = JSON.parse(remRaw);
-        if (rem.expires > Date.now() && rem.token) {
-          _token = rem.token;
-          const session = await api('GET', '/api/session');
-          if (session && session.role !== 'admin') {
-            _session = session;
-            afterLogin();
-            return;
-          }
-        }
-      } catch(_) {}
-      localStorage.removeItem('garuda_remember');
-      _token = null;
-    }
-
     // Try to restore session from previous visit (cookie / garuda_token)
     const canRestore = isLocal || !!_token;
     if (canRestore) {
@@ -365,13 +346,7 @@ const G = (() => {
         _token = res.token;
         localStorage.setItem('garuda_token', _token);
       }
-      // Store 5-day device token (user only, only if checkbox was ticked)
-      if (remember && res.role === 'user' && res.token) {
-        localStorage.setItem('garuda_remember', JSON.stringify({
-          token: res.token,
-          expires: Date.now() + 5 * 24 * 60 * 60 * 1000
-        }));
-      }
+      // remember_me → 7-day refresh token issued server-side via httpOnly cookie
       afterLogin();
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -2247,7 +2222,7 @@ const G = (() => {
   }
   function showEl(id, txt, ok) { showMsg($(id), txt, ok); }
 
-  async function api(method, url, body) {
+  async function api(method, url, body, _isRetry = false) {
     const base = getBackend();
     const fullUrl = base ? base.replace(/\/$/, '') + url : url;
     const headers = { 'Content-Type': 'application/json' };
@@ -2258,7 +2233,23 @@ const G = (() => {
     const r = await fetch(fullUrl, opts);
     let d;
     try { d = await r.json(); } catch(_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
-    if (!r.ok) throw d;
+    if (!r.ok) {
+      // On 401, attempt one silent token refresh before giving up
+      if (r.status === 401 && !_isRetry && url !== '/api/refresh' && url !== '/api/login') {
+        try {
+          const refreshUrl = base ? base.replace(/\/$/, '') + '/api/refresh' : '/api/refresh';
+          const rr = await fetch(refreshUrl, { method: 'POST', credentials: base ? 'omit' : 'include' });
+          if (rr.ok) {
+            const rd = await rr.json();
+            if (rd.token) { _token = rd.token; localStorage.setItem('garuda_token', _token); }
+            return api(method, url, body, true);   // retry once with new access token
+          }
+        } catch (_) {}
+        // Refresh failed — session is gone, force re-login
+        await logout();
+      }
+      throw d;
+    }
     return d;
   }
 

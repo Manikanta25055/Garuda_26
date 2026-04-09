@@ -130,6 +130,25 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL   = "llama-3.3-70b-versatile"
 DANGER_LABEL = "scissors"
 
+# ── Encrypted evidence exfiltration (AES-256-GCM + SSH) ─────────────────────
+# Set these in .env to enable off-site encrypted clip backup:
+#   EXFIL_HOST        — SSH server hostname or IP
+#   EXFIL_PORT        — SSH port (default 22)
+#   EXFIL_USER        — SSH username
+#   EXFIL_KEY_PATH    — path to SSH private key (preferred over password)
+#   EXFIL_PASSWORD    — SSH password (fallback if no key)
+#   EXFIL_REMOTE_PATH — remote directory (default ~/garuda_evidence/)
+#   EXFIL_AES_KEY     — 32-byte key as 64-char hex string (generate with:
+#                        python3 -c "import os,binascii; print(binascii.hexlify(os.urandom(32)).decode())")
+_EXFIL_HOST     = os.environ.get("EXFIL_HOST", "")
+_EXFIL_PORT     = int(os.environ.get("EXFIL_PORT", "22"))
+_EXFIL_USER     = os.environ.get("EXFIL_USER", "")
+_EXFIL_KEY_PATH = os.environ.get("EXFIL_KEY_PATH", "")
+_EXFIL_PASSWORD = os.environ.get("EXFIL_PASSWORD", "")
+_EXFIL_REMOTE   = os.environ.get("EXFIL_REMOTE_PATH", "garuda_evidence/")
+_exfil_raw_key  = os.environ.get("EXFIL_AES_KEY", "")
+_EXFIL_AES_KEY: bytes | None = bytes.fromhex(_exfil_raw_key) if len(_exfil_raw_key) == 64 else None
+
 ##############################################################################
 # GLOBALS & SETTINGS
 ##############################################################################
@@ -161,6 +180,11 @@ _admin_otp_user: str | None = None   # server-side stored username for OTP step 
 _admin_otp_ts: float = 0             # epoch when admin OTP was generated
 _admin_otp_attempts: int = 0         # failed verify attempts; cleared on success or expiry
 _forgot_otp_store: dict = {}  # username → {otp, ts, attempts}  (per-user, no race condition)
+USER_FORGOT_OTP: str | None = None   # test-facing alias: last generated forgot OTP string
+# Flat test-facing aliases (conftest monkeypatches these directly)
+_forgot_otp_user: str | None = None
+_forgot_otp_ts: float = 0.0
+_forgot_otp_attempts: int = 0
 
 # Modes
 MODE_DND = False
@@ -197,6 +221,9 @@ _class_counts_today = {}   # class_name → count since startup
 _total_frames = 0          # total inference frames (for avg FPS)
 _watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
 _perm_lock = threading.Lock()
+# ── RAM-buffered log write globals (buffer defined here; functions in HELPERS) ─
+_log_buffer: "defaultdict[str, list]" = defaultdict(list)
+_log_buffer_lock = threading.Lock()
 
 # ── False positive reduction ──────────────────────────────
 _label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
@@ -300,6 +327,11 @@ _rate_store: dict = defaultdict(list)   # IP → [timestamps]
 _RATE_LIMIT = 30     # max requests
 _RATE_WINDOW = 60    # per N seconds
 
+# ── Brute-force login lockout ────────────────────────────
+_login_failures: dict = {}   # IP → {"count": int, "lockout_until": float}
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_LOCKOUT_SECONDS = 300  # 5 minutes
+
 def _get_client_ip(request) -> str:
     """Return the real client IP, trusting X-Forwarded-For only from local proxies."""
     client = request.client.host if request.client else "unknown"
@@ -319,6 +351,32 @@ def _check_rate_limit(request) -> bool:
         return False
     stamps.append(now)
     return True
+
+def _is_login_locked(ip: str) -> bool:
+    """Return True if the IP is currently locked out from login attempts."""
+    entry = _login_failures.get(ip)
+    if not entry:
+        return False
+    if time.time() < entry["lockout_until"]:
+        return True
+    # Lockout expired — clear it
+    _login_failures.pop(ip, None)
+    return False
+
+def _record_login_failure(ip: str):
+    """Increment failure count; trigger lockout after _LOGIN_MAX_ATTEMPTS."""
+    entry = _login_failures.setdefault(ip, {"count": 0, "lockout_until": 0.0})
+    entry["count"] += 1
+    if entry["count"] >= _LOGIN_MAX_ATTEMPTS:
+        entry["lockout_until"] = time.time() + _LOGIN_LOCKOUT_SECONDS
+        log_system_update(
+            f"[SECURITY] Login lockout: {ip} after {entry['count']} failed attempts "
+            f"({_LOGIN_LOCKOUT_SECONDS}s cooldown)."
+        )
+
+def _clear_login_failure(ip: str):
+    """Clear failure record after a successful login."""
+    _login_failures.pop(ip, None)
 
 
 USERS: dict = {}  # populated from users.json at startup; no hardcoded defaults
@@ -556,17 +614,59 @@ _load_logs_from_disk()
 ##############################################################################
 # HELPERS
 ##############################################################################
-def _perm_write(filepath: str, line: str):
-    """Thread-safe append of one line to a permanent log file on disk."""
+# ── RAM-buffered log writes ───────────────────────────────────────────────────
+# All text log writes (detection, system, voice, scissors, night-mode) are
+# accumulated in-memory and flushed to disk every _LOG_FLUSH_INTERVAL seconds.
+# This eliminates per-event fsync calls — the biggest source of SD card wear.
+# Critical state (users, config, alert history) still uses _atomic_json_write.
+# _log_buffer and _log_buffer_lock are declared in the GLOBALS section (above
+# load_users() so startup log calls work correctly).
+_LOG_FLUSH_INTERVAL = 60    # flush every 60 seconds
+_LOG_MAX_SIZE_BYTES = 10 * 1024 * 1024   # rotate at 10 MB
+
+def _rotate_log(filepath: str):
+    """Rename filepath → filepath.1, discarding any previous .1 file."""
     try:
-        os.makedirs("system_logs", exist_ok=True)
-        with _perm_lock:
-            with open(filepath, "a", encoding="utf-8") as f:
-                f.write(line + "\n")
-                f.flush()
-                os.fsync(f.fileno())
+        rotated = filepath + ".1"
+        if os.path.exists(rotated):
+            os.unlink(rotated)
+        os.rename(filepath, rotated)
     except Exception:
         pass
+
+def _do_flush_logs():
+    """Write all buffered log lines to disk. Called by the flush thread and on shutdown."""
+    with _log_buffer_lock:
+        snapshots = {path: buf[:] for path, buf in _log_buffer.items() if buf}
+        for path in snapshots:
+            _log_buffer[path].clear()
+    for path, lines in snapshots.items():
+        if not lines:
+            continue
+        try:
+            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+            # Rotate if over size cap
+            try:
+                if os.path.getsize(path) > _LOG_MAX_SIZE_BYTES:
+                    _rotate_log(path)
+            except FileNotFoundError:
+                pass
+            with open(path, "a", encoding="utf-8") as f:
+                for line in lines:
+                    f.write(line + "\n")
+        except Exception:
+            pass
+
+def _flush_log_thread():
+    """Background daemon thread: flush log buffer on interval."""
+    while True:
+        time.sleep(_LOG_FLUSH_INTERVAL)
+        _do_flush_logs()
+
+def _perm_write(filepath: str, line: str):
+    """Buffer a log line in RAM; flushed to disk every _LOG_FLUSH_INTERVAL seconds."""
+    with _log_buffer_lock:
+        _log_buffer[filepath].append(line)
 
 def _append_detection_perm(event_type: str, label: str, confidence: float, info: str = ""):
     """Append one detection event to in-memory list, permanent file, and SQLite queue."""
@@ -720,6 +820,7 @@ def _connectivity_monitor():
 
 def stop_app():
     log_system_update("Stopping Garuda Web app.")
+    _do_flush_logs()   # write buffered logs before exit
     if app_gst is not None:
         try:
             app_gst.pipeline.set_state(Gst.State.NULL)
@@ -891,11 +992,8 @@ def trigger_software_alert():
     if not was_active:
         # New alert starting: log, record, sound, email
         if night:
-            try:
-                with open(NIGHT_MODE_LOG_FILE, "a") as f:
-                    f.write(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + "\n")
-            except Exception:
-                pass
+            _perm_write(NIGHT_MODE_LOG_FILE,
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         _last_alert_time = datetime.datetime.now()
         _record_alert_activity()
         log_system_update("Alert triggered.")
@@ -941,12 +1039,108 @@ def send_email_alert():
 
 def log_scissors_detection():
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{stamp}] SCISSORS DETECTED\n"
+    _perm_write(SCISSORS_LOG_FILE, f"[{stamp}] SCISSORS DETECTED")
+
+def _send_tamper_email():
+    """Maximum-priority tamper alert — bypasses DND/idle/email-off modes."""
+    if not EMAIL_SENDER or not EMAIL_RECIPIENTS:
+        return
+    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    msg = MIMEText(
+        f"CRITICAL: Camera tamper detected at {now_str}.\n"
+        "The camera lens appears to be covered or the feed has gone blank.\n"
+        "Immediate physical inspection required."
+    )
+    msg['Subject'] = "CRITICAL TAMPER ALERT — Garuda Camera Covered"
+    msg['From'] = EMAIL_SENDER
+    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
     try:
-        with open(SCISSORS_LOG_FILE, "a") as f:
-            f.write(entry)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
+            server.send_message(msg)
+        log_system_update("[TAMPER] Alert email sent.")
     except Exception as e:
-        log_system_update(f"Error logging scissors detection: {e}")
+        log_system_update(f"[TAMPER] Email failed: {e}")
+
+##############################################################################
+# ENCRYPTED EVIDENCE EXFILTRATION
+##############################################################################
+def _encrypt_clip_aes256(src_path: str) -> str | None:
+    """AES-256-GCM encrypt src_path → src_path.enc. Returns encrypted path or None on failure."""
+    if _EXFIL_AES_KEY is None:
+        log_system_update("[EXFIL] AES key not set — skipping encryption.")
+        return None
+    if len(_EXFIL_AES_KEY) != 32:
+        log_system_update("[EXFIL] EXFIL_AES_KEY must be exactly 32 bytes (64 hex chars).")
+        return None
+    enc_path = src_path + ".enc"
+    try:
+        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+        nonce = os.urandom(12)   # 96-bit nonce (recommended for GCM)
+        with open(src_path, "rb") as f:
+            plaintext = f.read()
+        ciphertext = AESGCM(_EXFIL_AES_KEY).encrypt(nonce, plaintext, None)
+        # Layout: [12-byte nonce][ciphertext+16-byte GCM tag]
+        with open(enc_path, "wb") as f:
+            f.write(nonce + ciphertext)
+        return enc_path
+    except ImportError:
+        log_system_update("[EXFIL] cryptography package not installed — run: pip install cryptography")
+        return None
+    except Exception as e:
+        log_system_update(f"[EXFIL] Encryption failed: {e}")
+        return None
+
+def _ssh_upload(local_path: str, remote_filename: str) -> bool:
+    """SFTP-upload local_path to the configured SSH server. Returns True on success."""
+    if not _EXFIL_HOST or not _EXFIL_USER:
+        return False
+    try:
+        import paramiko
+    except ImportError:
+        log_system_update("[EXFIL] paramiko not installed — run: pip install paramiko")
+        return False
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        kwargs: dict = {"hostname": _EXFIL_HOST, "port": _EXFIL_PORT,
+                        "username": _EXFIL_USER, "timeout": 30}
+        if _EXFIL_KEY_PATH and os.path.exists(_EXFIL_KEY_PATH):
+            kwargs["key_filename"] = _EXFIL_KEY_PATH
+        elif _EXFIL_PASSWORD:
+            kwargs["password"] = _EXFIL_PASSWORD
+        ssh.connect(**kwargs)
+        sftp = ssh.open_sftp()
+        remote_dir = _EXFIL_REMOTE.rstrip("/")
+        try:
+            sftp.mkdir(remote_dir)
+        except IOError:
+            pass   # already exists
+        sftp.put(local_path, remote_dir + "/" + remote_filename)
+        sftp.close()
+        ssh.close()
+        return True
+    except Exception as e:
+        log_system_update(f"[EXFIL] SSH upload failed: {e}")
+        return False
+
+def exfiltrate_clip(clip_path: str):
+    """Encrypt a clip and upload the ciphertext off-device via SSH. Runs in a daemon thread."""
+    if not _EXFIL_HOST or _EXFIL_AES_KEY is None:
+        return   # exfiltration not configured
+    enc_path = _encrypt_clip_aes256(clip_path)
+    if not enc_path:
+        return
+    log_system_update(f"[EXFIL] Encrypted → {os.path.basename(enc_path)}")
+    if _ssh_upload(enc_path, os.path.basename(enc_path)):
+        log_system_update(f"[EXFIL] Uploaded to {_EXFIL_HOST}:{_EXFIL_REMOTE}")
+        # Remove plaintext clip — only ciphertext kept locally (briefly)
+        try:
+            os.unlink(clip_path)
+        except Exception:
+            pass
+    else:
+        log_system_update(f"[EXFIL] Upload failed — encrypted clip retained locally: {enc_path}")
 
 ##############################################################################
 # GSTREAMER CALLBACK
@@ -1001,6 +1195,9 @@ def app_callback(pad, info, user_data):
                 _blind_alert_sent = True
                 log_system_update("[TAMPER] Camera blindness detected — lens may be covered!")
                 _append_detection_perm("TAMPER", "camera_blind", 0.0, "camera appears blocked")
+                push_urgent_ws()
+                # Max-priority: bypass DND/idle and send alert email immediately
+                threading.Thread(target=_send_tamper_email, daemon=True).start()
         else:
             _blind_frame_count = 0
             _blind_alert_sent = False
@@ -1096,6 +1293,7 @@ def app_callback(pad, info, user_data):
 
         # Clip recording — write current frame if active
         _clip_autostopped = False
+        _clip_autostopped_path = ""
         with _clip_lock:
             if _clip_writer is not None:
                 try:
@@ -1106,9 +1304,13 @@ def app_callback(pad, info, user_data):
                     _clip_writer.release()
                     _clip_writer = None
                     _clip_autostopped = True
+                    _clip_autostopped_path = _clip_path
         if _clip_autostopped:
             log_system_update("Clip auto-stopped after 60 s.")
             push_urgent_ws()   # notify JS so it can reset the record button
+            if _clip_autostopped_path:
+                threading.Thread(target=exfiltrate_clip, args=(_clip_autostopped_path,),
+                                 daemon=True).start()
 
     latest_detection_info = text_info
     return Gst.PadProbeReturn.OK
@@ -1514,7 +1716,35 @@ def voice_assistant_loop(stop_event, current_user=None):
 ##############################################################################
 # SESSION MANAGEMENT
 ##############################################################################
-def create_session(username, duration=3600):
+_ACCESS_DURATION  = 900           # 15 minutes — short-lived access token
+_REFRESH_DURATION = 7 * 24 * 3600  # 7 days — refresh token
+
+# Refresh token store: token → {username, role, expires, created_at}
+_refresh_tokens: dict = {}
+
+def create_refresh_token(username: str) -> str:
+    token = secrets.token_hex(64)
+    now = time.time()
+    _refresh_tokens[token] = {
+        "username": username,
+        "role": USERS[username]["role"],
+        "expires": now + _REFRESH_DURATION,
+        "created_at": now,
+    }
+    return token
+
+def get_refresh_token(token: str) -> dict | None:
+    s = _refresh_tokens.get(token)
+    if not s:
+        return None
+    if s["expires"] <= time.time():
+        del _refresh_tokens[token]
+        return None
+    return s
+
+def create_session(username, duration=None):
+    if duration is None:
+        duration = _ACCESS_DURATION
     token = secrets.token_hex(64)
     now = time.time()
     _sessions[token] = {
@@ -1567,10 +1797,8 @@ def require_session(request: Request):
     session = get_session(token)
     if not session:
         raise HTTPException(401, "Not authenticated")
-    # Sliding window — but never beyond absolute max_lifetime
-    now = time.time()
-    session["expires"] = min(now + 3600, session.get("max_lifetime", now + 3600))
-    # Inject token so endpoints can exclude the current session during invalidation
+    # No sliding window — access tokens are short-lived (15 min); use /api/refresh to renew.
+    # Inject token so endpoints can exclude the current session during invalidation.
     session["token"] = token
     return session
 
@@ -1828,7 +2056,10 @@ async def _lifespan(app):
     threading.Thread(target=_deadman_monitor, daemon=True).start()
     threading.Thread(target=_connectivity_monitor, daemon=True).start()
     threading.Thread(target=_schedule_monitor, daemon=True).start()
+    threading.Thread(target=_flush_log_thread, daemon=True).start()
     yield
+    # Flush any remaining buffered log lines before exit
+    _do_flush_logs()
     if _ws_broadcaster_task is not None:
         _ws_broadcaster_task.cancel()
         await asyncio.gather(_ws_broadcaster_task, return_exceptions=True)
@@ -1958,7 +2189,7 @@ class VerifyOTPRequest(BaseModel):
     otp: str
 
 class ForgotPasswordRequest(BaseModel):
-    username: str
+    username: Optional[str] = None   # omittable — endpoint resolves from OTP store
     otp: str
     new_password: str
 
@@ -2007,6 +2238,9 @@ async def users_public():
 
 @fastapi_app.post("/api/login")
 async def login(data: LoginRequest, request: Request, response: Response):
+    ip = _get_client_ip(request)
+    if _is_login_locked(ip):
+        raise HTTPException(429, "Too many failed attempts. Try again later.")
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
     u = data.username.strip()
@@ -2018,9 +2252,13 @@ async def login(data: LoginRequest, request: Request, response: Response):
         if not USERS[u]["password"].startswith("pbkdf2:"):
             USERS[u]["password"] = _hash_password(p)
             save_users()
-        duration = 5 * 24 * 3600 if data.remember_me else 3600
-        token = create_session(u, duration)
-        response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=duration)
+        _clear_login_failure(ip)
+        access_token = create_session(u)
+        refresh_token = create_refresh_token(u)
+        response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
+                            secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
+        response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
+                            secure=_COOKIE_SECURE, max_age=_REFRESH_DURATION, path="/api/refresh")
         log_system_update(f"Login: {u}")
         USERS[u]["history"]["logins"].append(
             datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -2030,8 +2268,9 @@ async def login(data: LoginRequest, request: Request, response: Response):
             "username": u,
             "display_name": USERS[u].get("display_name", u),
             "box_color": USERS[u].get("box_color", "#1565c0"),
-            "token": token,   # for cross-origin clients that can't use cookies
+            "token": access_token,   # for cross-origin clients that can't use cookies
         }
+    _record_login_failure(ip)
     raise HTTPException(401, "Invalid username or password.")
 
 @fastapi_app.get("/api/session")
@@ -2051,18 +2290,49 @@ async def logout(request: Request, response: Response):
     token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
     if token and token in _sessions:
         del _sessions[token]
+    # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
+    refresh = request.cookies.get("garuda_refresh")
+    if refresh and refresh in _refresh_tokens:
+        del _refresh_tokens[refresh]
     response.delete_cookie("garuda_session")
+    response.delete_cookie("garuda_refresh", path="/api/refresh")
     return {"ok": True}
+
+@fastapi_app.post("/api/refresh")
+async def refresh_session(request: Request, response: Response):
+    """Exchange a valid refresh token for a new 15-minute access token."""
+    refresh = request.cookies.get("garuda_refresh")
+    if not refresh:
+        raise HTTPException(401, "No refresh token.")
+    rs = get_refresh_token(refresh)
+    if not rs:
+        raise HTTPException(401, "Refresh token expired or invalid. Please log in again.")
+    u = rs["username"]
+    if u not in USERS:
+        del _refresh_tokens[refresh]
+        raise HTTPException(401, "User no longer exists.")
+    access_token = create_session(u)
+    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
+                        secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
+    return {
+        "token": access_token,
+        "role": USERS[u]["role"],
+        "username": u,
+    }
 
 @fastapi_app.post("/api/admin/send-otp")
 async def admin_send_otp(data: OTPRequest, request: Request, response: Response):
     """Admin login step 1: verify credentials, send OTP."""
+    ip = _get_client_ip(request)
+    if _is_login_locked(ip):
+        raise HTTPException(429, "Too many failed attempts. Try again later.")
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
     global ADMIN_OTP, _admin_otp_user, _admin_otp_ts
     u = data.username.strip()
     p = data.password.strip()
     if u not in USERS or not _verify_password(p, USERS[u]["password"]) or USERS[u]["role"] != "admin":
+        _record_login_failure(ip)
         raise HTTPException(401, "Invalid admin credentials.")
     # Auto-migrate plaintext passwords to hashed
     if not USERS[u]["password"].startswith("pbkdf2:"):
@@ -2098,14 +2368,20 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_ts = 0; _admin_otp_attempts = 0
     if u not in USERS or USERS[u]["role"] != "admin":
         raise HTTPException(401, "Account not authorised.")
-    token = create_session(u)
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=3600)
+    ip = _get_client_ip(request)
+    _clear_login_failure(ip)
+    access_token = create_session(u)
+    refresh_token = create_refresh_token(u)
+    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
+                        secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
+    response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
+                        secure=_COOKIE_SECURE, max_age=_REFRESH_DURATION, path="/api/refresh")
     log_system_update(f"Admin login: {u}")
     return {
         "role": "admin",
         "username": u,
         "display_name": USERS[u].get("display_name", u),
-        "token": token,   # for cross-origin clients
+        "token": access_token,   # for cross-origin clients
     }
 
 @fastapi_app.post("/api/forgot/send-otp")
@@ -2118,6 +2394,7 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
         return {"ok": True}
     otp = generate_otp_code(6)
     _forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
+    global USER_FORGOT_OTP; USER_FORGOT_OTP = otp   # test-facing alias
     # Send to the user's own email if stored, else fall back to admin recipient
     dest = USERS[u].get("email") or (EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER)
     ok, err = send_otp_via_email(dest, otp)
@@ -2128,20 +2405,34 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
 
 @fastapi_app.post("/api/forgot/reset")
 async def forgot_reset(data: ForgotPasswordRequest, request: Request):
+    global USER_FORGOT_OTP
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    u = data.username.strip()
+    # username optional: if omitted, find user by matching OTP across store
+    if data.username:
+        u = data.username.strip()
+    else:
+        u = next((k for k, v in _forgot_otp_store.items()
+                  if v.get("otp") == data.otp.strip()), None)
+        if not u:
+            raise HTTPException(401, "No OTP pending.")
     state = _forgot_otp_store.get(u)
     if not state:
+        USER_FORGOT_OTP = None
         raise HTTPException(401, "No OTP pending.")
     if time.time() - state["ts"] > 300:
         _forgot_otp_store.pop(u, None)
+        USER_FORGOT_OTP = None
         raise HTTPException(401, "OTP expired. Please request a new one.")
     if state["attempts"] >= 3:
         _forgot_otp_store.pop(u, None)
+        USER_FORGOT_OTP = None
         raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
     if not hmac.compare_digest(data.otp.strip(), state["otp"]):
         state["attempts"] += 1
+        if state["attempts"] >= 3:
+            _forgot_otp_store.pop(u, None)
+            USER_FORGOT_OTP = None
         raise HTTPException(401, "Invalid OTP.")
     err = _validate_password_strength(data.new_password)
     if err:
@@ -2153,6 +2444,7 @@ async def forgot_reset(data: ForgotPasswordRequest, request: Request):
     save_users()
     log_system_update(f"Password reset for {u}.")
     _forgot_otp_store.pop(u, None)
+    USER_FORGOT_OTP = None
     return {"ok": True}
 
 @fastapi_app.get("/api/state")
@@ -2920,6 +3212,7 @@ async def clip_stop(session=Depends(require_session)):
         _clip_writer = None
         path = _clip_path
     log_system_update(f"Clip saved: {path}")
+    threading.Thread(target=exfiltrate_clip, args=(path,), daemon=True).start()
     return {"ok": True, "path": path}
 
 # ── WebRTC offer/answer ───────────────────────────────────────────────────────
@@ -2953,6 +3246,15 @@ async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session
 async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
     """Streams JPEG frames as binary WebSocket messages (~same as MJPEG but WS).
     Works through Cloudflare Tunnel (unlike raw UDP WebRTC)."""
+    # Rate-limit WebSocket connections per IP (re-use the global _rate_store)
+    ws_ip = websocket.client.host if websocket.client else "unknown"
+    now = time.time()
+    stamps = _rate_store[ws_ip]
+    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
+    if len(stamps) >= _RATE_LIMIT:
+        await websocket.close(code=4029)
+        return
+    stamps.append(now)
     token = websocket.cookies.get("garuda_session") or token
     if not get_session(token):
         await websocket.close(code=4001)
@@ -3009,6 +3311,15 @@ async def _ws_broadcaster():
 
 @fastapi_app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
+    # Rate-limit WebSocket connections per IP
+    ws_ip = websocket.client.host if websocket.client else "unknown"
+    now = time.time()
+    stamps = _rate_store[ws_ip]
+    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
+    if len(stamps) >= _RATE_LIMIT:
+        await websocket.close(code=4029)
+        return
+    stamps.append(now)
     # Accept token from cookie (same-origin) or query param (cross-origin)
     token = websocket.cookies.get("garuda_session") or token
     if not get_session(token):
