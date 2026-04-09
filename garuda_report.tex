@@ -1,0 +1,186 @@
+\documentclass[12pt,a4paper]{article}
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{microtype}
+
+\hypersetup{colorlinks=true, linkcolor=black, urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Project Garuda}
+\rfoot{\thepage}
+
+\title{
+    \textbf{Project Garuda} \\[0.3em]
+    \large AI-Powered Local Home Security System \\[0.2em]
+    \normalsize Application Overview
+}
+\author{Manikanta \\ Electronics \& Communication Engineering}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+% ──────────────────────────────────────────────────────────────
+\section*{What is Garuda?}
+
+Garuda is a home security system that runs entirely on a local device.
+All AI detection, authentication, video streaming, and logging happen
+on the device itself. No video leaves the home. No cloud account is
+needed. No monthly subscription.
+
+It consists of two software components:
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Backend} — a Python application (\texttt{Garuda\_web.py},
+        \textasciitilde3,100 lines) that runs the AI detection pipeline and
+        serves a web dashboard + API.
+  \item \textbf{iOS app} — a native SwiftUI app that connects to the backend
+        over the home network for remote monitoring.
+\end{itemize}
+
+% ──────────────────────────────────────────────────────────────
+\section*{Core Features}
+
+\subsection*{AI Detection}
+\begin{itemize}[leftmargin=2em, itemsep=2pt]
+  \item Runs YOLOv8-class object detection locally in real time using a
+        GStreamer pipeline.
+  \item Detects people, vehicles, and general objects.
+  \item \textbf{Danger detection}: if the AI sees a knife, scissors, or
+        any object on a configurable danger list, it logs it separately
+        and sends an elevated alert — distinct from a routine intrusion.
+  \item Detection bounding boxes are drawn on the video before streaming,
+        so every client sees annotated video.
+\end{itemize}
+
+\subsection*{Video Streaming}
+\begin{itemize}[leftmargin=2em, itemsep=2pt]
+  \item \textbf{MJPEG stream} — annotated live video viewable in any browser
+        or the iOS app, no plugin needed.
+  \item \textbf{WebRTC} — peer-to-peer low-latency video path for supported
+        clients.
+  \item \textbf{Snapshots} — capture a single annotated frame on demand.
+  \item \textbf{Clip recording} — when an event is detected, the system
+        records a video clip and saves it locally.
+\end{itemize}
+
+\subsection*{Authentication}
+\begin{itemize}[leftmargin=2em, itemsep=2pt]
+  \item Two roles: \textbf{Admin} (full control) and \textbf{User}
+        (view only).
+  \item Admin login requires password \textbf{+} a one-time password
+        sent to email (two-factor auth, no third-party app needed).
+  \item Forgot-password flow via email OTP.
+  \item Emergency master-key system for account recovery.
+  \item All passwords hashed with bcrypt. Rate limiting on all endpoints.
+        Security headers on every response.
+\end{itemize}
+
+\subsection*{Security Modes}
+The system operates in five modes, each changing a different aspect of
+behaviour:
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Mode} & \textbf{What changes} \\
+\midrule
+Active       & Full detection and alerts \\
+DND          & Notifications off; logging continues \\
+Idle         & Detection reduced; no alerts \\
+Night Mode   & Separate log; adjusted sensitivity \\
+Email-Off    & Email alerts disabled \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Modes can be switched manually or set on a \textbf{schedule}
+(e.g., Night Mode auto-enables at 22:00 every day).
+
+\subsection*{Voice Assistant — Narada}
+\begin{itemize}[leftmargin=2em, itemsep=2pt]
+  \item Listens for spoken commands locally, no internet required.
+  \item Rule-based engine handles direct commands (``switch to night mode'',
+        ``arm the system'').
+  \item A local LLM handles commands outside the fixed vocabulary.
+  \item A \textbf{Groq-powered chat interface} in the dashboard allows
+        natural-language queries about system status and logs.
+\end{itemize}
+
+\subsection*{Presence Detection}
+Monitors whether registered devices (family phones, laptops) are on the
+home network using ARP probing. Alerts can be suppressed automatically
+when known occupants are home.
+
+\subsection*{Alerts}
+\begin{itemize}[leftmargin=2em, itemsep=2pt]
+  \item Email alert with event details (cooldown prevents flooding).
+  \item Instant WebSocket push to all connected clients (sub-second).
+  \item Elevated alert for danger-class objects.
+\end{itemize}
+
+\subsection*{Logging}
+\begin{itemize}[leftmargin=2em, itemsep=2pt]
+  \item Append-only detection log (JSON-lines format).
+  \item SQLite event database for multi-client sync.
+  \item Separate voice command log and system update log.
+  \item Alert history with cooldown tracking.
+  \item Logs viewable and downloadable from the dashboard.
+\end{itemize}
+
+\subsection*{iOS App}
+Native SwiftUI app with live MJPEG view, real-time detection event feed
+(WebSocket), role-based login with OTP, and full API access — all
+connecting directly to the local device over the home network.
+
+\subsection*{Web Dashboard (PWA)}
+Full web dashboard installable as a Progressive Web App (works offline
+for the last-loaded state). Includes live video, log viewer, user
+management, mode controls, device presence, voice/chat interface, and
+system settings.
+
+% ──────────────────────────────────────────────────────────────
+\section*{Planned Future Improvements}
+
+\begin{enumerate}[leftmargin=2em, itemsep=4pt]
+  \item \textbf{AI-driven camera rotation} — when a detected person moves
+        toward the edge of the frame, compute the offset from centre and
+        drive a servo motor to rotate the camera and keep the subject in view.
+        Eliminates fixed blind spots without adding extra cameras.
+
+  \item \textbf{Encrypted evidence exfiltration} — on every detection event,
+        encrypt the clip on-device (AES-256) and immediately push it to an
+        off-device destination (personal VPS, SSH server). If the device
+        is physically stolen, the encrypted evidence is already safe
+        off-site. Remote storage holds only ciphertext — readable only with
+        the user's key.
+
+  \item \textbf{RAM-buffered log writes} — accumulate log entries in memory
+        and flush to disk every 60 seconds instead of writing on every event.
+        Greatly reduces storage wear, important for SD-card-based deployments.
+
+  \item \textbf{Camera tamper detection} — monitor frame variance; if the
+        lens is covered or the feed goes blank, trigger an immediate
+        maximum-priority alert.
+
+  \item \textbf{Brute-force login lockout} — lock an account for an
+        escalating duration after repeated failed login attempts.
+
+  \item \textbf{JWT refresh token rotation} — replace long-lived session
+        tokens with short-lived access tokens (15 min) and rotating refresh
+        tokens (7 days), so stolen tokens expire quickly.
+\end{enumerate}
+
+% ──────────────────────────────────────────────────────────────
+\vspace{1em}
+\noindent\rule{\textwidth}{0.4pt}
+\noindent\small\textit{April 2026 — Manikanta, Electronics \& Communication Engineering}
+
+\end{document}
