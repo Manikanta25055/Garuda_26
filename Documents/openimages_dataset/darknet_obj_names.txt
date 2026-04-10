@@ -1,0 +1,4 @@
+hammer
+knife
+person
+scissors
