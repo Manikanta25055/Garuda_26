@@ -24,6 +24,7 @@ const G = (() => {
   let _currentPage = 'dashboard';
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
   let _alarmInterval  = null; // setInterval ID for repeating alarm beep
+  let _audioCtx       = null; // shared AudioContext — unlocked once during login user gesture
   let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
   let _clipRecording = false;  // true while a server-side clip is being recorded
 
@@ -393,6 +394,14 @@ const G = (() => {
     // Request browser notification permission (needed for alert popups)
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
+    }
+    // Unlock AudioContext now while we are inside a user-gesture call stack.
+    // Browsers block audio created outside a user gesture; login click is the
+    // earliest safe opportunity to pre-create and resume the context so that
+    // _beep() can play unconditionally when an alert fires later.
+    const _AC = window.AudioContext || window.webkitAudioContext;
+    if (_AC && (!_audioCtx || _audioCtx.state === 'closed')) {
+      try { _audioCtx = new _AC(); _audioCtx.resume().catch(() => {}); } catch(_) {}
     }
     // Notify feedback widget so it can inject admin Inbox tab
     if (G._afterLoginHook) G._afterLoginHook(_session);
@@ -1178,18 +1187,23 @@ const G = (() => {
     if (_alarmInterval) return;
     function _beep() {
       try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc  = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.25, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.35);
-        osc.onended = () => ctx.close();
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        if (!_audioCtx || _audioCtx.state === 'closed') {
+          _audioCtx = new AC();
+        }
+        _audioCtx.resume().then(() => {
+          const osc  = _audioCtx.createOscillator();
+          const gain = _audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(_audioCtx.destination);
+          osc.type = 'sine';
+          osc.frequency.value = 880;
+          gain.gain.setValueAtTime(0.25, _audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.35);
+          osc.start(_audioCtx.currentTime);
+          osc.stop(_audioCtx.currentTime + 0.35);
+        }).catch(() => {});
       } catch(e) {}
     }
     _beep();
