@@ -119,7 +119,7 @@ def connect(src, tgt, label="", style=None, parent="1"):
 # ── BAND 0: Title ─────────────────────────────────────────────────────────────
 cell(
     "Garuda — Full System Architecture\n"
-    "Raspberry Pi 5 (16 GB)  ·  Hailo-8L NPU (13 TOPS)  ·  Sony IMX708 @ 60 fps",
+    "Raspberry Pi 5 (16 GB RAM · 1 TB SSD)  ·  Hailo-8L NPU (13 TOPS)  ·  Sony IMX708 @ 60 fps",
     30, 10, 1480, 50,
     "text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;"
     "fillColor=none;strokeColor=none;"
@@ -130,12 +130,11 @@ cell(
 # ══════════════════════════════════════════════════════════════════════════════
 hw_cont = container("HARDWARE LAYER", 30, 80, 1060, 90, HW[0], HW[1])
 
-cam     = child("Sony IMX708\n1280×720 @ 60 fps", 20,  30, 150, 45, box(HW[0], HW[1], bold=True), hw_cont)
-mic     = child("Microphone\n(Voice Input)",        200, 30, 130, 45, box(HW[0], HW[1]), hw_cont)
-hcsr    = child("HC-SR04\nUltrasonic (GPIO18/24)",  360, 30, 150, 45, box(HW[0], HW[1]), hw_cont)
-led     = child("LED Indicator\n(GPIO17)",           540, 30, 130, 45, box(HW[0], HW[1]), hw_cont)
-net_hw  = child("LAN / WiFi\n(ARP Network)",        700, 30, 130, 45, box(HW[0], HW[1]), hw_cont)
-hailo_hw= child("Hailo-8L NPU\n13 TOPS  PCIe",      860, 30, 150, 45, box(HAILO[0], HAILO[1], bold=True), hw_cont)
+cam     = child("Sony IMX708\n1280×720 @ 60 fps",  20,  30, 165, 45, box(HW[0], HW[1], bold=True), hw_cont)
+mic     = child("Microphone\n(Voice Input)",        210, 30, 140, 45, box(HW[0], HW[1]), hw_cont)
+ssd_hw  = child("1 TB SSD\n(External Storage)",    375, 30, 140, 45, box(HW[0], HW[1]), hw_cont)
+net_hw  = child("LAN / WiFi\n(ARP Network)",        540, 30, 140, 45, box(HW[0], HW[1]), hw_cont)
+hailo_hw= child("Hailo-8L NPU\n13 TOPS  PCIe",      705, 30, 160, 45, box(HAILO[0], HAILO[1], bold=True), hw_cont)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BAND 2: GSTREAMER AI PIPELINE  y=210
@@ -199,17 +198,16 @@ connect(d_parse,  d_watch,  style=edge_h(), parent=det_cont)
 # ══════════════════════════════════════════════════════════════════════════════
 alt_cont = container("ALERT ENGINE", 30, 680, 1060, 110, ALERT[0], ALERT[1])
 
-a_soft   = child("trigger_software_alert()\n• _alert_active = True\n• 3 s timer extension per frame", 15,  35, 195, 55, box(ALERT[0], ALERT[1]), alt_cont)
-a_email  = child("send_email_alert()\n• Gmail SMTP-SSL port 465\n• 60 s cooldown\n• Subject: NORMAL / HIGH / EMERGENCY", 235, 35, 200, 55, box(ALERT[0], ALERT[1]), alt_cont)
-a_gpio   = child("GPIO LED\n(GPIO17)\nLights on alert", 460, 35, 120, 55, box(ALERT[0], ALERT[1]), alt_cont)
-a_ws     = child("WebSocket Push\npush_urgent_ws()\n→ all connected clients", 605, 35, 160, 55, box(ALERT[0], ALERT[1]), alt_cont)
-a_tamper = child("TAMPER ALERTS\n• Camera blindness\n• Dead man's switch\n  (bypass DND/Idle)", 790, 35, 175, 55, box("#ff0000", "#cc0000", bold=True), alt_cont)
+a_soft   = child("trigger_software_alert()\n• _alert_active = True\n• 3 s timer extension per frame", 15,  35, 210, 55, box(ALERT[0], ALERT[1]), alt_cont)
+a_email  = child("send_email_alert()\n• Gmail SMTP-SSL port 465\n• 60 s cooldown\n• Subject: NORMAL / HIGH / EMERGENCY", 250, 35, 210, 55, box(ALERT[0], ALERT[1]), alt_cont)
+a_audio  = child("Audio Alarm\naplay Front_Center.wav\n(on alert rising edge)", 485, 35, 170, 55, box(ALERT[0], ALERT[1]), alt_cont)
+a_ws     = child("WebSocket Push\npush_urgent_ws()\n→ all connected clients", 680, 35, 170, 55, box(ALERT[0], ALERT[1]), alt_cont)
+a_tamper = child("TAMPER ALERTS\n• Camera blindness\n• Dead man's switch\n  (bypass DND/Idle)", 875, 35, 170, 55, box("#ff0000", "#cc0000", bold=True), alt_cont)
 
 connect(d_danger, a_soft,   style=edge_style(color=ALERT[1]))
 connect(a_soft,   a_email,  style=edge_h(color=ALERT[1]), parent=alt_cont)
-connect(a_soft,   a_gpio,   style=edge_h(color=ALERT[1]), parent=alt_cont)
+connect(a_soft,   a_audio,  style=edge_h(color=ALERT[1]), parent=alt_cont)
 connect(a_soft,   a_ws,     style=edge_h(color=ALERT[1]), parent=alt_cont)
-connect(a_email,  led,      label="GPIO",  style=edge_style(dashed=1, color="#aaaaaa"))
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BAND 5: FASTAPI BACKEND + SECURITY  y=830
@@ -244,7 +242,7 @@ connect(net_hw, if_phone, style=edge_style(dashed=1, color=SVC[1]))
 # ══════════════════════════════════════════════════════════════════════════════
 # BAND 7: STORAGE LAYER  y=1230
 # ══════════════════════════════════════════════════════════════════════════════
-store_cont = container("STORAGE LAYER  (On-Device — Raspberry Pi SD Card)", 30, 1230, 1060, 130, STORE[0], STORE[1])
+store_cont = container("STORAGE LAYER  (1 TB External SSD)", 30, 1230, 1060, 130, STORE[0], STORE[1])
 
 st_sqlite = child("SQLite\ngaruda_events.db\n• Event queue (offline-resilient)\n• synced flag\n• Indexed by ts", 15,  35, 180, 75, db_style(STORE[0], STORE[1]), store_cont)
 st_json   = child("JSON Files\n• users.json  (PBKDF2 hashes)\n• config.json  (modes, schedule)\n• alert_history.json\n• presence_log.json\n• master_keys.json", 215, 35, 185, 75, box(STORE[0], STORE[1]), store_cont)
