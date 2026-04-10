@@ -101,153 +101,269 @@ The following describes the complete data flow through the Garuda system from fr
 
 #### Step 1 — Frame Capture
 
-The Sony IMX708 camera is accessed via `libcamerasrc`, the GStreamer source element for the Raspberry Pi camera stack. The sensor captures frames at **1280 × 720 resolution at 60 fps** in RGB format. Each frame is passed downstream as a GStreamer buffer.
+The Sony IMX708 is a 12.3 MP stacked BSI CMOS sensor with a 1/2.43" optical format. It is accessed via `libcamerasrc`, the GStreamer source element interfacing with the Linux camera stack through `libcamera`. The sensor is configured to operate at **1280 × 720 resolution at 60 fps** in raw RGB format. Each frame is passed downstream as a GStreamer buffer attached with PTS (presentation timestamp) metadata for synchronisation.
+
+The IMX708 supports phase-detection autofocus (PDAF) and high dynamic range (HDR) modes; in Garuda, autofocus is disabled and exposure is fixed to minimise per-frame latency variation.
 
 ```
-Input  : Physical light → Sony IMX708 CMOS sensor
-Output : GStreamer buffer (RGB, 1280×720, 60 fps)
+Input  : Physical light → Sony IMX708 CMOS sensor (12.3 MP, 1/2.43")
+Output : GStreamer buffer (RGB, 1280×720, 60 fps, with PTS)
 ```
 
 ---
 
 #### Step 2 — Preprocessing
 
-The raw frame undergoes two sequential transformations before inference:
+Raw frames pass through a three-stage preprocessing chain before being submitted to the neural network. This chain is implemented entirely within GStreamer, executing on CPU cores of the Raspberry Pi 5 (ARM Cortex-A76) in parallel with NPU inference.
 
-1. **Scaling** — `videoscale` resizes the frame from 1280×720 to the network input resolution of **640×640 pixels**.
-2. **Format conversion** — `videoconvert` ensures the pixel format matches the model's expected input (RGB, 8-bit per channel).
+**2a. Spatial Downscaling**
 
-The preprocessed frame then enters a `tee` element, which splits the stream into two parallel branches:
+`videoscale` reduces the frame from 1280×720 to the network input resolution of **640×640 pixels** using bilinear interpolation. This constitutes a stretch resize (no letterboxing), which is consistent with the training-time preprocessing applied during the original YOLO model training on the COCO dataset. Aspect ratio distortion is accepted in favour of full-field-of-view coverage.
 
-- **Branch A (Bypass)** — The raw frame passes directly to the `hailomuxer` input `sink_0` without modification.
-- **Branch B (Inference)** — The frame is routed through the Hailo-8L NPU for AI inference.
+> **Note on letterboxing:** A letterbox-preserving resize (padding with grey bars to maintain aspect ratio) can reduce geometric distortion for non-square subjects. The trade-off is that approximately 11% of the 640×640 tensor is padded and contributes no information. The current implementation prioritises field-of-view density over geometric fidelity. This is revisited in the model fine-tuning methodology (Section VIII).
+
+**2b. Pixel Format Normalisation**
+
+`videoconvert` ensures the pixel format is `RGB` (3 channels, uint8, range [0, 255]) as required by the compiled HEF model. Internally, the Hailo compiler bakes the normalization transform — dividing pixel values by 255.0 to yield a floating-point range of [0.0, 1.0] — into the HEF as a pre-processing layer fused with the first network layer. This means no explicit floating-point normalisation occurs on the CPU; the NPU handles it at near-zero latency during the first inference stage.
+
+**2c. Stream Splitting (tee)**
+
+The preprocessed frame enters a `tee` element, which non-destructively splits the stream into two parallel branches:
+
+- **Branch A — Bypass path:** The raw frame (1280×720) passes directly to `hailomuxer.sink_0` without further modification. This preserves the original resolution for MJPEG encoding and WebRTC streaming to the dashboard.
+- **Branch B — Inference path:** The scaled frame (640×640) is routed to `hailonet` for NPU inference.
+
+The bypass branch introduces a configurable queue (`bypass_queue`, max 20 buffers) to absorb any timing difference between the fast bypass path and the slower inference path, preventing pipeline starvation at the muxer.
 
 ```
 Input  : GStreamer buffer (RGB, 1280×720)
-Output : Two parallel buffers — raw (1280×720) and scaled (640×640)
+Process: bilinear downscale → RGB uint8 → tee split
+Output : Branch A: raw buffer (1280×720) for streaming
+         Branch B: scaled buffer (640×640) for NPU inference
+         Pixel normalisation [0,255]→[0.0,1.0] deferred to NPU
 ```
 
 ---
 
-#### Step 3 — Object Detection (Hailo-8L NPU)
+#### Step 3 — Object Detection on Hailo-8L NPU
 
-Branch B is processed by `hailonet`, the GStreamer element that submits the scaled frame to the Hailo-8L NPU. The NPU executes the quantized model compiled to the **Hailo Executable Format (HEF)**. Three models are supported: YOLOv8s (default), YOLOv6n, and YOLOx-S.
+**3a. Network Architecture**
 
-The raw network output is then passed to `hailofilter`, which runs the post-processing shared library (`libyolo_hailortpp_post.so`). This performs **Non-Maximum Suppression (NMS)** with the following parameters:
+The primary model deployed in Garuda is **YOLOv8s** (small variant), an anchor-free single-stage object detector. Its architecture is composed of three functional blocks:
 
-- NMS score threshold: **0.25**
-- IOU threshold: **0.45**
-- Output format: FLOAT32
+*Backbone — CSPDarknet with C2f modules:*
+The backbone extracts a hierarchical feature pyramid from the input image. Each C2f (Cross Stage Partial with 2 feature maps) module splits the input tensor into two branches: one passes through a stack of Bottleneck residual blocks, and the other bypasses them. The outputs are concatenated and projected, enabling gradient flow across stages while reducing parameter count. The backbone produces feature maps at three scales: P3 (80×80), P4 (40×40), and P5 (20×20), corresponding to small, medium, and large receptive fields respectively.
 
-The inferred detection results are then synchronised with the corresponding raw frame at the `hailomuxer`, which aligns `sink_0` (bypass) and `sink_1` (inference output) into a single annotated buffer.
+*Neck — PAN-FPN (Path Aggregation Network — Feature Pyramid Network):*
+The neck fuses multi-scale features from the backbone using a bidirectional feature propagation scheme. A top-down FPN path propagates semantic information from deep, low-resolution feature maps (P5) to shallower, high-resolution maps (P3). A bottom-up PAN path then propagates localization information from shallow maps back up. This dual-direction aggregation produces three enriched feature maps (P3′, P4′, P5′) that combine semantic richness with spatial precision, enabling accurate detection across object sizes.
+
+*Head — Decoupled Detection Head:*
+YOLOv8 separates classification and bounding box regression into two independent branches at each scale, unlike earlier YOLO versions which shared head weights. Each scale produces predictions for all 80 COCO classes. The regression branch predicts a distribution over bounding box offsets using DFL (Distribution Focal Loss), which models the uncertainty of box boundaries probabilistically rather than as point estimates.
+
+**3b. Transfer Learning and Fine-Tuning Methodology**
+
+The base YOLOv8s model is pre-trained on the **COCO 2017 dataset** (118,287 training images, 80 object classes), with the backbone itself initialised from **ImageNet-21k** pre-trained weights. This two-stage pre-training provides a strong feature prior — the backbone layers encode general visual representations (edges, textures, shapes) before any task-specific training.
+
+For deployment in Garuda's surveillance context, the model is fine-tuned on a domain-specific dataset to improve detection accuracy for the target class (`scissors`) and reduce false positives in indoor environments. The fine-tuning strategy employs **selective layer freezing**:
+
+*Frozen layers (backbone, stages 0–5):*
+The early and mid backbone layers capture low-level features (colour gradients, edge orientations, texture patterns) that are domain-invariant. Freezing these layers during fine-tuning prevents catastrophic forgetting of the pre-trained representations and reduces training time and GPU memory requirements.
+
+*Trainable layers (backbone stages 6–9, neck, detection head):*
+The deeper backbone stages capture high-level semantic features that are more dataset-specific. Together with the full neck and detection head, these layers are fine-tuned with a **reduced learning rate** (η = 1×10⁻⁴, approximately 10× lower than the base training rate) to preserve previously learned structure while adapting to the target distribution.
+
+*Training schedule:*
+- Warm-up: 3 epochs with linear learning rate ramp from η/10 to η
+- Cosine annealing over the remaining epochs (total: 50–100 epochs depending on dataset size)
+- Batch size: 16 (constrained by training hardware)
+- Optimiser: SGD with momentum 0.937, weight decay 5×10⁻⁴
+
+*Data augmentation (applied during fine-tuning):*
+- Mosaic augmentation (4-image composition): improves small object detection
+- Random horizontal flip (p=0.5)
+- HSV colour jitter (hue ±0.015, saturation ±0.7, value ±0.4)
+- Random affine transforms (scale ±50%, translate ±10%)
+- Mixup augmentation (p=0.1): blends two training images and their labels
+
+> **Note:** The fine-tuned model weights and dataset composition details are reported in Section VIII (Performance Optimisation Study). Results for the base COCO-trained model are used for all benchmarks in Sections IV and V.
+
+**3c. Quantisation for Hailo-8L Deployment**
+
+The Hailo-8L NPU operates on **INT8 quantised** weights and activations. The trained floating-point (FP32) model is compiled to the Hailo Executable Format (HEF) using the **Hailo Dataflow Compiler (DFC)**, which performs the following:
+
+1. **Graph parsing:** The ONNX export of the YOLOv8s model is parsed and mapped to Hailo's internal computational graph representation.
+2. **Layer fusion:** Convolution, batch normalisation, and activation layers are fused into single NPU operations, eliminating intermediate memory round-trips.
+3. **Post-training quantisation (PTQ):** A calibration dataset (representative subset of the training data, minimum 64 images) is used to compute per-layer activation ranges. Weights and activations are quantised to INT8 using symmetric min-max quantisation. The normalisation transform ([0,255]→[0.0,1.0]) is fused into the first layer as described in Step 2b.
+4. **HEF compilation:** The quantised graph is compiled to a binary HEF file optimised for the Hailo-8L's internal dataflow architecture.
+
+The quantisation process introduces a small accuracy degradation (typically 0.3–1.5% mAP on COCO val2017) relative to the FP32 baseline, which is characterised in Section VIII.
+
+**3d. NMS Post-Processing**
+
+The raw NPU output (classification scores and raw box predictions for all spatial grid cells across P3′/P4′/P5′) is passed to `hailofilter`, which loads `libyolo_hailortpp_post.so` — a compiled shared library that performs **Non-Maximum Suppression (NMS)**:
+
+For each class *c* and each candidate box *b* with objectness-weighted class score *s*:
+
+$$s_{b,c} = p_{\text{obj}} \cdot p(c \mid \text{obj})$$
+
+Boxes with $s_{b,c} < \tau_{\text{score}}$ (score threshold = **0.25**) are discarded. The remaining boxes are sorted by score in descending order. For each box $b_i$, all lower-scoring boxes $b_j$ with Intersection over Union (IoU) $> \tau_{\text{iou}}$ (IoU threshold = **0.45**) are suppressed:
+
+$$\text{IoU}(b_i, b_j) = \frac{|b_i \cap b_j|}{|b_i \cup b_j|}$$
+
+The surviving boxes are returned as `HAILO_DETECTION` metadata objects, each carrying: class label, confidence score, and normalised bounding box coordinates $(x_{\min}, y_{\min}, x_{\max}, y_{\max}) \in [0, 1]$.
+
+The inference results are then synchronised with the corresponding raw frame at the `hailomuxer`, which aligns `sink_0` (bypass) and `sink_1` (inference output) into a single annotated buffer by matching buffer PTS values.
 
 ```
-Input  : Scaled RGB frame (640×640)
-Process: Hailo-8L NPU → YOLOv8s HEF inference → NMS post-processing
-Output : Annotated GStreamer buffer with HAILO_DETECTION metadata objects
-         (bounding box, label string, confidence score per detection)
+Input  : Scaled RGB frame (640×640, uint8)
+Process: CSPDarknet backbone → PAN-FPN neck → decoupled head
+         → INT8 NPU inference → NMS (score≥0.25, IoU≤0.45)
+Output : HAILO_DETECTION metadata per surviving box
+         (label, confidence ∈ [0,1], normalised bbox)
+         Synchronised with raw 1280×720 frame via hailomuxer
 ```
 
 ---
 
 #### Step 4 — Classification (Normal / Danger)
 
-The annotated buffer arrives at the `identity_callback` element, where a GStreamer pad probe invokes `app_callback()` on every frame. Inside this callback, the following classification logic executes:
+The synchronised buffer arrives at the `identity_callback` element, where a GStreamer pad probe invokes `app_callback()` on every frame. This function executes in the GStreamer streaming thread.
 
-**4a. Camera Integrity Check**
+**4a. Camera Integrity Check (Tamper Detection)**
 
-Before processing detections, the frame's grayscale variance is computed. If variance falls below **50** for **300 consecutive frames** (~10 seconds at 30 fps), the camera is classified as **blind** (lens covered or obstructed) and a tamper alert is raised immediately, bypassing all operator modes.
+Before processing any detections, a frame-level integrity test is performed. The RGB frame is converted to grayscale and its **pixel intensity variance** is computed:
 
-**4b. Detection Parsing**
+$$\sigma^2 = \frac{1}{N} \sum_{i=1}^{N} (I_i - \bar{I})^2$$
 
-All `HAILO_DETECTION` metadata objects attached to the buffer are iterated. Each detection is evaluated against the user-configured **detection threshold** (default: 0.35). Detections below this threshold are discarded.
+where $N$ is the total pixel count and $\bar{I}$ is the mean intensity. A uniformly dark or uniformly bright frame (e.g., lens covered with tape, blinding light shone at the camera) produces $\sigma^2 < 50$. If this condition persists for **300 consecutive frames** (~10 seconds at 30 fps), the system concludes the camera is physically obstructed. A `TAMPER` event is raised immediately, bypassing all operator modes including DND and Idle, and an emergency email is dispatched.
+
+**4b. Detection Parsing and Threshold Filtering**
+
+All `HAILO_DETECTION` objects attached to the buffer are iterated. Bounding box coordinates are denormalised to pixel coordinates:
+
+$$x_1 = x_{\min} \cdot W, \quad y_1 = y_{\min} \cdot H, \quad x_2 = x_{\max} \cdot W, \quad y_2 = y_{\max} \cdot H$$
+
+where $W = 1280$, $H = 720$. Each detection is then evaluated against the user-configured **detection threshold** $\tau_d$ (default: 0.35). Detections with confidence $< \tau_d$ are discarded. $\tau_d$ is tunable at runtime via the dashboard (range: 0.05–0.95), allowing the operator to trade precision against recall according to the deployment environment.
 
 **4c. Privacy Masking**
 
-If **Privacy Mode** is active, every detection with label `person` triggers an in-place **Gaussian blur** (kernel 51×51, σ=30) applied to the corresponding bounding box region of the frame. The blurred frame is re-encoded to JPEG (quality 75) and placed into the shared MJPEG frame buffer.
+If `MODE_PRIVACY = True`, every detection with label `person` triggers an in-place spatial filter on the bounding box region. A **Gaussian blur** with kernel size 51×51 and $\sigma = 30$ is applied using OpenCV's `cv2.GaussianBlur`. This renders faces and identifying features unrecognisable while preserving the detection bounding box overlay. The blurred frame is then JPEG-encoded at quality 75 and placed into the shared MJPEG frame buffer for dashboard streaming. The raw unblurred frame is stored separately for the WebRTC track.
 
-**4d. Classification Decision**
+**4d. Classification Decision and Consecutive-Frame Filter**
 
-Each detection above threshold is classified into one of three categories:
+Each detection above $\tau_d$ is classified into one of three categories:
 
-| Category | Condition | Action |
-|----------|-----------|--------|
-| **DANGER** | label == `DANGER_LABEL` (default: scissors) AND ≥ 2 consecutive frames | Trigger alert pipeline |
-| **WATCH** | label ∈ {person, backpack, suitcase} | Silent log with 30 s cooldown |
-| **NORMAL** | All other labels above threshold | Count only; no log |
+| Category | Trigger Condition | Action |
+|----------|------------------|--------|
+| **DANGER** | `label == DANGER_LABEL` AND `consecutive_frames ≥ 2` | Invoke alert pipeline |
+| **WATCH** | `label ∈ {person, backpack, suitcase}` | Append to detection log (30 s cooldown) |
+| **NORMAL** | All other labels above $\tau_d$ | Increment class counter only |
 
-The consecutive-frame requirement for DANGER events acts as a **false positive filter** — a single-frame detection does not trigger an alert.
+The **consecutive-frame filter** maintains a per-label counter `_label_consec_frames[label]` that increments each frame the label is seen above $\tau_d$ and resets to zero the frame it disappears. A DANGER event fires only when this counter reaches 2, requiring the threat object to be visible in at least two consecutive frames. This eliminates single-frame false positives caused by motion blur, partial occlusion, or transient reflections — common sources of spurious detections in indoor surveillance.
 
 ```
-Input  : HAILO_DETECTION objects (label, confidence, bounding box)
-Output : Classification tag per detection — DANGER / WATCH / NORMAL
-         Privacy-masked JPEG frame in shared MJPEG buffer
+Input  : HAILO_DETECTION objects (label, confidence, bbox)
+Process: variance tamper check → threshold filter → privacy blur
+         → consecutive frame filter → 3-class labelling
+Output : Per-detection tag: DANGER / WATCH / NORMAL
+         Privacy-masked JPEG frame in MJPEG buffer
+         Tamper flag raised if camera blind
 ```
 
 ---
 
 #### Step 5 — Decision Logic
 
-Before any alert is dispatched, the system evaluates the current **operator mode state** and **owner presence**:
+Before any alert is dispatched, the system evaluates a **mode state vector** and an **owner presence flag**. The mode state is a set of six boolean flags maintained in a shared global state protected by `_mode_lock` (a `threading.Lock`), ensuring atomic read-modify-write across concurrent threads.
 
-| Condition | Outcome |
-|-----------|---------|
-| `MODE_IDLE = True` | All alerts suppressed |
-| `MODE_DND = True` | Audio alarm suppressed; email proceeds |
-| `MODE_EMAIL_OFF = True` | Email suppressed; audio proceeds |
-| `MODE_NIGHT = True` | Alert proceeds; email subject elevated to HIGH PRIORITY |
-| `MODE_EMERGENCY = True` | Alert proceeds; email subject elevated to EMERGENCY; overrides DND |
-| Owner present (ARP match) | Alert proceeds normally; operator can suppress via Idle mode |
+| Mode Flag | Effect on Alert Dispatch |
+|-----------|--------------------------|
+| `MODE_IDLE` | Suppresses all alerts (audio + email + WS banner). Detection and logging continue. |
+| `MODE_DND` | Suppresses audio alarm only. Email and WS proceed. |
+| `MODE_EMAIL_OFF` | Suppresses email only. Audio and WS proceed. |
+| `MODE_NIGHT` | No suppression. Email subject elevated: prepended with `HIGH PRIORITY`. All detections logged regardless of class. |
+| `MODE_EMERGENCY` | No suppression. Overrides DND. Email subject elevated: `EMERGENCY`. |
+| `MODE_PRIVACY` | Activates Gaussian blur on person bounding boxes (Step 4c). No effect on alert routing. |
 
-Mode state is protected by a threading lock (`_mode_lock`) to prevent race conditions between the GStreamer callback thread and the FastAPI request threads that modify modes.
+**Owner presence:** A background thread (`_presence_poller`) scans the local ARP table every 30 seconds for the MAC addresses of registered devices (owner's phone). If a registered device is detected, `_owner_present = True`. This flag is made available to the decision layer and exposed in the dashboard state. The operator is expected to activate `MODE_IDLE` manually when present; automatic alert suppression based solely on presence is intentionally not implemented, as the operator may still want alerts even when home (e.g., during night mode). This design decision preserves operator agency over the alert policy.
+
+**Mode scheduling:** A separate daemon thread (`_schedule_monitor`) enforces time-based mode transitions. The operator can configure start/end times (HH:MM) for any mode via the dashboard. The scheduler checks the current time every 30 seconds and applies transitions automatically. This enables, for example, automatic activation of `MODE_NIGHT` from 22:00 to 06:00 without manual intervention.
 
 ```
-Input  : Classification tag (DANGER), current mode state, owner presence flag
-Output : Dispatch decision — which alert channels are active for this event
+Input  : DANGER tag, mode state vector, owner presence flag
+Output : Dispatch decision tuple: {audio: bool, email: bool, ws: bool, priority: str}
 ```
 
 ---
 
 #### Step 6 — Alert Generation
 
-On a confirmed DANGER event with alerts enabled, the following actions execute in parallel daemon threads to avoid blocking the GStreamer pipeline:
+On a confirmed DANGER event with at least one alert channel active, the following actions are dispatched as **daemon threads** to ensure the GStreamer callback returns within the pipeline's frame budget (~16 ms at 60 fps), avoiding buffer starvation.
 
-**6a. Software Alert**
-`trigger_software_alert()` sets `_alert_active = True` and extends a 3-second expiry timer. The timer resets on every frame where the danger label remains visible, keeping the alert active continuously while the threat is present. The alert clears 3 seconds after the label disappears from frame.
+**6a. Visual Alert (Dashboard)**
+
+`_alert_active` is set to `True` and `_alert_end_time` is set to `time.time() + 3`. On every subsequent frame where the danger label remains above threshold, `_alert_end_time` is extended by 3 seconds. The alert therefore remains active continuously while the threat is visible and expires **3 seconds after the threat leaves frame**. The FastAPI state endpoint and WebSocket broadcaster read `_alert_active` under `_alert_lock` (a separate lock from `_mode_lock`) to serve the alert banner to connected dashboard clients.
 
 **6b. Audio Alarm**
-`aplay` plays the system alarm sound (`Front_Center.wav`) on the rising edge of the alert (first triggering frame only).
+
+On the **rising edge** of the alert (first triggering frame only), `subprocess.Popen(["aplay", ...])` is called in a non-blocking subprocess. This fires once per alert event, not once per frame, preventing continuous audio repetition during sustained detections.
 
 **6c. Email Notification**
-`send_email_alert()` sends an email via Gmail SMTP-SSL (port 465) with the detection timestamp and label. A **60-second cooldown** prevents alert spam during sustained detections. The email subject reflects the current mode: standard, HIGH PRIORITY (night), or EMERGENCY.
+
+`send_email_alert()` opens an SMTP-SSL connection to Gmail on port 465, authenticates using an application-specific password stored in the `.env` file (never in `config.json`), and sends an alert email to the configured recipient list. A thread-safe **60-second cooldown** (enforced via `_email_lock` and comparing `time.time()` against `last_email_sent_time`) prevents alert spam during sustained detections. The email subject is dynamically composed:
+
+- Normal: `"Scissors Detected Alert"`
+- Night mode: `"HIGH PRIORITY: Scissors Detected Alert"`
+- Emergency mode: `"EMERGENCY: Scissors Detected Alert"`
 
 **6d. WebSocket Push**
-`push_urgent_ws()` signals the async WebSocket broadcaster to immediately push the updated system state to all connected dashboard clients, ensuring the alert banner appears on the operator's screen within milliseconds.
+
+`push_urgent_ws()` uses `asyncio.call_soon_threadsafe()` to signal the async WebSocket broadcaster event loop from the synchronous GStreamer thread. This causes the broadcaster to immediately push the current system state JSON to all connected WebSocket clients, delivering the alert banner to the dashboard within one network round-trip of the detection event.
 
 ```
-Input  : Confirmed DANGER event, dispatch decision
-Output : Active alert flag (3 s timer), audio playback, email sent, WS push to clients
+Input  : Dispatch decision tuple, _danger_trigger_info snapshot
+Output : _alert_active flag set (3 s sliding timer)
+         Audio subprocess (rising edge only)
+         Email sent (60 s cooldown)
+         Async WS push → alert banner on all connected clients
 ```
 
 ---
 
 #### Step 7 — Logging and Persistence
 
-Every event — detection, alert, mode change, login, system action — is recorded through a two-tier persistence system designed for the constraints of embedded storage:
+Every detection, alert, mode change, login, and system event is recorded through a **two-tier persistence architecture** designed specifically for the constraints of SSD-based embedded storage — minimising write amplification while guaranteeing zero event loss.
 
-**Tier 1 — RAM Buffer (low-latency writes)**
-All text log entries are written into an in-memory buffer (`_log_buffer`, a `defaultdict(list)`) protected by a threading lock. A background daemon thread flushes this buffer to the 1 TB SSD every **60 seconds**, eliminating per-event disk I/O and significantly reducing write amplification.
+**7a. Tier 1 — RAM Buffer (Write Coalescing)**
 
-**Tier 2 — SQLite Event Queue (structured, queryable)**
-Every detection event is also inserted into `garuda_events.db` with a `synced` flag. This database serves as the offline-resilient event store — it retains all events regardless of network state, and the dashboard queries it for historical review once connectivity is restored.
+All text log writes accumulate in `_log_buffer`, a `defaultdict(list)` mapping file paths to lists of pending log lines. This buffer is protected by `_log_buffer_lock`. A background daemon thread (`_flush_log_thread`) sleeps for **60 seconds**, then acquires the lock, snapshots the buffer, clears it, releases the lock, and writes all pending lines to their respective files on the SSD in a single sequential write per file. This pattern reduces the write frequency from once-per-event (potentially hundreds per minute) to once per 60 seconds, dramatically reducing write amplification and extending SSD longevity.
 
-**Critical state** (user accounts, configuration, alert history) is written using an **atomic JSON write** pattern: data is written to a temporary file, flushed with `fsync`, then renamed into place with `os.replace`. This guarantees file integrity on unexpected power loss.
+Log files are **rotated at 10 MB** — the file is renamed to `<name>.1` and a fresh file begins. At most two rotation files are kept per log.
+
+**7b. Tier 2 — SQLite Event Queue (Structured Persistence)**
+
+Every detection event is also inserted into `garuda_events.db` via `queue_event()`, which opens a SQLite connection under `_eq_lock`. Each row stores: ISO timestamp, event type, label, confidence, info string, and a `synced` flag (default 0). This database serves as the **offline-resilient event store**: events accumulate regardless of network state and are available for historical review on the dashboard at any time.
+
+The schema includes two indexes — on `synced` (for pending-count queries) and on `timestamp` (for range queries) — ensuring $O(\log n)$ retrieval even with large event histories.
+
+**7c. Atomic JSON Writes (Critical State)**
+
+User accounts, system configuration, and alert history are written using the **atomic write pattern**:
 
 ```
-Input  : Detection event, system event, mode change
-Output : Entry in RAM log buffer (→ SSD every 60 s)
-         Row in SQLite garuda_events.db
-         Atomic JSON update for critical state files
+1. os.makedirs(dir, exist_ok=True)
+2. fd, tmp_path = tempfile.mkstemp(dir=dir, suffix=".tmp")
+3. json.dump(data, fd); fd.flush(); os.fsync(fd.fileno())
+4. os.replace(tmp_path, target_path)   ← atomic on POSIX
+```
+
+`os.replace` is atomic on POSIX filesystems — the target path transitions instantaneously from the old file to the new, with no window where the file is missing or partially written. Combined with `fsync`, this guarantees that a hard power-off at any point leaves the state file either fully old or fully new — never corrupt.
+
+```
+Input  : Detection / system / mode change event
+Output : Line appended to RAM buffer (→ SSD flush every 60 s)
+         Row inserted into garuda_events.db (SQLite, indexed)
+         Atomic JSON file update for users / config / alert_history
 ```
 
 ---
