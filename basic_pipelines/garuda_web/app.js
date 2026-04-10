@@ -427,7 +427,7 @@ const G = (() => {
     _stopAlarm();
     if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
     _session = null; _token = null; _logsUnlocked = false;
-    _recentDets = []; _prevAlertActive = false; _lastDetInfo = '';
+    _recentDets = []; _prevAlertActive = false; _lastAlertState = false; _lastDetInfo = '';
     localStorage.removeItem('garuda_token');
     localStorage.removeItem('garuda_remember');
     if (_ws) { _ws.close(); _ws = null; }
@@ -2282,7 +2282,7 @@ const G = (() => {
       if (r.status === 401 && !_isRetry && url !== '/api/refresh' && url !== '/api/login') {
         try {
           const refreshUrl = base ? base.replace(/\/$/, '') + '/api/refresh' : '/api/refresh';
-          const rr = await fetch(refreshUrl, { method: 'POST', credentials: base ? 'omit' : 'include' });
+          const rr = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
           if (rr.ok) {
             const rd = await rr.json();
             if (rd.token) { _token = rd.token; localStorage.setItem('garuda_token', _token); }
