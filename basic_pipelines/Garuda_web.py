@@ -1965,6 +1965,7 @@ def get_state_dict():
     camera_blind = _blind_alert_sent
 
     # Expire night presence alert if window ended
+    global _night_presence_alert_active
     with _np_lock:
         if _night_presence_alert_active and time.time() > _night_presence_alert_end_time:
             _night_presence_alert_active = False
