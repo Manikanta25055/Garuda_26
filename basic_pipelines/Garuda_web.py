@@ -126,9 +126,9 @@ last_email_sent_time = 0
 _email_lock = threading.Lock()
 _danger_active = False   # True while danger label is continuously detected
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL   = "llama-3.3-70b-versatile"
-DANGER_LABEL = "scissors"
+GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
+GROQ_MODEL    = "llama-3.3-70b-versatile"
+DANGER_LABELS: list = ["Knife", "scissors", "Hammer"]   # all non-person model outputs
 
 # ── Encrypted evidence exfiltration (AES-256-GCM + SSH) ─────────────────────
 # Set these in .env to enable off-site encrypted clip backup:
@@ -231,6 +231,12 @@ _label_consec_frames: dict = {}   # label → consecutive frames seen above thre
 # ── Scheduled modes ───────────────────────────────────────
 MODE_SCHEDULE: dict = {}   # {"night": {"start": "22:00", "end": "06:00"}, ...}
 
+# ── Night presence window (yellow alarm when human seen in dead hours) ─────────
+NIGHT_PRESENCE_WINDOW: dict = {"start": "01:30", "end": "05:00", "enabled": True}
+_night_presence_alert_active = False
+_night_presence_alert_end_time = 0.0
+_np_lock = threading.Lock()
+
 # ── Clip recording ────────────────────────────────────────
 _clip_writer     = None
 _clip_lock       = threading.Lock()
@@ -249,7 +255,7 @@ OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking awa
 _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_poller)
 
 # ── Detection categories ──────────────────────────────────
-WATCH_LABELS: list = ['person', 'backpack', 'suitcase']  # log silently, no alert
+WATCH_LABELS: list = ['Person', 'person']   # human — log silently, no alert
 
 # ── Password hashing (PBKDF2-SHA256) ────────────────────
 _PBKDF2_ITERS = 600000  # OWASP 2024 recommendation for PBKDF2-SHA256
@@ -451,8 +457,9 @@ def save_users():
 def load_config():
     global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
     global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
-    global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABEL
+    global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABELS
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
+    global NIGHT_PRESENCE_WINDOW
     # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are NOT loaded from config.json —
     # they live exclusively in .env / environment variables for security.
     if os.path.exists(CONFIG_FILE):
@@ -467,7 +474,12 @@ def load_config():
             DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
             KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
             WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
-            DANGER_LABEL = cfg.get("danger_label", DANGER_LABEL)
+            # Support both legacy "danger_label" (str) and new "danger_labels" (list)
+            if "danger_labels" in cfg:
+                DANGER_LABELS = cfg["danger_labels"]
+            elif "danger_label" in cfg:
+                DANGER_LABELS = [cfg["danger_label"]]
+            NIGHT_PRESENCE_WINDOW = cfg.get("night_presence_window", NIGHT_PRESENCE_WINDOW)
             # Restore persisted mode states
             modes = cfg.get("modes", {})
             MODE_DND       = bool(modes.get("dnd",       MODE_DND))
@@ -578,7 +590,8 @@ def save_config():
             "detection_threshold": DETECTION_THRESHOLD,
             "known_devices": KNOWN_DEVICES,
             "watch_labels": WATCH_LABELS,
-            "danger_label": DANGER_LABEL,
+            "danger_labels": DANGER_LABELS,
+            "night_presence_window": NIGHT_PRESENCE_WINDOW,
             "modes": {
                 "dnd":       MODE_DND,
                 "email_off": MODE_EMAIL_OFF,
@@ -1022,12 +1035,13 @@ def send_email_alert():
             return
         last_email_sent_time = current_time
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    subject = "Scissors Detected Alert"
+    label_str = ", ".join(DANGER_LABELS)
+    subject = f"Danger Object Detected — {label_str}"
     if emergency:
         subject = "EMERGENCY: " + subject
     elif night:
         subject = "HIGH PRIORITY: " + subject
-    body = f"Detected scissors at {now_str}.\nCheck your environment for safety.\n"
+    body = f"Danger object detected at {now_str}.\nObject(s): {label_str}\nCheck your environment for safety.\n"
     msg = MIMEText(body)
     msg['Subject'] = subject
     msg['From'] = EMAIL_SENDER
@@ -1040,9 +1054,9 @@ def send_email_alert():
     except Exception as e:
         log_system_update(f"Failed sending email alert: {e}")
 
-def log_scissors_detection():
+def log_scissors_detection(label: str = "danger"):
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    _perm_write(SCISSORS_LOG_FILE, f"[{stamp}] SCISSORS DETECTED")
+    _perm_write(SCISSORS_LOG_FILE, f"[{stamp}] DANGER DETECTED: {label.upper()}")
 
 def _send_tamper_email():
     """Maximum-priority tamper alert — bypasses DND/idle/email-off modes."""
@@ -1152,7 +1166,7 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.person_detected = False
-        self.danger_label = DANGER_LABEL
+        self.danger_labels = list(DANGER_LABELS)
         # Override with a threading-safe lock-based store
         # (base class uses multiprocessing.Queue which breaks across threads)
         self._frame = None
@@ -1165,6 +1179,31 @@ class user_app_callback_class(app_callback_class):
     def get_frame(self):
         with self._flock:
             return self._frame
+
+
+def _check_night_presence():
+    """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
+    global _night_presence_alert_active, _night_presence_alert_end_time
+    with _np_lock:
+        win = NIGHT_PRESENCE_WINDOW
+    if not win.get("enabled", True):
+        return
+    try:
+        import zoneinfo
+        now_ist = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Kolkata"))
+    except Exception:
+        now_ist = datetime.datetime.now()  # fallback: no timezone lib
+    now_hm = now_ist.strftime("%H:%M")
+    start, end = win.get("start", "01:30"), win.get("end", "05:00")
+    # Handle window that wraps midnight (e.g. 23:00 → 05:00)
+    if start <= end:
+        in_window = start <= now_hm < end
+    else:
+        in_window = now_hm >= start or now_hm < end
+    if in_window:
+        with _np_lock:
+            _night_presence_alert_active = True
+            _night_presence_alert_end_time = time.time() + 10
 
 
 def app_callback(pad, info, user_data):
@@ -1221,7 +1260,8 @@ def app_callback(pad, info, user_data):
             det_count += 1
             text_info += f"{label} ({confidence:.2f})\n"
             _class_counts_today[label] = _class_counts_today.get(label, 0) + 1
-            if privacy and label == "person" and frame is not None:
+            # Privacy blur: blur any detected person (case-insensitive)
+            if privacy and label.lower() == "person" and frame is not None:
                 bbox = d.get_bbox()
                 x1 = int(bbox.xmin() * width)
                 y1 = int(bbox.ymin() * height)
@@ -1233,12 +1273,12 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label == user_data.danger_label:
+            if label in user_data.danger_labels:
                 _label_consec_frames[label] = _label_consec_frames.get(label, 0) + 1
                 if _label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
                     danger_detected = True
                 _last_danger_conf = confidence
-            elif label in WATCH_LABELS and label != user_data.danger_label:
+            elif label.lower() == "person" or (label in WATCH_LABELS and label not in user_data.danger_labels):
                 # WATCH: log silently with 30s cooldown to avoid per-frame spam
                 now_t = time.time()
                 if now_t - _watch_last_logged.get(label, 0) >= 30:
@@ -1256,11 +1296,15 @@ def app_callback(pad, info, user_data):
         _detections_today += det_count
 
     global _danger_active
+    # Find which danger labels were actually detected this frame (for logging)
+    _triggered_labels = [d.get_label() for d in detections
+                         if d.get_label() in user_data.danger_labels
+                         and d.get_confidence() >= threshold]
     if danger_detected:
         global _danger_trigger_info
         _danger_trigger_info = text_info   # snapshot the frame that triggered
         _captured_conf = _last_danger_conf
-        _captured_label = user_data.danger_label
+        _captured_label = _triggered_labels[0] if _triggered_labels else "danger"
         threading.Thread(target=trigger_software_alert, daemon=True).start()
         if not _danger_active:
             # Rising edge: first frame where danger is seen — send one email
@@ -1271,13 +1315,15 @@ def app_callback(pad, info, user_data):
             _now = time.time()
             if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
                 _watch_last_logged[_danger_key] = _now
-                threading.Thread(target=log_scissors_detection, daemon=True).start()
-                threading.Thread(target=lambda: _append_detection_perm(
-                    "DANGER", _captured_label, _captured_conf, "alert triggered"), daemon=True).start()
+                threading.Thread(target=lambda lbl=_captured_label: log_scissors_detection(lbl), daemon=True).start()
+                threading.Thread(target=lambda lbl=_captured_label, conf=_captured_conf: _append_detection_perm(
+                    "DANGER", lbl, conf, "alert triggered"), daemon=True).start()
     else:
         _danger_active = False  # Reset when danger clears; next detection gets a fresh email
 
-    user_data.person_detected = any(d.get_label() == "person" for d in detections)
+    user_data.person_detected = any(d.get_label().lower() == "person" for d in detections)
+    if user_data.person_detected:
+        threading.Thread(target=_check_night_presence, daemon=True).start()
 
     if frame is not None:
         cv2.putText(frame, f"Thr: {threshold:.2f}", (10, 30),
@@ -1918,6 +1964,12 @@ def get_state_dict():
     watchdog_ok = True if not _hb_key else (time.time() - _last_heartbeat) < _DEADMAN_TIMEOUT
     camera_blind = _blind_alert_sent
 
+    # Expire night presence alert if window ended
+    with _np_lock:
+        if _night_presence_alert_active and time.time() > _night_presence_alert_end_time:
+            _night_presence_alert_active = False
+    np_alert = _night_presence_alert_active
+
     return {
         "modes": {
             "dnd": MODE_DND,
@@ -1928,7 +1980,8 @@ def get_state_dict():
             "privacy": MODE_PRIVACY,
         },
         "alert_active": _alert_active,
-        "danger_info": _danger_trigger_info,   # only non-empty during a scissors alert
+        "night_presence_alert": np_alert,
+        "danger_info": _danger_trigger_info,   # only non-empty during a danger alert
         "last_alert": _last_alert_time.isoformat() if _last_alert_time else None,
         "uptime": uptime_str,
         "uptime_seconds": uptime,
@@ -2157,11 +2210,15 @@ class ConfigUpdateRequest(BaseModel):
     email_sender_pass: Optional[str] = None
     email_recipients: Optional[List[str]] = None
     email_cooldown: Optional[int] = None
-    danger_label: Optional[str] = None
+    danger_label: Optional[str] = None    # legacy single-label (maps to danger_labels)
+    danger_labels: Optional[List[str]] = None
     groq_api_key: Optional[str] = None
     privacy: Optional[bool] = None
     watch_labels: Optional[List[str]] = None
     mode_schedule: Optional[dict] = None
+    night_presence_start: Optional[str] = None
+    night_presence_end: Optional[str] = None
+    night_presence_enabled: Optional[bool] = None
 
 class DeviceAddRequest(BaseModel):
     name: str
@@ -2654,7 +2711,7 @@ async def update_user(data: UpdateUserRequest, session=Depends(require_admin)):
 async def get_config(session=Depends(require_admin)):
     return {
         "detection_threshold": DETECTION_THRESHOLD,
-        "danger_label": DANGER_LABEL,
+        "danger_labels": DANGER_LABELS,
         "email_sender": EMAIL_SENDER,
         "email_recipients": EMAIL_RECIPIENTS,
         "email_cooldown": EMAIL_COOLDOWN,
@@ -2664,12 +2721,14 @@ async def get_config(session=Depends(require_admin)):
         "watch_labels": WATCH_LABELS,
         "groq_configured": bool(GROQ_API_KEY),
         "mode_schedule": MODE_SCHEDULE,
+        "night_presence_window": NIGHT_PRESENCE_WINDOW,
     }
 
 @fastapi_app.post("/api/config")
 async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
     global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
-    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, GROQ_API_KEY, DANGER_LABEL
+    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, GROQ_API_KEY, DANGER_LABELS
+    global NIGHT_PRESENCE_WINDOW
     if data.detection_threshold is not None:
         DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
     if data.email_sender is not None:
@@ -2692,11 +2751,17 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.privacy is not None:
         with _mode_lock:
             MODE_PRIVACY = data.privacy
-    if data.danger_label is not None:
-        DANGER_LABEL = data.danger_label.strip() or DANGER_LABEL
-        # Update danger label in user_data if available
+    # Accept danger_labels (list) or legacy danger_label (single)
+    if data.danger_labels is not None:
+        DANGER_LABELS = [l.strip() for l in data.danger_labels if l.strip()]
         if app_gst and hasattr(app_gst, 'user_data'):
-            app_gst.user_data.danger_label = DANGER_LABEL
+            app_gst.user_data.danger_labels = list(DANGER_LABELS)
+    elif data.danger_label is not None:
+        new_lbl = data.danger_label.strip()
+        if new_lbl:
+            DANGER_LABELS = [new_lbl]
+            if app_gst and hasattr(app_gst, 'user_data'):
+                app_gst.user_data.danger_labels = list(DANGER_LABELS)
     if data.watch_labels is not None:
         global WATCH_LABELS
         WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
@@ -2712,6 +2777,17 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
                 if re.match(r'^\d{2}:\d{2}$', s) and re.match(r'^\d{2}:\d{2}$', e):
                     clean[k] = {"start": s, "end": e}
         MODE_SCHEDULE = clean
+    # Night presence window
+    if data.night_presence_start is not None or data.night_presence_end is not None or data.night_presence_enabled is not None:
+        with _np_lock:
+            if data.night_presence_start is not None:
+                if re.match(r'^\d{2}:\d{2}$', data.night_presence_start):
+                    NIGHT_PRESENCE_WINDOW["start"] = data.night_presence_start
+            if data.night_presence_end is not None:
+                if re.match(r'^\d{2}:\d{2}$', data.night_presence_end):
+                    NIGHT_PRESENCE_WINDOW["end"] = data.night_presence_end
+            if data.night_presence_enabled is not None:
+                NIGHT_PRESENCE_WINDOW["enabled"] = data.night_presence_enabled
     await _async_save_config()
     log_system_update("Config updated.")
     return {"ok": True}

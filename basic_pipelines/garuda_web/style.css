@@ -768,9 +768,10 @@ textarea:-webkit-autofill {
 #top-hud.di-voice    .di-live         { max-width: 95px;  opacity: 1; }
 #top-hud.di-voice    .di-cnt-voice    { display: flex; }
 
-/* Pulsing pip — red (alert) or green (allclear) */
+/* Pulsing pip — red (alert), green (allclear), yellow (night presence) */
 .di-pip {
   width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  margin-left: 3px; /* prevent left clip when pip scales during overflow-x:clip animation */
 }
 .di-pip.di-r {
   background: var(--danger);
@@ -780,8 +781,35 @@ textarea:-webkit-autofill {
   background: var(--success);
   animation: di-pip-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
 }
+.di-pip.di-y {
+  background: var(--warn);
+  animation: di-pip-pulse 1.3s ease-in-out infinite;
+}
 @keyframes di-pip-pulse { 0%,100%{opacity:1;transform:scale(1);}  50%{opacity:0.35;transform:scale(1.6);} }
 @keyframes di-pip-pop   { from{transform:scale(0);opacity:0;} to{transform:scale(1);opacity:1;} }
+
+/* State — night presence (yellow) */
+#top-hud.di-yellow {
+  background: rgba(255, 159, 10, 0.12);
+  border-color: rgba(255, 159, 10, 0.38);
+  box-shadow:
+    0 10px 24px rgba(255,159,10,0.20),
+    0 2px 6px rgba(255,159,10,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  animation: di-yellow-pulse 1.4s ease-in-out infinite;
+}
+[data-theme="light"] #top-hud.di-yellow {
+  background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(245, 158, 11, 0.30);
+}
+@keyframes di-yellow-pulse {
+  0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
+  20% { transform: translateX(-50%) translateY(-0.5px) scale(1.010); }
+  50% { transform: translateX(-50%) translateY(0) scale(1.018); }
+  70% { transform: translateX(-50%) translateY(-0.5px) scale(1.008); }
+}
+#top-hud.di-yellow .di-live    { max-width: 160px; opacity: 1; }
+#top-hud.di-yellow .di-cnt-night { display: flex; }
 
 /* Bouncing dots — thinking */
 .di-bdot {

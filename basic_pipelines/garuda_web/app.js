@@ -1169,16 +1169,18 @@ const G = (() => {
     const hud = document.getElementById('top-hud');
     const hudLabel = document.getElementById('hud-label');
     if (!hud) return;
-    const thinking = hud.classList.contains('di-thinking');
+    const thinking  = hud.classList.contains('di-thinking');
     const alerting  = hud.classList.contains('di-alert');
     const allclear  = hud.classList.contains('di-allclear');
-    const voice = _currentPage === 'narada' && !thinking && !alerting && !allclear;
+    const yellow    = hud.classList.contains('di-yellow');
+    const voice = _currentPage === 'narada' && !thinking && !alerting && !allclear && !yellow;
     hud.classList.toggle('di-voice', voice);
-    hud.classList.toggle('di-idle', !thinking && !alerting && !voice && !allclear);
+    hud.classList.toggle('di-idle', !thinking && !alerting && !voice && !allclear && !yellow);
     if (!hudLabel) return;
     if (alerting)       hudLabel.textContent = 'Alert';
     else if (thinking)  hudLabel.textContent = 'Thinking';
     else if (allclear)  hudLabel.textContent = 'All Clear';
+    else if (yellow)    hudLabel.textContent = 'Night Presence';
     else if (voice)     hudLabel.textContent = 'Voice';
     else                hudLabel.textContent = '';
   }
@@ -1222,6 +1224,7 @@ const G = (() => {
     hud.classList.toggle('di-alert',    state === 'alert');
     hud.classList.toggle('di-thinking', state === 'thinking');
     hud.classList.toggle('di-allclear', state === 'allclear');
+    hud.classList.toggle('di-yellow',   state === 'yellow');
     // Auto-dismiss "All Clear" after 2.5s
     if (state === 'allclear') {
       _diAllclearTimer = setTimeout(() => { _diAllclearTimer = null; _setDIState(''); }, 2500);
@@ -1390,6 +1393,11 @@ const G = (() => {
       if (pipeLabel) pipeLabel.textContent = 'Alert';
       if (hudDot) hudDot.className = 'hdr-dot alert';
       _setDIState('alert');
+    } else if (s.night_presence_alert) {
+      if (pipeDot) pipeDot.className = 'hdr-dot alert';
+      if (pipeLabel) pipeLabel.textContent = 'Night Presence';
+      if (hudDot) hudDot.className = 'hdr-dot alert';
+      _setDIState('yellow');
     } else {
       if (pipeDot) pipeDot.className = 'hdr-dot online';
       if (pipeLabel) pipeLabel.textContent = 'Online';
@@ -1400,7 +1408,7 @@ const G = (() => {
         _setDIState('allclear');
       } else {
         const hud = document.getElementById('top-hud');
-        if (hud && !hud.classList.contains('di-thinking') && !hud.classList.contains('di-allclear')) {
+        if (hud && !hud.classList.contains('di-thinking') && !hud.classList.contains('di-allclear') && !hud.classList.contains('di-yellow')) {
           _setDIState('');
         }
       }
@@ -1755,6 +1763,8 @@ const G = (() => {
     } catch(e) { showToast(e.detail || 'Failed to send test email.', 'error'); }
   }
 
+  let _npOn = true;   // night presence alarm enabled flag
+
   // ── Admin: System settings ────────────────────────────────
   async function loadSysCfg() {
     try {
@@ -1767,7 +1777,7 @@ const G = (() => {
       const wl = $('watch-labels');
       if (wl) wl.value = (cfg.watch_labels || []).join(', ');
       const dl = $('danger-lbl');
-      if (dl) dl.value = cfg.danger_label || '';
+      if (dl) dl.value = (cfg.danger_labels || []).join(', ');
       const gk = $('groq-api-key');
       if (gk) gk.value = '';
       // Scheduled modes
@@ -1775,9 +1785,23 @@ const G = (() => {
       _loadSchedField('night', sched.night);
       _loadSchedField('dnd',   sched.dnd);
       _loadSchedField('idle',  sched.idle);
+      // Night presence window
+      const npw = cfg.night_presence_window || {};
+      _npOn = npw.enabled !== false;
+      const npTog = $('np-toggle');
+      if (npTog) npTog.className = 'toggle' + (_npOn ? ' on' : '');
+      const nps = $('np-start'), npe = $('np-end');
+      if (nps) nps.value = npw.start || '01:30';
+      if (npe) npe.value = npw.end   || '05:00';
     } catch(e) {}
     loadDevices();
     loadMasterKeys();
+  }
+
+  function toggleNightPresence() {
+    _npOn = !_npOn;
+    const el = $('np-toggle');
+    if (el) el.className = 'toggle' + (_npOn ? ' on' : '');
   }
 
   function _loadSchedField(mode, sched) {
@@ -1805,16 +1829,22 @@ const G = (() => {
 
   async function saveSettings() {
     const thr = parseInt($('thr-slider').value) / 100;
-    const dl = val('danger-lbl') || undefined;
+    const dlRaw = val('danger-lbl') || '';
+    const dangerLabels = dlRaw.split(',').map(s => s.trim()).filter(Boolean);
     const wlRaw = val('watch-labels') || '';
     const watchLabels = wlRaw.split(',').map(s => s.trim()).filter(Boolean);
     try {
       const groqKey = val('groq-api-key');
+      const npStartVal = ($('np-start') || {}).value || '';
+      const npEndVal   = ($('np-end')   || {}).value || '';
       const payload = {
         detection_threshold: thr,
         privacy: _privacyOn,
         watch_labels: watchLabels,
-        ...(dl ? { danger_label: dl } : {}),
+        ...(dangerLabels.length > 0 ? { danger_labels: dangerLabels } : {}),
+        night_presence_enabled: _npOn,
+        ...(npStartVal ? { night_presence_start: npStartVal } : {}),
+        ...(npEndVal   ? { night_presence_end:   npEndVal   } : {}),
       };
       if (groqKey) payload.groq_api_key = groqKey;
       const sched = _buildSchedule();
@@ -2310,7 +2340,7 @@ const G = (() => {
     toggleTheme, switchCamTab,
     toggleCamera, takeSnapshot, toggleClip, openDocs, sendChat, clearChat, toggleRateLimitInfo,
     loadEmailCfg, saveEmail, testEmail,
-    loadSysCfg, togglePrivacy, saveSettings,
+    loadSysCfg, togglePrivacy, toggleNightPresence, saveSettings,
     filterLogs, exportLogs, downloadFullLog,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence,
     loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey, onMkKeyInput,

@@ -226,6 +226,11 @@
         <span class="di-vbar"></span>
         <span class="di-vbar"></span>
       </div>
+      <!-- Night Presence: yellow pip + label -->
+      <div class="di-cnt di-cnt-night">
+        <span class="di-pip di-y"></span>
+        <span class="di-lbl">Night Presence</span>
+      </div>
     </div>
 
     <div class="hud-status">
@@ -725,6 +730,26 @@
             <div class="settings-section-title">Watch Labels <span style="font-size:11px;color:var(--t3);font-weight:400">(log only, no alert)</span></div>
             <input id="watch-labels" class="input" type="text" placeholder="person, backpack, suitcase"/>
             <div style="font-size:11px;color:var(--t3);margin-top:4px">Comma-separated YOLO class names to silently log (no alert triggered).</div>
+          </div>
+
+          <!-- Card 5b: Night Presence Alarm -->
+          <div class="settings-card">
+            <div class="settings-section-title">Night Presence Alarm <span style="font-size:11px;color:var(--warn);font-weight:400">(yellow alert)</span></div>
+            <div style="font-size:12px;color:var(--t3);margin-bottom:10px">Yellow alarm fires when a person is detected in this IST time window. Leave times blank or disable to turn off.</div>
+            <div class="toggle-row" style="margin-bottom:12px">
+              <div class="toggle-info">
+                <div><span>Enable Night Presence Alarm</span></div>
+              </div>
+              <div id="np-toggle" class="toggle on" onclick="G.toggleNightPresence()"></div>
+            </div>
+            <div class="sched-grid">
+              <div class="sched-row">
+                <span class="sched-label">Window</span>
+                <input id="np-start" class="input input-sm" type="time" value="01:30" aria-label="Night presence start"/>
+                <span class="sched-sep">to</span>
+                <input id="np-end" class="input input-sm" type="time" value="05:00" aria-label="Night presence end"/>
+              </div>
+            </div>
           </div>
 
           <!-- Card 6: Scheduled Modes -->
