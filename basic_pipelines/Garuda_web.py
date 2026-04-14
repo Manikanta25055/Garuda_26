@@ -1404,11 +1404,21 @@ class GStreamerDetectionApp(GStreamerApp):
             self.labels_config = ''
 
         self.app_callback = app_callback
-        self.thresholds_str = (
-            f"nms-score-threshold={nms_score_threshold} "
-            f"nms-iou-threshold={nms_iou_threshold} "
-            f"output-format-type=HAILO_FORMAT_TYPE_FLOAT32"
-        )
+        # When using libyolo_hailortpp_post.so with a custom labels config, the HEF
+        # runs NMS internally (HailortPP mode). Adding output-format-type=FLOAT32
+        # conflicts with that and silently drops all detections (Knife, Hammer, etc.).
+        # Only set FLOAT32 for standard models that rely on hailofilter for NMS.
+        if args.labels_json:
+            self.thresholds_str = (
+                f"nms-score-threshold={nms_score_threshold} "
+                f"nms-iou-threshold={nms_iou_threshold}"
+            )
+        else:
+            self.thresholds_str = (
+                f"nms-score-threshold={nms_score_threshold} "
+                f"nms-iou-threshold={nms_iou_threshold} "
+                f"output-format-type=HAILO_FORMAT_TYPE_FLOAT32"
+            )
         setproctitle.setproctitle("Garuda Web App")
         # Use fakesink — no display needed, frames captured via MJPEG callback
         self.video_sink = "fakesink"
