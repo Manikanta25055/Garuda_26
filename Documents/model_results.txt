@@ -1,0 +1,58 @@
+==================================================
+Model Results — Garuda Project (Custom 4-Class Detector)
+==================================================
+Date       : 2026-04-11
+Classes    : Hammer, Knife, Person, Scissors
+Dataset    : Knives and scissors training (Roboflow)
+Base arch  : YOLOv8s (640x640)
+
+--------------------------------------------------
+Training Results (best.hef — custom trained)
+Source     : https://github.com/ForLab400/hailo results.csv
+Epochs     : 100
+--------------------------------------------------
+Best checkpoint (epoch 94):
+  mAP@0.5        : 0.897
+  mAP@0.5:0.95   : 0.667
+  Precision      : 0.942
+  Recall         : 0.826
+
+Final epoch (100):
+  mAP@0.5        : 0.889
+  mAP@0.5:0.95   : 0.664
+  Precision      : 0.900
+  Recall         : 0.846
+
+  Val box_loss   : 0.704
+  Val cls_loss   : 0.513
+  Val dfl_loss   : 1.071
+
+--------------------------------------------------
+Deployment Results (Raspberry Pi 5 + Hailo-8L)
+HEF        : best.hef (NMS baked in — HailortPP)
+Tool       : hailortcli benchmark + GStreamer pipeline
+--------------------------------------------------
+  FPS (HW-only)      : 52.22
+  FPS (streaming)    : 52.22
+  HW Latency         : 17.46 ms
+  GStreamer Avg FPS  : 52.29
+  Frame drop rate    : 0.00
+
+--------------------------------------------------
+Baseline Comparison (yolov8s_h8l — Hailo official)
+--------------------------------------------------
+  FPS (HW-only)      : 58.18
+  FPS (streaming)    : 58.17
+  HW Latency         : 13.36 ms
+  Throughput delta   : -10.2% vs baseline
+
+  Note: Baseline is COCO-trained, Hailo production-optimized.
+  FPS gap attributed to default quantization calibration.
+
+--------------------------------------------------
+Default yolov8s Baseline on same dataset
+(COCO pre-trained, zero-shot on custom classes)
+--------------------------------------------------
+  [Run pending — see below]
+
+==================================================

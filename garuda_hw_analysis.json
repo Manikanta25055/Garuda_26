@@ -1,0 +1,96 @@
+{
+  "generated": "2026-04-14T16:07:58.965945",
+  "platform": {
+    "board": "Raspberry Pi 5 Model B Rev 1.1",
+    "soc": "BCM2712 Cortex-A76 x4",
+    "ram_gb": 16,
+    "npu": "Hailo-8L M.2 13TOPS",
+    "npu_fw": "4.20.0",
+    "os_kernel": "6.12.75+rpt-rpi-v8",
+    "hailort": "4.20.0"
+  },
+  "bench": {
+    "duration_s": 90,
+    "frames_read": 6004,
+    "frames_proc": 238,
+    "eff_fps": 2.62
+  },
+  "latency_ms": {
+    "yolo": {
+      "n": 238,
+      "mean": 23.46,
+      "p50": 22.92,
+      "p95": 25.46,
+      "p99": 36.14,
+      "min": 21.73,
+      "max": 51.62
+    },
+    "classifier": {
+      "n": 2164,
+      "mean": 7.34,
+      "p50": 6.9,
+      "p95": 9.43,
+      "p99": 11.61,
+      "min": 6.25,
+      "max": 17.72
+    },
+    "depth": {
+      "n": 2164,
+      "mean": 29.28,
+      "p50": 28.77,
+      "p95": 31.57,
+      "p99": 33.91,
+      "min": 28.06,
+      "max": 51.1
+    },
+    "full_frame": {
+      "n": 238,
+      "mean": 379.8,
+      "p50": 416.72,
+      "p95": 569.81,
+      "p99": 642.78,
+      "min": 60.19,
+      "max": 660.62
+    }
+  },
+  "cpu": {
+    "mean_per_core": [
+      19.8,
+      19.6,
+      20.8,
+      17.4
+    ],
+    "peak_per_core": [
+      100.0,
+      96.0,
+      100.0,
+      63.3
+    ]
+  },
+  "memory": {
+    "idle_sys_mb": 1937,
+    "load_proc_rss_mean_mb": 172.0,
+    "load_proc_rss_peak_mb": 172.0,
+    "load_sys_mb": 2030
+  },
+  "thermal": {
+    "idle_c": 54.9,
+    "mean_c": 55.1,
+    "peak_c": 58.7,
+    "delta_c": 3.8,
+    "freq_mhz": 2385
+  },
+  "detections": {
+    "total": 2164,
+    "by_class": {
+      "Person": 2164,
+      "Hammer": 0,
+      "Knife": 0,
+      "Scissors": 0
+    },
+    "total_persons_cascaded": 2164,
+    "spoof_flags": 431,
+    "weapon_flags": 0,
+    "mean_persons_per_frame": 9.092
+  }
+}

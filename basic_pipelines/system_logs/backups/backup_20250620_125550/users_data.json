@@ -1,0 +1,24 @@
+{
+  "user": {
+    "password": "user",
+    "role": "user",
+    "history": {
+      "logins": [
+        "2025-05-21 01:16:04",
+        "2025-05-21 01:49:48",
+        "2025-05-21 01:54:35",
+        "2025-05-21 02:03:33",
+        "2025-05-21 02:07:09"
+      ],
+      "narada_activity": []
+    }
+  },
+  "admin": {
+    "password": "root",
+    "role": "admin",
+    "history": {
+      "logins": [],
+      "narada_activity": []
+    }
+  }
+}

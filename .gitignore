@@ -29,3 +29,31 @@ Garuda.xcodeproj/xcuserdata/
 
 # Secrets
 .env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+venv_*/
+myenv/
+.venv/
+
+# Hailo / GStreamer runtime logs
+hailort*.log
+pyhailort*.log
+garuda_report.log
+gstshark_*/
+*.swp
+
+# System logs — keep structure, exclude sensitive runtime files
+basic_pipelines/system_logs/users.json
+basic_pipelines/system_logs/users_data.json
+basic_pipelines/system_logs/master_keys.json
+basic_pipelines/system_logs/garuda_events.db
+
+# Large training datasets
+Documents/Knives*/
+Documents/scissors_dataset/
+Documents/openimages_dataset/
+Documents/__MACOSX/

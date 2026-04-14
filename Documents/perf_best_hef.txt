@@ -1,0 +1,140 @@
+Running streaming inference (Documents/best.hef):
+  Transform data: true
+    Type:      auto
+    Quantized: true
+Network best/best: 3% | 52 | HW Latency: 18.29 ms | ETA: 00:00:29
+[F[2KNetwork best/best: 6% | 104 | HW Latency: 18.36 ms | ETA: 00:00:28
+[F[2KNetwork best/best: 10% | 156 | HW Latency: 18.36 ms | ETA: 00:00:27
+[F[2KNetwork best/best: 13% | 209 | HW Latency: 18.36 ms | ETA: 00:00:26
+[F[2KNetwork best/best: 16% | 261 | HW Latency: 18.36 ms | ETA: 00:00:25
+[F[2KNetwork best/best: 20% | 313 | HW Latency: 18.36 ms | ETA: 00:00:24
+[F[2KNetwork best/best: 23% | 365 | HW Latency: 18.37 ms | ETA: 00:00:23
+[F[2KNetwork best/best: 26% | 418 | HW Latency: 18.37 ms | ETA: 00:00:22
+[F[2KNetwork best/best: 30% | 469 | HW Latency: 18.37 ms | ETA: 00:00:21
+[F[2KNetwork best/best: 33% | 520 | HW Latency: 18.36 ms | ETA: 00:00:20
+[F[2KNetwork best/best: 36% | 572 | HW Latency: 18.37 ms | ETA: 00:00:19
+[F[2KNetwork best/best: 40% | 624 | HW Latency: 18.37 ms | ETA: 00:00:18
+[F[2KNetwork best/best: 43% | 677 | HW Latency: 18.38 ms | ETA: 00:00:17
+[F[2KNetwork best/best: 46% | 729 | HW Latency: 18.38 ms | ETA: 00:00:16
+[F[2KNetwork best/best: 50% | 781 | HW Latency: 18.38 ms | ETA: 00:00:15
+[F[2KNetwork best/best: 53% | 833 | HW Latency: 18.38 ms | ETA: 00:00:14
+[F[2KNetwork best/best: 56% | 886 | HW Latency: 18.38 ms | ETA: 00:00:13
+[F[2KNetwork best/best: 60% | 938 | HW Latency: 18.38 ms | ETA: 00:00:12
+[F[2KNetwork best/best: 63% | 990 | HW Latency: 18.39 ms | ETA: 00:00:11
+[F[2KNetwork best/best: 66% | 1042 | HW Latency: 18.38 ms | ETA: 00:00:10
+[F[2KNetwork best/best: 70% | 1094 | HW Latency: 18.38 ms | ETA: 00:00:09
+[F[2KNetwork best/best: 73% | 1145 | HW Latency: 18.37 ms | ETA: 00:00:08
+[F[2KNetwork best/best: 76% | 1198 | HW Latency: 18.38 ms | ETA: 00:00:07
+[F[2KNetwork best/best: 80% | 1250 | HW Latency: 18.38 ms | ETA: 00:00:06
+[F[2KNetwork best/best: 83% | 1302 | HW Latency: 18.38 ms | ETA: 00:00:05
+[F[2KNetwork best/best: 86% | 1354 | HW Latency: 18.38 ms | ETA: 00:00:04
+[F[2KNetwork best/best: 90% | 1407 | HW Latency: 18.38 ms | ETA: 00:00:03
+[F[2KNetwork best/best: 93% | 1459 | HW Latency: 18.38 ms | ETA: 00:00:02
+[F[2KNetwork best/best: 96% | 1511 | HW Latency: 18.38 ms | ETA: 00:00:01
+[F[2KNetwork best/best: 100% | 1562 | HW Latency: 18.38 ms | ETA: 00:00:00
+[2K> Inference result:
+ Network group: best
+    Frames count: 1562
+    HW Latency: 18.38 ms
+
+Starting Measurements...
+Measuring FPS in HW-only mode
+Network best/best: 3% | 52 | FPS: 51.95 | ETA: 00:00:29
+[F[2KNetwork best/best: 6% | 104 | FPS: 51.95 | ETA: 00:00:28
+[F[2KNetwork best/best: 10% | 157 | FPS: 52.28 | ETA: 00:00:27
+[F[2KNetwork best/best: 13% | 209 | FPS: 52.19 | ETA: 00:00:26
+[F[2KNetwork best/best: 16% | 261 | FPS: 52.14 | ETA: 00:00:25
+[F[2KNetwork best/best: 20% | 313 | FPS: 52.11 | ETA: 00:00:24
+[F[2KNetwork best/best: 23% | 366 | FPS: 52.23 | ETA: 00:00:23
+[F[2KNetwork best/best: 26% | 418 | FPS: 52.19 | ETA: 00:00:22
+[F[2KNetwork best/best: 30% | 470 | FPS: 52.17 | ETA: 00:00:21
+[F[2KNetwork best/best: 33% | 523 | FPS: 52.24 | ETA: 00:00:20
+[F[2KNetwork best/best: 36% | 575 | FPS: 52.22 | ETA: 00:00:19
+[F[2KNetwork best/best: 40% | 627 | FPS: 52.19 | ETA: 00:00:18
+[F[2KNetwork best/best: 43% | 680 | FPS: 52.25 | ETA: 00:00:17
+[F[2KNetwork best/best: 46% | 732 | FPS: 52.23 | ETA: 00:00:16
+[F[2KNetwork best/best: 50% | 784 | FPS: 52.21 | ETA: 00:00:15
+[F[2KNetwork best/best: 53% | 836 | FPS: 52.19 | ETA: 00:00:14
+[F[2KNetwork best/best: 56% | 889 | FPS: 52.24 | ETA: 00:00:13
+[F[2KNetwork best/best: 60% | 941 | FPS: 52.22 | ETA: 00:00:12
+[F[2KNetwork best/best: 63% | 993 | FPS: 52.21 | ETA: 00:00:11
+[F[2KNetwork best/best: 66% | 1046 | FPS: 52.25 | ETA: 00:00:10
+[F[2KNetwork best/best: 70% | 1098 | FPS: 52.23 | ETA: 00:00:09
+[F[2KNetwork best/best: 73% | 1150 | FPS: 52.22 | ETA: 00:00:08
+[F[2KNetwork best/best: 76% | 1202 | FPS: 52.21 | ETA: 00:00:07
+[F[2KNetwork best/best: 80% | 1255 | FPS: 52.24 | ETA: 00:00:06
+[F[2KNetwork best/best: 83% | 1307 | FPS: 52.23 | ETA: 00:00:05
+[F[2KNetwork best/best: 86% | 1359 | FPS: 52.22 | ETA: 00:00:04
+[F[2KNetwork best/best: 90% | 1412 | FPS: 52.24 | ETA: 00:00:03
+[F[2KNetwork best/best: 93% | 1464 | FPS: 52.23 | ETA: 00:00:02
+[F[2KNetwork best/best: 96% | 1516 | FPS: 52.22 | ETA: 00:00:01
+[F[2KNetwork best/best: 100% | 1567 | FPS: 52.22 | ETA: 00:00:00
+Measuring FPS (and Power on supported platforms) in streaming mode
+Network best/best: 3% | 52 | FPS: 51.95 | ETA: 00:00:29
+[F[2KNetwork best/best: 6% | 104 | FPS: 51.95 | ETA: 00:00:28
+[F[2KNetwork best/best: 10% | 157 | FPS: 52.28 | ETA: 00:00:27
+[F[2KNetwork best/best: 13% | 209 | FPS: 52.20 | ETA: 00:00:26
+[F[2KNetwork best/best: 16% | 261 | FPS: 52.15 | ETA: 00:00:25
+[F[2KNetwork best/best: 20% | 314 | FPS: 52.28 | ETA: 00:00:24
+[F[2KNetwork best/best: 23% | 366 | FPS: 52.23 | ETA: 00:00:23
+[F[2KNetwork best/best: 26% | 418 | FPS: 52.20 | ETA: 00:00:22
+[F[2KNetwork best/best: 30% | 470 | FPS: 52.17 | ETA: 00:00:21
+[F[2KNetwork best/best: 33% | 523 | FPS: 52.24 | ETA: 00:00:20
+[F[2KNetwork best/best: 36% | 575 | FPS: 52.22 | ETA: 00:00:19
+[F[2KNetwork best/best: 40% | 627 | FPS: 52.19 | ETA: 00:00:18
+[F[2KNetwork best/best: 43% | 680 | FPS: 52.25 | ETA: 00:00:17
+[F[2KNetwork best/best: 46% | 732 | FPS: 52.23 | ETA: 00:00:16
+[F[2KNetwork best/best: 50% | 784 | FPS: 52.21 | ETA: 00:00:15
+[F[2KNetwork best/best: 53% | 836 | FPS: 52.19 | ETA: 00:00:14
+[F[2KNetwork best/best: 56% | 889 | FPS: 52.24 | ETA: 00:00:13
+[F[2KNetwork best/best: 60% | 941 | FPS: 52.22 | ETA: 00:00:12
+[F[2KNetwork best/best: 63% | 993 | FPS: 52.21 | ETA: 00:00:11
+[F[2KNetwork best/best: 66% | 1046 | FPS: 52.24 | ETA: 00:00:10
+[F[2KNetwork best/best: 70% | 1098 | FPS: 52.23 | ETA: 00:00:09
+[F[2KNetwork best/best: 73% | 1150 | FPS: 52.22 | ETA: 00:00:08
+[F[2KNetwork best/best: 76% | 1202 | FPS: 52.21 | ETA: 00:00:07
+[F[2KNetwork best/best: 80% | 1255 | FPS: 52.24 | ETA: 00:00:06
+[F[2KNetwork best/best: 83% | 1307 | FPS: 52.22 | ETA: 00:00:05
+[F[2KNetwork best/best: 86% | 1359 | FPS: 52.21 | ETA: 00:00:04
+[F[2KNetwork best/best: 90% | 1412 | FPS: 52.24 | ETA: 00:00:03
+[F[2KNetwork best/best: 93% | 1464 | FPS: 52.23 | ETA: 00:00:02
+[F[2KNetwork best/best: 96% | 1516 | FPS: 52.22 | ETA: 00:00:01
+[F[2KNetwork best/best: 100% | 1567 | FPS: 52.22 | ETA: 00:00:00
+Measuring HW Latency
+Network best/best: 3% | 52 | HW Latency: 18.34 ms | ETA: 00:00:29
+[F[2KNetwork best/best: 6% | 104 | HW Latency: 18.38 ms | ETA: 00:00:28
+[F[2KNetwork best/best: 10% | 157 | HW Latency: 18.39 ms | ETA: 00:00:27
+[F[2KNetwork best/best: 13% | 208 | HW Latency: 18.36 ms | ETA: 00:00:26
+[F[2KNetwork best/best: 16% | 260 | HW Latency: 18.35 ms | ETA: 00:00:25
+[F[2KNetwork best/best: 20% | 312 | HW Latency: 18.35 ms | ETA: 00:00:24
+[F[2KNetwork best/best: 23% | 364 | HW Latency: 18.36 ms | ETA: 00:00:23
+[F[2KNetwork best/best: 26% | 417 | HW Latency: 18.37 ms | ETA: 00:00:22
+[F[2KNetwork best/best: 30% | 469 | HW Latency: 18.38 ms | ETA: 00:00:21
+[F[2KNetwork best/best: 33% | 521 | HW Latency: 18.38 ms | ETA: 00:00:20
+[F[2KNetwork best/best: 36% | 573 | HW Latency: 18.38 ms | ETA: 00:00:19
+[F[2KNetwork best/best: 40% | 626 | HW Latency: 18.37 ms | ETA: 00:00:18
+[F[2KNetwork best/best: 43% | 678 | HW Latency: 18.37 ms | ETA: 00:00:17
+[F[2KNetwork best/best: 46% | 730 | HW Latency: 18.37 ms | ETA: 00:00:16
+[F[2KNetwork best/best: 50% | 782 | HW Latency: 18.37 ms | ETA: 00:00:15
+[F[2KNetwork best/best: 53% | 834 | HW Latency: 18.37 ms | ETA: 00:00:14
+[F[2KNetwork best/best: 56% | 885 | HW Latency: 18.37 ms | ETA: 00:00:13
+[F[2KNetwork best/best: 60% | 937 | HW Latency: 18.37 ms | ETA: 00:00:12
+[F[2KNetwork best/best: 63% | 989 | HW Latency: 18.37 ms | ETA: 00:00:11
+[F[2KNetwork best/best: 66% | 1042 | HW Latency: 18.37 ms | ETA: 00:00:10
+[F[2KNetwork best/best: 70% | 1094 | HW Latency: 18.37 ms | ETA: 00:00:09
+[F[2KNetwork best/best: 73% | 1146 | HW Latency: 18.38 ms | ETA: 00:00:08
+[F[2KNetwork best/best: 76% | 1199 | HW Latency: 18.38 ms | ETA: 00:00:07
+[F[2KNetwork best/best: 80% | 1251 | HW Latency: 18.38 ms | ETA: 00:00:06
+[F[2KNetwork best/best: 83% | 1303 | HW Latency: 18.38 ms | ETA: 00:00:05
+[F[2KNetwork best/best: 86% | 1355 | HW Latency: 18.38 ms | ETA: 00:00:04
+[F[2KNetwork best/best: 90% | 1407 | HW Latency: 18.38 ms | ETA: 00:00:03
+[F[2KNetwork best/best: 93% | 1460 | HW Latency: 18.38 ms | ETA: 00:00:02
+[F[2KNetwork best/best: 96% | 1511 | HW Latency: 18.38 ms | ETA: 00:00:01
+[F[2KNetwork best/best: 100% | 1562 | HW Latency: 18.38 ms | ETA: 00:00:00
+
+=======
+Summary
+=======
+FPS     (hw_only)                 = 52.2229
+        (streaming)               = 52.2229
+Latency (hw)                      = 18.3772 ms

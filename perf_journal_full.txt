@@ -1,0 +1,114 @@
+==================================================
+Hailo-8L Full Performance Report — Journal Edition
+==================================================
+Date       : 2026-04-10
+Device     : Hailo-8L (0001:01:00.0) — PCIe HAT on Raspberry Pi 5
+HailoRT    : 4.20.0
+Kernel     : 6.12.75+rpt-rpi-v8
+Benchmark  : hailortcli benchmark (15 s per phase x3 phases)
+Accuracy   : Hailo Model Zoo v2.x — COCO val2017, INT8 compiled
+Compiler   : Hailo Dataflow Compiler v3.33.0
+
+--------------------------------------------------
+Metric Definitions
+--------------------------------------------------
+FPS (HW-only)     : Raw NPU throughput, no host I/O — theoretical upper bound.
+FPS (Streaming)   : End-to-end including host DMA — closest to pipeline reality.
+HW Latency        : Single-inference NPU latency (non-batched).
+mAP (Float)       : COCO mAP@[0.5:0.95] of original FP32 model (pre-quantization).
+mAP (INT8 HW)     : COCO mAP@[0.5:0.95] after INT8 quantization compiled to HEF.
+                    This is what runs on Hailo-8L in production.
+Quantization Drop : Accuracy lost due to INT8 quantization (Float - HW).
+
+Note on Precision / Recall / F1:
+  These are confidence-threshold-dependent metrics. Hailo does not publish them
+  in the model zoo. To obtain them, COCO val2017 evaluation must be run on-device
+  at a specific threshold (e.g. conf=0.25, IoU=0.45). See section at the bottom
+  for the evaluation command to run when COCO val2017 is available.
+
+Note on Power:
+  hailortcli measure-power returned no data. Hailo-8L M.2 HAT on RPi5 PCIe does
+  not expose a current-sense resistor via the hailortcli interface.
+  Published TDP for Hailo-8L: 1.5 W (typical inference load).
+
+--------------------------------------------------
+Throughput & Latency (measured on this device)
+--------------------------------------------------
+
+Model                 | Task         | HEF Size | FPS (HW) | FPS (Stream) | HW Latency
+----------------------|--------------|----------|----------|--------------|------------
+yolov8s_h8l           | Detection    | 34.9 MB  |   58.19  |    58.18     |  13.22 ms
+yolov6n               | Detection    | 13.9 MB  |  355.38  |   355.33     |   6.98 ms
+yolox_s_leaky_h8l_mz  | Detection    | 21.4 MB  |   59.91  |    59.91     |  15.09 ms
+yolov5n_seg_h8l_mz    | Segmentation |  7.4 MB  |   64.37  |    64.37     |  14.32 ms
+yolov8s_pose_h8l_pi   | Pose Est.    | 23.4 MB  |   49.97  |    49.98     |  19.05 ms
+yolov8x_h8l           | Detection    | 91.0 MB  |    9.06  |     9.06     | 108.44 ms
+model3_merged         | Detection    | 24.0 MB  |   51.64  |    51.64     |  17.51 ms
+
+--------------------------------------------------
+Accuracy — COCO val2017 (from Hailo Model Zoo)
+--------------------------------------------------
+
+Model                 | Task         | Input     | mAP Float | mAP INT8 HW | Quant Drop
+----------------------|--------------|-----------|-----------|-------------|------------
+yolov8s_h8l           | Detection    | 640x640   |   44.6    |    44.0     |   -0.6
+yolov6n               | Detection    | 640x640   |   34.3    |    32.5     |   -1.8
+yolox_s_leaky_h8l_mz  | Detection    | 640x640   |   38.1    |    37.3     |   -0.8
+yolov5n_seg_h8l_mz    | Segmentation | 640x640   |   23.3    |    23.0     |   -0.3
+yolov8s_pose_h8l_pi   | Pose Est.    | 640x640   |   59.2    |    55.7     |   -3.5
+yolov8x_h8l           | Detection    | 640x640   |   53.5    |    52.9     |   -0.6
+
+mAP for detection/segmentation = box mAP@[0.5:0.95] on COCO val2017 (80 classes).
+mAP for pose = OKS mAP@[0.5:0.95] on COCO val2017 keypoint benchmark (17 keypoints).
+Source: github.com/hailo-ai/hailo_model_zoo — HAILO8L benchmarks
+
+--------------------------------------------------
+Combined Summary (Production Model: yolov8s_h8l)
+--------------------------------------------------
+
+Metric               | Value
+---------------------|----------
+FPS (HW-only)        | 58.19
+FPS (Streaming)      | 58.18
+HW Latency           | 13.22 ms
+mAP@0.5:0.95 (INT8)  | 44.0
+Quantization Drop    | -0.6 mAP
+HEF Size             | 34.9 MB
+Power (published TDP)| ~1.5 W
+Input Resolution     | 640x640x3
+
+--------------------------------------------------
+Garuda Deployment Context
+--------------------------------------------------
+Pipeline batch_size    : 2
+Camera input           : 1280x720 @ 60fps (RPi Camera Module 3)
+Effective pipeline FPS : ~25-30 (after GStreamer + callback overhead)
+Classes monitored      : COCO 80-class (person, scissors, knife, etc.)
+
+--------------------------------------------------
+To obtain Precision / Recall / F1 on-device
+--------------------------------------------------
+Requires: COCO val2017 images + annotations (~1 GB)
+
+  # Download
+  wget http://images.cocodataset.org/zips/val2017.zip
+  wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+
+  # Evaluate using ultralytics (FP32 baseline for comparison)
+  pip install ultralytics
+  yolo val model=yolov8s.pt data=coco.yaml split=val
+
+  # For INT8 HEF on-device evaluation, use Hailo Model Zoo eval pipeline:
+  # hailomz eval --target hailo8l yolov8s
+
+Results from this will give per-class AP, P@conf, R@conf, F1@conf curves.
+
+--------------------------------------------------
+Comparison Template (new models)
+--------------------------------------------------
+
+Model                 | Task      | HEF Size | FPS (HW) | FPS (S) | HW Lat  | mAP INT8
+----------------------|-----------|----------|----------|---------|---------|----------
+yolov8s_h8l (base)    | Detection | 34.9 MB  |   58.19  |  58.18  | 13.22ms |  44.0
+<new_model>           |           |          |          |         |         |
+==================================================

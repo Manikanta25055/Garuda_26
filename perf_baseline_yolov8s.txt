@@ -1,0 +1,35 @@
+==================================================
+Hailo Performance Baseline — yolov8s_h8l.hef
+==================================================
+Date       : 2026-04-10
+Device     : Hailo-8L (0001:01:00.0) on Raspberry Pi 5
+HEF file   : resources/yolov8s_h8l.hef
+Model      : YOLOv8s (640x640, RGB)
+Tool       : hailortcli benchmark
+
+--------------------------------------------------
+Results
+--------------------------------------------------
+FPS  (HW-only mode)   : 58.18
+FPS  (streaming mode) : 58.17
+HW Latency            : 13.36 ms
+
+--------------------------------------------------
+Notes
+--------------------------------------------------
+- HW-only mode: measures raw NPU throughput, no host overhead
+- Streaming mode: measures end-to-end inference including host I/O
+- HW Latency: time for one frame to pass through the NPU (single-inference, no batching)
+- Garuda_web.py default batch_size=2; real pipeline FPS will be lower due to
+  GStreamer overhead, preprocessing, and callback processing
+- This baseline is for NPU comparison only (new model vs yolov8s_h8l)
+
+--------------------------------------------------
+Comparison Template (fill in for new models)
+--------------------------------------------------
+Model                  | FPS (HW) | FPS (stream) | HW Latency | GStreamer Avg FPS | Drop rate
+-----------------------|----------|--------------|------------|------------------|----------
+yolov8s_h8l (baseline)| 58.18    | 58.17        | 13.36 ms   | —                | —
+best.hef (no NMS)      | 52.22    | 52.22        | 18.38 ms   | —                | —
+best.hef (NMS baked)   | 52.22    | 52.22        | 17.46 ms   | 52.29            | 0.00
+==================================================

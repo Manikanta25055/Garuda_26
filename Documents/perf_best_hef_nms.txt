@@ -1,0 +1,1508 @@
+/usr/lib/python3/dist-packages/gpiozero/input_devices.py:852: PWMSoftwareFallback: For more accurate readings, use the pigpio pin factory.See https://gpiozero.readthedocs.io/en/stable/api_input.html#distancesensor-hc-sr04 for more info
+  warnings.warn(PWMSoftwareFallback(
+/usr/lib/python3/dist-packages/gpiozero/input_devices.py:975: DistanceSensorNoEcho: no echo received
+  warnings.warn(DistanceSensorNoEcho('no echo received'))
+hailomuxer name=hmux filesrc location=resources/detection0.mp4 name=src_0 ! queue name=queue_dec264 max-size-buffers=3 max-size-bytes=0 max-size-time=0 !  qtdemux ! h264parse ! avdec_h264 max-threads=2 !  video/x-raw, format=I420 ! queue name=queue_scale max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! videoscale n-threads=2 ! queue name=queue_src_convert max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! videoconvert n-threads=3 name=src_convert qos=false ! video/x-raw, format=RGB, width=640, height=640, pixel-aspect-ratio=1/1 ! tee name=t ! queue name=bypass_queue max-size-buffers=20 max-size-bytes=0 max-size-time=0 ! hmux.sink_0 t. ! queue name=queue_hailonet max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! hailonet hef-path=Documents/best.hef batch-size=1 nms-score-threshold=0.25 nms-iou-threshold=0.45 force-writable=true ! queue name=queue_hailofilter max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! hailofilter so-path=/home/manikanta/Projects/hailo-rpi5-examples/basic_pipelines/../resources/libyolo_hailortpp_post.so  config-path=Documents/best_labels.json  qos=false ! queue name=queue_hmuc max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! hmux.sink_1 hmux. ! queue name=queue_user_callback max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! identity name=identity_callback ! queue name=queue_hailooverlay max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! hailooverlay ! queue name=queue_videoconvert max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! videoconvert n-threads=3 qos=false ! queue name=queue_hailo_display max-size-buffers=3 max-size-bytes=0 max-size-time=0 ! fpsdisplaysink video-sink=xvimagesink name=hailo_display sync=false text-overlay=True signal-fps-measurements=true 
+Showing FPS
+Frame count: 1
+
+Frame count: 2
+
+Frame count: 3
+
+Frame count: 4
+
+Frame count: 5
+
+Frame count: 6
+
+Frame count: 7
+
+Frame count: 8
+
+Frame count: 9
+
+Frame count: 10
+
+Frame count: 11
+
+Frame count: 12
+
+Frame count: 13
+
+Frame count: 14
+
+Frame count: 15
+
+Frame count: 16
+
+Frame count: 17
+
+Frame count: 18
+
+Frame count: 19
+
+Frame count: 20
+
+Frame count: 21
+
+Frame count: 22
+
+Frame count: 23
+
+Frame count: 24
+
+Frame count: 25
+
+Frame count: 26
+
+Frame count: 27
+
+Frame count: 28
+
+FPS: 54.56, Droprate: 0.00, Avg FPS: 54.56
+Frame count: 29
+
+Frame count: 30
+
+Frame count: 31
+
+Frame count: 32
+
+Frame count: 33
+
+Frame count: 34
+
+Frame count: 35
+
+Frame count: 36
+
+Frame count: 37
+
+Frame count: 38
+
+Frame count: 39
+
+Frame count: 40
+
+Frame count: 41
+
+Frame count: 42
+
+Frame count: 43
+
+Frame count: 44
+
+Frame count: 45
+
+Frame count: 46
+
+Frame count: 47
+
+Frame count: 48
+
+Frame count: 49
+
+Frame count: 50
+
+Frame count: 51
+
+Frame count: 52
+
+Frame count: 53
+
+Frame count: 54
+
+Frame count: 55
+
+FPS: 52.32, Droprate: 0.00, Avg FPS: 53.44
+Frame count: 56
+
+Frame count: 57
+
+Frame count: 58
+
+Frame count: 59
+
+Frame count: 60
+
+Frame count: 61
+
+Frame count: 62
+
+Frame count: 63
+
+Frame count: 64
+
+Frame count: 65
+
+Frame count: 66
+
+Frame count: 67
+
+Frame count: 68
+
+Frame count: 69
+
+Frame count: 70
+
+Frame count: 71
+
+Frame count: 72
+
+Frame count: 73
+
+Frame count: 74
+
+Frame count: 75
+
+Frame count: 76
+
+Frame count: 77
+
+Frame count: 78
+
+Frame count: 79
+
+Frame count: 80
+
+Frame count: 81
+
+Frame count: 82
+
+FPS: 52.27, Droprate: 0.00, Avg FPS: 53.05
+Frame count: 83
+
+Frame count: 84
+
+Frame count: 85
+
+Frame count: 86
+
+Frame count: 87
+
+Frame count: 88
+
+Frame count: 89
+
+Frame count: 90
+
+Frame count: 91
+
+Frame count: 92
+
+Frame count: 93
+
+Frame count: 94
+
+Frame count: 95
+
+Frame count: 96
+
+Frame count: 97
+
+Frame count: 98
+
+Frame count: 99
+
+Frame count: 100
+
+Frame count: 101
+
+Frame count: 102
+
+Frame count: 103
+
+Frame count: 104
+
+Frame count: 105
+
+Frame count: 106
+
+Frame count: 107
+
+Frame count: 108
+
+Frame count: 109
+
+FPS: 52.16, Droprate: 0.00, Avg FPS: 52.83
+Frame count: 110
+
+Frame count: 111
+
+Frame count: 112
+
+Frame count: 113
+
+Frame count: 114
+
+Frame count: 115
+
+Frame count: 116
+
+Frame count: 117
+
+Frame count: 118
+
+Frame count: 119
+
+Frame count: 120
+
+Frame count: 121
+
+Frame count: 122
+
+Frame count: 123
+
+Frame count: 124
+
+Frame count: 125
+
+Frame count: 126
+
+Frame count: 127
+
+Frame count: 128
+
+Frame count: 129
+
+Frame count: 130
+
+Frame count: 131
+
+Frame count: 132
+
+Frame count: 133
+
+Frame count: 134
+
+Frame count: 135
+
+Frame count: 136
+
+FPS: 52.17, Droprate: 0.00, Avg FPS: 52.69
+Frame count: 137
+
+Frame count: 138
+
+Frame count: 139
+
+Frame count: 140
+
+Frame count: 141
+
+Frame count: 142
+
+Frame count: 143
+
+Frame count: 144
+
+Frame count: 145
+
+Frame count: 146
+
+Frame count: 147
+
+Frame count: 148
+
+Frame count: 149
+
+Frame count: 150
+
+Frame count: 151
+
+Frame count: 152
+
+Frame count: 153
+
+Frame count: 154
+
+Frame count: 155
+
+Frame count: 156
+
+Frame count: 157
+
+Frame count: 158
+
+Frame count: 159
+
+Frame count: 160
+
+Frame count: 161
+
+Frame count: 162
+
+Frame count: 163
+
+FPS: 52.14, Droprate: 0.00, Avg FPS: 52.60
+Frame count: 164
+
+Frame count: 165
+
+Frame count: 166
+
+Frame count: 167
+
+Frame count: 168
+
+Frame count: 169
+
+Frame count: 170
+
+Frame count: 171
+
+Frame count: 172
+
+Frame count: 173
+
+Frame count: 174
+
+Frame count: 175
+
+Frame count: 176
+
+Frame count: 177
+
+Frame count: 178
+
+Frame count: 179
+
+Frame count: 180
+
+Frame count: 181
+
+Frame count: 182
+
+Frame count: 183
+
+Frame count: 184
+
+Frame count: 185
+
+Frame count: 186
+
+Frame count: 187
+
+Frame count: 188
+
+Frame count: 189
+
+Frame count: 190
+
+FPS: 52.19, Droprate: 0.00, Avg FPS: 52.54
+Frame count: 191
+
+Frame count: 192
+
+Frame count: 193
+
+Frame count: 194
+
+Frame count: 195
+
+Frame count: 196
+
+Frame count: 197
+
+Frame count: 198
+
+Frame count: 199
+
+Frame count: 200
+
+Frame count: 201
+
+Frame count: 202
+
+Frame count: 203
+
+Frame count: 204
+
+Frame count: 205
+
+Frame count: 206
+
+Frame count: 207
+
+Frame count: 208
+
+Frame count: 209
+
+Frame count: 210
+
+Frame count: 211
+
+Frame count: 212
+
+Frame count: 213
+
+Frame count: 214
+
+Frame count: 215
+
+Frame count: 216
+
+Frame count: 217
+
+FPS: 52.24, Droprate: 0.00, Avg FPS: 52.50
+Frame count: 218
+
+Frame count: 219
+
+Frame count: 220
+
+Frame count: 221
+
+Frame count: 222
+
+Frame count: 223
+
+Frame count: 224
+
+Frame count: 225
+
+Frame count: 226
+
+Frame count: 227
+
+Frame count: 228
+
+Frame count: 229
+
+Frame count: 230
+
+Frame count: 231
+
+Frame count: 232
+
+Frame count: 233
+
+Frame count: 234
+
+Frame count: 235
+
+Frame count: 236
+
+Frame count: 237
+
+Frame count: 238
+
+Frame count: 239
+
+Frame count: 240
+
+Frame count: 241
+
+Frame count: 242
+
+Frame count: 243
+
+Frame count: 244
+
+FPS: 52.23, Droprate: 0.00, Avg FPS: 52.47
+Frame count: 245
+
+Frame count: 246
+
+Frame count: 247
+
+Frame count: 248
+
+Frame count: 249
+
+Frame count: 250
+
+Frame count: 251
+
+Frame count: 252
+
+Frame count: 253
+
+Frame count: 254
+
+Frame count: 255
+
+Frame count: 256
+
+Frame count: 257
+
+Frame count: 258
+
+Frame count: 259
+
+Frame count: 260
+
+Frame count: 261
+
+Frame count: 262
+
+Frame count: 263
+
+Frame count: 264
+
+Frame count: 265
+
+Frame count: 266
+
+Frame count: 267
+
+Frame count: 268
+
+Frame count: 269
+
+Frame count: 270
+
+Frame count: 271
+
+FPS: 52.20, Droprate: 0.00, Avg FPS: 52.45
+Frame count: 272
+
+Frame count: 273
+
+Frame count: 274
+
+Frame count: 275
+
+Frame count: 276
+
+Frame count: 277
+
+Frame count: 278
+
+Frame count: 279
+
+Frame count: 280
+
+Frame count: 281
+
+Frame count: 282
+
+Frame count: 283
+
+Frame count: 284
+
+Frame count: 285
+
+Frame count: 286
+
+Frame count: 287
+
+Frame count: 288
+
+Frame count: 289
+
+Frame count: 290
+
+Frame count: 291
+
+Frame count: 292
+
+Frame count: 293
+
+Frame count: 294
+
+Frame count: 295
+
+Frame count: 296
+
+Frame count: 297
+
+Frame count: 298
+
+FPS: 52.12, Droprate: 0.00, Avg FPS: 52.42
+Frame count: 299
+
+Frame count: 300
+
+Frame count: 301
+
+Frame count: 302
+
+Frame count: 303
+
+Frame count: 304
+
+Frame count: 305
+
+Frame count: 306
+
+Frame count: 307
+
+Frame count: 308
+
+Frame count: 309
+
+Frame count: 310
+
+Frame count: 311
+
+Frame count: 312
+
+Frame count: 313
+
+Frame count: 314
+
+Frame count: 315
+
+Frame count: 316
+
+Frame count: 317
+
+Frame count: 318
+
+Frame count: 319
+
+Frame count: 320
+
+Frame count: 321
+
+Frame count: 322
+
+Frame count: 323
+
+Frame count: 324
+
+Frame count: 325
+
+FPS: 52.18, Droprate: 0.00, Avg FPS: 52.40
+Frame count: 326
+
+Frame count: 327
+
+Frame count: 328
+
+Frame count: 329
+
+Frame count: 330
+
+Frame count: 331
+
+Frame count: 332
+
+Frame count: 333
+
+Frame count: 334
+
+Frame count: 335
+
+Frame count: 336
+
+Frame count: 337
+
+Frame count: 338
+
+Frame count: 339
+
+Frame count: 340
+
+Frame count: 341
+
+Frame count: 342
+
+Frame count: 343
+
+Frame count: 344
+
+Frame count: 345
+
+Frame count: 346
+
+Frame count: 347
+
+Frame count: 348
+
+Frame count: 349
+
+Frame count: 350
+
+Frame count: 351
+
+Frame count: 352
+
+FPS: 52.26, Droprate: 0.00, Avg FPS: 52.39
+Frame count: 353
+
+Frame count: 354
+
+Frame count: 355
+
+Frame count: 356
+
+Frame count: 357
+
+Frame count: 358
+
+Frame count: 359
+
+Frame count: 360
+
+Frame count: 361
+
+Frame count: 362
+
+Frame count: 363
+
+Frame count: 364
+
+Frame count: 365
+
+Frame count: 366
+
+Frame count: 367
+
+Frame count: 368
+
+Frame count: 369
+
+Frame count: 370
+
+Frame count: 371
+
+Frame count: 372
+
+Frame count: 373
+
+Frame count: 374
+
+Frame count: 375
+
+Frame count: 376
+
+Frame count: 377
+
+Frame count: 378
+
+Frame count: 379
+
+FPS: 51.98, Droprate: 0.00, Avg FPS: 52.36
+Frame count: 380
+
+Frame count: 381
+
+Frame count: 382
+
+Frame count: 383
+
+Frame count: 384
+
+Frame count: 385
+
+Frame count: 386
+
+Frame count: 387
+
+Frame count: 388
+
+Frame count: 389
+
+Frame count: 390
+
+Frame count: 391
+
+Frame count: 392
+
+Frame count: 393
+
+Frame count: 394
+
+Frame count: 395
+
+Frame count: 396
+
+Frame count: 397
+
+Frame count: 398
+
+Frame count: 399
+
+Frame count: 400
+
+Frame count: 401
+
+Frame count: 402
+
+Frame count: 403
+
+Frame count: 404
+
+Frame count: 405
+
+Frame count: 406
+
+FPS: 52.40, Droprate: 0.00, Avg FPS: 52.36
+Frame count: 407
+
+Frame count: 408
+
+Frame count: 409
+
+Frame count: 410
+
+Frame count: 411
+
+Frame count: 412
+
+Frame count: 413
+
+Frame count: 414
+
+Frame count: 415
+
+Frame count: 416
+
+Frame count: 417
+
+Frame count: 418
+
+Frame count: 419
+
+Frame count: 420
+
+Frame count: 421
+
+Frame count: 422
+
+Frame count: 423
+
+Frame count: 424
+
+Frame count: 425
+
+Frame count: 426
+
+Frame count: 427
+
+Frame count: 428
+
+Frame count: 429
+
+Frame count: 430
+
+Frame count: 431
+
+Frame count: 432
+
+Frame count: 433
+
+FPS: 52.36, Droprate: 0.00, Avg FPS: 52.36
+Frame count: 434
+
+Frame count: 435
+
+Frame count: 436
+
+Frame count: 437
+
+Frame count: 438
+
+Frame count: 439
+
+Frame count: 440
+
+Frame count: 441
+
+Frame count: 442
+
+Frame count: 443
+
+Frame count: 444
+
+Frame count: 445
+
+Frame count: 446
+
+Frame count: 447
+
+Frame count: 448
+
+Frame count: 449
+
+Frame count: 450
+
+Frame count: 451
+
+Frame count: 452
+
+Frame count: 453
+
+Frame count: 454
+
+Frame count: 455
+
+Frame count: 456
+
+Frame count: 457
+
+Frame count: 458
+
+Frame count: 459
+
+FPS: 51.95, Droprate: 0.00, Avg FPS: 52.34
+Frame count: 460
+
+Frame count: 461
+
+Frame count: 462
+
+Frame count: 463
+
+Frame count: 464
+
+Frame count: 465
+
+Frame count: 466
+
+Frame count: 467
+
+Frame count: 468
+
+Frame count: 469
+
+Frame count: 470
+
+Frame count: 471
+
+Frame count: 472
+
+Frame count: 473
+
+Frame count: 474
+
+Frame count: 475
+
+Frame count: 476
+
+Frame count: 477
+
+Frame count: 478
+
+Frame count: 479
+
+Frame count: 480
+
+Frame count: 481
+
+Frame count: 482
+
+Frame count: 483
+
+Frame count: 484
+
+Frame count: 485
+
+Frame count: 486
+
+FPS: 52.31, Droprate: 0.00, Avg FPS: 52.34
+Frame count: 487
+
+Frame count: 488
+
+Frame count: 489
+
+Frame count: 490
+
+Frame count: 491
+
+Frame count: 492
+
+Frame count: 493
+
+Frame count: 494
+
+Frame count: 495
+
+Frame count: 496
+
+Frame count: 497
+
+Frame count: 498
+
+Frame count: 499
+
+Frame count: 500
+
+Frame count: 501
+
+Frame count: 502
+
+Frame count: 503
+
+Frame count: 504
+
+Frame count: 505
+
+Frame count: 506
+
+Frame count: 507
+
+Frame count: 508
+
+Frame count: 509
+
+Frame count: 510
+
+Frame count: 511
+
+Frame count: 512
+
+Frame count: 513
+
+FPS: 52.06, Droprate: 0.00, Avg FPS: 52.32
+Frame count: 514
+
+Frame count: 515
+
+Frame count: 516
+
+Frame count: 517
+
+Frame count: 518
+
+Frame count: 519
+
+Frame count: 520
+
+Frame count: 521
+
+Frame count: 522
+
+Frame count: 523
+
+Frame count: 524
+
+Frame count: 525
+
+Frame count: 526
+
+Frame count: 527
+
+Frame count: 528
+
+Frame count: 529
+
+Frame count: 530
+
+Frame count: 531
+
+Frame count: 532
+
+Frame count: 533
+
+Frame count: 534
+
+Frame count: 535
+
+Frame count: 536
+
+Frame count: 537
+
+Frame count: 538
+
+Frame count: 539
+
+Frame count: 540
+
+FPS: 52.10, Droprate: 0.00, Avg FPS: 52.31
+Frame count: 541
+
+Frame count: 542
+
+Frame count: 543
+
+Frame count: 544
+
+Frame count: 545
+
+Frame count: 546
+
+Frame count: 547
+
+Frame count: 548
+
+Frame count: 549
+
+Frame count: 550
+
+Frame count: 551
+
+Frame count: 552
+
+Frame count: 553
+
+Frame count: 554
+
+Frame count: 555
+
+Frame count: 556
+
+Frame count: 557
+
+Frame count: 558
+
+Frame count: 559
+
+Frame count: 560
+
+Frame count: 561
+
+Frame count: 562
+
+Frame count: 563
+
+Frame count: 564
+
+Frame count: 565
+
+Frame count: 566
+
+Frame count: 567
+
+FPS: 51.04, Droprate: 0.00, Avg FPS: 52.25
+Frame count: 568
+
+Frame count: 569
+
+Frame count: 570
+
+Frame count: 571
+
+Frame count: 572
+
+Frame count: 573
+
+Frame count: 574
+
+Frame count: 575
+
+Frame count: 576
+
+Frame count: 577
+
+Frame count: 578
+
+Frame count: 579
+
+Frame count: 580
+
+Frame count: 581
+
+Frame count: 582
+
+Frame count: 583
+
+Frame count: 584
+
+Frame count: 585
+
+Frame count: 586
+
+Frame count: 587
+
+Frame count: 588
+
+Frame count: 589
+
+Frame count: 590
+
+Frame count: 591
+
+Frame count: 592
+
+Frame count: 593
+
+Frame count: 594
+
+FPS: 53.63, Droprate: 0.00, Avg FPS: 52.31
+Frame count: 595
+
+Frame count: 596
+
+Frame count: 597
+
+Frame count: 598
+
+Frame count: 599
+
+Frame count: 600
+
+Frame count: 601
+
+Frame count: 602
+
+Frame count: 603
+
+Frame count: 604
+
+Frame count: 605
+
+Frame count: 606
+
+Frame count: 607
+
+Frame count: 608
+
+Frame count: 609
+
+Frame count: 610
+
+Frame count: 611
+
+Frame count: 612
+
+Frame count: 613
+
+Frame count: 614
+
+Frame count: 615
+
+Frame count: 616
+
+Frame count: 617
+
+Frame count: 618
+
+Frame count: 619
+
+Frame count: 620
+
+Frame count: 621
+
+FPS: 52.21, Droprate: 0.00, Avg FPS: 52.30
+Frame count: 622
+
+Frame count: 623
+
+Frame count: 624
+
+Frame count: 625
+
+Frame count: 626
+
+Frame count: 627
+
+Frame count: 628
+
+Frame count: 629
+
+Frame count: 630
+
+Frame count: 631
+
+Frame count: 632
+
+Frame count: 633
+
+Frame count: 634
+
+Frame count: 635
+
+Frame count: 636
+
+Frame count: 637
+
+Frame count: 638
+
+Frame count: 639
+
+Frame count: 640
+
+Frame count: 641
+
+Frame count: 642
+
+Frame count: 643
+
+Frame count: 644
+
+Frame count: 645
+
+Frame count: 646
+
+Frame count: 647
+
+Frame count: 648
+
+FPS: 52.14, Droprate: 0.00, Avg FPS: 52.30
+Frame count: 649
+
+Frame count: 650
+
+Frame count: 651
+
+Frame count: 652
+
+Frame count: 653
+
+Frame count: 654
+
+Frame count: 655
+
+Frame count: 656
+
+Frame count: 657
+
+Frame count: 658
+
+Frame count: 659
+
+Frame count: 660
+
+Frame count: 661
+
+Frame count: 662
+
+Frame count: 663
+
+Frame count: 664
+
+Frame count: 665
+
+Frame count: 666
+
+Frame count: 667
+
+Frame count: 668
+
+Frame count: 669
+
+Frame count: 670
+
+Frame count: 671
+
+Frame count: 672
+
+Frame count: 673
+
+Frame count: 674
+
+Frame count: 675
+
+FPS: 52.32, Droprate: 0.00, Avg FPS: 52.30
+Frame count: 676
+
+Frame count: 677
+
+Frame count: 678
+
+Frame count: 679
+
+Frame count: 680
+
+Frame count: 681
+
+Frame count: 682
+
+Frame count: 683
+
+Frame count: 684
+
+Frame count: 685
+
+Frame count: 686
+
+Frame count: 687
+
+Frame count: 688
+
+Frame count: 689
+
+Frame count: 690
+
+Frame count: 691
+
+Frame count: 692
+
+Frame count: 693
+
+Frame count: 694
+
+Frame count: 695
+
+Frame count: 696
+
+Frame count: 697
+
+Frame count: 698
+
+Frame count: 699
+
+Frame count: 700
+
+Frame count: 701
+
+Frame count: 702
+
+FPS: 52.17, Droprate: 0.00, Avg FPS: 52.29
+Frame count: 703
+
+Frame count: 704
+
+Frame count: 705
+
+Frame count: 706
+
+Frame count: 707
+
+Frame count: 708
+
+Frame count: 709
+
+Frame count: 710
+
+Frame count: 711
+
+Frame count: 712
+
+Frame count: 713
+
+Frame count: 714
+
+Frame count: 715
+
+Frame count: 716
+
+Frame count: 717
+
+Frame count: 718
+
+Frame count: 719
+
+Frame count: 720
+
+Frame count: 721
+
+Frame count: 722
+
+Frame count: 723
+
+Frame count: 724
+
+Frame count: 725
+
+Frame count: 726
+
+Frame count: 727
+
+Frame count: 728
+
+Frame count: 729
+
+FPS: 52.21, Droprate: 0.00, Avg FPS: 52.29
+Frame count: 730
+
+Frame count: 731
+
+Frame count: 732
+
+Frame count: 733
+
+Frame count: 734
+
+Frame count: 735
+
+Frame count: 736
+
+Frame count: 737
+
+End-of-stream

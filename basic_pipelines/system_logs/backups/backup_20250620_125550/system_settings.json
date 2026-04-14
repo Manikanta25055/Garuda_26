@@ -1,0 +1,12 @@
+{
+  "quiet_hours": {
+    "enabled": false,
+    "start": "22:00",
+    "end": "07:00"
+  },
+  "alert_volume": 100,
+  "detection_sensitivity": 0.3,
+  "auto_backup": true,
+  "backup_interval_days": 3,
+  "last_backup": "20250521_011558"
+}

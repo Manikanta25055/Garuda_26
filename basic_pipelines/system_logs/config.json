@@ -1,0 +1,26 @@
+{
+  "custom_voice_commands": {},
+  "custom_modes": {},
+  "email_recipients": [
+    "mgonugondlamanikanta@gmail.com"
+  ],
+  "email_cooldown": 180,
+  "email_sender": "mgonugondlamanikanta@gmail.com",
+  "detection_threshold": 0.82,
+  "known_devices": [],
+  "watch_labels": [
+    "person",
+    "backpack",
+    "suitcase"
+  ],
+  "danger_label": "scissors",
+  "modes": {
+    "dnd": false,
+    "email_off": true,
+    "idle": false,
+    "night": false,
+    "emergency": false,
+    "privacy": false
+  },
+  "mode_schedule": {}
+}

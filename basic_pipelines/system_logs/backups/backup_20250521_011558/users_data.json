@@ -1,0 +1,18 @@
+{
+  "user": {
+    "password": "user",
+    "role": "user",
+    "history": {
+      "logins": [],
+      "narada_activity": []
+    }
+  },
+  "admin": {
+    "password": "root",
+    "role": "admin",
+    "history": {
+      "logins": [],
+      "narada_activity": []
+    }
+  }
+}
