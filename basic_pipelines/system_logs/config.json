@@ -13,9 +13,16 @@
     "backpack",
     "suitcase"
   ],
-  "danger_label": "scissors",
+  "danger_labels": [
+    "scissors"
+  ],
+  "night_presence_window": {
+    "start": "01:30",
+    "end": "05:00",
+    "enabled": true
+  },
   "modes": {
-    "dnd": false,
+    "dnd": true,
     "email_off": true,
     "idle": false,
     "night": false,

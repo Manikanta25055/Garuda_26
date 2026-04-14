@@ -103,7 +103,7 @@ HEF_NAMES = {
 
 
 # ─── Cascade config (live-reloaded from admin panel) ─────────────────────────
-_cfg: dict = {"depth_mode": "night_only", "_mtime": 0.0}
+_cfg: dict = {"depth_mode": "always", "_mtime": 0.0}
 
 def _load_config():
     """Re-read cascade_config.json only when the file has changed."""
@@ -377,7 +377,7 @@ def gst_camera_thread(frame_queue, stop):
     interval = 1.0 / TARGET_FPS
     while not stop.is_set():
         t0 = time.monotonic()
-        sample = sink.emit("pull-sample")
+        sample = sink.try_pull_sample(5 * _Gst.SECOND)
         if sample is None:
             time.sleep(0.01)
             continue

@@ -1075,3 +1075,48 @@
 [2026-04-14 15:46:18] Pipeline started.
 [2026-04-14 15:49:26] [TAMPER] No heartbeat in 188s — possible system tampering!
 [2026-04-14 20:49:47] [TAMPER] No heartbeat in 180s — possible system tampering!
+[2026-04-14 21:18:32] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-04-14 21:18:32] [CAMERA] Input resolved to: rpi
+[2026-04-14 21:18:32] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-04-14 21:18:43] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-04-14 21:18:43] [CAMERA] Input resolved to: rpi
+[2026-04-14 21:18:43] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-04-14 21:20:56] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-04-14 21:20:56] [CAMERA] Input resolved to: rpi
+[2026-04-14 21:20:56] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-04-14 21:21:34] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-04-14 21:21:34] [CAMERA] Input resolved to: rpi
+[2026-04-14 21:21:34] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-04-14 21:21:34] Pipeline started.
+[2026-04-14 21:21:46] Master key login.
+[2026-04-14 21:22:17] [WATCH] Person (0.89)
+[2026-04-14 21:22:45] Alert triggered.
+[2026-04-14 21:23:50] [WATCH] Person (0.83)
+[2026-04-14 21:24:20] [WATCH] Person (0.89)
+[2026-04-14 21:24:34] [TAMPER] No heartbeat in 180s — possible system tampering!
+[2026-04-14 21:24:36] [TAMPER] Failed to send alert email: (535, b'5.7.8 Username and Password not accepted. For more information, go to\n5.7.8  https://support.google.com/mail/?p=BadCredentials d9443c01a7336-2b462830bc5sm56761205ad.50 - gsmtp')
+[2026-04-14 21:27:30] [WATCH] Person (0.86)
+[2026-04-14 21:31:52] [WATCH] Person (0.86)
+[2026-04-14 21:32:46] [WATCH] Person (0.88)
+[2026-04-14 21:33:53] [WATCH] Person (0.87)
+[2026-04-14 21:40:16] [WATCH] Person (0.92)
+[2026-04-14 21:43:43] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-04-14 21:43:43] [CAMERA] Input resolved to: rpi
+[2026-04-14 21:43:43] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-04-14 21:43:43] Pipeline started.
+[2026-04-14 21:44:30] Master key login.
+[2026-04-14 21:46:43] [TAMPER] No heartbeat in 180s — possible system tampering!
+[2026-04-14 21:46:57] [WATCH] Person (0.88)
+[2026-04-14 21:47:13] Alert triggered.
+[2026-04-14 21:48:42] Mode email_off set to False by admin
+[2026-04-14 21:48:44] Mode email_off set to True by admin
+[2026-04-14 21:48:46] Mode dnd set to True by admin
+[2026-04-14 21:48:55] [WATCH] Person (0.83)
+[2026-04-14 21:49:38] [TAMPER] Camera blindness detected — lens may be covered!
+[2026-04-14 21:49:41] [TAMPER] Alert email sent.
+[2026-04-14 21:50:05] [WATCH] Person (0.85)
+[2026-04-14 21:59:08] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-04-14 21:59:08] [CAMERA] Input resolved to: rpi
+[2026-04-14 21:59:08] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-04-14 21:59:08] Pipeline started.
+[2026-04-14 22:02:08] [TAMPER] No heartbeat in 180s — possible system tampering!

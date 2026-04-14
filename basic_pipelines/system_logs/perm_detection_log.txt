@@ -573,3 +573,17 @@
 [2026-04-14 12:43:49] [WATCH] Person conf=0.89
 [2026-04-14 12:44:31] [WATCH] Person conf=0.83
 [2026-04-14 14:01:34] [WATCH] Person conf=0.83
+[2026-04-14 21:22:17] [WATCH] Person conf=0.89
+[2026-04-14 21:22:45] [DANGER] scissors conf=0.89 — alert triggered
+[2026-04-14 21:23:50] [WATCH] Person conf=0.83
+[2026-04-14 21:24:20] [WATCH] Person conf=0.89
+[2026-04-14 21:27:30] [WATCH] Person conf=0.86
+[2026-04-14 21:31:52] [WATCH] Person conf=0.86
+[2026-04-14 21:32:46] [WATCH] Person conf=0.88
+[2026-04-14 21:33:53] [WATCH] Person conf=0.87
+[2026-04-14 21:40:16] [WATCH] Person conf=0.92
+[2026-04-14 21:46:57] [WATCH] Person conf=0.88
+[2026-04-14 21:47:13] [DANGER] scissors conf=0.85 — alert triggered
+[2026-04-14 21:48:55] [WATCH] Person conf=0.83
+[2026-04-14 21:49:38] [TAMPER] camera_blind conf=0.00 — camera appears blocked
+[2026-04-14 21:50:05] [WATCH] Person conf=0.85
