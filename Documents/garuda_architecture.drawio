@@ -1,304 +1,282 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2338" math="0" shadow="1">
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="2500" math="0" shadow="1">
   <root>
     <mxCell id="0" />
     <mxCell id="1" parent="0" />
-    <mxCell id="2" value="Garuda — Full System Architecture&#10;Raspberry Pi 5 (16 GB RAM · 1 TB SSD)  ·  Hailo-8L NPU (13 TOPS)  ·  Sony IMX708 @ 60 fps" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
+
+    <!-- TITLE -->
+    <mxCell id="2" value="Garuda — Full System Architecture&#10;Raspberry Pi 5 (8 GB RAM)  ·  Hailo-8L NPU (13 TOPS)  ·  Sony IMX708 @ 52 FPS  ·  YOLOv8s + MobileNetV2 + MiDaS Cascade" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fillColor=none;strokeColor=none;" vertex="1" parent="1">
       <mxGeometry x="30" y="10" width="1480" height="50" as="geometry" />
     </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- HARDWARE LAYER                                      -->
+    <!-- ═══════════════════════════════════════════════════ -->
     <mxCell id="3" value="HARDWARE LAYER" style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="80" width="1060" height="90" as="geometry" />
+      <mxGeometry x="30" y="80" width="1220" height="90" as="geometry" />
+    </mxCell>
+    <mxCell id="4" value="Sony IMX708&#10;Pi Camera Module 3&#10;1280×720 @ 52 FPS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="3">
+      <mxGeometry x="20" y="28" width="175" height="48" as="geometry" />
     </mxCell>
-    <mxCell id="4" value="Sony IMX708&#10;1280×720 @ 60 fps" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="3">
-      <mxGeometry x="20" y="30" width="165" height="45" as="geometry" />
+    <mxCell id="5" value="Microphone&#10;(Narada Voice Input)&#10;SpeechRecognition" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="3">
+      <mxGeometry x="215" y="28" width="165" height="48" as="geometry" />
+    </mxCell>
+    <mxCell id="6" value="LAN / WiFi&#10;(Web dashboard access)&#10;192.168.x.x:8080" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="3">
+      <mxGeometry x="400" y="28" width="165" height="48" as="geometry" />
+    </mxCell>
+    <mxCell id="7" value="Hailo-8L NPU&#10;13 TOPS · PCIe Gen 2&#10;VDevice multiplexed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="3">
+      <mxGeometry x="585" y="28" width="185" height="48" as="geometry" />
+    </mxCell>
+    <mxCell id="8" value="Raspberry Pi 5&#10;Cortex-A76 · 4 cores&#10;Core 0/1/2/3 pinned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="3">
+      <mxGeometry x="790" y="28" width="165" height="48" as="geometry" />
+    </mxCell>
+    <mxCell id="9" value="GStreamer 1.22&#10;libcamera + HailoRT&#10;libcamerasrc pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="3">
+      <mxGeometry x="975" y="28" width="165" height="48" as="geometry" />
+    </mxCell>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- CASCADE INFERENCE PIPELINE (garuda_cascade.py)     -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="10" value="CASCADE INFERENCE PIPELINE  —  garuda_cascade.py  (3 CPU threads · Hailo-8L VDevice)" style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="30" y="210" width="1220" height="280" as="geometry" />
+    </mxCell>
+
+    <!-- Core 0 row label -->
+    <mxCell id="11" value="Core 0&#10;camera_thread" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=3;fillColor=none;strokeColor=none;" vertex="1" parent="10">
+      <mxGeometry x="5" y="42" width="80" height="40" as="geometry" />
     </mxCell>
-    <mxCell id="5" value="Microphone&#10;(Voice Input)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="3">
-      <mxGeometry x="210" y="30" width="140" height="45" as="geometry" />
+    <mxCell id="12" value="libcamerasrc&#10;(IMX708 / libcamera)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="10">
+      <mxGeometry x="95" y="38" width="140" height="48" as="geometry" />
     </mxCell>
-    <mxCell id="6" value="1 TB SSD&#10;(External Storage)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="3">
-      <mxGeometry x="375" y="30" width="140" height="45" as="geometry" />
+    <mxCell id="13" value="videoconvert&#10;→ BGR format" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="10">
+      <mxGeometry x="255" y="38" width="130" height="48" as="geometry" />
+    </mxCell>
+    <mxCell id="14" value="appsink&#10;try_pull_sample(5 s)&#10;1280×720 BGR frames" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="405" y="38" width="150" height="48" as="geometry" />
+    </mxCell>
+    <mxCell id="15" value="frame_queue&#10;maxsize=4&#10;drop-on-full" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="575" y="38" width="130" height="48" as="geometry" />
+    </mxCell>
+
+    <!-- Core 1 row label -->
+    <mxCell id="16" value="Core 1&#10;inference_thread" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=3;fillColor=none;strokeColor=none;" vertex="1" parent="10">
+      <mxGeometry x="5" y="112" width="80" height="40" as="geometry" />
     </mxCell>
-    <mxCell id="7" value="LAN / WiFi&#10;(ARP Network)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="3">
-      <mxGeometry x="540" y="30" width="140" height="45" as="geometry" />
+    <mxCell id="17" value="YOLOv8s  SCOUT&#10;best_v5.hef · 4-class&#10;640×640 · 52.22 FPS&#10;18.38 ms HW latency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="95" y="108" width="175" height="58" as="geometry" />
     </mxCell>
-    <mxCell id="8" value="Hailo-8L NPU&#10;13 TOPS  PCIe" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="3">
-      <mxGeometry x="705" y="30" width="160" height="45" as="geometry" />
+    <mxCell id="18" value="Weapon detected?&#10;Hammer / Knife / Scissors&#10;conf ≥ 0.25" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="300" y="100" width="150" height="74" as="geometry" />
     </mxCell>
-    <mxCell id="9" value="GSTREAMER AI PIPELINE  (Raspberry Pi 5 — On-Device)" style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="210" width="1060" height="220" as="geometry" />
+    <mxCell id="19" value="Person detected?&#10;conf ≥ 0.60&#10;→ take highest-conf" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=10;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="480" y="100" width="150" height="74" as="geometry" />
     </mxCell>
-    <mxCell id="10" value="libcamerasrc&#10;(IMX708 driver)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="15" y="50" width="120" height="45" as="geometry" />
+    <mxCell id="20" value="MobileNetV2  INSPECTOR&#10;224×224 crop · Safe/Weapon&#10;99.6% val accuracy&#10;500+ FPS on Hailo-8L" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="660" y="108" width="185" height="58" as="geometry" />
     </mxCell>
-    <mxCell id="11" value="videoscale&#10;videoscale" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="160" y="50" width="100" height="45" as="geometry" />
+    <mxCell id="21" value="MiDaS Small  REALITY CHECKER&#10;256×256 crop · depth map&#10;variance&lt;0.05 → Spoof_Attempt&#10;real: var 0.022–0.10  spoof: &lt;0.005" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="870" y="108" width="235" height="58" as="geometry" />
     </mxCell>
-    <mxCell id="12" value="videoconvert&#10;(RGB 640×640)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="285" y="50" width="120" height="45" as="geometry" />
+
+    <!-- Core 2 row label -->
+    <mxCell id="22" value="Core 2&#10;postprocess_thread" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontStyle=3;fillColor=none;strokeColor=none;" vertex="1" parent="10">
+      <mxGeometry x="5" y="195" width="80" height="40" as="geometry" />
     </mxCell>
-    <mxCell id="13" value="tee" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="430" y="70" width="60" height="30" as="geometry" />
+    <mxCell id="23" value="result_queue&#10;maxsize=16" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="10">
+      <mxGeometry x="95" y="195" width="130" height="48" as="geometry" />
     </mxCell>
-    <mxCell id="14" value="bypass_queue&#10;(raw frames)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="515" y="40" width="120" height="45" as="geometry" />
+    <mxCell id="24" value="Decision Engine&#10;weapon_label set? → Weapon&#10;fast_spoof None? → MiDaS result&#10;else → RGB variance proxy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="10">
+      <mxGeometry x="250" y="192" width="240" height="55" as="geometry" />
     </mxCell>
-    <mxCell id="15" value="hailonet&#10;(YOLOv8s / YOLOv6n HEF)&#10;Batch=1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="515" y="100" width="160" height="50" as="geometry" />
+    <mxCell id="25" value="JSON event log&#10;{ts, label, conf, variance,&#10;spoof, threat, box}&#10;→ stdout + session .json" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="10">
+      <mxGeometry x="515" y="192" width="200" height="55" as="geometry" />
     </mxCell>
-    <mxCell id="16" value="hailofilter&#10;NMS  (score≥0.25, IOU≤0.45)&#10;libyolo_hailortpp_post.so" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="700" y="100" width="180" height="50" as="geometry" />
+    <mxCell id="26" value="danger_sightings.txt&#10;[CASCADE] ts label&#10;conf=x var=y" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="10">
+      <mxGeometry x="735" y="192" width="185" height="55" as="geometry" />
     </mxCell>
-    <mxCell id="17" value="hailomuxer&#10;(sync raw + inference)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="700" y="40" width="160" height="45" as="geometry" />
+    <mxCell id="27" value="_event_callbacks&#10;→ Garuda_web.py&#10;register_event_callback(fn)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="10">
+      <mxGeometry x="940" y="192" width="185" height="55" as="geometry" />
     </mxCell>
-    <mxCell id="18" value="identity_callback&#10;(app_callback pad probe)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="885" y="40" width="160" height="45" as="geometry" />
+
+    <!-- Cascade edges -->
+    <mxCell id="e1" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="12" target="13" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e2" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="13" target="14" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="14" target="15" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="15" target="17" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="17" target="18" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e6" value="No" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="18" target="19" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e7" value="Yes → person crop" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="19" target="20" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="20" target="21" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="17" target="23" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="21" target="23" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e11" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="23" target="24" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="24" target="25" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="24" target="26" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e14" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="24" target="27" parent="10"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <!-- Camera to libcamerasrc -->
+    <mxCell id="e15" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" source="4" target="12" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
-    <mxCell id="19" value="fakesink&#10;(no display)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=0;dashed=0;" vertex="1" parent="9">
-      <mxGeometry x="1000" y="145" width="50" height="30" as="geometry" />
+    <!-- Hailo to YOLO -->
+    <mxCell id="e16" value="PCIe" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" source="7" target="17" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
-    <mxCell id="20" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="10" target="11" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- ALERT ENGINE                                        -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="30" value="ALERT ENGINE" style="swimlane;startSize=28;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="30" y="535" width="1220" height="110" as="geometry" />
+    </mxCell>
+    <mxCell id="31" value="Email Alert&#10;Gmail SMTP-SSL :465&#10;App Password · 60 s cooldown&#10;JPEG snapshot attached" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="30">
+      <mxGeometry x="15" y="32" width="200" height="62" as="geometry" />
+    </mxCell>
+    <mxCell id="32" value="Voice TTS Alert&#10;pyttsx3 / espeak&#10;'Weapon detected'&#10;async thread" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="30">
+      <mxGeometry x="235" y="32" width="185" height="62" as="geometry" />
     </mxCell>
-    <mxCell id="21" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="11" target="12" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="33" value="Tamper Detection&#10;• Camera blindness (entropy drop)&#10;• Heartbeat watchdog (180 s)&#10;→ overrides DND / Idle modes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff0000;strokeColor=#cc0000;fontStyle=1;fontSize=11;" vertex="1" parent="30">
+      <mxGeometry x="440" y="32" width="240" height="62" as="geometry" />
     </mxCell>
-    <mxCell id="22" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="12" target="13" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="34" value="Mode Gates&#10;DND → suppress notify&#10;EMAIL_OFF → no email&#10;IDLE → reduced frequency" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="30">
+      <mxGeometry x="700" y="32" width="200" height="62" as="geometry" />
     </mxCell>
-    <mxCell id="23" value="bypass" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="13" target="14" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="35" value="Night Presence Window&#10;01:30–05:00 configurable&#10;Person detected → HIGH alert&#10;regardless of weapon class" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="30">
+      <mxGeometry x="920" y="32" width="220" height="62" as="geometry" />
     </mxCell>
-    <mxCell id="24" value="inference" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="13" target="15" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <!-- Alert engine from decision engine -->
+    <mxCell id="e17" value="Weapon /&#10;Spoof_Attempt" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" source="24" target="31" parent="1">
+      <mxGeometry relative="1" as="geometry"/>
     </mxCell>
-    <mxCell id="25" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="15" target="16" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- FASTAPI WEB SERVER (Garuda_web.py)                  -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="40" value="FASTAPI WEB SERVER  —  Garuda_web.py  (uvicorn · :8080 · separate GStreamer pipeline · holds /dev/hailo0)" style="swimlane;startSize=28;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="30" y="690" width="1220" height="200" as="geometry" />
     </mxCell>
-    <mxCell id="26" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="14" target="17" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="41" value="GStreamer Pipeline&#10;libcamerasrc&#10;→ videoscale&#10;→ videoconvert&#10;→ hailonet (best_v5.hef)&#10;→ hailofilter&#10;   (libyolo_hailortpp_post.so&#10;    best_labels.json)&#10;→ identity_callback&#10;→ fakesink" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" vertex="1" parent="40">
+      <mxGeometry x="15" y="32" width="185" height="148" as="geometry" />
     </mxCell>
-    <mxCell id="27" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" source="16" target="17" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="42" value="Authentication&#10;• POST /api/login (PBKDF2)&#10;• POST /api/admin/send-otp (2FA)&#10;• POST /api/admin/verify-otp&#10;• Forgot password OTP flow&#10;• bcrypt hashed passwords&#10;• 5 fail → lockout 5 min" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="40">
+      <mxGeometry x="215" y="32" width="200" height="148" as="geometry" />
     </mxCell>
-    <mxCell id="28" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="17" target="18" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="43" value="Session Management&#10;• Access token: 15 min&#10;• Refresh token: 7 days&#10;• Master key: 8 h&#10;• secrets.token_hex(64)&#10;• Invalidation on pw change&#10;• Session timeout + rotation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="40">
+      <mxGeometry x="430" y="32" width="190" height="148" as="geometry" />
     </mxCell>
-    <mxCell id="29" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#aaaaaa;endArrow=block;endFill=1;" edge="1" source="18" target="19" parent="9">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="44" value="REST API&#10;• GET  /api/state&#10;• POST /api/modes&#10;• GET  /api/users&#10;• POST /api/users/*&#10;• POST /api/config&#10;• GET  /api/logs/*&#10;• POST /api/presence/devices" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="40">
+      <mxGeometry x="635" y="32" width="185" height="148" as="geometry" />
     </mxCell>
-    <mxCell id="30" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" source="4" target="10" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="45" value="Real-time Streaming&#10;• WS  /ws  (state push 2 s)&#10;• GET  /stream  (MJPEG)&#10;• WebRTC H.264 offer&#10;• SSE /api/chat/stream" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="40">
+      <mxGeometry x="835" y="32" width="185" height="148" as="geometry" />
     </mxCell>
-    <mxCell id="31" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#82b366;endArrow=block;endFill=1;" edge="1" source="8" target="15" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="46" value="Security Middleware&#10;• Rate limit: 30 req/60 s/IP&#10;• Brute-force lockout&#10;• HSTS · CSP · X-Frame&#10;• CORS (known origins)&#10;• SECURE_COOKIES flag&#10;• HttpOnly + SameSite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="40">
+      <mxGeometry x="1035" y="32" width="170" height="148" as="geometry" />
     </mxCell>
-    <mxCell id="32" value="DETECTION &amp; DECISION LOGIC" style="swimlane;startSize=28;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="470" width="1060" height="170" as="geometry" />
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- USER INTERFACES                                     -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="50" value="USER INTERFACES" style="swimlane;startSize=28;fillColor=#ffe6cc;strokeColor=#d6a050;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="30" y="935" width="1220" height="120" as="geometry" />
     </mxCell>
-    <mxCell id="33" value="Frame Analysis&#10;• Camera blindness (var &lt; 50, 300 frames)&#10;• JPEG encode → MJPEG buffer&#10;• WebRTC raw BGR frame" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="32">
-      <mxGeometry x="15" y="35" width="195" height="75" as="geometry" />
+    <mxCell id="51" value="Web Dashboard&#10;(FastAPI · :8080)&#10;Live MJPEG / WebRTC&#10;Detection overlay · Mode controls" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6a050;fontSize=11;fontStyle=1;" vertex="1" parent="50">
+      <mxGeometry x="15" y="32" width="220" height="68" as="geometry" />
     </mxCell>
-    <mxCell id="34" value="Detection Parser&#10;• hailo.get_roi_from_buffer()&#10;• get_objects_typed(HAILO_DETECTION)&#10;• conf ≥ threshold (default 0.35)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="32">
-      <mxGeometry x="235" y="35" width="200" height="75" as="geometry" />
+    <mxCell id="52" value="macOS Native App&#10;(Swift / HTTP+WS client)&#10;Login · Dashboard · Alerts&#10;Mirror of web dashboard" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6a050;fontSize=11;" vertex="1" parent="50">
+      <mxGeometry x="255" y="32" width="215" height="68" as="geometry" />
     </mxCell>
-    <mxCell id="35" value="Privacy Mode&#10;Gaussian Blur (51×51, σ=30)&#10;on person bounding boxes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="32">
-      <mxGeometry x="460" y="35" width="170" height="75" as="geometry" />
+    <mxCell id="53" value="Narada — Voice Assistant&#10;SpeechRecognition (Google)&#10;→ Rule-based command parser&#10;Commands: DND / status / arm…" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f3ff;strokeColor=#4da3e8;fontSize=11;" vertex="1" parent="50">
+      <mxGeometry x="490" y="32" width="220" height="68" as="geometry" />
     </mxCell>
-    <mxCell id="36" value="Danger Check&#10;label == DANGER_LABEL&#10;AND ≥2 consecutive frames&#10;→ ALERT TRIGGERED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="32">
-      <mxGeometry x="655" y="35" width="175" height="75" as="geometry" />
+    <mxCell id="54" value="Email Alerts&#10;Gmail SMTP-SSL :465&#10;Subject: DANGER / TAMPER&#10;Recipient configurable (.env)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="50">
+      <mxGeometry x="730" y="32" width="210" height="68" as="geometry" />
     </mxCell>
-    <mxCell id="37" value="Watch Labels&#10;person / backpack / suitcase&#10;Silent log (30 s cooldown)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="32">
-      <mxGeometry x="855" y="35" width="160" height="75" as="geometry" />
+    <mxCell id="55" value="Phone Presence&#10;ARP scan /proc/net/arp&#10;Known device MAC match&#10;30 s poll · suppress alert" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="50">
+      <mxGeometry x="960" y="32" width="200" height="68" as="geometry" />
     </mxCell>
-    <mxCell id="38" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#d6b656;endArrow=block;endFill=1;" edge="1" source="18" target="33" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <!-- FastAPI to UI -->
+    <mxCell id="e20" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="44" target="51" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e21" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="44" target="52" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e22" value="" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="44" target="53" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+    <mxCell id="e23" value="" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#aaaaaa;endArrow=block;endFill=1;" edge="1" source="5" target="53" parent="1"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- STORAGE LAYER                                       -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="60" value="STORAGE LAYER  (local filesystem · Raspberry Pi 5)" style="swimlane;startSize=28;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="30" y="1105" width="1220" height="130" as="geometry" />
     </mxCell>
-    <mxCell id="39" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="33" target="34" parent="32">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="61" value="JSON Files&#10;• users.json (PBKDF2 hashes)&#10;• config.json (modes, schedule)&#10;• alert_history.json&#10;• cascade_config.json" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="60">
+      <mxGeometry x="15" y="32" width="200" height="82" as="geometry" />
     </mxCell>
-    <mxCell id="40" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="34" target="35" parent="32">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="62" value="Text Logs (7-day retention)&#10;• perm_system_log.txt&#10;• perm_detection_log.txt&#10;• perm_voice_log.txt&#10;• danger_sightings.txt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="60">
+      <mxGeometry x="230" y="32" width="200" height="82" as="geometry" />
     </mxCell>
-    <mxCell id="41" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="34" target="36" parent="32">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="63" value="Cascade Session Logs&#10;• cascade_YYYYMMDD_HHMMSS.json&#10;• Per-event: {ts, label, conf,&#10;  variance, spoof, threat, box}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="60">
+      <mxGeometry x="445" y="32" width="220" height="82" as="geometry" />
     </mxCell>
-    <mxCell id="42" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#555555;endArrow=block;endFill=1;" edge="1" source="34" target="37" parent="32">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="64" value="SQLite&#10;garuda_events.db&#10;• Event queue (offline-resilient)&#10;• synced flag · indexed by ts" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="60">
+      <mxGeometry x="680" y="30" width="180" height="84" as="geometry" />
     </mxCell>
-    <mxCell id="43" value="ALERT ENGINE" style="swimlane;startSize=28;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="680" width="1060" height="110" as="geometry" />
+    <mxCell id="65" value="Atomic JSON Writes&#10;tmpfile → fsync → os.replace&#10;RAM-buffered → flush 60 s&#10;Prevents SD card corruption" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="60">
+      <mxGeometry x="875" y="32" width="210" height="82" as="geometry" />
     </mxCell>
-    <mxCell id="44" value="trigger_software_alert()&#10;• _alert_active = True&#10;• 3 s timer extension per frame" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="43">
-      <mxGeometry x="15" y="35" width="210" height="55" as="geometry" />
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- BACKGROUND SERVICES                                 -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="70" value="BACKGROUND SERVICES  (daemon threads)" style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="30" y="1285" width="1220" height="100" as="geometry" />
     </mxCell>
-    <mxCell id="45" value="send_email_alert()&#10;• Gmail SMTP-SSL port 465&#10;• 60 s cooldown&#10;• Subject: NORMAL / HIGH / EMERGENCY" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="43">
-      <mxGeometry x="250" y="35" width="210" height="55" as="geometry" />
+    <mxCell id="71" value="Heartbeat Watchdog&#10;180 s timeout&#10;→ TAMPER email" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="70">
+      <mxGeometry x="15" y="32" width="175" height="52" as="geometry" />
     </mxCell>
-    <mxCell id="46" value="Audio Alarm&#10;aplay Front_Center.wav&#10;(on alert rising edge)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="43">
-      <mxGeometry x="485" y="35" width="170" height="55" as="geometry" />
+    <mxCell id="72" value="Schedule Monitor&#10;HH:MM mode transitions&#10;DND / Night / Idle&#10;Every 30 s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="70">
+      <mxGeometry x="205" y="32" width="175" height="52" as="geometry" />
     </mxCell>
-    <mxCell id="47" value="WebSocket Push&#10;push_urgent_ws()&#10;→ all connected clients" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="43">
-      <mxGeometry x="680" y="35" width="170" height="55" as="geometry" />
+    <mxCell id="73" value="Presence Poller&#10;ARP scan /proc/net/arp&#10;Known MAC match&#10;Every 30 s · 90 s grace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="70">
+      <mxGeometry x="395" y="32" width="175" height="52" as="geometry" />
     </mxCell>
-    <mxCell id="48" value="TAMPER ALERTS&#10;• Camera blindness&#10;• Dead man's switch&#10;  (bypass DND/Idle)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ff0000;strokeColor=#cc0000;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="43">
-      <mxGeometry x="875" y="35" width="170" height="55" as="geometry" />
+    <mxCell id="74" value="Connectivity Monitor&#10;DNS probe 1.1.1.1&#10;Online/Offline logging&#10;Every 30 s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="70">
+      <mxGeometry x="585" y="32" width="175" height="52" as="geometry" />
     </mxCell>
-    <mxCell id="49" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" source="36" target="44" parent="1">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="75" value="Log Flush Thread&#10;RAM buffer → disk&#10;Every 60 s&#10;Reduces flash wear" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="70">
+      <mxGeometry x="775" y="32" width="175" height="52" as="geometry" />
     </mxCell>
-    <mxCell id="50" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" source="44" target="45" parent="43">
-      <mxGeometry relative="1" as="geometry" />
+    <mxCell id="76" value="WS Broadcaster&#10;async task · push 2 s&#10;+ event-driven (urgent)&#10;Session pruner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="70">
+      <mxGeometry x="965" y="32" width="175" height="52" as="geometry" />
     </mxCell>
-    <mxCell id="51" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" source="44" target="46" parent="43">
-      <mxGeometry relative="1" as="geometry" />
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <!-- LEGEND                                              -->
+    <!-- ═══════════════════════════════════════════════════ -->
+    <mxCell id="80" value="LEGEND" style="swimlane;startSize=28;fillColor=#ffffff;strokeColor=#666666;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+      <mxGeometry x="1270" y="210" width="200" height="360" as="geometry" />
     </mxCell>
-    <mxCell id="52" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#b85450;endArrow=block;endFill=1;" edge="1" source="44" target="47" parent="43">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="53" value="FASTAPI BACKEND  (uvicorn · 127.0.0.1:8080 · Cloudflare Tunnel → garuda.veeramanikanta.in)" style="swimlane;startSize=28;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="830" width="1060" height="200" as="geometry" />
-    </mxCell>
-    <mxCell id="54" value="Authentication&#10;• POST /api/login (user, PBKDF2)&#10;• POST /api/admin/send-otp&#10;• POST /api/admin/verify-otp (2FA)&#10;• POST /api/forgot/send-otp&#10;• POST /api/forgot/reset" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="53">
-      <mxGeometry x="15" y="35" width="200" height="110" as="geometry" />
-    </mxCell>
-    <mxCell id="55" value="Session Management&#10;• Access token: 15 min&#10;• Refresh token: 7 days&#10;• secrets.token_hex(64)&#10;• Master key (8 h)&#10;• Session invalidation on pw change" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="53">
-      <mxGeometry x="235" y="35" width="190" height="110" as="geometry" />
-    </mxCell>
-    <mxCell id="56" value="REST API&#10;• GET  /api/state&#10;• POST /api/modes&#10;• GET  /api/users&#10;• POST /api/users/add|delete|update&#10;• POST /api/config&#10;• GET  /api/logs/*&#10;• POST /api/presence/devices" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="53">
-      <mxGeometry x="445" y="35" width="185" height="110" as="geometry" />
-    </mxCell>
-    <mxCell id="57" value="Real-time Streaming&#10;• WS  /ws  (state push 2 s)&#10;• GET  /stream  (MJPEG)&#10;• POST /api/webrtc/offer (H.264)&#10;• POST /api/chat/stream (SSE)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="53">
-      <mxGeometry x="650" y="35" width="185" height="110" as="geometry" />
-    </mxCell>
-    <mxCell id="58" value="Security Middleware&#10;• Rate limit: 30 req/60 s/IP&#10;• Brute-force lockout: 5 fail→5 min&#10;• HSTS · CSP · X-Frame-Options&#10;• CORS (known origins only)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="53">
-      <mxGeometry x="855" y="35" width="190" height="110" as="geometry" />
-    </mxCell>
-    <mxCell id="59" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="47" target="57" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="60" value="USER INTERFACES" style="swimlane;startSize=28;fillColor=#ffe6cc;strokeColor=#d6a050;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="1070" width="1060" height="120" as="geometry" />
-    </mxCell>
-    <mxCell id="61" value="Web PWA&#10;(garuda.veeramanikanta.in)&#10;Vanilla JS · MJPEG/WebRTC&#10;Service Worker · Offline cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6a050;fontSize=11;fontStyle=1;dashed=0;" vertex="1" parent="60">
-      <mxGeometry x="15" y="35" width="200" height="65" as="geometry" />
-    </mxCell>
-    <mxCell id="62" value="macOS Native App&#10;(Swift)&#10;Welcome/Login/Dashboard/Alerts&#10;HTTP + WebSocket client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6a050;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="60">
-      <mxGeometry x="240" y="35" width="200" height="65" as="geometry" />
-    </mxCell>
-    <mxCell id="63" value="Narada — Voice Assistant&#10;Google Speech Recognition&#10;→ Groq LLM (llama-3.3-70b)&#10;→ Rule-based fallback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f3ff;strokeColor=#4da3e8;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="60">
-      <mxGeometry x="465" y="35" width="200" height="65" as="geometry" />
-    </mxCell>
-    <mxCell id="64" value="Email Alerts&#10;Gmail SMTP-SSL&#10;Danger / Tamper / Heartbeat&#10;(recipient configurable)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="60">
-      <mxGeometry x="700" y="35" width="190" height="65" as="geometry" />
-    </mxCell>
-    <mxCell id="65" value="Phone Presence&#10;(ARP scan /proc/net/arp)&#10;Known device MAC match&#10;30 s poll · 90 s grace" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="60">
-      <mxGeometry x="915" y="35" width="130" height="65" as="geometry" />
-    </mxCell>
-    <mxCell id="66" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="56" target="61" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="67" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="56" target="62" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="68" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=0;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="56" target="63" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="69" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;strokeColor=#aaaaaa;endArrow=block;endFill=1;" edge="1" source="5" target="63" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="70" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" source="7" target="65" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="71" value="STORAGE LAYER  (1 TB External SSD)" style="swimlane;startSize=28;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="30" y="1230" width="1060" height="130" as="geometry" />
-    </mxCell>
-    <mxCell id="72" value="SQLite&#10;garuda_events.db&#10;• Event queue (offline-resilient)&#10;• synced flag&#10;• Indexed by ts" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="71">
-      <mxGeometry x="15" y="35" width="180" height="75" as="geometry" />
-    </mxCell>
-    <mxCell id="73" value="JSON Files&#10;• users.json  (PBKDF2 hashes)&#10;• config.json  (modes, schedule)&#10;• alert_history.json&#10;• presence_log.json&#10;• master_keys.json" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="71">
-      <mxGeometry x="215" y="35" width="185" height="75" as="geometry" />
-    </mxCell>
-    <mxCell id="74" value="Text Logs  (RAM-buffered → flush 60 s)&#10;• perm_system_log.txt&#10;• perm_detection_log.txt&#10;• perm_voice_log.txt&#10;• danger_sightings.txt&#10;Rotate at 10 MB" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="71">
-      <mxGeometry x="420" y="35" width="200" height="75" as="geometry" />
-    </mxCell>
-    <mxCell id="75" value="Video Clips&#10;• OpenCV mp4 (60 s max)&#10;• AES-256-GCM encrypted&#10;• SFTP upload via paramiko&#10;• Plaintext deleted after upload" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="71">
-      <mxGeometry x="640" y="35" width="185" height="75" as="geometry" />
-    </mxCell>
-    <mxCell id="76" value="Atomic JSON Write&#10;tmpfile → fsync → os.replace&#10;(prevents corruption on&#10;power loss)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=0;dashed=0;" vertex="1" parent="71">
-      <mxGeometry x="845" y="35" width="185" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="77" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" source="37" target="72" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="78" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" source="36" target="72" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="79" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;dashed=1;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" source="33" target="74" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="80" value="BACKGROUND SERVICES&#10;(daemon threads)" style="swimlane;startSize=28;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="1120" y="210" width="200" height="580" as="geometry" />
-    </mxCell>
-    <mxCell id="81" value="Presence Poller&#10;UDP probe → ARP scan&#10;/proc/net/arp&#10;Every 30 s" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="40" width="175" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="82" value="Dead Man's Switch&#10;GET /api/heartbeat&#10;No ping in 180 s&#10;→ TAMPER email" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="110" width="175" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="83" value="Connectivity Monitor&#10;DNS probe 1.1.1.1&#10;Every 30 s&#10;Logs online/offline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="180" width="175" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="84" value="Schedule Monitor&#10;HH:MM mode transitions&#10;Every 30 s&#10;(DND / Night / Idle…)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="250" width="175" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="85" value="Log Flush Thread&#10;RAM buffer → disk&#10;Every 60 s&#10;Reduces SD card wear" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="320" width="175" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="86" value="Session Pruner&#10;Remove expired tokens&#10;Every WS broadcast cycle" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="390" width="175" height="45" as="geometry" />
-    </mxCell>
-    <mxCell id="87" value="WS Broadcaster&#10;async task&#10;Push every 2 s +&#10;event-driven (urgent)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="80">
-      <mxGeometry x="10" y="450" width="175" height="55" as="geometry" />
-    </mxCell>
-    <mxCell id="88" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#6c8ebf;endArrow=block;endFill=1;" edge="1" source="81" target="65" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="89" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=1;strokeColor=#666666;endArrow=block;endFill=1;" edge="1" source="85" target="74" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="90" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;dashed=0;strokeColor=#9673a6;endArrow=block;endFill=1;" edge="1" source="87" target="57" parent="1">
-      <mxGeometry relative="1" as="geometry" />
-    </mxCell>
-    <mxCell id="91" value="LEGEND" style="swimlane;startSize=28;fillColor=#ffffff;strokeColor=#666666;fontStyle=1;fontSize=12;whiteSpace=wrap;html=1;" vertex="1" parent="1">
-      <mxGeometry x="1120" y="830" width="200" height="430" as="geometry" />
-    </mxCell>
-    <mxCell id="92" value="Hardware / Input" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="81" value="Hardware / Input" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="35" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="93" value="GStreamer Pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="82" value="Cascade / NPU Inference" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="75" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="94" value="Detection Logic" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="83" value="Decision / Queue" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="115" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="95" value="Alert Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="84" value="Alert Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="155" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="96" value="Security / Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="85" value="Security / Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fde9d9;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="195" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="97" value="API / Streaming" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="86" value="API / Streaming" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="235" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="98" value="User Interfaces" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6a050;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="87" value="User Interfaces" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6a050;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="275" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="99" value="Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
+    <mxCell id="88" value="Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=11;" vertex="1" parent="80">
       <mxGeometry x="10" y="315" width="175" height="30" as="geometry" />
     </mxCell>
-    <mxCell id="100" value="Background Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;dashed=0;" vertex="1" parent="91">
-      <mxGeometry x="10" y="355" width="175" height="30" as="geometry" />
-    </mxCell>
+
   </root>
 </mxGraphModel>
