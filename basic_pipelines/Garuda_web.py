@@ -3424,10 +3424,75 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         _ws_clients.discard(websocket)
 
 ##############################################################################
+# CAMERA AUTO-DETECT
+##############################################################################
+def _resolve_camera(input_src: str) -> str:
+    """
+    Resolve the camera source for GStreamer.
+    - If input is not a /dev/videoN device, return as-is (file or 'rpi').
+    - If it IS a /dev/videoN, check via v4l2-ctl whether it is a Pi-internal
+      device (rp1-cfe / pispbe). If so, find a real USB camera or fall back
+      to 'rpi' (libcamera via GStreamer, which works here unlike OpenCV).
+    """
+    if not input_src.startswith("/dev/video"):
+        return input_src
+
+    try:
+        result = subprocess.run(
+            ["v4l2-ctl", "--list-devices"],
+            capture_output=True, text=True, timeout=3
+        )
+        # Build map: device_path → category_name
+        dev_category: dict = {}
+        current = ""
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            if stripped and not line.startswith("\t"):
+                current = stripped
+            elif stripped.startswith("/dev/video"):
+                dev_category[stripped] = current
+
+        def _is_pi_internal(dev: str) -> bool:
+            return "platform:" in dev_category.get(dev, "")
+
+        if _is_pi_internal(input_src):
+            # Look for a real USB camera (no "platform:" in name)
+            for dev, cat in dev_category.items():
+                if "platform:" not in cat:
+                    log_system_update(f"[CAMERA] {input_src} is Pi-internal → using USB: {dev}")
+                    return dev
+            # No USB camera found; libcamera (GStreamer) works for Pi camera
+            log_system_update("[CAMERA] No USB camera found → using Pi camera (rpi/libcamera)")
+            return "rpi"
+    except Exception as e:
+        log_system_update(f"[CAMERA] v4l2-ctl probe failed: {e}")
+
+    return input_src  # unable to determine — use as-is
+
+
+##############################################################################
 # MAIN
 ##############################################################################
 def run_web_app(args):
     global app_gst
+
+    # ── Resolve camera input ───────────────────────────────────────────────
+    args.input = _resolve_camera(args.input)
+    log_system_update(f"[CAMERA] Input resolved to: {args.input}")
+
+    # ── Auto-select best_v5.hef + best_labels.json when no HEF specified ──
+    _base = Path(__file__).parent.parent / "resources"
+    _best_hef    = _base / "best_v5.hef"
+    _best_labels = _base / "best_labels.json"
+    if args.hef_path is None and _best_hef.exists():
+        args.hef_path = str(_best_hef)
+        if not hasattr(args, "labels_json") or args.labels_json is None:
+            if _best_labels.exists():
+                args.labels_json = str(_best_labels)
+        log_system_update(
+            f"[MODEL] Auto-selected {_best_hef.name}"
+            + (f" + {_best_labels.name}" if args.labels_json else "")
+        )
 
     # ── Start uvicorn on the MAIN thread via its own event loop ──────────────
     # The server must outlive any pipeline restarts, so we spin the GStreamer

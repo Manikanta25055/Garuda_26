@@ -45,6 +45,15 @@ import cv2
 import numpy as np
 
 try:
+    import gi
+    gi.require_version("Gst", "1.0")
+    from gi.repository import Gst as _Gst
+    _Gst.init(None)
+    _GST_OK = True
+except Exception:
+    _GST_OK = False
+
+try:
     from hailo_platform import (
         VDevice,
         HailoStreamInterface,
@@ -317,6 +326,7 @@ class DepthNetwork:
 
 # ─── Thread workers ───────────────────────────────────────────────────────────
 def camera_thread(cap, frame_queue, stop, loop=False):
+    """OpenCV-based capture thread for USB cameras and video files."""
     pin_thread(0)
     interval = 1.0 / TARGET_FPS
     while not stop.is_set():
@@ -334,13 +344,62 @@ def camera_thread(cap, frame_queue, stop, loop=False):
             frame_queue.put_nowait(frame)
         except queue.Full:
             _metrics.record_drop()
-            # Test 5 observable: prints immediately on every drop so stress
-            # behaviour is visible in real time; does not stall the camera loop.
             print(f"[STRESS    ] frame DROPPED (queue full)  total_drops={_metrics.queue_drops}",
                   flush=True)
         sleep_for = interval - (time.monotonic() - t0)
         if sleep_for > 0:
             time.sleep(sleep_for)
+
+
+def gst_camera_thread(frame_queue, stop):
+    """
+    GStreamer-based capture for Pi camera (libcamerasrc / libcamera).
+    Used when OpenCV is built without GStreamer support.
+    Requires gi.repository GStreamer (always available on RPi OS).
+    """
+    pin_thread(0)
+    if not _GST_OK:
+        log.error("GStreamer Python bindings unavailable — cannot capture Pi camera.")
+        stop.set()
+        return
+
+    pipeline_str = (
+        f"libcamerasrc ! "
+        f"video/x-raw,width=1280,height=720,framerate={TARGET_FPS}/1 ! "
+        "videoconvert ! video/x-raw,format=BGR ! "
+        "appsink name=sink emit-signals=false max-buffers=1 drop=true sync=false"
+    )
+    pipeline = _Gst.parse_launch(pipeline_str)
+    sink = pipeline.get_by_name("sink")
+    pipeline.set_state(_Gst.State.PLAYING)
+    log.info("GStreamer Pi camera pipeline started.")
+
+    interval = 1.0 / TARGET_FPS
+    while not stop.is_set():
+        t0 = time.monotonic()
+        sample = sink.emit("pull-sample")
+        if sample is None:
+            time.sleep(0.01)
+            continue
+        buf = sample.get_buffer()
+        caps_info = sample.get_caps().get_structure(0)
+        w = caps_info.get_value("width")
+        h = caps_info.get_value("height")
+        ok, mapinfo = buf.map(_Gst.MapFlags.READ)
+        if ok:
+            frame = np.frombuffer(bytes(mapinfo.data), dtype=np.uint8).reshape(h, w, 3).copy()
+            buf.unmap(mapinfo)
+            _metrics.record_frame()
+            try:
+                frame_queue.put_nowait(frame)
+            except queue.Full:
+                _metrics.record_drop()
+        sleep_for = interval - (time.monotonic() - t0)
+        if sleep_for > 0:
+            time.sleep(sleep_for)
+
+    pipeline.set_state(_Gst.State.NULL)
+    log.info("GStreamer Pi camera pipeline stopped.")
 
 
 def inference_thread(frame_queue, result_queue, yolo, classifier, depth_net, stop):
@@ -522,6 +581,32 @@ def stop():
         _pipeline_stop.set()
 
 
+def _auto_detect_camera() -> str:
+    """
+    Find the best available camera source:
+    1. Probe /dev/video0..19 for a working V4L2 USB camera (OpenCV read test).
+    2. If none found, return 'rpi' to use Pi camera via GStreamer libcamerasrc.
+    OpenCV is built without GStreamer on this system, so Pi camera (/dev/video0-7
+    via rp1-cfe) requires the 'rpi' path which uses gi.repository GStreamer.
+    """
+    for i in range(20):
+        dev = f"/dev/video{i}"
+        try:
+            cap = cv2.VideoCapture(dev)
+            if cap.isOpened():
+                ret, _ = cap.read()
+                cap.release()
+                if ret:
+                    log.info(f"Auto-detected USB camera: {dev}")
+                    return dev
+            else:
+                cap.release()
+        except Exception:
+            pass
+    log.info("No USB camera found — using Pi camera via GStreamer libcamerasrc (rpi)")
+    return "rpi"
+
+
 def _pipeline_entry(input_src, hef_dir, loop, stop):
     """
     Full VDevice lifecycle for one pipeline session.
@@ -530,7 +615,12 @@ def _pipeline_entry(input_src, hef_dir, loop, stop):
     """
     from pathlib import Path as _P
     _resources = _P(hef_dir) if hef_dir else _P(__file__).parent.parent / "resources"
-    _input     = input_src or "/dev/video0"
+
+    # Resolve camera input
+    if input_src in (None, "auto"):
+        _input = _auto_detect_camera()
+    else:
+        _input = input_src
 
     yolo_path  = _resources / HEF_NAMES["yolo"]
     cls_path   = _resources / HEF_NAMES["classifier"]
@@ -541,22 +631,20 @@ def _pipeline_entry(input_src, hef_dir, loop, stop):
             log.error(f"HEF not found: {p}")
             return
 
-    if _input == "rpi":
-        gst_pipe = (
-            f"libcamerasrc ! video/x-raw,width=1280,height=720,"
-            f"framerate={TARGET_FPS}/1,format=BGR ! appsink"
-        )
-        cap = cv2.VideoCapture(gst_pipe, cv2.CAP_GSTREAMER)
-    else:
+    use_gst = (_input == "rpi")  # GStreamer path for Pi camera
+
+    if not use_gst:
         cap = cv2.VideoCapture(_input)
         if str(_input).startswith("/dev/"):
             cap.set(cv2.CAP_PROP_FRAME_WIDTH,  1280)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
             cap.set(cv2.CAP_PROP_FPS,          TARGET_FPS)
-
-    if not cap.isOpened():
-        log.error(f"Cannot open input: {_input}")
-        return
+        if not cap.isOpened():
+            log.error(f"Cannot open input: {_input}")
+            return
+    else:
+        cap = None
+        log.info("Using Pi camera via GStreamer libcamerasrc.")
 
     with VDevice() as vdevice:
         def _setup(hef_obj):
@@ -578,9 +666,15 @@ def _pipeline_entry(input_src, hef_dir, loop, stop):
         frame_q  = queue.Queue(maxsize=4)
         result_q = queue.Queue(maxsize=16)
 
+        if use_gst:
+            cam_t = threading.Thread(target=gst_camera_thread,
+                                     args=(frame_q, stop), name="cam", daemon=True)
+        else:
+            cam_t = threading.Thread(target=camera_thread,
+                                     args=(cap, frame_q, stop, loop), name="cam", daemon=True)
+
         threads = [
-            threading.Thread(target=camera_thread,
-                             args=(cap, frame_q, stop, loop), name="cam",     daemon=True),
+            cam_t,
             threading.Thread(target=inference_thread,
                              args=(frame_q, result_q, yolo, classifier, depth_net, stop),
                              name="infer",   daemon=True),
@@ -596,7 +690,8 @@ def _pipeline_entry(input_src, hef_dir, loop, stop):
         for t in threads:
             t.join(timeout=5)
 
-    cap.release()
+    if cap is not None:
+        cap.release()
     log.info("Garuda Cascade pipeline stopped.")
 
 
@@ -606,8 +701,8 @@ def main():
     parser = argparse.ArgumentParser(description="Garuda Cascade — 3-model NPU pipeline")
     parser.add_argument("--hef-dir", default=str(SCRIPT_DIR.parent / "resources"),
                         help="Directory containing the three HEF files")
-    parser.add_argument("--input",   default=str(SCRIPT_DIR.parent / "resources/detection0.mp4"),
-                        help="Camera device (/dev/videoN), 'rpi' for libcamera, or video file path")
+    parser.add_argument("--input",   default="auto",
+                        help="Camera device (/dev/videoN), 'auto' (probe USB then fall back to test video), or video file path")
     parser.add_argument("--loop",    action="store_true", help="Loop video file input")
     parser.add_argument("--conf",    type=float, default=PERSON_CONF_THRESH,
                         help=f"Person detection confidence threshold (default {PERSON_CONF_THRESH})")
