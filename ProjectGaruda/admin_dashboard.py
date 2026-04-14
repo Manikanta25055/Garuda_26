@@ -1,6 +1,10 @@
 # admin_dashboard.py
+import json
 import tkinter as tk
+from pathlib import Path
 from tkinter import ttk, messagebox, scrolledtext
+
+_CASCADE_CONFIG = Path(__file__).parent.parent / "basic_pipelines" / "cascade_config.json"
 
 class AdminDashboard(tk.Frame):
     def __init__(self, master):
@@ -162,5 +166,74 @@ class AdminDashboard(tk.Frame):
         self.entry_cooldown.insert(0, "60")
         ttk.Button(email_frame, text="Save Email Settings", command=lambda: messagebox.showinfo("Info", "Email settings updated")).grid(row=2, column=0, columnspan=2, pady=5)
         ttk.Button(frame, text="Configure Automated Night Report", command=lambda: messagebox.showinfo("Info", "Night report settings updated")).pack(pady=5)
+
+        # ── Cascade depth anti-spoof setting ──────────────────────────────────
+        ttk.Separator(frame, orient="horizontal").pack(fill="x", padx=10, pady=12)
+        ttk.Label(frame, text="Cascade — Depth Anti-Spoof (MiDaS)",
+                  font=("Helvetica", 12, "bold")).pack(anchor="w", padx=10)
+        ttk.Label(frame,
+                  text="Controls when the MiDaS depth model runs to detect flat-screen spoofs.",
+                  foreground="gray").pack(anchor="w", padx=10)
+
+        self._depth_mode_var = tk.StringVar(value=self._read_depth_mode())
+        rb_frame = ttk.Frame(frame)
+        rb_frame.pack(anchor="w", padx=20, pady=6)
+        for label, value in [
+            ("Night only  —  20:00 to 06:00  (recommended)", "night_only"),
+            ("Always on   —  runs MiDaS on every frame",     "always"),
+            ("Off         —  lightweight RGB proxy only",     "off"),
+        ]:
+            ttk.Radiobutton(rb_frame, text=label,
+                            variable=self._depth_mode_var, value=value,
+                            command=self._on_depth_mode_change).pack(anchor="w", pady=2)
+
+        self._depth_warn = ttk.Label(
+            frame,
+            text=(
+                "Warning: 'Always on' runs MiDaS depth inference on every frame. "
+                "This reduces pipeline FPS from ~16 FPS to ~2.6 FPS in typical scenes. "
+                "Enable this only if you specifically need depth anti-spoof outside night hours."
+            ),
+            foreground="red", wraplength=520,
+        )
+        # shown/hidden dynamically
+        if self._depth_mode_var.get() == "always":
+            self._depth_warn.pack(padx=12, pady=4)
+
+        ttk.Button(frame, text="Save Depth Setting",
+                   command=self._save_depth_mode).pack(pady=6)
+
         return frame
+
+    def _read_depth_mode(self) -> str:
+        try:
+            return json.loads(_CASCADE_CONFIG.read_text()).get("depth_mode", "night_only")
+        except Exception:
+            return "night_only"
+
+    def _on_depth_mode_change(self):
+        if self._depth_mode_var.get() == "always":
+            self._depth_warn.pack(padx=12, pady=4)
+        else:
+            self._depth_warn.pack_forget()
+
+    def _save_depth_mode(self):
+        mode = self._depth_mode_var.get()
+        try:
+            _CASCADE_CONFIG.write_text(json.dumps({"depth_mode": mode}, indent=2))
+            labels = {
+                "night_only": "Night only (20:00–06:00)",
+                "always":     "Always on",
+                "off":        "Off (RGB proxy only)",
+            }
+            messagebox.showinfo(
+                "Saved",
+                f"Depth anti-spoof set to: {labels[mode]}\n"
+                "The cascade pipeline will pick up the change within 30 frames.",
+            )
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not save setting:\n{e}")
+
+    def _placeholder(self):
+        pass
 

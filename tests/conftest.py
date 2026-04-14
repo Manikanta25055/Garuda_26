@@ -244,6 +244,9 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw, '_app_start_time', time.time())
     monkeypatch.setattr(gw, '_RATE_WINDOW', 3600)
     monkeypatch.setattr(gw, '_RATE_LIMIT', 30)
+    # ── New feature state resets ──
+    monkeypatch.setattr(gw, '_login_failures', {})
+    monkeypatch.setattr(gw, '_refresh_tokens', {})
 
     # ── Mock SMTP so no real emails are sent ──
     smtp_mock = MagicMock()
