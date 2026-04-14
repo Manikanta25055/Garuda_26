@@ -1120,3 +1120,4 @@
 [2026-04-14 21:59:08] [MODEL] Auto-selected best_v5.hef + best_labels.json
 [2026-04-14 21:59:08] Pipeline started.
 [2026-04-14 22:02:08] [TAMPER] No heartbeat in 180s — possible system tampering!
+[2026-04-14 22:10:16] Master key login.
