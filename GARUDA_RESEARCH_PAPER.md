@@ -210,41 +210,198 @@ Empirically validated: real human scenes produced variance 0.022–0.10; flat-sc
 
 ## IV. Experimental Validation
 
-### IV.1 Dataset Creation
+### IV.1 Dataset Creation and Preprocessing
 
-The system was trained and evaluated on a progressively expanded multi-source dataset targeting the specific classes required for domestic security monitoring: Hammer, Knife, Person, scissors.
+#### IV.1.1 Motivation and Dataset Evolution
 
-#### Dataset Evolution
+The system requires detection of four classes absent from standard COCO-trained models: Hammer, Knife, Person (in a security context), and scissors. Training data was assembled through five progressive versions, each correcting specific deficiencies identified in earlier evaluations.
 
-| Version | Images | Instances | Sources |
-|---------|--------|-----------|---------|
-| **v1** | 512 | ~1,200 | Roboflow Knives & Scissors Training v2 |
-| **v2** | 1,659 | ~4,000 | v1 + OpenImages v7 (Hammer, Knife, Person, Scissors extracts) |
-| **v5** | **6,226** | **~17,256** | v2 + COCO 2017 persons + OpenImages extra person images |
-| v6 | 8,129 | ~22,782 | v5 + 2,000 additional OpenImages Person images |
+The original dataset (v1, 512 images, Roboflow Knives & Scissors Training v2, CC BY 4.0) achieved mAP50 = 0.897 on its own validation split but only 0.465 on the held-out test set — a 43-point overfitting gap driven by limited background diversity and severe knife/hammer underrepresentation. Version 2 introduced 1,219 OpenImages v7 images to address this. Version 5, the deployed model, further expanded the corpus with targeted per-class OpenImages extra downloads and is the basis for all reported results.
 
-Each dataset version covered the following scenario types:
+| Version | Train Images | Total Images | Ann. Instances | Test mAP50 | Primary Change |
+|---------|-------------|--------------|----------------|------------|----------------|
+| v1 | 359 | 512 | ~1,200 | 0.465 | Roboflow Knives & Scissors v2 only |
+| v2 | 1,383 | 1,730 | ~4,000 | 0.754 | + OpenImages v7 (1,219 imgs) |
+| v5 | **4,982** | **6,226** | **16,335** | **0.847** | + OI extra per-class (2,276 imgs added) |
 
-| Scenario | Covered? |
-|----------|----------|
-| Indoor scenes (kitchen, living room, bedroom) | Yes |
-| Outdoor scenes (OpenImages diverse backgrounds) | Yes |
-| Daytime natural lighting | Yes |
-| Night / low-light conditions | Partial (augmentation: brightness ±20%) |
-| Human presence — single person | Yes |
-| Human presence — multiple persons | Yes (copy-paste augmentation at 0.3–0.5) |
-| Dangerous object — Knife | Yes (500+ OpenImages images) |
-| Dangerous object — Hammer | Yes (53+ OpenImages images) |
-| Dangerous object — Scissors | Yes (Roboflow + OpenImages) |
-| Object with person (co-occurrence) | Yes (MobileNetV2 crop dataset) |
-| Object without person | Yes |
+#### IV.1.2 Source Datasets
 
-**MobileNetV2 classifier dataset:** Person bounding box crops from dataset_v5, labelled by co-occurrence. 10× augmentation on Weapon crops to correct 62:1 class imbalance. Final: 2,860 training crops (1,200 Safe + 1,660 Weapon), 224 validation crops.
+**Source A — Roboflow Knives & Scissors Training v2**
 
-**Test sets** were held out before any training (seed=42, never used during training or validation):
-- YOLO v5 test set: 622 images, 1,656 instances
-- YOLO v1 test set: 51 images, ~120 instances
-- YOLO v2 test set: 174 images, 351 instances
+| Property | Value |
+|----------|-------|
+| License | CC BY 4.0 |
+| Format | YOLO v5+ normalised `[class cx cy w h]` |
+| Classes | Hammer (0), Knife (1), Person (2), scissors (3) |
+| Train / Val / Test | 359 / 102 / 51 images |
+| Image type | JPEG, mostly 640×640 |
+
+All Roboflow splits were pooled and re-split with the OpenImages data to produce a statistically valid 80/10/10 partition.
+
+**Source B — OpenImages v7 (OIDv4 Toolkit, FiftyOne)**
+
+| Property | Value |
+|----------|-------|
+| License | CC BY 4.0 |
+| Annotation quality | Google-verified human annotations, IoB ≥ 0.5 |
+| Format | YOLO Darknet (normalised per-class subfolders) |
+| hammer / knife / person / scissors | 53 / 500 / 500 / 166 images (v2 batch); 119 / 600 / 2,485 / 292 total in v5 |
+| Image size | Varies — real-world photos, up to 4608×2592, non-square |
+
+OpenImages photographs span diverse real-world backgrounds, lighting conditions, and aspect ratios — the diversity v1 lacked.
+
+#### IV.1.3 Preprocessing Pipeline
+
+The preprocessing pipeline addresses three hardware constraints simultaneously: the Hailo-8L NPU requires fixed 640×640 float32 HWC input; the IMX708 camera delivers 16:9 frames; and YOLO label coordinates must remain geometrically valid after resize.
+
+A naive `cv2.resize(img, (640, 640))` on a 4608×2592 image compresses horizontally 7.2× and vertically 4.0×, invalidating bounding box aspect ratios. Letterbox resize preserves aspect ratio:
+
+**Step 1 — Letterbox resize:**
+
+```python
+def letterbox(img, size=640):
+    h, w = img.shape[:2]
+    scale = size / max(h, w)
+    new_w, new_h = int(w * scale), int(h * scale)
+    img_r = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+    pad_w = (size - new_w) // 2
+    pad_h = (size - new_h) // 2
+    img_padded = cv2.copyMakeBorder(
+        img_r, pad_h, size-new_h-pad_h, pad_w, size-new_w-pad_w,
+        cv2.BORDER_CONSTANT, value=(114, 114, 114))
+    return img_padded, scale, (pad_w, pad_h)
+```
+
+Grey fill (114, 114, 114) matches YOLOv8's inference-time letterbox fill, so the model learns to suppress false detections near padding borders.
+
+**Step 2 — Label coordinate adjustment:**
+
+After letterboxing, YOLO normalised coordinates must be remapped to the padded canvas:
+
+```
+cx_new = (cx_px × scale + pad_w) / 640
+cy_new = (cy_px × scale + pad_h) / 640
+bw_new = (bw_px × scale) / 640
+bh_new = (bh_px × scale) / 640
+```
+
+All coordinates are clamped to [0.001, 0.999] to avoid boundary anomalies in YOLOv8's loss computation.
+
+**Step 3 — Integrity and deduplication:**
+
+| Check | Result (v5) |
+|-------|-------------|
+| Missing label files | 0 |
+| Missing image files | 0 |
+| Empty label files | 0 |
+| Corrupt images | 0 |
+| SHA-256 train duplicates | 0 |
+| Images skipped (v2 merge) | 1 (missing annotation) |
+
+**Step 4 — Stratified re-split (seed=42):** Class-primary stratification, 80/10/10. Fixed seed ensures all experiment comparisons are valid.
+
+**Step 5 — Filename collision prevention:** Files prefixed by source (`roboflow_*`, `openimages_knife_*`, `v4_train_*`, `oi_person_*`, etc.) to prevent namespace collisions in the merged directory.
+
+**Augmentation (applied at training time by YOLOv8 / Albumentations):**
+
+| Parameter | Value |
+|-----------|-------|
+| Mosaic | 1.0 (4-image composition) |
+| Flip LR | p = 0.5 |
+| HSV hue | h = 0.015 |
+| HSV saturation | s = 0.7 |
+| HSV value | v = 0.4 |
+| Scale | 0.5 |
+| Translate | 0.1 |
+| MixUp | 0.0 (disabled) |
+| Degrees / Shear | 0 |
+
+#### IV.1.4 Final Dataset Statistics (v5 — Deployed)
+
+**Split composition:**
+
+| Split | Images | Labels | Multi-class images |
+|-------|--------|--------|--------------------|
+| train | 4,982 | 4,982 | 155 (3.1%) |
+| val | 622 | 622 | 19 (3.1%) |
+| test | 622 | 622 | 19 (3.1%) |
+| **Total** | **6,226** | **6,226** | |
+
+**Source breakdown (v5 train split):**
+
+| Source | Train | Val | Test | Total |
+|--------|-------|-----|------|-------|
+| merged\_dataset/train | 1,913 | 244 | 226 | 2,383 |
+| merged\_dataset/val | 141 | 18 | 14 | 173 |
+| merged\_dataset/test | 133 | 23 | 18 | 174 |
+| openimages\_extra/hammer | 93 | 12 | 14 | 119 |
+| openimages\_extra/knife | 495 | 49 | 56 | 600 |
+| openimages\_extra/person | 1,981 | 245 | 259 | 2,485 |
+| openimages\_extra/scissors | 226 | 31 | 35 | 292 |
+
+**Annotation instance counts per class per split:**
+
+| Class | Train | Val | Test | Total |
+|-------|-------|-----|------|-------|
+| 0 Hammer | 254 | 35 | 46 | 335 |
+| 1 Knife | 1,381 | 162 | 159 | 1,702 |
+| 2 Person | 10,460 | 1,273 | 1,324 | 13,057 |
+| 3 scissors | 981 | 133 | 127 | 1,241 |
+| **Total** | **13,076** | **1,603** | **1,656** | **16,335** |
+
+**Class frequency (train split):** Person 80.0% · Knife 10.6% · scissors 7.5% · Hammer 1.9%
+
+**Annotations per image (train split):** min=1 · max=113 · mean=2.62 · std=3.67 · median=1.0 · p95=9.0
+
+#### IV.1.5 Bounding Box Statistics (Train Split)
+
+| Class | BBox W (mean±std) | BBox H (mean±std) | Area (median) | Aspect ratio (median) | Small / Med / Large |
+|-------|-------------------|-------------------|---------------|-----------------------|---------------------|
+| Hammer | 0.385±0.252 | 0.353±0.258 | 0.086 | 1.221 | 2.4% / 36.6% / 61.0% |
+| Knife | 0.583±0.304 | 0.436±0.279 | 0.181 | 1.437 | 0.5% / 18.8% / 80.7% |
+| Person | 0.191±0.207 | 0.332±0.249 | 0.025 | 0.472 | 5.2% / 57.4% / 37.4% |
+| scissors | 0.392±0.239 | 0.321±0.231 | 0.096 | 1.457 | 2.5% / 34.9% / 62.6% |
+
+Size thresholds: small < 0.0032 · medium 0.0032–0.0512 · large ≥ 0.0512 (normalised area, COCO-style).
+
+The Person class has high small-object fraction (5.2%) due to partial annotations (torso/face crops) and crowd scenes. This explains the lower Person recall (0.609) compared to weapon classes in the final model.
+
+#### IV.1.6 Class Co-occurrence Matrix (Train Split — Image Level)
+
+| | Hammer | Knife | Person | scissors |
+|-|--------|-------|--------|----------|
+| **Hammer** | 202 | 36 | 61 | 44 |
+| **Knife** | 36 | 1,029 | 82 | 91 |
+| **Person** | 61 | 82 | 3,318 | 72 |
+| **scissors** | 44 | 91 | 72 | 689 |
+
+Values represent number of training images containing both row and column class simultaneously. Co-occurrence is intentional — the cascade pipeline (MobileNetV2 Inspector) specifically targets person+weapon co-occurrence frames.
+
+#### IV.1.7 Image Properties (Train Split)
+
+| Property | Value |
+|----------|-------|
+| Format | JPEG (100%) |
+| Width: min / mean / max | 436 / 826.1 / 4608 px |
+| Height: min / mean / max | 303 / 722.4 / 3456 px |
+| Unique resolutions | 439 |
+| Most common: 640×640 | 2,187 images (43.9%) |
+| File size: median / p95 | 148.8 KB / 621.2 KB |
+| Total dataset size | 1.32 GB |
+
+#### IV.1.8 MobileNetV2 Classifier Dataset
+
+Person bounding box crops were extracted from dataset\_v5 and labelled by co-occurrence: Safe (no weapon in the same image) vs. Weapon (weapon annotation present). The raw crop distribution was 62:1 Safe:Weapon. A 10× augmentation strategy (random horizontal flip, brightness ±20%, slight rotation ±10°) was applied exclusively to Weapon crops to correct this imbalance.
+
+| Split | Safe crops | Weapon crops | Total |
+|-------|-----------|--------------|-------|
+| Train | 1,200 | 1,660 | 2,860 |
+| Val | 200 | 24 | 224 |
+
+**Test sets held out before any training (seed=42):**
+- YOLOv8s v5 test set: 622 images, 1,656 instances
+- YOLOv8s v2 test set: 174 images, 351 instances
+- YOLOv8s v1 test set: 51 images, ~120 instances
 
 ### IV.2 Performance Metrics
 
