@@ -18,7 +18,7 @@ class MainApplication(tk.Tk):
         self.current_frame = None
         self.show_login_page()
         if _HAS_PIPELINE:
-            _garuda_pipeline.start_pipeline()  # Start the pipeline
+            _garuda_pipeline.start_pipeline()  # auto-detect camera or fall back to test video
 
     def show_login_page(self):
         if self.current_frame:

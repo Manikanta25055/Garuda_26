@@ -122,12 +122,43 @@ def _send_email(label: str, conf: float):
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+def _resolve_input(input_src: str | None) -> tuple[str, bool]:
+    """
+    Return (path, loop) for the cascade pipeline input.
+    Tries USB V4L2 cameras first (/dev/video0..9); falls back to the
+    bundled test video (looped) when no camera opens.
+    Pi camera (IMX708/rp1-cfe) requires libcamera and is not directly
+    readable by OpenCV V4L2 — a USB webcam or video file is needed.
+    """
+    import cv2 as _cv2
+    if input_src and input_src not in ("rpi", "auto"):
+        return input_src, False   # explicit path — trust the caller
+
+    for dev in [f"/dev/video{i}" for i in range(10)]:
+        try:
+            cap = _cv2.VideoCapture(dev)
+            ok = cap.isOpened()
+            cap.release()
+            if ok:
+                return dev, False
+        except Exception:
+            pass
+
+    # Fallback: bundled test video, looped — pipeline still runs, alerts still fire
+    video = str(Path(__file__).parent.parent / "resources" / "detection0.mp4")
+    common.log_system_update(
+        "[CASCADE] No USB camera found — running on test video (looped). "
+        "Connect a USB webcam for live monitoring."
+    )
+    return video, True
+
+
 def start_pipeline(input_src=None, hef_dir=None, conf=0.40):
     """
     Start the Garuda Cascade pipeline in a background thread.
     Called automatically by main_app.py on startup.
 
-    input_src — camera device or video file; defaults to /dev/video0
+    input_src — camera device, video file, or None (auto-detect)
     hef_dir   — directory with the three HEF files; defaults to resources/
     conf      — YOLO person confidence threshold
     """
@@ -135,15 +166,16 @@ def start_pipeline(input_src=None, hef_dir=None, conf=0.40):
         common.log_system_update("[CASCADE] Pipeline unavailable (hailo_platform not found).")
         return
 
-    _hef_dir = hef_dir or str(Path(__file__).parent.parent / "resources")
-    _src     = input_src or "/dev/video0"
+    _hef_dir    = hef_dir or str(Path(__file__).parent.parent / "resources")
+    _src, _loop = _resolve_input(input_src)
 
-    common.log_system_update(f"[CASCADE] Starting pipeline — input={_src}")
+    common.log_system_update(f"[CASCADE] Starting pipeline — input={_src}  loop={_loop}")
     _cascade.start(
         on_event  = _on_event,
         input_src = _src,
         hef_dir   = _hef_dir,
         conf      = conf,
+        loop      = _loop,
     )
 
 
