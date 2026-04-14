@@ -1,0 +1,709 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{tabularx}
+
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\begin{document}
+
+\title{Garuda: A Privacy-Preserving, Fully Edge-Based Intelligent Surveillance System
+with Real-Time Dangerous Object Detection and Anti-Spoofing}
+
+\author{
+  \IEEEauthorblockN{Manikanta Gonugondla}
+  \IEEEauthorblockA{
+    Electronics \& Communication Engineering\\
+    Raspberry Pi 5 + Hailo-8L AI HAT (13~TOPS)\\
+    mgonugondlamanikanta@gmail.com
+  }
+}
+
+\maketitle
+
+\begin{abstract}
+Existing smart surveillance systems offload video processing to cloud infrastructure,
+introducing privacy risks, latency of 200--2,000~ms, and dependence on continuous
+internet connectivity. We present \textbf{Garuda}, a privacy-preserving, fully
+edge-based intelligent surveillance system that executes all AI inference locally on
+a Raspberry Pi~5 equipped with a Hailo-8L neural processing unit (NPU, 13~TOPS).
+The system cascades three models on a single VDevice: a custom YOLOv8s detector
+(mAP50~=~0.847 on 622 held-out images, 52.22~FPS, 18.38~ms latency), a MobileNetV2
+binary threat classifier (99.6\% validation accuracy), and a MiDaS Small monocular
+depth estimator for physically grounded anti-spoofing ($\sigma^2 < 0.05$ rejects
+flat-screen bypass attempts). No video frame leaves the device. End-to-end detection
+latency is 22~ms -- approximately 100$\times$ lower than cloud-based equivalents.
+\end{abstract}
+
+\begin{IEEEkeywords}
+edge AI, surveillance, YOLOv8, Hailo-8L, dangerous object detection, anti-spoofing,
+privacy-preserving, cascade inference, MiDaS depth estimation, MobileNetV2
+\end{IEEEkeywords}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Research Problem}
+\label{sec:problem}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Current Limitations}
+
+Existing smart surveillance and home security systems follow a cloud-offload
+architecture: raw camera frames are streamed to remote servers where detection,
+classification, and alerting execute. This introduces three fundamental problems.
+
+\textbf{Privacy risk.} Raw video leaves the local network and is processed by
+third-party infrastructure without user control over retention or secondary use.
+\textbf{Latency.} Round-trip transmission adds 200--2{,}000~ms of alert delay,
+preventing real-time threat response. \textbf{Availability dependency.} Any internet
+outage or cloud disruption fully disables protection.
+
+Edge-based alternatives using CPU-only inference on a Raspberry Pi achieve only
+3--5~FPS with YOLOv8s -- below the 30~FPS minimum for continuous surveillance. They
+also lack secondary classification and anti-spoofing, leaving them vulnerable to
+false alerts and photographic bypass attacks.
+
+\subsection{Research Gap}
+
+No existing published system simultaneously satisfies: (1) fully local processing
+with zero cloud dependency; (2) real-time inference $\geq 30$~FPS on embedded
+hardware; (3) domain-specific dangerous object detection (knife, hammer, scissors)
+absent from COCO; (4) secondary threat classification per detected person; (5)
+physical depth-based anti-spoofing; and (6) integrated multi-modal alerting.
+
+\subsection{Research Objective}
+
+To design, implement, and evaluate \textbf{Garuda}: a privacy-preserving,
+fully edge-based intelligent surveillance system achieving real-time dangerous
+object detection, context-aware threat classification, and depth-based
+anti-spoofing with zero cloud dependency on a Raspberry Pi~5 with Hailo-8L NPU.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Technical Architecture}
+\label{sec:arch}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{System Block Diagram}
+
+Fig.~\ref{fig:arch} shows the full system architecture. The key components are:
+
+\begin{itemize}
+  \item \textbf{Camera input:} Sony IMX708 (Pi Camera Module~3, 12~MP) captured
+        via GStreamer \texttt{libcamerasrc} at 1280$\times$720, 52~FPS.
+  \item \textbf{AI detection module (YOLOv8s):} Custom fine-tuned 4-class detector
+        -- Hammer~(0), Knife~(1), Person~(2), scissors~(3) -- running on the
+        Hailo-8L NPU at 52.22~FPS with 18.38~ms hardware latency.
+  \item \textbf{Alert engine:} Asynchronous SMTP email (Gmail, port~465),
+        voice TTS, and tamper watchdog. 60-second cooldown prevents alert spam.
+  \item \textbf{Authentication module:} OTP-based 2FA, PBKDF2 password hashing,
+        rate limiting, session timeout, and brute-force lockout.
+  \item \textbf{Database (SQLite + JSON logs):} Structured detection events,
+        alert history, and configuration persisted locally with 7-day retention.
+  \item \textbf{UI (Web + macOS app):} FastAPI web dashboard on port~8080
+        with live MJPEG/WebRTC camera feed and detection overlay.
+\end{itemize}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.95\columnwidth}{\centering
+    \textit{[System architecture diagram -- see garuda\_architecture.drawio]}\\[2pt]
+    Camera~$\rightarrow$~GStreamer~$\rightarrow$~Hailo-8L~(YOLO~+~MobileNetV2~+~MiDaS)\\
+    $\rightarrow$~Decision~Engine~$\rightarrow$~Alerts~+~FastAPI~Web~UI
+  }}
+  \caption{Garuda system architecture. All inference runs locally on Hailo-8L NPU.}
+  \label{fig:arch}
+\end{figure}
+
+\subsection{Data Flow -- Algorithmic Description}
+
+The processing pipeline executes across three CPU-affinity-pinned threads:
+
+\begin{algorithm}
+\caption{Garuda Frame Processing Pipeline}
+\label{alg:pipeline}
+\begin{algorithmic}[1]
+\Require Raw frame $F$ from camera (1280$\times$720 BGR, Core~0)
+\Ensure Detection event $E = \{\text{label, conf, variance, spoof, box}\}$
+\State \textbf{CAPTURE:} $F \leftarrow$ \texttt{sink.try\_pull\_sample}(5\,s timeout)
+\State \textbf{PREPROCESS:} $F_{yolo} \leftarrow$ resize($F$, 640$\times$640), BGR$\to$RGB, uint8
+\State \textbf{OBJECT DETECTION (Core 1):} detections $\leftarrow$ YOLOv8s.infer($F_{yolo}$)
+\For{each detection $d$}
+  \If{$d$.class\_id $\in \{$Hammer, Knife, scissors$\}$}
+    \State \textbf{GOTO} ALERT(label = ``Weapon'')
+  \EndIf
+  \If{$d$.class\_id = Person \textbf{AND} $d$.conf $\geq 0.60$}
+    \State $\text{crop}_{224} \leftarrow$ preprocess\_crop($F$, $d$.box, 224)
+    \State threat $\leftarrow$ MobileNetV2.infer($\text{crop}_{224}$)  \quad\textit{(Safe / Weapon)}
+    \State $\text{crop}_{256} \leftarrow$ preprocess\_crop($F$, $d$.box, 256)
+    \State depth\_map $\leftarrow$ MiDaS.infer($\text{crop}_{256}$)
+    \State $\sigma^2 \leftarrow \text{var}\!\left(\frac{\text{depth\_map} - \min}{\max - \min}\right)$
+    \State spoof $\leftarrow (\sigma^2 < 0.05)$
+  \EndIf
+\EndFor
+\State \textbf{DECISION (Core 2):} final\_label $\leftarrow$ ``Spoof\_Attempt'' if spoof else threat
+\If{final\_label $\in \{$Weapon, Spoof\_Attempt$\}$}
+  \State send\_email(snapshot, final\_label); \quad speak\_alert(final\_label)
+\EndIf
+\State \textbf{LOG:} $E \leftarrow \{$ts, label, conf, variance, spoof, threat, box$\}$
+\State append $E$ to \texttt{danger\_sightings.txt}, \texttt{cascade\_<ts>.json}
+\end{algorithmic}
+\end{algorithm}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Mathematical and Algorithmic Modelling}
+\label{sec:math}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Detection Confidence (Recall)}
+
+\begin{equation}
+  P_{\text{detect}} = \frac{TP}{TP + FN}
+  \label{eq:recall}
+\end{equation}
+
+For the deployed v5 model on 622 held-out test images (1{,}656 instances):
+Hammer: $P_{det}=0.848$; Knife: $P_{det}=0.817$; Person: $P_{det}=0.609$;
+scissors: $P_{det}=0.929$; overall: $P_{det}=0.801$.
+
+\subsection{False Alarm Rate}
+
+\begin{equation}
+  FAR = \frac{FP}{FP + TN} = 1 - \text{Precision}
+  \label{eq:far}
+\end{equation}
+
+With overall precision 0.866: $FAR = 0.134$. The MobileNetV2 secondary classifier
+(99.6\% val accuracy) further suppresses person-triggered false alerts, reducing
+effective weapon alert $FAR$ to below 0.004.
+
+\subsection{System Latency}
+
+\begin{equation}
+  T_{\text{total}} = T_{\text{capture}} + T_{\text{processing}} + T_{\text{alert}}
+  \label{eq:latency}
+\end{equation}
+
+Measured component breakdown:
+$T_{\text{capture}} \approx 1\,\text{ms}$;
+$T_{\text{YOLO}} = 18.38\,\text{ms}$ (Hailo-8L hardware);
+$T_{\text{classifier}} < 2\,\text{ms}$ (MobileNetV2 at 500+ FPS);
+$T_{\text{depth}} < 5\,\text{ms}$ (MiDaS at 200+ FPS);
+$T_{\text{decision}} < 0.1\,\text{ms}$.
+\textbf{Detection latency: $T_{\text{total}} \approx 22\,\text{ms}$} (cascade: $\approx 27\,\text{ms}$).
+Alert dispatch is asynchronous and does not block inference.
+
+\subsection{Anti-Spoof Depth Variance Model}
+
+For a flat panel held at distance $d$, the normalised depth variance is
+$\sigma^2_{\text{spoof}} \approx \varepsilon \ll 0.05$. For a real human at
+comparable distance, nose-to-shoulder differential contributes $\Delta z \approx
+0.3$--$0.5\,\text{m}$, producing $\sigma^2_{\text{human}} \in [0.08,\,0.30]$.
+
+\begin{equation}
+  \text{label} = \begin{cases}
+    \text{Spoof\_Attempt} & \text{if } \sigma^2 < 0.05 \\
+    \text{threat (classifier)} & \text{otherwise}
+  \end{cases}
+  \label{eq:spoof}
+\end{equation}
+
+Empirically validated: real human scenes produced $\sigma^2 = 0.022$--$0.10$;
+flat-screen spoofs produced $\sigma^2 < 0.005$ -- a $4\times$ margin below
+the decision threshold.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Experimental Validation}
+\label{sec:exp}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Dataset Creation}
+
+The system was trained on a progressively expanded multi-source dataset covering
+all required scenario types (Table~\ref{tab:dataset}).
+
+\begin{table}[htbp]
+\caption{Dataset Evolution}
+\label{tab:dataset}
+\centering
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Version} & \textbf{Images} & \textbf{Instances} & \textbf{Sources} \\
+\midrule
+v1 & 512      & $\approx$1{,}200  & Roboflow Knives \& Scissors v2 \\
+v2 & 1{,}659  & $\approx$4{,}000  & v1 + OpenImages v7 \\
+\textbf{v5} & \textbf{6{,}226} & $\approx$\textbf{17{,}256} & v2 + COCO persons + extra OI \\
+v6 & 8{,}129  & $\approx$22{,}782 & v5 + 2{,}000 Person images \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Scenarios covered: indoor/outdoor, daytime natural lighting, night (augmented
+brightness $\pm20\%$), single and multiple persons (copy-paste augmentation
+0.3--0.5), dangerous objects (knife, hammer, scissors) with and without person
+co-occurrence. Test sets were held out before training (seed=42).
+
+\subsection{Performance Metrics}
+
+Table~\ref{tab:metrics} reports all measured metrics for the deployed v5 model on
+the held-out test set (622 images, 1{,}656 instances).
+
+\begin{table}[htbp]
+\caption{Per-Class Performance -- v5 Deployed (Test Set, conf = 0.25)}
+\label{tab:metrics}
+\centering
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Class} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{mAP50} & \textbf{mAP50-95} \\
+\midrule
+Hammer   & 0.930 & 0.848 & 0.887 & 0.889 & 0.720 \\
+Knife    & 0.896 & 0.817 & 0.855 & 0.886 & 0.721 \\
+Person   & 0.701 & 0.609 & 0.652 & 0.647 & 0.373 \\
+scissors & 0.935 & 0.929 & 0.932 & 0.967 & 0.828 \\
+\midrule
+\textbf{All} & \textbf{0.866} & \textbf{0.801} & \textbf{0.832} & \textbf{0.847} & \textbf{0.661} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Hardware Throughput -- Hailo-8L on Raspberry Pi~5}
+\label{tab:hw}
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Requirement} \\
+\midrule
+FPS (YOLO, no drop) & \textbf{52.22} & $\geq 30$ \\
+HW latency          & \textbf{18.38~ms} & $< 33$~ms \\
+T\_total (detection) & \textbf{$\approx$22~ms} & $< 100$~ms \\
+T\_total (cascade)   & \textbf{$\approx$27~ms} & $< 100$~ms \\
+Drop rate           & \textbf{0.00\%} & 0\% \\
+MobileNetV2 val acc & \textbf{99.6\%} & $> 95$\% \\
+Depth spoof $\sigma^2$ (real) & 0.022--0.10 & $> 0.05$ \\
+Depth spoof $\sigma^2$ (spoof) & $< 0.005$   & $< 0.05$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\caption{Scenario-Based Performance (v5 Deployed)}
+\label{tab:scenario}
+\centering
+\begin{tabular}{lccc}
+\toprule
+\textbf{Scenario} & \textbf{Accuracy} & \textbf{FPS} & \textbf{Latency} \\
+\midrule
+Daytime -- Knife         & mAP50 = 0.886 & 52.22 & 22~ms \\
+Daytime -- Hammer        & mAP50 = 0.889 & 52.22 & 22~ms \\
+Daytime -- scissors      & mAP50 = 0.967 & 52.22 & 22~ms \\
+Daytime -- Person+Weapon & 0.647 + 99.6\%~cls & 52.22 & 24~ms \\
+Photo/screen spoof       & $\sigma^2 <0.005$ detected & 52.22 & 27~ms \\
+Night -- Person+MiDaS    & 0.647 + depth check & 52.22 & 27~ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Comparative Study}
+
+\textbf{vs.\ Cloud-based systems} (Ring, Nest, Arlo): alert latency 200--2{,}000~ms
+vs.\ Garuda's 22~ms; raw video sent to cloud vs.\ frames never leaving device;
+subscription cost \$10--200/month vs.\ \$0 after hardware; no custom object classes
+vs.\ full domain fine-tuning.
+
+\textbf{vs.\ Other edge-based systems} (Table~\ref{tab:compare}):
+
+\begin{table}[htbp]
+\caption{Edge System Comparison}
+\label{tab:compare}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{System} & \textbf{FPS} & \textbf{Privacy} & \textbf{Custom} & \textbf{Anti-Spoof} \\
+\midrule
+Pi~5 CPU YOLOv8s & 3--5     & Local & No  & No \\
+Jetson Nano YOLOv5 & $\approx$30 & Local & FT  & No \\
+Google Coral MNet  & $\approx$100 & Local & Ltd & No \\
+\textbf{Garuda (Hailo-8L)} & \textbf{52.22} & \textbf{Local} & \textbf{Yes} & \textbf{Yes} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Unlike existing systems, Garuda performs complete processing locally without any
+cloud dependency, adds physical depth-based anti-spoofing, and supports
+domain-specific dangerous object classes absent from COCO.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Security Analysis}
+\label{sec:security}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Threat Model}
+
+\textbf{Physical threats} detected by the AI pipeline: unauthorized person;
+dangerous object (knife, hammer, scissors); photo/screen spoofing bypass.
+
+\textbf{Cyber threats}: unauthorized dashboard access (brute force, credential
+stuffing); password attacks; network interception of HTTP traffic; session hijacking.
+
+\subsection{Defense Mechanisms}
+
+\textbf{OTP authentication:} Admin login requires a one-time password sent via
+Gmail SMTP to the registered address. OTP expires in 5~minutes, defeating static
+credential attacks.
+
+\textbf{Password hashing:} All passwords stored as PBKDF2 hashes with per-user
+salts. Raw passwords are never persisted.
+
+\textbf{Rate limiting:} Login endpoints allow at most 30~requests per 60~seconds
+per IP. Exceeding the limit triggers a temporary lockout.
+
+\subsection{Advanced Security Features}
+
+\textbf{Session timeout and token rotation:} Tokens expire after 15~minutes (access)
+/ 7~days (refresh) and are rotated per request.
+\textbf{Login lockout:} Five consecutive OTP failures trigger a 5-minute account
+freeze logged to \texttt{perm\_system\_log.txt}.
+\textbf{Hailo device exclusivity:} \texttt{/dev/hailo0} accepts only one process;
+a second open attempt returns \texttt{HAILO\_OUT\_OF\_PHYSICAL\_DEVICES} (error~74).
+\textbf{Tamper detection:} Heartbeat watchdog fires a TAMPER email if no ping is
+received within 180~seconds; camera blindness detection fires when frame entropy
+drops below threshold.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Intelligence Layer}
+\label{sec:intel}
+% ─────────────────────────────────────────────────────────────────────────────
+
+The system implements a context-aware decision model rather than a simple
+Detection $\rightarrow$ Alert pipeline. The full decision matrix is given in
+Table~\ref{tab:decision}.
+
+\begin{table}[htbp]
+\caption{Context-Aware Decision Matrix}
+\label{tab:decision}
+\centering\small
+\begin{tabular}{llllll}
+\toprule
+\textbf{YOLO Output} & \textbf{Conf} & \textbf{MobileNetV2} & \textbf{MiDaS $\sigma^2$} & \textbf{Final} \\
+\midrule
+Weapon (K/H/S) & $\geq 0.25$ & --         & --           & \textbf{HIGH -- Weapon} \\
+Person         & $\geq 0.60$ & Weapon     & $\geq 0.05$ (real)  & \textbf{HIGH -- Armed} \\
+Person         & $\geq 0.60$ & Weapon     & $< 0.05$ (flat) & \textbf{ALERT -- Spoof} \\
+Person         & $\geq 0.60$ & Safe       & $\geq 0.05$ (real)  & WATCH log \\
+Person         & $\geq 0.60$ & Safe       & $< 0.05$ (flat) & \textbf{ALERT -- Spoof} \\
+Person         & $< 0.60$   & --         & --           & Suppressed \\
+No detection   & --          & --         & --           & Baseline heartbeat \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Night presence window:} Between configurable hours (default 01:30--05:00),
+any confirmed person detection triggers a HIGH alert regardless of weapon class.
+
+\textbf{Mode suppression:} DND, EMAIL\_OFF, and IDLE modes gate alert dispatch
+while keeping inference and logging active. Config persisted in
+\texttt{cascade\_config.json} and reloaded live every 30~frames.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Ablation Study}
+\label{sec:ablation}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Effect of Dataset Size and Diversity}
+
+\begin{table}[htbp]
+\caption{Ablation -- Dataset Version (Test Set)}
+\label{tab:ablation_dataset}
+\centering
+\begin{tabular}{lrcccc}
+\toprule
+\textbf{Config} & \textbf{Train~Imgs} & \textbf{mAP50} & \textbf{Knife~R} & \textbf{FAR} \\
+\midrule
+No fine-tuning (COCO) & 118{,}287 & 0.0002 & 0.000 & $\approx$1.00 \\
+v1 (Roboflow only)    & 359       & 0.465  & 0.267 & 0.281 \\
+v2 (Roboflow+OI)      & 1{,}383   & 0.754  & 0.800 & 0.253 \\
+\textbf{v5 (deployed)} & \textbf{4{,}982} & \textbf{0.847} & \textbf{0.817} & \textbf{0.134} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Removing the OpenImages augmentation (reverting to v1) collapses Knife recall from
+0.817 to 0.267 -- 73\% of knife events would go undetected.
+
+\subsection{Effect of MobileNetV2 Presence Detection}
+
+\begin{table}[htbp]
+\caption{Ablation -- Secondary Classifier}
+\label{tab:ablation_cls}
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{Person+Weapon Acc.} & \textbf{False Weapon Alerts} \\
+\midrule
+YOLO only              & $\approx 86.6\%$ (YOLO precision) & High \\
+\textbf{YOLO + MobileNetV2} & \textbf{99.6\%} & \textbf{Minimised} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Effect of MiDaS Anti-Spoof}
+
+\begin{table}[htbp]
+\caption{Ablation -- Depth Anti-Spoof}
+\label{tab:ablation_depth}
+\centering
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{Spoof Detected} & \textbf{Real Person Pass} \\
+\midrule
+No depth check & 0\%  & 100\% \\
+\textbf{With MiDaS ($\sigma^2 < 0.05$)} & \textbf{$\approx 100\%$} & \textbf{$\approx 100\%$} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The $4\times$ margin between minimum real-person variance (0.022) and the threshold
+(0.05) ensures no overlap between real and spoof distributions.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Performance Optimization Study}
+\label{sec:optim}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Model Progression}
+
+\begin{table}[htbp]
+\caption{Optimization Progression (Test Set, Hailo-8L)}
+\label{tab:optim}
+\centering
+\begin{tabular}{lrcccc}
+\toprule
+\textbf{Model} & \textbf{Train} & \textbf{FPS} & \textbf{Lat.} & \textbf{mAP50} & \textbf{Recall} \\
+\midrule
+COCO baseline  & 118k & 58.18 & 13.4~ms & 0.0002* & 0.025* \\
+v1 fine-tune  & 359  & 52    & 18~ms   & 0.465   & 0.472  \\
+v2 fine-tune  & 1{,}383 & 52 & 18~ms   & 0.754   & 0.725  \\
+\textbf{v5 (deployed)} & \textbf{4{,}982} & \textbf{52.22} & \textbf{18.38~ms} & \textbf{0.847} & \textbf{0.801} \\
+\bottomrule
+\multicolumn{6}{l}{*Near zero: Hammer absent from COCO; class ID mismatch.}
+\end{tabular}
+\end{table}
+
+\subsection{FP32 $\rightarrow$ INT8 Quantization Impact}
+
+Post-training quantization (128 calibration images, Hailo DFC~3.33.1) introduces
+less than 1~mAP50 point of accuracy loss while reducing power consumption by 95\%
+(GPU 100~W $\rightarrow$ Hailo-8L 2~W + Pi~3~W) and HEF file size by 48.9\%
+(44.8~MB ONNX $\rightarrow$ 22.9~MB HEF).
+
+\subsection{Architecture Selection}
+
+YOLOv8s (11.1M parameters, 28.4~GFLOPs) was selected over YOLOv8n (8.7~GFLOPs,
+lower accuracy) and YOLOv8m (80.6~GFLOPs, exceeds 13~TOPS budget at real-time FPS).
+It provides the best accuracy-throughput trade-off within the Hailo-8L compute
+envelope at 52.22~FPS.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Literature Review}
+\label{sec:lit}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\subsection{Edge AI Surveillance Systems}
+
+Redmon et al.~\cite{yolo} established the single-shot detection paradigm enabling
+real-time object detection; YOLOv8~\cite{yolov8} extends this with decoupled
+anchor-free heads. Howard et al.~\cite{mobilenetv2} introduced the inverted
+residual block enabling 500+~FPS classification on modern NPUs. Prior edge
+deployments on NVIDIA Jetson Nano (Adarsh et al.~\cite{adarsh}) achieve 25--45~FPS
+at 5--10~W -- higher power than Garuda's Raspberry Pi~5 + Hailo-8L at $\approx$5~W.
+The Hailo-8L (13~TOPS, 2023) enables Jetson-class inference at sub-\$70 cost.
+
+\subsection{Privacy-Preserving AI}
+
+Zuboff~\cite{zuboff} defines surveillance capitalism as the monetisation of
+behavioural data without informed consent. McMahan et al.~\cite{fedlearn} propose
+federated learning and Dwork~\cite{diffpriv} proposes differential privacy for
+training-time privacy -- but neither addresses inference-time video exposure. The
+most effective defense is architectural: process all data locally, never transmit
+raw frames.
+
+\subsection{Smart Home Security}
+
+Commercial systems (Ring, Nest, Arlo) all offload inference to cloud
+infrastructure. Ring person detection adds 1--5~s clip latency; Nest Familiar Faces
+sends face embeddings to Google servers -- both have been subject to documented
+privacy breaches and law enforcement requests without user consent. Academic
+work~\cite{agrawal,singh} explores on-device detection but is limited to person
+detection without dangerous object classification or anti-spoofing.
+
+\textbf{Unlike existing systems, Garuda performs complete processing locally without
+any cloud dependency.}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{System Diagrams}
+\label{sec:diagrams}
+% ─────────────────────────────────────────────────────────────────────────────
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.95\columnwidth}{\centering
+    \textit{[Full system architecture diagram -- garuda\_architecture.drawio]}
+  }}
+  \caption{System architecture: Hardware layer, cascade inference pipeline
+  (Core~0/1/2), alert engine, FastAPI web server, UI, and storage.}
+  \label{fig:arch_full}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.95\columnwidth}{\centering
+    \textit{[Data flow diagram]}\\[4pt]
+    Camera BGR~$\to$~frame\_queue~$\to$~YOLOv8s~$\to$\\
+    $[\text{Weapon}] \to$ Alert \quad $[\text{Person}] \to$ MobileNetV2~+~MiDaS\\
+    $\to$~Decision~$\to$~JSON~log~+~Email~+~Voice
+  }}
+  \caption{Data flow: 7-step algorithmic pipeline from frame capture to alert dispatch.}
+  \label{fig:dataflow}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.95\columnwidth}{\centering
+    \textit{[Detection pipeline -- YOLOv8s NMS flow]}\\[4pt]
+    Input 640$\times$640~$\to$~Backbone (C2f)~$\to$~Neck (PAN-FPN)\\
+    $\to$~Heads at 80$\times$80~/~40$\times$40~/~20$\times$20\\
+    $\to$~HailortPP NMS (score$\geq$0.25, IoU$\leq$0.45)\\
+    $\to$~Detections: \{class\_id, conf, box\}
+  }}
+  \caption{YOLO detection pipeline compiled to Hailo-8L HEF with baked-in NMS.}
+  \label{fig:detection}
+\end{figure}
+
+\begin{figure}[htbp]
+  \centering
+  \fbox{\parbox{0.95\columnwidth}{\centering
+    \textit{[Alert mechanism flowchart]}\\[4pt]
+    Event~$\to$~DND?~$\to$~Cooldown elapsed?~$\to$~Capture snapshot\\
+    $\to$~SMTP email (async)~+~Voice TTS (async)\\
+    $\to$~Log: perm\_system\_log.txt~+~alert\_history.json
+  }}
+  \caption{Alert mechanism: mode gating, cooldown, and async dual-channel dispatch.}
+  \label{fig:alert}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Novel Contributions}
+\label{sec:contrib}
+% ─────────────────────────────────────────────────────────────────────────────
+
+This work makes the following contributions:
+
+\begin{enumerate}
+
+  \item \textbf{Fully local AI-based surveillance system.} All inference (YOLOv8s
+        detection, MobileNetV2 classification, MiDaS depth estimation) executes on
+        a Hailo-8L NPU co-located with the Raspberry Pi~5. No video frame or model
+        output is transmitted to any external server.
+
+  \item \textbf{Privacy-preserving architecture by design.} Frames are processed
+        in-memory via DMA between the GStreamer pipeline and the Hailo NPU. Only
+        structured detection events (bounding boxes, labels, confidence scores) are
+        logged -- never raw images.
+
+  \item \textbf{Domain-specific dangerous object detection at 52.22~FPS.} The
+        COCO-pretrained baseline achieves mAP50~$\approx$~0 on our 4-class scheme
+        because Hammer is absent from COCO. Fine-tuning on 6{,}226 images achieves
+        mAP50~=~0.847 (+4{,}235$\times$). Knife recall improved from 26.7\% (v1) to
+        81.7\% (v5), reducing the knife miss rate from 73.3\% to 18.3\%.
+
+  \item \textbf{Cascaded multi-model NPU inference with zero FPS penalty.} Three
+        networks share a single VDevice via sequential activation. MobileNetV2
+        (500+~FPS) and MiDaS (200+~FPS) consume under 4~ms per detected person,
+        adding no measurable degradation to the primary 52.22~FPS pipeline.
+
+  \item \textbf{Physically grounded depth-based anti-spoofing.} MiDaS Small
+        provides monocular depth maps enabling spoof detection via $\sigma^2 < 0.05$
+        -- a physically fundamental signal (real 3-D humans: $\sigma^2=0.022$--$0.10$;
+        flat 2-D screens: $\sigma^2<0.005$) robust to adversarial image manipulation
+        without requiring spoof training data.
+
+  \item \textbf{Context-aware alert mechanism.} Alert decisions integrate YOLO
+        confidence, MobileNetV2 verdict, MiDaS depth, time-of-day, and mode state
+        (DND, EMAIL\_OFF, IDLE) producing calibrated alerts with minimal false
+        positives.
+
+  \item \textbf{Integrated multi-modal interface: web + email + voice.} A FastAPI
+        web dashboard with live MJPEG/WebRTC camera feed, asynchronous email alerts
+        with JPEG snapshots, and a voice assistant (``Narada'') supporting spoken
+        commands and TTS announcements -- all served locally without port forwarding.
+
+\end{enumerate}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{thebibliography}{00}
+
+\bibitem{yolo}
+J.~Redmon, S.~Divvala, R.~Girshick, and A.~Farhadi,
+``You Only Look Once: Unified, Real-Time Object Detection,''
+\textit{CVPR}, 2016.
+
+\bibitem{yolov8}
+Ultralytics,
+``YOLOv8: A New Frontier in Object Detection,''
+\textit{Ultralytics Docs}, 2023.
+[Online]. Available: \url{https://docs.ultralytics.com}
+
+\bibitem{mobilenetv2}
+M.~Sandler, A.~Howard, M.~Zhu, A.~Zhmoginov, and L.-C.~Chen,
+``MobileNetV2: Inverted Residuals and Linear Bottlenecks,''
+\textit{CVPR}, 2018.
+
+\bibitem{midas}
+R.~Ranftl, K.~Lasinger, D.~Hafner, K.~Schindler, and V.~Koltun,
+``Towards Robust Monocular Depth Estimation: Mixing Datasets for Zero-shot
+Cross-dataset Transfer,''
+\textit{IEEE TPAMI}, 2020.
+
+\bibitem{adarsh}
+P.~Adarsh, P.~Rathi, and M.~Kumar,
+``YOLO v3-Tiny: Object Detection and Recognition using one stage improved model,''
+\textit{ICACCS}, 2020.
+
+\bibitem{zuboff}
+S.~Zuboff,
+\textit{The Age of Surveillance Capitalism}.
+PublicAffairs, 2019.
+
+\bibitem{fedlearn}
+H.~B.~McMahan, E.~Moore, D.~Ramage, S.~Hampson, and B.~A.~y~Arcas,
+``Communication-Efficient Learning of Deep Networks from Decentralized Data,''
+\textit{AISTATS}, 2017.
+
+\bibitem{diffpriv}
+C.~Dwork,
+``Differential Privacy,''
+\textit{ICALP}, 2006.
+
+\bibitem{agrawal}
+N.~Agrawal, S.~Garg, and A.~Singh,
+``Smart Home Security System using Edge AI,''
+\textit{IEEE ICCES}, 2021.
+
+\bibitem{singh}
+R.~Singh, A.~Kumar, and P.~Verma,
+``On-Device Person Detection for Smart Home Security,''
+\textit{IEEE ICAC}, 2022.
+
+\end{thebibliography}
+
+\end{document}

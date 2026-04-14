@@ -248,17 +248,49 @@ Each dataset version covered the following scenario types:
 
 ### IV.2 Performance Metrics
 
-| Metric | Definition | Relevance to Security |
-|--------|------------|----------------------|
-| **Accuracy** | (TP+TN)/(TP+TN+FP+FN) | Overall detection correctness |
-| **Precision** | TP/(TP+FP) | Control of false alarms — unnecessary alerts |
-| **Recall** | TP/(TP+FN) | Missed detections — failures to alert on real threats |
-| **F1-score** | 2·P·R/(P+R) | Balanced metric for asymmetric class distributions |
-| **mAP50** | Mean AP at IoU=0.50 | Standard object detection quality metric |
-| **mAP50-95** | Mean AP at IoU=0.50:0.95 | Strict localization quality |
-| **FPS** | Frames per second (Hailo-8L) | Real-time capability (≥30 FPS required) |
-| **HW Latency** | NPU inference time per frame | System responsiveness |
-| **T_total** | End-to-end detection latency | Alert delay from event occurrence |
+#### Overall System Metrics (v5 Deployed — Hailo-8L, Test Set: 622 images, 1,656 instances)
+
+| Metric | Definition | Hammer | Knife | Person | Scissors | **Overall** |
+|--------|------------|--------|-------|--------|----------|-------------|
+| **Precision** | TP/(TP+FP) | 0.930 | 0.896 | 0.701 | 0.935 | **0.866** |
+| **Recall** | TP/(TP+FN) | 0.848 | 0.817 | 0.609 | 0.929 | **0.801** |
+| **F1-score** | 2·P·R/(P+R) | 0.887 | 0.855 | 0.652 | 0.932 | **0.832** |
+| **mAP50** | Mean AP @ IoU=0.50 | 0.889 | 0.886 | 0.647 | 0.967 | **0.847** |
+| **mAP50-95** | Mean AP @ IoU=0.50:0.95 | 0.720 | 0.721 | 0.373 | 0.828 | **0.661** |
+| **False Alarm Rate** | FP/(FP+TN) = 1−Precision | 0.070 | 0.104 | 0.299 | 0.065 | **0.134** |
+
+#### MobileNetV2 Classifier (val set: 224 crops — 200 Safe, 24 Weapon)
+
+| Metric | Definition | Value |
+|--------|------------|-------|
+| **Val Accuracy** | (TP+TN)/(TP+TN+FP+FN) | **99.6%** (final) / 100.0% (best, Phase 2 Epoch 3) |
+| **Val Loss** | CrossEntropyLoss | 0.0206 (final) / 0.0026 (best) |
+| **Training time** | RTX 4090, 30 epochs total (5+25) | ~2.5 minutes |
+
+#### Hardware Throughput (Hailo-8L on Raspberry Pi 5)
+
+| Metric | Definition | Value | Relevance to Security |
+|--------|------------|-------|-----------------------|
+| **FPS** | Frames per second | **52.22 FPS** | ≥30 FPS required for real-time |
+| **HW Latency** | NPU inference time per frame | **18.38 ms** | Detection responsiveness |
+| **T_capture** | GStreamer appsink pull | ~1 ms | Frame acquisition |
+| **T_YOLO** | YOLOv8s end-to-end | **18.38 ms** | Primary detection |
+| **T_classifier** | MobileNetV2 per person crop | <2 ms | Threat confirmation |
+| **T_depth** | MiDaS per person crop | <5 ms | Anti-spoof check |
+| **T_total (detection)** | Capture + YOLO + decision | **~22 ms** | Weapon detection latency |
+| **T_total (cascade)** | + Classifier + Depth | **~27 ms** | Person threat latency |
+| **Drop rate** | Frames lost at 52 FPS | **0.00%** | No missed frames |
+
+#### Scenario-Based Performance
+
+| Scenario | Accuracy (mAP50 / Classifier) | FPS | End-to-End Latency |
+|----------|-------------------------------|-----|-------------------|
+| Daytime — Knife detection | 0.886 | 52.22 | 22 ms |
+| Daytime — Hammer detection | 0.889 | 52.22 | 22 ms |
+| Daytime — Scissors detection | 0.967 | 52.22 | 22 ms |
+| Daytime — Person + Weapon | 0.647 (YOLO) + 99.6% (MobileNetV2) | 52.22 | 24 ms |
+| Any — Photo/screen spoof | depth var: 0.000–0.004 (spoof) vs 0.022–0.10 (real) | 52.22 | 27 ms |
+| Night — Person + MiDaS | 0.647 + depth check (var≥0.05 → real) | 52.22 | 27 ms |
 
 ### IV.3 Experimental Results
 
