@@ -1185,7 +1185,7 @@ def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
     global _night_presence_alert_active, _night_presence_alert_end_time
     with _np_lock:
-        win = NIGHT_PRESENCE_WINDOW
+        win = dict(NIGHT_PRESENCE_WINDOW)   # snapshot — avoids race with config update
     if not win.get("enabled", True):
         return
     try:
@@ -1251,6 +1251,10 @@ def app_callback(pad, info, user_data):
         threshold = DETECTION_THRESHOLD
         privacy = MODE_PRIVACY
 
+    # Build case-insensitive lookup sets so UI casing mismatches never break detection
+    _danger_set = {lbl.lower() for lbl in user_data.danger_labels}
+    _watch_set  = {lbl.lower() for lbl in WATCH_LABELS}
+
     danger_detected = False
     det_count = 0
     for d in detections:
@@ -1273,12 +1277,12 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label in user_data.danger_labels:
+            if label.lower() in _danger_set:
                 _label_consec_frames[label] = _label_consec_frames.get(label, 0) + 1
                 if _label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
                     danger_detected = True
                 _last_danger_conf = confidence
-            elif label.lower() == "person" or (label in WATCH_LABELS and label not in user_data.danger_labels):
+            elif label.lower() == "person" or (label.lower() in _watch_set and label.lower() not in _danger_set):
                 # WATCH: log silently with 30s cooldown to avoid per-frame spam
                 now_t = time.time()
                 if now_t - _watch_last_logged.get(label, 0) >= 30:
@@ -1298,28 +1302,32 @@ def app_callback(pad, info, user_data):
     global _danger_active
     # Find which danger labels were actually detected this frame (for logging)
     _triggered_labels = [d.get_label() for d in detections
-                         if d.get_label() in user_data.danger_labels
+                         if d.get_label().lower() in _danger_set
                          and d.get_confidence() >= threshold]
     if danger_detected:
         global _danger_trigger_info
         _danger_trigger_info = text_info   # snapshot the frame that triggered
         _captured_conf = _last_danger_conf
         _captured_label = _triggered_labels[0] if _triggered_labels else "danger"
-        threading.Thread(target=trigger_software_alert, daemon=True).start()
-        if not _danger_active:
-            # Rising edge: first frame where danger is seen — send one email
+        _is_rising_edge = not _danger_active
+        if _is_rising_edge:
             _danger_active = True
-            threading.Thread(target=send_email_alert, daemon=True).start()
-            # Log to permanent log at most once per 60s
-            _danger_key = "__danger__"
-            _now = time.time()
-            if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
-                _watch_last_logged[_danger_key] = _now
-                threading.Thread(target=lambda lbl=_captured_label: log_scissors_detection(lbl), daemon=True).start()
-                threading.Thread(target=lambda lbl=_captured_label, conf=_captured_conf: _append_detection_perm(
-                    "DANGER", lbl, conf, "alert triggered"), daemon=True).start()
-    else:
-        _danger_active = False  # Reset when danger clears; next detection gets a fresh email
+        # Batch all danger work into ONE daemon thread per frame (not 4-5 separate ones)
+        def _danger_work(lbl=_captured_label, conf=_captured_conf, rising=_is_rising_edge):
+            trigger_software_alert()
+            if rising:
+                send_email_alert()
+                _danger_key = "__danger__"
+                _now = time.time()
+                if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
+                    _watch_last_logged[_danger_key] = _now
+                    log_scissors_detection(lbl)
+                    _append_detection_perm("DANGER", lbl, conf, "alert triggered")
+        threading.Thread(target=_danger_work, daemon=True).start()
+    elif not _triggered_labels:
+        # Only reset when NO danger labels are seen at all this frame.
+        # Avoids false reset during the 2-frame ramp-up period.
+        _danger_active = False
 
     user_data.person_detected = any(d.get_label().lower() == "person" for d in detections)
     if user_data.person_detected:
@@ -1453,12 +1461,15 @@ class GStreamerDetectionApp(GStreamerApp):
     def get_pipeline_string(self):
         if self.source_type == "rpi":
             # 1280x720 @ 60fps — IMX708 supports up to 120fps at 720p vs 30fps at 1536x864
+            # libcamerasrc already outputs RGB at the requested size; skip the common
+            # videoscale+videoconvert to avoid redundant processing on the Pi 5.
             source_element = (
                 "libcamerasrc name=src_0 ! "
                 f"video/x-raw, format={self.network_format}, width=1280, height=720, framerate=60/1 ! "
                 + QUEUE("queue_src_scale")
-                + "videoscale ! "
-                f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, framerate=60/1 ! "
+                + "videoscale n-threads=2 ! "
+                f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, "
+                "pixel-aspect-ratio=1/1 ! "
             )
         elif self.source_type == "usb":
             source_element = (
@@ -1473,15 +1484,17 @@ class GStreamerDetectionApp(GStreamerApp):
                 "video/x-raw, format=I420 ! "
             )
 
-        source_element += QUEUE("queue_scale")
-        source_element += "videoscale n-threads=2 ! "
-        source_element += QUEUE("queue_src_convert")
-        source_element += "videoconvert n-threads=3 name=src_convert qos=false ! "
-        source_element += (
-            f"video/x-raw, format={self.network_format}, "
-            f"width={self.network_width}, height={self.network_height}, "
-            "pixel-aspect-ratio=1/1 ! "
-        )
+        if self.source_type != "rpi":
+            # USB and file sources need scale + format conversion to network dims
+            source_element += QUEUE("queue_scale")
+            source_element += "videoscale n-threads=2 ! "
+            source_element += QUEUE("queue_src_convert")
+            source_element += "videoconvert n-threads=3 name=src_convert qos=false ! "
+            source_element += (
+                f"video/x-raw, format={self.network_format}, "
+                f"width={self.network_width}, height={self.network_height}, "
+                "pixel-aspect-ratio=1/1 ! "
+            )
 
         pipeline_string = (
             "hailomuxer name=hmux "
@@ -2606,11 +2619,11 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
         for token in _groq_stream_text(msg):
             full_tokens.append(token)
             loop.call_soon_threadsafe(queue.put_nowait, ("token", token))
-        # After full response, run structured JSON call in background to apply commands
+        # Apply rule-based commands from the streamed text (no second LLM call).
+        # The streaming endpoint is conversational — mode changes should go
+        # through the non-streaming /api/chat endpoint which uses structured JSON.
         full_text = "".join(full_tokens)
-        llm_result = query_local_llm(msg)
-        if llm_result is not None:
-            _apply_llm_result(llm_result)
+        apply_rule_based_command(full_text.lower())
         loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
     threading.Thread(target=_worker, daemon=True).start()
@@ -2861,7 +2874,7 @@ def _do_presence_check():
             mac = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
             _append_presence_log("arrived", dev, mac)
             log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
-    elif _owner_present:
+    elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
         _owner_present = False
         dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
         _append_presence_log("left", dev, "")
@@ -3019,7 +3032,7 @@ async def master_key_request_otp(data: dict, session=Depends(require_admin)):
     """Step 1 of adding a master key: verify an existing key, then email OTP."""
     global MASTER_KEY_OTP
     current = (data.get("current_key") or "").strip()
-    if not current or current not in MASTER_KEYS:
+    if not current or not any(hmac.compare_digest(current, k) for k in MASTER_KEYS):
         raise HTTPException(401, "Current master key is incorrect.")
     MASTER_KEY_OTP = generate_otp_code(6)
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
@@ -3034,7 +3047,7 @@ async def master_key_add(data: dict, session=Depends(require_admin)):
     global MASTER_KEY_OTP
     otp = (data.get("otp") or "").strip()
     new_key = (data.get("new_key") or "").strip()
-    if not otp or otp != MASTER_KEY_OTP:
+    if not otp or not MASTER_KEY_OTP or not hmac.compare_digest(otp, MASTER_KEY_OTP):
         raise HTTPException(401, "Invalid OTP.")
     if not new_key or len(new_key) < 12:
         raise HTTPException(400, "Key must be at least 12 characters.")
@@ -3419,15 +3432,12 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     _ws_clients.add(websocket)
     try:
         # Keep the connection alive; broadcaster pushes state.
-        # Also drain any pings/pongs from the client so the socket stays healthy.
+        # Drain any client messages; the frontend does not send data, so we
+        # just wait indefinitely — WebSocketDisconnect fires on close/error.
         while True:
-            try:
-                # Drain any client messages (pings/pongs); 60s timeout before
-                # declaring the connection dead and exiting the loop.
-                await asyncio.wait_for(websocket.receive_text(), timeout=60)
-            except asyncio.TimeoutError:
-                # No message in 60s → connection likely dead, exit cleanly
-                break
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
     except Exception:
         pass
     finally:

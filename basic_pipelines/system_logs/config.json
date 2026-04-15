@@ -14,6 +14,8 @@
     "suitcase"
   ],
   "danger_labels": [
+    "Hammer",
+    "Knife",
     "scissors"
   ],
   "night_presence_window": {
@@ -22,8 +24,8 @@
     "enabled": true
   },
   "modes": {
-    "dnd": true,
-    "email_off": true,
+    "dnd": false,
+    "email_off": false,
     "idle": false,
     "night": false,
     "emergency": false,
