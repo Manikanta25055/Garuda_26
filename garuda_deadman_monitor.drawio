@@ -1,0 +1,41 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-dead" name="Deadman Monitor">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="740" pageHeight="380" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Deadman Monitor — Garuda_web.py : _deadman_monitor (L2156+), _send_tamper_email (L1061)" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="8" width="620" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Heartbeat receiver -->
+        <mxCell id="hb" value="Heartbeat Receiver&#xa;(POST /api/heartbeat)&#xa;client pings to reset timer&#xa;updates _last_heartbeat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="55" width="185" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Deadman thread -->
+        <mxCell id="dm" value="Deadman Thread&#xa;(_deadman_monitor)&#xa;daemon, checks every 10s&#xa;180s timeout window" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="265" y="55" width="185" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="hb" target="dm" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Timeout evaluator -->
+        <mxCell id="timeout" value="Timeout Evaluator&#xa;(now − _last_heartbeat&#xa;&gt; 180s → tamper event)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="55" width="185" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="dm" target="timeout" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Tamper email -->
+        <mxCell id="tamper" value="Tamper Email&#xa;(_send_tamper_email L1061)&#xa;SMTP to admin address&#xa;includes timestamp + context" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="timeout" target="tamper" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Alert trigger -->
+        <mxCell id="alt" value="Alert Trigger&#xa;(trigger_software_alert)&#xa;fires visual + WS alert&#xa;on tamper event" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="265" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="timeout" target="alt" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

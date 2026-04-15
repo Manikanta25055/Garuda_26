@@ -1,0 +1,47 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-presence" name="Presence Monitor">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="780" pageHeight="420" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Presence Monitor — Garuda_web.py : _presence_poller (L2106–L2155)" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="8" width="660" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- ARP scanner -->
+        <mxCell id="arp" value="ARP Scanner&#xa;(_presence_poller daemon)&#xa;scans LAN every 30s via&#xa;subprocess arp-scan / ip neigh" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="55" width="185" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Known devices -->
+        <mxCell id="known" value="Device Registry&#xa;(KNOWN_DEVICES dict&#xa;loaded from config.json&#xa;MAC → friendly name)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="265" y="55" width="185" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="arp" target="known" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- State tracker -->
+        <mxCell id="state" value="Presence State Tracker&#xa;(_device_presence dict)&#xa;online / offline per MAC&#xa;last-seen timestamp" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="55" width="185" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="known" target="state" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Change detector -->
+        <mxCell id="chg" value="Change Detector&#xa;(new device appeared&#xa;or known device lost)&#xa;fires event on transition" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="265" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="state" target="chg" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- WS notifier -->
+        <mxCell id="wsn" value="WebSocket Notifier&#xa;(push_urgent_ws)&#xa;broadcasts device event&#xa;to all connected clients" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="510" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="chg" target="wsn" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Config persistence -->
+        <mxCell id="cfg" value="Config Persistence&#xa;(save_config L580)&#xa;stores KNOWN_DEVICES&#xa;in config.json" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="known" target="cfg" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-web" name="Web Server">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Web Server — Garuda_web.py : FastAPI app + run_web_app (L3486)" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="100" y="8" width="700" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Uvicorn -->
+        <mxCell id="uv" value="Uvicorn ASGI Server&#xa;(127.0.0.1:8080)&#xa;run_web_app L3486" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="40" width="185" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Cloudflare -->
+        <mxCell id="cf" value="Cloudflare Tunnel&#xa;garuda.veeramanikanta.in&#xa;→ localhost:8080" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="150" width="185" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e0" style="rounded=0;orthogonalLoop=1;" edge="1" source="uv" target="cf" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- FastAPI App -->
+        <mxCell id="app" value="FastAPI App&#xa;(~45 REST routes&#xa;CORS: veeramanikanta.in&#xa;vercel.app, localhost)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="255" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="cf" target="app" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Route groups -->
+        <mxCell id="auth" value="Auth Routes&#xa;/login /logout&#xa;/otp /reset-password&#xa;/master-key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="400" width="145" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="st" value="State Routes&#xa;/api/state&#xa;/api/modes&#xa;/api/config" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="190" y="400" width="130" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="chat" value="Chat &amp; Logs&#xa;/api/chat/stream&#xa;/api/logs/*&#xa;/api/events" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="335" y="400" width="130" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="media" value="Media Routes&#xa;/stream (MJPEG)&#xa;/ws /ws/stream&#xa;/api/webrtc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="480" y="400" width="135" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="misc" value="Device / Users&#xa;/api/devices&#xa;/api/users&#xa;/api/feedback" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="630" y="400" width="135" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="app" target="auth" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="app" target="st" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="app" target="chat" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="app" target="media" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="rounded=0;orthogonalLoop=1;" edge="1" source="app" target="misc" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Static files -->
+        <mxCell id="static" value="Static File Server&#xa;(garuda_web/ PWA)&#xa;served at /" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="620" y="255" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="rounded=0;orthogonalLoop=1;" edge="1" source="app" target="static" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

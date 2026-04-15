@@ -1,0 +1,59 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-det" name="Detection Engine">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="860" pageHeight="480" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Detection Engine — Garuda_web.py : app_callback (L1209–1365)" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="8" width="700" height="22" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fbuf" value="Frame Buffer&#xa;(get_numpy_from_buffer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="70" width="155" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="roi" value="ROI Metadata Parser&#xa;(hailo.get_roi_from_buffer&#xa;HAILO_DETECTION objects)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="60" width="160" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="fbuf" target="roi" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="conf" value="Confidence Filter&#xa;threshold = 0.3&#xa;(DETECTION_THRESHOLD)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="60" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="roi" target="conf" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="lblcls" value="Label Classifier&#xa;Watch: Person / person&#xa;Danger: Knife / Scissors / Hammer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="645" y="55" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="conf" target="lblcls" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Watch path -->
+        <mxCell id="wlog" value="Watch Logger&#xa;(30s cooldown per label&#xa;→ perm_detection_log)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="440" y="220" width="160" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="lblcls" target="wlog" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Danger path -->
+        <mxCell id="consec" value="Consecutive Frame Counter&#xa;(_label_consec_frames)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="645" y="220" width="185" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="lblcls" target="consec" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="alttrig" value="Alert Trigger&#xa;(trigger_software_alert)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="645" y="360" width="185" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" style="rounded=0;orthogonalLoop=1;" edge="1" source="consec" target="alttrig" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Frame container -->
+        <mxCell id="fcont" value="Frame Container&#xa;(user_app_callback_class&#xa;set_frame / get_frame)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="220" width="170" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="rounded=0;orthogonalLoop=1;" edge="1" source="fbuf" target="fcont" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Class counts / FPS -->
+        <mxCell id="fps" value="Frame &amp; Class Counter&#xa;(_class_counts_today&#xa;_total_frames, _detections_today)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="360" width="185" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="rounded=0;orthogonalLoop=1;" edge="1" source="conf" target="fps" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

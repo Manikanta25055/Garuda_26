@@ -1,0 +1,47 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-mode" name="Mode Controller">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="800" pageHeight="430" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Mode Controller — Garuda_web.py L190–232, L2637–2653, L2076–2105" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="8" width="640" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Mode flags store -->
+        <mxCell id="flags" value="Mode Flags Store (L190)&#xa;MODE_DND = False&#xa;MODE_EMAIL_OFF = False&#xa;MODE_IDLE = False&#xa;MODE_NIGHT = False&#xa;MODE_EMERGENCY = False&#xa;MODE_PRIVACY = True  ← default ON" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;align=left;" vertex="1" parent="1">
+          <mxGeometry x="30" y="55" width="230" height="125" as="geometry" />
+        </mxCell>
+
+        <!-- Mode lock -->
+        <mxCell id="lock" value="Mode Lock&#xa;(threading.Lock&#xa;_mode_lock L209)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="55" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="flags" target="lock" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Custom modes registry -->
+        <mxCell id="custom" value="Custom Mode Registry&#xa;(CUSTOM_MODES&#xa;user-defined via config API)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="515" y="55" width="185" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- Schedule engine -->
+        <mxCell id="sched" value="Schedule Engine&#xa;(_schedule_monitor L2076)&#xa;daemon thread, wakes every 30s&#xa;_time_in_range L2070&#xa;MODE_SCHEDULE dict from config" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="200" width="200" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="sched" target="flags" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Config persistence -->
+        <mxCell id="cfg" value="Config Persistence&#xa;(save_config L580)&#xa;modes → config.json&#xa;restored on startup via load_config" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="515" y="200" width="195" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="flags" target="cfg" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- API handler -->
+        <mxCell id="api" value="API Handler&#xa;(POST /api/modes L2637)&#xa;validates mode name → update flag → save_config" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="320" width="290" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="api" target="flags" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="api" target="cfg" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

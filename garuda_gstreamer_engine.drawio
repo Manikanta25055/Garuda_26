@@ -1,0 +1,73 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-gst" name="GStreamer TAPPAS Pipeline Engine">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="590" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="GStreamer TAPPAS Pipeline Engine — Garuda_web.py : GStreamerDetectionApp (L1368–1512)" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="8" width="730" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Source -->
+        <mxCell id="src" value="Video Source&#xa;v4l2src / libcamerasrc / filesrc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="300" y="36" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Preprocess -->
+        <mxCell id="pre" value="Preprocess&#xa;videoscale + videoconvert" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="300" y="128" width="200" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="src" target="pre" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Inference branch -->
+        <mxCell id="hnet" value="HailoNet&#xa;(Hailo-8L inference element)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="240" width="185" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="pre" target="hnet" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="hfilt" value="HailoFilter&#xa;(NMS post-processing)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="340" width="185" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="hnet" target="hfilt" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Bypass branch -->
+        <mxCell id="byp" value="Bypass Queue&#xa;(raw frames, timing sync)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="240" width="185" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="pre" target="byp" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- HailoMuxer -->
+        <mxCell id="mux" value="HailoMuxer&#xa;(sync inference results with raw frame)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="295" y="430" width="215" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="hfilt" target="mux" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="rounded=0;orthogonalLoop=1;" edge="1" source="byp" target="mux" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- app_callback probe -->
+        <mxCell id="cb" value="app_callback Probe&#xa;(identity element, L1209)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="60" y="510" width="195" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" style="rounded=0;orthogonalLoop=1;" edge="1" source="mux" target="cb" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- HailoOverlay -->
+        <mxCell id="ov" value="HailoOverlay&#xa;(render bboxes + labels)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="310" y="510" width="185" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="rounded=0;orthogonalLoop=1;" edge="1" source="cb" target="ov" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Sink -->
+        <mxCell id="sink" value="Display / Video Sink" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="560" y="510" width="170" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="rounded=0;orthogonalLoop=1;" edge="1" source="ov" target="sink" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Branch label -->
+        <mxCell id="lb1" value="inference path" style="text;html=1;strokeColor=none;fillColor=none;fontSize=9;fontStyle=2;fontColor=#888888;" vertex="1" parent="1">
+          <mxGeometry x="60" y="215" width="100" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lb2" value="bypass path" style="text;html=1;strokeColor=none;fillColor=none;fontSize=9;fontStyle=2;fontColor=#888888;" vertex="1" parent="1">
+          <mxGeometry x="580" y="215" width="90" height="18" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

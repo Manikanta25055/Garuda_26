@@ -1,0 +1,47 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-auth" name="Auth Engine">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="820" pageHeight="440" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Auth Engine — Garuda_web.py L853–994, L2156–2250" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="8" width="660" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Password hasher -->
+        <mxCell id="hash" value="Password Hasher&#xa;(PBKDF2-SHA256&#xa;600k iterations&#xa;hashlib.pbkdf2_hmac)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="60" width="175" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- User store -->
+        <mxCell id="users" value="User Store&#xa;(users.json&#xa;hashed password + salt&#xa;admin / user roles)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="255" y="60" width="175" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="hash" target="users" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Session tokens -->
+        <mxCell id="sess" value="Session Token Manager&#xa;(secrets.token_hex&#xa;HTTP-only cookies&#xa;server-side session map)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="480" y="60" width="190" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="users" target="sess" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- OTP -->
+        <mxCell id="otp" value="OTP Engine&#xa;(send_otp_via_email L853)&#xa;6-digit code, 10-min expiry&#xa;SMTP delivery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="users" target="otp" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Master key -->
+        <mxCell id="mkey" value="Master Key System&#xa;(master_keys.json)&#xa;separate from user auth&#xa;high-privilege ops only" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="265" y="240" width="185" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- RBAC -->
+        <mxCell id="rbac" value="Role-Based Access Control&#xa;(admin: all routes&#xa;user: read + limited write&#xa;route-level dependency check)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="480" y="240" width="195" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="sess" target="rbac" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="mkey" target="rbac" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

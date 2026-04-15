@@ -1,0 +1,58 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-alert" name="Alert Engine">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="860" pageHeight="490" math="0" shadow="0">
+      <root>
+        <mxCell id="0" /><mxCell id="1" parent="0" />
+        <mxCell id="t" value="Alert Engine — Garuda_web.py L853–1160" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="8" width="560" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Row 1 -->
+        <mxCell id="atrig" value="Alert Trigger&#xa;(trigger_software_alert L994)&#xa;reads _mode_lock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="55" width="175" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="mchk" value="Mode Gate&#xa;suppress if&#xa;MODE_DND or MODE_IDLE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="255" y="55" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="atrig" target="mchk" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="astate" value="Alert State Manager&#xa;(_alert_active&#xa;_alert_end_time 3s banner)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="460" y="55" width="165" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="mchk" target="astate" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="wspush" value="WebSocket Push&#xa;(push_urgent_ws L897&#xa;notifies all WS clients)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="675" y="55" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="astate" target="wspush" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- Row 2 -->
+        <mxCell id="email" value="Email Alert&#xa;(send_email_alert L1023)&#xa;SMTP · 60s cooldown&#xa;checks MODE_EMAIL_OFF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="230" width="175" height="75" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="atrig" target="email" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="otp" value="OTP Email&#xa;(send_otp_via_email L853)&#xa;admin auth &amp; password reset" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="255" y="230" width="165" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tamper" value="Tamper Alert Email&#xa;(_send_tamper_email L1061)&#xa;triggered by Deadman Monitor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="470" y="230" width="175" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Row 3 -->
+        <mxCell id="clip" value="Clip Recorder&#xa;(clip_start / clip_stop&#xa;L3268, L3296)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="400" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="aes" value="AES-256-CBC Encryptor&#xa;(_encrypt_clip_aes256 L1085)&#xa;key from EXFIL_AES_KEY env" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="235" y="400" width="185" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="exfil" value="SSH Exfiltrator&#xa;(_ssh_upload L1111&#xa;exfiltrate_clip L1144)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="470" y="400" width="175" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="clip" target="aes" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="rounded=0;orthogonalLoop=1;" edge="1" source="aes" target="exfil" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
