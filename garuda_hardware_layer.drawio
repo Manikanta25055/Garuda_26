@@ -1,0 +1,86 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-hw" name="Garuda — Hardware Layer">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="720" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Project Garuda — Hardware Layer" style="text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontSize=14;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="150" y="12" width="650" height="28" as="geometry" />
+        </mxCell>
+
+        <!-- ========== RASPBERRY PI 5 (central board) ========== -->
+        <mxCell id="pi" value="&lt;b&gt;Raspberry Pi 5&lt;/b&gt;&#xa;BCM2712 · 4× Cortex-A76 @ 2.4 GHz&#xa;8 GB LPDDR4X&#xa;Raspberry Pi OS (64-bit)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="320" y="230" width="230" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- ========== HAILO-8L AI HAT+ ========== -->
+        <mxCell id="hailo" value="&lt;b&gt;Hailo-8L AI HAT+&lt;/b&gt;&#xa;13 TOPS NPU&#xa;HailoRT driver · /dev/hailo0&#xa;Runs: YOLOv8 / YOLOv6 / MiDaS&#xa;MobileNetV2 (.hef files)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=0;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="640" y="200" width="210" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- PCIe edge: Pi → Hailo -->
+        <mxCell id="epc" value="PCIe Gen3 ×1&#xa;M.2 M-Key" style="rounded=0;orthogonalLoop=1;fontSize=10;fontStyle=2;html=1;" edge="1" source="pi" target="hailo" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== USB CAMERA ========== -->
+        <mxCell id="usbcam" value="&lt;b&gt;USB Camera&lt;/b&gt;&#xa;/dev/video0&#xa;V4L2 · GStreamer v4l2src" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="170" width="175" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- USB edge -->
+        <mxCell id="eusb" value="USB 3.0" style="rounded=0;orthogonalLoop=1;fontSize=10;fontStyle=2;html=1;" edge="1" source="usbcam" target="pi" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== RPi CAMERA MODULE ========== -->
+        <mxCell id="csicam" value="&lt;b&gt;RPi Camera Module&lt;/b&gt;&#xa;CSI-2 / MIPI&#xa;libcamera · GStreamer libcamerasrc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="60" y="315" width="175" height="65" as="geometry" />
+        </mxCell>
+
+        <!-- CSI edge -->
+        <mxCell id="ecsi" value="CSI-2 / MIPI" style="rounded=0;orthogonalLoop=1;fontSize=10;fontStyle=2;html=1;" edge="1" source="csicam" target="pi" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- OR label between cameras -->
+        <mxCell id="or" value="— or —" style="text;html=1;align=center;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="110" y="283" width="80" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- ========== NETWORK ========== -->
+        <mxCell id="net" value="&lt;b&gt;Network Interface&lt;/b&gt;&#xa;Gigabit Ethernet · WiFi 802.11ac&#xa;→ Cloudflare Tunnel (external)&#xa;→ LAN ARP scan (presence)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="310" y="440" width="220" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Network edge -->
+        <mxCell id="enet" value="GbE / WiFi" style="rounded=0;orthogonalLoop=1;fontSize=10;fontStyle=2;html=1;" edge="1" source="pi" target="net" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== STORAGE ========== -->
+        <mxCell id="storage" value="&lt;b&gt;Storage&lt;/b&gt;&#xa;microSD / USB-SSD&#xa;OS · .hef model files&#xa;JSON + TXT persistent logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontSize=11;fontStyle=0;" vertex="1" parent="1">
+          <mxGeometry x="640" y="420" width="185" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Storage edge -->
+        <mxCell id="estor" value="microSD / USB" style="rounded=0;orthogonalLoop=1;fontSize=10;fontStyle=2;html=1;" edge="1" source="pi" target="storage" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ========== SOFTWARE DRIVER LAYER (annotation bar) ========== -->
+        <mxCell id="swbar" value="Software Drivers on Pi 5:   hailo_pci (DKMS kernel module)  ·  HailoRT 4.x  ·  TAPPAS 3.x  ·  GStreamer 1.x  ·  V4L2  ·  libcamera  ·  uvicorn / FastAPI" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f0f0f0;strokeColor=#999999;fontSize=10;fontStyle=2;align=center;" vertex="1" parent="1">
+          <mxGeometry x="40" y="570" width="870" height="38" as="geometry" />
+        </mxCell>
+
+        <!-- Dotted lines from Pi to software bar -->
+        <mxCell id="esw" style="rounded=0;dashed=1;endArrow=none;strokeColor=#aaaaaa;" edge="1" source="pi" target="swbar" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
