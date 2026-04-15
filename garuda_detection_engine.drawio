@@ -1,12 +1,13 @@
 <mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
   <diagram id="garuda-det" name="Detection Engine">
-    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="860" pageHeight="480" math="0" shadow="0">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="720" math="0" shadow="0">
       <root>
         <mxCell id="0" /><mxCell id="1" parent="0" />
         <mxCell id="t" value="Detection Engine — Garuda_web.py : app_callback (L1209–1365)" style="text;html=1;align=center;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;" vertex="1" parent="1">
-          <mxGeometry x="80" y="8" width="700" height="22" as="geometry" />
+          <mxGeometry x="80" y="8" width="740" height="22" as="geometry" />
         </mxCell>
 
+        <!-- ── Garuda_web.py path ── -->
         <mxCell id="fbuf" value="Frame Buffer&#xa;(get_numpy_from_buffer)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="30" y="70" width="155" height="50" as="geometry" />
         </mxCell>
@@ -27,32 +28,63 @@
 
         <!-- Watch path -->
         <mxCell id="wlog" value="Watch Logger&#xa;(30s cooldown per label&#xa;→ perm_detection_log)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="440" y="220" width="160" height="65" as="geometry" />
+          <mxGeometry x="440" y="210" width="160" height="65" as="geometry" />
         </mxCell>
         <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="lblcls" target="wlog" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <!-- Danger path -->
         <mxCell id="consec" value="Consecutive Frame Counter&#xa;(_label_consec_frames)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="645" y="220" width="185" height="55" as="geometry" />
+          <mxGeometry x="645" y="210" width="185" height="55" as="geometry" />
         </mxCell>
         <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="lblcls" target="consec" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
 
         <mxCell id="alttrig" value="Alert Trigger&#xa;(trigger_software_alert)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="645" y="360" width="185" height="50" as="geometry" />
+          <mxGeometry x="645" y="330" width="185" height="50" as="geometry" />
         </mxCell>
         <mxCell id="e6" style="rounded=0;orthogonalLoop=1;" edge="1" source="consec" target="alttrig" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
 
-        <!-- Frame container -->
+        <!-- Frame container + counters -->
         <mxCell id="fcont" value="Frame Container&#xa;(user_app_callback_class&#xa;set_frame / get_frame)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="30" y="220" width="170" height="65" as="geometry" />
+          <mxGeometry x="30" y="210" width="170" height="65" as="geometry" />
         </mxCell>
         <mxCell id="e7" style="rounded=0;orthogonalLoop=1;" edge="1" source="fbuf" target="fcont" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
 
-        <!-- Class counts / FPS -->
         <mxCell id="fps" value="Frame &amp; Class Counter&#xa;(_class_counts_today&#xa;_total_frames, _detections_today)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="230" y="360" width="185" height="65" as="geometry" />
+          <mxGeometry x="230" y="330" width="185" height="65" as="geometry" />
         </mxCell>
         <mxCell id="e8" style="rounded=0;orthogonalLoop=1;" edge="1" source="conf" target="fps" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ── Divider ── -->
+        <mxCell id="div" value="" style="line;strokeColor=#666666;strokeWidth=1;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="430" width="860" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="t2" value="Cascade Architecture — garuda_cascade.py (standalone, L1–728)" style="text;html=1;align=left;strokeColor=none;fillColor=none;fontSize=11;fontStyle=3;" vertex="1" parent="1">
+          <mxGeometry x="20" y="442" width="550" height="18" as="geometry" />
+        </mxCell>
+
+        <!-- ── Cascade path ── -->
+        <mxCell id="cam" value="Camera Thread&#xa;(camera_thread L328&#xa;gst_camera_thread L354&#xa;auto-detect source)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="30" y="470" width="160" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="inf" value="Inference Thread&#xa;(inference_thread L405)&#xa;Stage 1: YoloNetwork (YOLOv8s)&#xa;Stage 2: ClassifierNetwork (MobileNetV2)&#xa;Stage 3: DepthNetwork (MiDaS)*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="230" y="465" width="215" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="rounded=0;orthogonalLoop=1;" edge="1" source="cam" target="inf" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="post" value="Postprocess Thread&#xa;(postprocess_thread L481)&#xa;verdicts · logging&#xa;fast_rgb_spoof (L129)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="490" y="465" width="185" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" style="rounded=0;orthogonalLoop=1;" edge="1" source="inf" target="post" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="metrics" value="TestMetrics&#xa;(L157)&#xa;FPS · drops · verdicts&#xa;status_line output" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="720" y="465" width="150" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" style="rounded=0;orthogonalLoop=1;" edge="1" source="post" target="metrics" parent="1"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="note" value="* DepthNetwork runs only when&#xa;_depth_active() is True (L122)&#xa;_is_night() controls night logic (L118)" style="text;html=1;strokeColor=none;fillColor=#fff2cc;fontSize=10;align=left;" vertex="1" parent="1">
+          <mxGeometry x="230" y="570" width="270" height="50" as="geometry" />
+        </mxCell>
       </root>
     </mxGraphModel>
   </diagram>
