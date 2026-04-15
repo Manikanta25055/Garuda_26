@@ -1,0 +1,148 @@
+<mxfile host="app.diagrams.net" modified="2026-04-15" version="21.0">
+  <diagram id="garuda-block" name="Project Garuda - Block Diagram">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="title" value="Project Garuda — AI Home Security System" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=15;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="200" y="10" width="700" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- === ROW 1 LABEL === -->
+        <mxCell id="label1" value="Input &amp; Inference Pipeline" style="text;html=1;align=left;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="52" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Camera Input -->
+        <mxCell id="cam" value="Camera / Video Input" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="72" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- GStreamer -->
+        <mxCell id="gst" value="GStreamer&#xa;TAPPAS Pipeline" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="235" y="72" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Hailo -->
+        <mxCell id="hailo" value="Hailo-8L&#xa;AI Inference Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="435" y="72" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Detection Engine -->
+        <mxCell id="detect" value="YOLOv8 / v6&#xa;Object Detection Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="635" y="72" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Pipeline arrows -->
+        <mxCell id="e1" style="rounded=0;orthogonalLoop=1;" edge="1" source="cam" target="gst" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="rounded=0;orthogonalLoop=1;" edge="1" source="gst" target="hailo" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="rounded=0;orthogonalLoop=1;" edge="1" source="hailo" target="detect" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- === ROW 2 LABEL === -->
+        <mxCell id="label2" value="Analysis Engines" style="text;html=1;align=left;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="178" width="180" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Night Mode -->
+        <mxCell id="night" value="Night Mode Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="435" y="198" width="150" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Danger Detection -->
+        <mxCell id="danger" value="Danger Detection Engine&#xa;(Object Flagging)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="635" y="198" width="160" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Detection to Analysis -->
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="night" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="danger" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Night Mode feedback arrow (dashed) -->
+        <mxCell id="e6" style="rounded=0;orthogonalLoop=1;dashed=1;endArrow=open;endFill=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="night" target="detect" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="510" y="155" />
+              <mxPoint x="715" y="155" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- === ROW 3 LABEL === -->
+        <mxCell id="label3" value="Output &amp; Interface Engines" style="text;html=1;align=left;verticalAlign=middle;resizable=0;strokeColor=none;fillColor=none;fontSize=10;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="305" width="220" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Voice Assistant -->
+        <mxCell id="voice" value="Voice Assistant&#xa;(Narada)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="40" y="325" width="130" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Email Alert -->
+        <mxCell id="email" value="Email Alert Engine&#xa;(OTP Auth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="200" y="325" width="130" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- GPIO -->
+        <mxCell id="gpio" value="GPIO Hardware Engine&#xa;(HC-SR04, LED, Button)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="360" y="325" width="155" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Logging -->
+        <mxCell id="log" value="System Logging Engine&#xa;(JSON, 7-day retention)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="545" y="325" width="155" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- GUI -->
+        <mxCell id="gui" value="GUI Dashboard&#xa;(PyQt5)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="730" y="325" width="130" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Detection to Output engines -->
+        <mxCell id="e7" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="voice" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="email" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="gpio" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Analysis to Logging -->
+        <mxCell id="e10" style="rounded=0;orthogonalLoop=1;" edge="1" source="danger" target="log" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" style="rounded=0;orthogonalLoop=1;" edge="1" source="night" target="log" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" style="rounded=0;orthogonalLoop=1;" edge="1" source="email" target="log" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- To GUI -->
+        <mxCell id="e13" style="rounded=0;orthogonalLoop=1;" edge="1" source="log" target="gui" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" style="rounded=0;orthogonalLoop=1;" edge="1" source="voice" target="gui" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" style="rounded=0;orthogonalLoop=1;" edge="1" source="danger" target="gui" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
