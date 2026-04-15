@@ -51,8 +51,8 @@
           <mxGeometry x="40" y="178" width="180" height="20" as="geometry" />
         </mxCell>
 
-        <!-- Night Mode -->
-        <mxCell id="night" value="Night Mode Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+        <!-- Night Mode (present but passive) -->
+        <mxCell id="night" value="Night Mode Engine" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#b0b0b0;fontStyle=2;fontSize=11;fontColor=#888888;" vertex="1" parent="1">
           <mxGeometry x="435" y="198" width="150" height="55" as="geometry" />
         </mxCell>
 
@@ -62,21 +62,11 @@
         </mxCell>
 
         <!-- Detection to Analysis -->
-        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="night" parent="1">
+        <mxCell id="e4" style="rounded=0;orthogonalLoop=1;dashed=1;strokeColor=#b0b0b0;" edge="1" source="detect" target="night" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e5" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="danger" parent="1">
           <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-
-        <!-- Night Mode feedback arrow (dashed) -->
-        <mxCell id="e6" style="rounded=0;orthogonalLoop=1;dashed=1;endArrow=open;endFill=0;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" source="night" target="detect" parent="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="510" y="155" />
-              <mxPoint x="715" y="155" />
-            </Array>
-          </mxGeometry>
         </mxCell>
 
         <!-- === ROW 3 LABEL === -->
@@ -86,27 +76,27 @@
 
         <!-- Voice Assistant -->
         <mxCell id="voice" value="Voice Assistant&#xa;(Narada)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="40" y="325" width="130" height="55" as="geometry" />
+          <mxGeometry x="110" y="325" width="130" height="55" as="geometry" />
         </mxCell>
 
         <!-- Email Alert -->
         <mxCell id="email" value="Email Alert Engine&#xa;(OTP Auth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="200" y="325" width="130" height="55" as="geometry" />
+          <mxGeometry x="290" y="325" width="130" height="55" as="geometry" />
         </mxCell>
 
-        <!-- GPIO -->
-        <mxCell id="gpio" value="GPIO Hardware Engine&#xa;(HC-SR04, LED, Button)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="360" y="325" width="155" height="55" as="geometry" />
+        <!-- Web Server -->
+        <mxCell id="web" value="Web Server Engine&#xa;(Garuda_web)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="470" y="325" width="140" height="55" as="geometry" />
         </mxCell>
 
         <!-- Logging -->
         <mxCell id="log" value="System Logging Engine&#xa;(JSON, 7-day retention)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="545" y="325" width="155" height="55" as="geometry" />
+          <mxGeometry x="640" y="325" width="155" height="55" as="geometry" />
         </mxCell>
 
         <!-- GUI -->
         <mxCell id="gui" value="GUI Dashboard&#xa;(PyQt5)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=11;" vertex="1" parent="1">
-          <mxGeometry x="730" y="325" width="130" height="55" as="geometry" />
+          <mxGeometry x="830" y="325" width="130" height="55" as="geometry" />
         </mxCell>
 
         <!-- Detection to Output engines -->
@@ -116,7 +106,7 @@
         <mxCell id="e8" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="email" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e9" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="gpio" parent="1">
+        <mxCell id="e9" style="rounded=0;orthogonalLoop=1;" edge="1" source="detect" target="web" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -124,10 +114,10 @@
         <mxCell id="e10" style="rounded=0;orthogonalLoop=1;" edge="1" source="danger" target="log" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e11" style="rounded=0;orthogonalLoop=1;" edge="1" source="night" target="log" parent="1">
+        <mxCell id="e12" style="rounded=0;orthogonalLoop=1;" edge="1" source="email" target="log" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="e12" style="rounded=0;orthogonalLoop=1;" edge="1" source="email" target="log" parent="1">
+        <mxCell id="e16" style="rounded=0;orthogonalLoop=1;" edge="1" source="web" target="log" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
@@ -139,6 +129,9 @@
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="e15" style="rounded=0;orthogonalLoop=1;" edge="1" source="danger" target="gui" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e17" style="rounded=0;orthogonalLoop=1;" edge="1" source="web" target="gui" parent="1">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
