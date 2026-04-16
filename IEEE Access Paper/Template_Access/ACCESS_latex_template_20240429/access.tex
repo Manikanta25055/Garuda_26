@@ -7,6 +7,7 @@
 \usepackage{multirow}
 \usepackage{booktabs}
 \usepackage{float}
+\usepackage{placeins}
 \usepackage{url}
 \usepackage[htt]{hyphenat}
 \graphicspath{{figures/}{./}}
@@ -48,11 +49,11 @@
 
 
 \begin{abstract}
-Modern home security comes with an uncomfortable trade-off. Commercial cloud-backed systems work well, but every frame of footage ends up on a vendor's servers and the customer pays a monthly fee for that privilege. Do-it-yourself builds on single-board computers are private and cheap, but they usually stop at frame-differencing motion detection. No mainstream product pulls together edge inference, encrypted evidence capture, remote access, voice control, and tamper detection on a single consumer device. Project Garuda is an attempt to close that gap.
+Home security has landed in an awkward place. The cloud-backed products people can actually buy off a shelf work well, but every frame of footage leaves the house, and the owner pays a subscription for the privilege. The do-it-yourself builds on single-board computers are private and cheap, but they almost all stop at frame-differencing motion detection. Nothing on the mainstream shelf packages edge inference, encrypted evidence, remote access, voice control, and tamper detection into a single consumer device. Project Garuda is our attempt to bridge that gap.
 
-The hardware is a Raspberry Pi~5 with 16~GB of RAM and a 1~TB NVMe SSD, running a Hailo-8L AI HAT+ (13~TOPS, INT8) over a PCIe Gen3~$\times$1 link. A YOLOv8s detector fine-tuned on four security-relevant classes (Hammer, Knife, Person, Scissors) and compiled to an INT8 HEF runs continuously on the accelerator through a GStreamer TAPPAS pipeline at 52.22~FPS with 18.38~ms of NPU latency. Frames come from a Raspberry Pi Camera Module v3 on CSI-2 and never leave the device during inference. When a weapon class is seen for three consecutive frames, the alert pipeline fires: a JSON payload goes out over WebSocket to every connected dashboard, an OTP-protected email (with a 60-second cooldown to stop alert storms) is dispatched to the administrator, and an AES-256-CBC encrypted video clip is pushed to a remote host over SSH.
+The hardware is a Raspberry Pi~5 (CPU overclocked to 2.8~GHz) with 16~GB of LPDDR4X and a 1~TB USB~3 SSD, paired with a Hailo-8L AI HAT+ (13~TOPS, INT8) sitting on a PCIe Gen3~$\times$1 link. A YOLOv8s detector, fine-tuned on four security-relevant classes (Hammer, Knife, Person, Scissors) and compiled to an INT8 HEF, runs continuously on the accelerator through a GStreamer TAPPAS pipeline at a sustained 52.22~FPS with an 18.38~ms NPU latency. Frames come from a Raspberry Pi Camera Module v3 over CSI-2 and never leave the device during inference. When a weapon class fires on three consecutive frames, the alert pipeline lights up: a JSON payload is pushed over WebSocket to every connected dashboard, an OTP-protected email is sent to the administrator (with a 60-second cooldown that stops alert storms), and an AES-256-CBC encrypted clip is uploaded to a remote host over SSH.
 
-The backend is a FastAPI application under Uvicorn, tunnelled to the public Internet through Cloudflare and protected by PBKDF2-SHA256 session authentication, per-endpoint rate limits, and strict CORS. A Progressive Web App serves as the frontend, with live video available over both WebRTC and MJPEG. A voice assistant called Narada listens in the background on a configurable wake word, parses transcripts through a rule set first, and falls back to a Groq-hosted language model when the rules are silent. Five operating modes (Do Not Disturb, email-off, idle, emergency, and privacy) can be toggled manually or on a schedule, and every subsystem checks the relevant mode before doing anything user-visible. Supporting services include ARP-based LAN device tracking, a 180-second deadman heartbeat that fires a tamper alert when the dashboard goes silent, a SQLite event queue for offline client catch-up, and a multi-tier logging pipeline with seven-day rotation. The total bill of materials stays under US\$500. The same platform can be moved to night-time operation by swapping the standard camera for the NoIR Camera Module v3 and retraining the detector on low-light imagery; that extension is out of scope in this paper.
+The backend is a FastAPI application running under Uvicorn, exposed through a Cloudflare tunnel and guarded by PBKDF2-SHA256 session authentication, per-endpoint rate limits, and strict CORS. A Progressive Web App is the frontend; live video is available over both WebRTC and MJPEG. A voice assistant called Narada listens for a configurable wake word, runs transcripts through a rule set first, and falls back to a Groq-hosted language model only when no rule matches. The Groq path is used strictly as a stateless completion API in free-tier mode: user video, audio, and images are never uploaded, and only the short parsed transcript intent is sent. Five operating modes (Do Not Disturb, email-off, idle, emergency, and privacy) can be toggled manually or on a schedule, and every subsystem checks the relevant mode before doing anything user-visible. Supporting services include ARP-based LAN device tracking, a 180-second deadman heartbeat that fires a tamper alert when the dashboard goes silent, a SQLite event queue for offline client catch-up, and a multi-tier logging pipeline with seven-day rotation. The total bill of materials stays under US\$500. The same platform can be moved to night-time operation by swapping the standard camera for the NoIR Camera Module v3 and retraining the detector on low-light imagery; that extension is out of scope in this paper.
 \end{abstract}
 
 \begin{keywords}
@@ -65,41 +66,131 @@ Edge AI, GStreamer, Hailo-8L, home security, neural processing unit, object dete
 
 \section{Introduction}
 \label{sec:introduction}
-\PARstart{H}{ome} security has moved a long way from the passive siren-and-PIR boxes of the 1990s. The platforms sold today can recognise specific objects, people, and behaviours in real time, and they can do it well. But the market has ended up in an uncomfortable split. On one side sit the cloud-backed products from established vendors. They work, but every frame of footage leaves the house on its way to a remote data centre, the user pays a monthly subscription, and there is very little the buyer can do about either fact~\cite{b1}. On the other side sit do-it-yourself builds on single-board computers. These are private and cheap, but they almost always stop at frame-differencing motion detection with no second-stage reasoning, no voice interface, and no encrypted evidence path~\cite{b2}.
+\PARstart{H}{ome} security has moved a long way from the passive siren-and-PIR boxes of the 1990s. Today's platforms can recognise specific objects, people, and behaviours in real time, and they can do it well. The market, though, has ended up split into two uncomfortable camps. On one side sit the cloud-backed products from the established vendors. They work, but every frame of footage leaves the house on its way to a remote data centre, the user pays a monthly subscription, and there is very little the buyer can do about either fact~\cite{b1}. On the other side sit the do-it-yourself builds on single-board computers. They are private and cheap, but they almost always stop at frame-differencing motion detection with no second-stage reasoning, no voice interface, and no encrypted evidence path~\cite{b2}.
 
-Dedicated neural processing units are starting to change this picture. They bring deep-learning inference to the edge at a few watts of power and at a price point that a single enthusiast can absorb. The Hailo-8L, the accelerator we use, delivers 13~TOPS of INT8 compute over a single PCIe Gen3 lane and plugs directly into a Raspberry Pi~5 through a standard M.2 HAT. Together they are enough to run a YOLOv8s-class detector at well above 50~FPS without pinning the host CPU~\cite{b3}. Bueno \emph{et~al.}~\cite{b4} recently validated the same hardware pair for real-time YOLOv8 inference in microscopy, finding that the Pi~5 + Hailo-8L pipeline is accuracy-competitive with GPU-accelerated systems at a fraction of the power draw.
+Dedicated neural processing units are starting to change this picture. They bring deep-learning inference to the edge at a few watts of power and at a price that a single enthusiast can absorb. The Hailo-8L, the accelerator we use, delivers 13~TOPS of INT8 compute over a single PCIe Gen3 lane and plugs directly into a Raspberry Pi~5 through a standard M.2 HAT. Together they are enough to run a YOLOv8s-class detector at well over 50~FPS without pinning the host CPU~\cite{b3}. Bueno \emph{et~al.}~\cite{b4} recently validated this same hardware pair for real-time YOLOv8 inference in microscopy, finding that the Pi~5 + Hailo-8L pipeline is accuracy-competitive with GPU-accelerated systems at a fraction of the power draw.
 
 \subsection{Related Work}
-Edge-deployed YOLO variants have been explored across several domains. Xu \emph{et~al.}~\cite{b1} proposed FL-YOLO, a depthwise-separable variant running on an NVIDIA Jetson TX1 inside a coal-mine surveillance system, achieving 36.7~FPS at 76.7\% AP through an edge-cloud cooperation framework. Al Amin \emph{et~al.}~\cite{b5} implemented YOLOv3-Tiny on a Xilinx Kria KV260 FPGA and reached 15~FPS at 99\% accuracy for traffic-light classification at 3.5~W, showing that dedicated accelerators can beat general-purpose GPUs on power efficiency for fixed inference tasks. Dong \emph{et~al.}~\cite{b6} introduced PG-YOLO, which replaces standard convolutions in YOLOv5s with Ghost modules and applies channel pruning plus knowledge distillation to achieve a $9\times$ compression at only 0.1\% accuracy loss. Chung \emph{et~al.}~\cite{b7} proposed YOLO-LSD with CBAM attention for detecting small pedestrians at long range, and Cheng~\cite{b8} presented RMN-YOLO with multi-scale edge enhancement for defect detection; both contribute architectural ideas for lifting small-object recall on resource-constrained hardware. The Ultralytics YOLOv8 framework~\cite{b9} provides the baseline architecture and training pipeline we use, and the Hailo TAPPAS framework~\cite{b10} provides the GStreamer elements that ship inference to the NPU.
+Edge-deployed YOLO variants have been explored across a number of domains. Xu \emph{et~al.}~\cite{b1} proposed FL-YOLO, a depthwise-separable variant running on an NVIDIA Jetson TX1 inside a coal-mine surveillance system, achieving 36.7~FPS at 76.7\% AP through an edge-cloud cooperation framework. Al Amin \emph{et~al.}~\cite{b5} implemented YOLOv3-Tiny on a Xilinx Kria KV260 FPGA and reached 15~FPS at 99\% accuracy for traffic-light classification at 3.5~W, showing that dedicated accelerators can beat general-purpose GPUs on power efficiency for fixed inference tasks. Dong \emph{et~al.}~\cite{b6} introduced PG-YOLO, which replaces standard convolutions in YOLOv5s with Ghost modules and applies channel pruning plus knowledge distillation to achieve a $9\times$ compression at only 0.1\% accuracy loss. Chung \emph{et~al.}~\cite{b7} proposed YOLO-LSD with CBAM attention for detecting small pedestrians at long range, and Cheng~\cite{b8} presented RMN-YOLO with multi-scale edge enhancement for defect detection; both contribute architectural ideas for lifting small-object recall on resource-constrained hardware. The Ultralytics YOLOv8 framework~\cite{b9} provides the baseline architecture and training pipeline we use, and the Hailo TAPPAS framework~\cite{b10} provides the GStreamer elements that dispatch inference to the NPU.
 
-Even with all this prior work, no published system we are aware of combines, on a single consumer-grade edge device, all of the following at once: real-time multi-class object detection on a dedicated NPU, a cascaded classifier and depth-based anti-spoof stage, encrypted evidence capture, a voice assistant with an LLM fallback, ARP-based presence monitoring, a tamper watchdog, and a remotely accessible web server with session authentication and OTP two-factor verification.
+Even with all this prior work, no published system that we are aware of combines, on a single consumer-grade edge device, all of the following at once: real-time multi-class object detection on a dedicated NPU, a cascaded classifier plus depth-based anti-spoof stage, encrypted evidence capture, a voice assistant with an LLM fallback, ARP-based presence monitoring, a tamper watchdog, and a remotely accessible web server with session authentication and OTP two-factor verification.
 
 \subsection{Contributions}
 This paper presents Project Garuda, an end-to-end AI home security system that runs entirely on a Raspberry Pi~5 with a Hailo-8L AI HAT+. The main contributions are:
 
 \begin{enumerate}
-\item A custom-fine-tuned YOLOv8s detector for four security-relevant classes (Hammer, Knife, Person, Scissors) trained on a 4{,}982-image dataset and compiled to an INT8 HEF, reaching a test mAP{@}0.5 of 0.847 at 52.22~FPS on the Hailo-8L.
-\item A three-stage cascade architecture (YOLOv8s + MobileNetV2 classifier + MiDaS depth estimator) that adds weapon verification and photo/screen spoof rejection at less than 5~ms of additional latency.
-\item A twelve-engine software architecture covering detection, alerting, voice, mode control, presence, web, authentication, tamper detection, and logging, all integrated under a single FastAPI application and exposed through a Cloudflare tunnel, delivering a complete security platform with no cloud inference dependency.
-\item A full evaluation of training convergence, per-class metrics, confusion structure, and hardware throughput, with a dataset-scaling study that runs from 359 to 4{,}982 training images.
+\item A custom-fine-tuned YOLOv8s detector for four security-relevant classes (Hammer, Knife, Person, Scissors), trained on a 4{,}982-image dataset assembled in three passes and compiled to an INT8 HEF, reaching a test mAP{@}0.5 of 0.847 at a sustained 52.22~FPS on the Hailo-8L.
+\item A three-stage cascade architecture (YOLOv8s + MobileNetV2 classifier + MiDaS Small depth estimator) that adds weapon verification and photo/screen spoof rejection at less than 5~ms of additional latency, with all three networks multiplexed on a single VDevice.
+\item A twelve-engine software architecture covering detection, alerting, voice, mode control, presence, web, authentication, tamper detection, and logging, integrated under a single FastAPI application and exposed through a Cloudflare tunnel, delivering a complete security platform with no cloud inference dependency.
+\item A full evaluation of training convergence, per-class metrics, confusion structure, hardware throughput, and INT8 quantisation impact, with a dataset-scaling study that runs from 359 to 4{,}982 training images.
 \end{enumerate}
 
 \subsection{Paper Organisation}
-The rest of the paper is organised as follows. Section~\ref{sec:dataset} describes the training dataset. Section~\ref{sec:methodology} walks through the methodology, engine by engine. Section~\ref{sec:flowchart} presents the system-level flowchart and the three-layer block diagram. Section~\ref{sec:specs} consolidates the hardware, software, and model specifications. Section~\ref{sec:results} reports the training and inference results. Section~\ref{sec:conclusion} concludes with a summary of findings and directions for future work.
+The rest of the paper is organised as follows. Section~\ref{sec:dataset} describes the training dataset, the preprocessing pipeline, and the validation checks we ran before training. Section~\ref{sec:methodology} walks through the methodology, engine by engine. Section~\ref{sec:flowchart} presents the system-level flowchart and the three-layer block diagram. Section~\ref{sec:specs} consolidates the hardware, software, and model specifications. Section~\ref{sec:results} reports the training and inference results. Section~\ref{sec:conclusion} concludes with a summary of findings and directions for future work.
 
 \section{Dataset}
 \label{sec:dataset}
-The detector used in the deployed system is trained on a four-class dataset we refer to internally as v5. The four classes are Hammer, Knife, Person, and Scissors; between them they cover the objects that a home surveillance user is most likely to want to be alerted about. The dataset was built in three passes rather than in one shot, and the dataset-size progression is in fact a useful experimental variable on its own that we revisit in Section~\ref{sec:results}.
+The detector used in the deployed system is trained on a four-class dataset we refer to internally as v5. The four classes are Hammer, Knife, Person, and Scissors; between them they cover the objects that a home surveillance user is most likely to want to be alerted about. The dataset was built in three passes rather than in one shot, and the dataset-size progression is, as it happens, a useful experimental variable on its own that we come back to in Section~\ref{sec:results}.
 
-The first pass started with a small Roboflow seed of 359 training images. The seed fixed the annotation format and gave us a working end-to-end training loop, but the class distribution was badly skewed and the visual variety was low. The second pass added 1{,}219 images from OpenImages v7, concentrated on Knife and Scissors, which were the two most under-represented classes after the seed pass. The third pass added another 2{,}276 OpenImages images, this time targeted at whichever class still had the lowest mAP after v2 training, which left us with a final training set of 4{,}982 images. Every additional image was reviewed by hand before being added to the dataset. OpenImages class tags are noisy for close-up tool shots (a Swiss army knife on a desk is frequently tagged as a dozen unrelated things), so automatic import is not safe; we filtered and re-annotated where necessary before including an image.
+\subsection{Source Datasets}
+\label{sec:sources}
+Training imagery was drawn from two public, permissively licensed sources, merged into a single four-class schema before any training was run. Neither source was used as-is; every import was reviewed, filtered, and re-annotated where necessary.
 
-Table~\ref{tab:dataset} summarises the final v5 geometry. Images are stored as JPEGs with heights ranging from 303 to 3{,}456 pixels and widths from 436 to 4{,}608 pixels. The single most common native resolution is 640$\times$640, reflecting the default Roboflow preprocessing pass. The whole dataset takes 1.32~GB on disk and contains 16{,}335 annotated instances across 6{,}226 images, split into 4{,}982 training, 1{,}070 validation, and 174 test images.
+\textbf{Source A --- Roboflow ``Knives \& Scissors Training v2.''} A CC BY 4.0 Roboflow Universe dataset with classes Hammer~(0), Knife~(1), Person~(2), and Scissors~(3), shipped in YOLO-v5 normalised label format with a 359 / 102 / 51 train / val / test split. The images are mostly square 640$\times$640 JPEGs of studio-lit or close-crop scenes. This source fixed the annotation convention and gave us a functioning end-to-end training loop, but its class distribution was badly skewed and its visual variety was low.
 
-\begin{table}[!t]
+\textbf{Source B --- OpenImages v7 (via the OIDv4 toolkit and FiftyOne).} Google-verified human annotations at IoB $\geq 0.5$, CC BY 4.0, exported in YOLO Darknet format from per-class subfolders. OpenImages contributes diverse, real-world photographs with varying aspect ratios, lighting, and backgrounds --- exactly the diversity the Roboflow seed lacked. We pulled 1{,}219 images in the v2 pass and another 2{,}276 in the v5 pass, targeted class-by-class at whichever label had the lowest mAP after the previous training run.
+
+\begin{table}[H]
+\caption{\textbf{Image Counts Contributed by Each Source (v5 Splits)}}
+\label{tab:sources}
+\setlength{\tabcolsep}{3pt}
+\centering\small
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Source} & \textbf{Train} & \textbf{Val} & \textbf{Test} & \textbf{Total} \\
+\hline
+merged\_dataset/train      & 1{,}913 & 244 & 226 & 2{,}383 \\
+merged\_dataset/val        & 141     & 18  & 14  & 173   \\
+merged\_dataset/test       & 133     & 23  & 18  & 174   \\
+openimages\_extra/hammer   & 93      & 12  & 14  & 119   \\
+openimages\_extra/knife    & 495     & 49  & 56  & 600   \\
+openimages\_extra/person   & 1{,}981 & 245 & 259 & 2{,}485 \\
+openimages\_extra/scissors & 226     & 31  & 35  & 292   \\
+\hline
+\textbf{All sources}       & \textbf{4{,}982} & \textbf{622} & \textbf{622} & \textbf{6{,}226} \\
+\hline
+\end{tabular}
+\end{table}
+
+OpenImages class tags are famously noisy for close-up tool shots --- a Swiss army knife on a desk is frequently tagged as a dozen unrelated things --- so automatic import is not safe. Every image that entered the dataset was looked at by one of the authors before being added.
+
+\subsection{Preprocessing and Validation Pipeline}
+\label{sec:preprocess}
+The preprocessing pipeline has to satisfy three constraints at once: the Hailo-8L NPU accepts a fixed 640$\times$640 INT8 input, the IMX708 camera delivers 16:9 frames, and YOLO label coordinates must remain geometrically correct after any resize. A naive \texttt{cv2.resize(img, (640,640))} on a 4608$\times$2592 OpenImages photo compresses the horizontal axis by $7.2\times$ and the vertical axis by $4.0\times$, which destroys bounding-box aspect ratios. Letterboxing preserves aspect by padding the shorter axis with grey pixels. The five-step pipeline is as follows.
+
+\textit{Step 1 --- Letterbox resize.} Each source image is scaled by $s=\min(640/W,\,640/H)$, placed in a 640$\times$640 canvas, and padded with the YOLO-standard grey fill $(114,114,114)$ so the model's training-time padding matches its inference-time padding. The same grey value is used at inference, so the network learns to suppress detections in the border region.
+
+\textit{Step 2 --- Label coordinate remap.} After letterboxing, YOLO-normalised coordinates are remapped to the padded canvas as $c_x^\prime = (c_x \cdot s + p_x)/640$ and equivalently for $c_y, b_w, b_h$. All coordinates are clamped to $[0.001, 0.999]$ to dodge a boundary-value edge case inside YOLOv8's loss computation.
+
+\textit{Step 3 --- Integrity and deduplication checks.} Every image and label file is opened with OpenCV to confirm it decodes, every \texttt{.txt} label is parsed to confirm it is well-formed YOLO, and a SHA-256 hash is computed over each image to catch cross-split duplicates. The results for v5 are summarised in Table~\ref{tab:integrity}. A single image was dropped from the v2 merge for a missing annotation file; everything else cleared all checks.
+
+\begin{table}[H]
+\caption{\textbf{v5 Integrity and Deduplication Results}}
+\label{tab:integrity}
+\setlength{\tabcolsep}{3pt}
+\centering\small
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Check} & \textbf{Result} \\
+\hline
+Missing label files                & 0 \\
+Missing image files                & 0 \\
+Empty label files                  & 0 \\
+Corrupt images                     & 0 \\
+SHA-256 train duplicates           & 0 \\
+Cross-split leakage (train vs val/test) & 0 \\
+Images dropped during merge        & 1 (missing annotation) \\
+\hline
+\end{tabular}
+\end{table}
+
+\textit{Step 4 --- Stratified re-split (seed=42).} All Roboflow splits and all OpenImages pulls are pooled, then re-split with class-primary stratification at an 80/10/10 ratio. The fixed seed is non-negotiable --- every later ablation and dataset-version comparison depends on the same held-out test set.
+
+\textit{Step 5 --- Filename namespacing.} To prevent collisions in the merged tree, each file is prefixed by its source (\texttt{roboflow\_*}, \texttt{openimages\_knife\_*}, \texttt{v4\_train\_*}, \texttt{oi\_person\_*}, and so on). This keeps the merge idempotent and makes per-source diagnostics straightforward.
+
+Augmentation runs online during training, not in the preprocessing stage. The parameters used for v5 are in Table~\ref{tab:augment}. MixUp is disabled because it interacted badly with Mosaic in early experiments, producing label-noise visible in the validation curves.
+
+\begin{table}[H]
+\caption{\textbf{v5 Augmentation Parameters (YOLOv8 / Albumentations)}}
+\label{tab:augment}
+\setlength{\tabcolsep}{3pt}
+\centering\small
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Mosaic (4-image composition)  & 1.0   \\
+Horizontal flip probability   & 0.5   \\
+HSV hue $h$                   & 0.015 \\
+HSV saturation $s$            & 0.7   \\
+HSV value $v$                 & 0.4   \\
+Scale                         & 0.5   \\
+Translate                     & 0.1   \\
+MixUp                         & 0.0 (disabled) \\
+Degrees / Shear               & 0 / 0 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Final Dataset Geometry}
+\label{sec:dataset_geometry}
+Table~\ref{tab:dataset} summarises the final v5 geometry. Images are stored as JPEGs with heights ranging from 303 to 3{,}456 pixels and widths from 436 to 4{,}608 pixels. The single most common native resolution is 640$\times$640, reflecting the default Roboflow preprocessing pass. The whole dataset takes 1.32~GB on disk and contains 16{,}335 annotated instances across 6{,}226 images, split into 4{,}982 training, 622 validation, and 622 test images.
+
+\begin{table}[H]
 \caption{\textbf{v5 Dataset Geometry}}
 \label{tab:dataset}
 \setlength{\tabcolsep}{3pt}
-\centering
+\centering\small
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Property} & \textbf{Value} \\
@@ -111,29 +202,68 @@ Unique resolutions & 439 \\
 Most common resolution & 640$\times$640 (2{,}187 images, 43.9\%) \\
 File size (median / p95) & 148.8~KB / 621.2~KB \\
 Total dataset size & 1.32~GB \\
-Train / Val / Test images & 4{,}982 / 1{,}070 / 174 \\
+Train / Val / Test images & 4{,}982 / 622 / 622 \\
 Total images & 6{,}226 \\
 Annotated instances & 16{,}335 \\
 \hline
 \end{tabular}
 \end{table}
 
-Figure~\ref{fig:dataset_dist} breaks down the per-class instance count across the three splits. Person dominates at roughly 2{,}100 training instances, because it is the most common class in almost any natural scene. Hammer is the smallest class at around 480 training instances, simply because hammers are less common in the source imagery than the other three classes. The test set holds 174 images and 351 instances, drawn from a separate sample that the model never sees during training or validation.
+The per-class instance counts across the three splits are in Table~\ref{tab:instances}. Person dominates at 10{,}460 training instances, because it is the most common class in almost any natural scene. Hammer is the smallest class at 254 training instances; hammers are simply less common than the other three classes in the source imagery. Figure~\ref{fig:dataset_dist} plots the same numbers visually.
 
-\begin{figure}[!t]
+\begin{table}[H]
+\caption{\textbf{Annotated Instance Counts per Class per Split}}
+\label{tab:instances}
+\setlength{\tabcolsep}{3pt}
+\centering\small
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Class}  & \textbf{Train} & \textbf{Val} & \textbf{Test} & \textbf{Total} \\
+\hline
+Hammer   & 254     & 35      & 46    & 335    \\
+Knife    & 1{,}381 & 162     & 159   & 1{,}702 \\
+Person   & 10{,}460 & 1{,}273 & 1{,}324 & 13{,}057 \\
+Scissors & 981     & 133     & 127   & 1{,}241 \\
+\hline
+\textbf{Total} & \textbf{13{,}076} & \textbf{1{,}603} & \textbf{1{,}656} & \textbf{16{,}335} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig8_dataset_distribution.pdf}
 \caption{v5 dataset class distribution across the train, validation, and test splits. Person is the most abundant class; Hammer is the scarcest.}
 \label{fig:dataset_dist}
 \end{figure}
 
-The cascade's MobileNetV2 Safe/Weapon classifier is trained on a smaller companion dataset of crops harvested directly from the detection pipeline. The split is listed in Table~\ref{tab:mobilenet}: 1{,}200 Safe and 1{,}660 Weapon crops for training, and 200 Safe and 24 Weapon crops for validation. The validation imbalance is a consequence of the harvest procedure, since hand-verified weapon crops were scarce. We balanced the training set heavily and accepted the asymmetric validation split rather than discard otherwise-good training data.
+Bounding-box statistics on the training split are in Table~\ref{tab:bbox}. Person has by far the highest small-object fraction (5.2\%), a consequence of partial annotations (torso/face crops) and crowded scenes, and this is precisely the class on which recall is most difficult to recover --- we return to that point in Section~\ref{sec:results}.
 
-\begin{table}[!t]
+\begin{table}[H]
+\caption{\textbf{Bounding Box Statistics (Train Split)}}
+\label{tab:bbox}
+\setlength{\tabcolsep}{2pt}
+\centering\scriptsize
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Class}  & \textbf{W (mean$\pm$std)} & \textbf{H (mean$\pm$std)} & \textbf{Area (med)} & \textbf{S / M / L} \\
+\hline
+Hammer   & 0.385$\pm$0.252 & 0.353$\pm$0.258 & 0.086 & 2.4\% / 36.6\% / 61.0\% \\
+Knife    & 0.583$\pm$0.304 & 0.436$\pm$0.279 & 0.181 & 0.5\% / 18.8\% / 80.7\% \\
+Person   & 0.191$\pm$0.207 & 0.332$\pm$0.249 & 0.025 & 5.2\% / 57.4\% / 37.4\% \\
+Scissors & 0.392$\pm$0.239 & 0.321$\pm$0.231 & 0.096 & 2.5\% / 34.9\% / 62.6\% \\
+\hline
+\end{tabular}\\[2pt]
+\raggedright\scriptsize Size thresholds (COCO-style, normalised area): small $<$ 0.0032, medium 0.0032--0.0512, large $\geq$ 0.0512.
+\end{table}
+
+The cascade's MobileNetV2 Safe/Weapon classifier is trained on a smaller companion dataset of crops harvested directly from the detection pipeline. The split is listed in Table~\ref{tab:mobilenet}: 1{,}200 Safe and 1{,}660 Weapon crops for training, and 200 Safe and 24 Weapon crops for validation. The validation imbalance is a consequence of the harvest procedure --- hand-verified weapon crops were scarce. We balanced the training set heavily with $10\times$ augmentation on the Weapon class (random horizontal flip, $\pm$20\% brightness, $\pm$10$^\circ$ rotation) and accepted the asymmetric validation split rather than discard otherwise-good training data.
+
+\begin{table}[H]
 \caption{\textbf{MobileNetV2 Classifier Dataset}}
 \label{tab:mobilenet}
 \setlength{\tabcolsep}{4pt}
-\centering
+\centering\small
 \begin{tabular}{|l|c|c|c|}
 \hline
 \textbf{Split} & \textbf{Safe crops} & \textbf{Weapon crops} & \textbf{Total} \\
@@ -144,35 +274,49 @@ Val   & 200     & 24      & 224 \\
 \end{tabular}
 \end{table}
 
+\FloatBarrier
+
 \section{Methodology}
 \label{sec:methodology}
-Project Garuda is built as a collection of loosely coupled engines that share state through a mode controller and a common logging layer. This section walks through each engine in roughly the order that video and control flow move through the system: hardware first, then the GStreamer pipeline and the detection callback, the three-stage cascade, the alert path, the voice assistant, the mode controller, the presence monitor, the web server, authentication, the deadman watchdog, and finally the logging subsystem. Each engine gets a short functional description, a note on how it is implemented, a figure that captures the control flow, and any tables that fix the numbers.
+Project Garuda is built as a collection of loosely coupled engines that share state through a mode controller and a common logging layer. This section walks through each engine in roughly the order that video and control flow move through the system: hardware first, then the GStreamer pipeline and the detection callback, the three-stage cascade, the alert path, the voice assistant, the mode controller, the presence monitor, the web server, authentication, the deadman watchdog, and finally the logging subsystem. Each engine gets a short functional description, a note on how it is implemented, a figure that captures its control flow, and any tables that fix the numbers.
 
 \subsection{Hardware Engine}
 The hardware engine is the physical platform on which everything else runs. The architectural decision that drives the rest of the system is straightforward: move heavy neural inference onto a dedicated accelerator so the general-purpose CPU stays free for the web server, the voice pipeline, video encoding, and logging. Without that split, a single-board computer cannot keep up with a real-time object detector, a Python web application, and a microphone listener all at once.
 
-The host board is a Raspberry Pi~5 (Broadcom BCM2712) with a 2.4~GHz quad-core Cortex-A76 and 16~GB of LPDDR4X memory, running 64-bit Raspberry Pi OS. A Hailo-8L AI HAT+ attaches over a PCIe Gen3~$\times$1 M.2 M-key interface and is exposed to the kernel as a standard PCI device. The Hailo driver is installed as a DKMS kernel module, so the interface survives kernel upgrades without a manual rebuild, and the TAPPAS 3.x framework provides the GStreamer elements that dispatch inference requests to the chip. The Hailo-8L itself delivers 13~TOPS of INT8 neural compute. It runs all three models of the cascade (the YOLOv8s detector, the MobileNetV2 classifier, and the MiDaS Small depth estimator) asynchronously, with no CPU involvement during the forward pass.
+The host board is a Raspberry Pi~5 (Broadcom BCM2712) with a quad-core Cortex-A76 overclocked to 2.8~GHz via \texttt{arm\_freq=2800} and \texttt{force\_turbo=1} in \texttt{/boot/firmware/config.txt}. 16~GB of LPDDR4X-4267 memory back the SoC, and the system runs 64-bit Raspberry Pi OS. Under continuous three-model NPU inference the Linux DVFS governor scales the clock down modestly (observed 2{,}385~MHz under load), which has no effect on NPU throughput because inference is dispatched over PCIe DMA and does not require CPU cycles during the forward pass. A Hailo-8L AI HAT+ attaches over a PCIe Gen3~$\times$1 M.2 M-key interface and is exposed to the kernel as a standard PCI device. The Hailo driver is installed as a DKMS kernel module, so the interface survives kernel upgrades without a manual rebuild, and the TAPPAS 3.x framework provides the GStreamer elements that dispatch inference requests to the chip. The Hailo-8L itself delivers 13~TOPS of INT8 neural compute and runs all three cascade models (YOLOv8s detector, MobileNetV2 classifier, MiDaS Small depth estimator) on a single VDevice, with sequential activation and no CPU involvement during the forward pass.
 
-All video comes from a single Raspberry Pi Camera Module v3 (Sony IMX708), connected through the CSI-2 MIPI interface and captured with libcamera. Networking is provided by the Pi's on-board 802.11ac Wi-Fi; the Wi-Fi link serves two roles at once, carrying the outbound HTTPS tunnel to Cloudflare and the ARP traffic that the presence monitor uses on the local subnet. A 1~TB NVMe SSD sits on the Hailo AI HAT+ M.2 carrier and holds the operating system, the compiled HEF model files, the SQLite event database, and every persistent text and JSON log. The hardware topology is shown in Fig.~\ref{fig:hw_layer}.
+Video comes from a single Raspberry Pi Camera Module~v3 (Sony IMX708), connected through the CSI-2 MIPI interface and captured with libcamera. Networking is provided by the Pi's on-board 802.11ac Wi-Fi; the Wi-Fi link serves two roles at once, carrying the outbound HTTPS tunnel to Cloudflare and the ARP traffic that the presence monitor uses on the local subnet. Persistent storage is a 1~TB NVMe SSD in a USB~3 enclosure, which holds the operating system, the compiled HEF model files, the SQLite event database, and every persistent text and JSON log. The hardware topology is shown in Fig.~\ref{fig:hw_layer}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_hardware_layer.drawio.pdf}
-\caption{Hardware engine. Raspberry Pi~5 host with the Hailo-8L AI HAT+ over PCIe Gen3~$\times$1, a Raspberry Pi Camera Module v3 on CSI-2, a 1~TB NVMe SSD on the HAT carrier, and 802.11ac Wi-Fi uplink.}
+\caption{Hardware engine. Raspberry Pi~5 host (Cortex-A76 overclocked to 2.8~GHz) with the Hailo-8L AI HAT+ over PCIe Gen3~$\times$1, a Raspberry Pi Camera Module~v3 on CSI-2, a 1~TB USB~3 SSD, and 802.11ac Wi-Fi uplink.}
 \label{fig:hw_layer}
 \end{figure}
+
+\FloatBarrier
 
 \subsection{GStreamer TAPPAS Pipeline Engine}
 The GStreamer engine is the part of the system that actually moves video. It captures raw frames from the camera, pushes them through the Hailo accelerator, and produces time-aligned annotated buffers for everything downstream to consume.
 
-The pipeline is built inside a detection application class that extends the base Hailo GStreamer application shipped with TAPPAS. The source element is \texttt{libcamerasrc}, which talks to the Raspberry Pi Camera Module v3 over libcamera and delivers frames in the native sensor format. A small preprocessing stage of \texttt{videoscale} and \texttt{videoconvert} normalises the frame size and pixel format so the inference branch always sees the resolution and format the network expects. From there, the pipeline forks in two directions. The inference branch sends frames into the HailoNet element, which dispatches them over PCIe to the Hailo-8L, and then into a HailoFilter element that runs non-maximum suppression on the raw network output (IoU threshold of 0.45, confidence threshold of 0.35). The bypass branch holds the same frames in a queue for later re-alignment. Both branches converge at a HailoMuxer, which synchronises the annotated inference result with its raw frame so the two can be drawn together. The merged buffer is then passed through an identity element (this is where our application callback attaches as a pad probe) and on to a HailoOverlay element that renders bounding boxes and class labels. The final buffer goes to a display or video sink depending on how the system is started. The full topology is shown in Fig.~\ref{fig:gstreamer}.
+The pipeline is built inside a detection application class that extends the base Hailo GStreamer application shipped with TAPPAS. The source element is \texttt{libcamerasrc}, which talks to the Raspberry Pi Camera Module~v3 over libcamera and delivers frames in the native sensor format. A small preprocessing stage of \texttt{videoscale} and \texttt{videoconvert} normalises the frame size and pixel format so the inference branch always sees the resolution and format the network expects. From there, the pipeline forks in two directions. The inference branch sends frames into the HailoNet element, which dispatches them over PCIe to the Hailo-8L, and then into a HailoFilter element that runs non-maximum suppression on the raw network output (IoU threshold 0.45, confidence threshold 0.35). The bypass branch holds the same frames in a queue for later re-alignment. Both branches converge at a HailoMuxer, which synchronises the annotated inference result with its raw frame so the two can be drawn together. The merged buffer is then passed through an identity element (this is where our application callback attaches as a pad probe) and on to a HailoOverlay element that renders bounding boxes and class labels. The final buffer goes to a display or video sink depending on how the system is started. The full topology is shown in Fig.~\ref{fig:gstreamer}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_gstreamer_engine.drawio-2.pdf}
 \caption{GStreamer TAPPAS pipeline: source $\to$ preprocess $\to$ (HailoNet + NMS $\parallel$ bypass queue) $\to$ HailoMuxer $\to$ identity callback $\to$ overlay $\to$ sink.}
 \label{fig:gstreamer}
 \end{figure}
+
+\subsubsection{Sustained 52.22~FPS via an Asynchronous, CPU-Pinned Pipeline}
+\label{sec:async_fps}
+The defining runtime property of the system is that it holds a constant 52.22~FPS across every operating mode --- idle, alerting, streaming over WebRTC, running a voice query, or uploading an encrypted clip. That constancy is not an artefact of measurement; it is the direct consequence of three architectural choices.
+
+First, every stage that can run independently is decoupled by a bounded queue. The camera thread pushes frames into a \texttt{frame\_queue} of depth~4 with a drop-if-full policy, the inference thread pulls from that queue and pushes into a \texttt{result\_queue}, and the post-processing thread pulls from \texttt{result\_queue} and fans out into logging, the alert engine, and the media publishers. The queues absorb any short spike in downstream cost (a slow SMTP handshake, a large SSH upload) without back-pressuring the camera. Inference latency stays pinned to the NPU's 18.38~ms because it never waits on CPU-side work.
+
+Second, the expensive side-effects (email, SSH clip upload, text-to-speech, Groq LLM calls, WebSocket broadcast) are dispatched on \texttt{asyncio} or thread-pool futures. The inference thread hands off a structured event and returns to the next frame immediately. The average end-to-end detect-to-log latency is $\sim$22~ms, and the asynchronous alert fan-out is $\sim$800~ms SMTP and $\sim$200~ms TTS, both of which complete in parallel with the next 40~to~50 inference passes.
+
+Third, thread-to-core affinity is pinned explicitly through \texttt{os.sched\_setaffinity}: camera capture on Core~0, HailoRT VDevice calls on Core~1, post-processing and logging on Core~2, with Core~3 reserved for the OS and the FastAPI request handlers. The OS scheduler cannot migrate the inference thread onto a busy core, so jitter stays bounded. The net effect is the flat FPS line in Fig.~\ref{fig:hw_perf}: across all five operating modes, the measured frame rate sits between 52.29 and 52.36~FPS with zero frame drops at the camera, exactly what an asynchronous, producer-consumer, CPU-pinned pipeline would be expected to deliver.
 
 \subsubsection{Input Preprocessing}
 Every frame is letterbox-resized from its native capture size to the network input of $640\times640$ before it reaches the NPU. The letterbox pass preserves aspect ratio by padding the shorter axis with grey pixels. We keep the scale factor $s$ and the padding offsets $(p_x, p_y)$ so we can map bounding boxes back to the original image for overlay rendering and for the alert engine's evidence crops. The scale factor and the offsets are
@@ -187,27 +331,31 @@ x = \frac{x_{\mathrm{net}} - p_x}{s},\quad y = \frac{y_{\mathrm{net}} - p_y}{s}
 \end{equation}
 recovers coordinates in the original image. Pixel intensities sit in the INT8 range after post-training quantisation, so there is no floating-point preprocessing at runtime; the chip accepts the YUV-to-RGB converted frame as it is.
 
+\FloatBarrier
+
 \subsection{Detection Engine}
 The detection engine is the first consumer of inference results. It decides, on every frame, whether anything in the scene is worth logging and whether a danger-class detection is confident enough to fire the alert path.
 
-The engine is implemented as a small callback attached to the identity element in the GStreamer pipeline. For every buffer that arrives, the callback grabs a zero-copy NumPy view of the pixels and pulls the ROI metadata object that the HailoFilter has already attached to the buffer. It then iterates over every detection metadata child, drops anything below the confidence threshold of 0.3, and sorts what survives into two lists. Detections labelled Person go onto the watch list and are appended to the detection log with a 30-second per-label cooldown, which keeps a lingering subject from flooding the log. Detections labelled Knife, Scissors, or Hammer go onto the danger list; for each of those labels, the engine increments a per-label consecutive-frame counter, and once that counter clears three frames the alert pipeline is triggered. Running counters for per-class hits, total frames processed, and today's detection total feed the dashboard. A simple frame-buffer interface exposes the current annotated frame to the MJPEG and WebRTC streaming paths so the browser client can see exactly what the detector sees. The callback flow is shown in Fig.~\ref{fig:detect}.
+The engine is implemented as a small callback attached to the identity element in the GStreamer pipeline. For every buffer that arrives, the callback grabs a zero-copy NumPy view of the pixels and pulls the ROI metadata object that the HailoFilter has already attached. It then iterates over every detection child, drops anything below the confidence threshold of 0.3, and sorts what survives into two lists. Detections labelled Person go onto the watch list and are appended to the detection log with a 30-second per-label cooldown, which keeps a lingering subject from flooding the log. Detections labelled Knife, Scissors, or Hammer go onto the danger list; for each of those labels, the engine increments a per-label consecutive-frame counter, and once that counter clears three frames the alert pipeline is triggered. Running counters for per-class hits, total frames processed, and today's detection total feed the dashboard. A simple frame-buffer interface exposes the current annotated frame to the MJPEG and WebRTC streaming paths so the browser client sees exactly what the detector sees. The callback flow is shown in Fig.~\ref{fig:detect}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_detection_engine.drawio.pdf}
 \caption{Detection engine callback. Metadata extraction, confidence filter, watch/danger label routing, and consecutive-frame gating before alert dispatch.}
 \label{fig:detect}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Cascade Architecture}
 The cascade is a standalone three-stage inference chain we developed separately for higher-accuracy person verification and for rejecting photo and screen spoofs. It lives in its own pipeline file and is not invoked by the deployed detection application, but we include it here because the numbers it produces are reported in Section~\ref{sec:results} and because the decision matrix is useful context for the alert path.
 
-A camera thread feeds raw frames into an inference thread that runs three models in sequence. Stage~1 is the same YOLOv8s detector described earlier, returning bounding boxes for any class it recognises. Stage~2 takes the crop of each detected person and runs it through a MobileNetV2 classifier that produces a Safe or Weapon label on the crop. Stage~3 optionally runs a MiDaS Small depth estimator on the same crop as a monocular anti-spoof check: a flat printed photo or a screen has a very different depth histogram from a real person standing in front of the camera, and a simple variance threshold on the depth map is enough to reject most spoofs. A post-processing thread then combines the three verdicts, applies a fast RGB-variance check as a quick liveness pre-filter, writes the final verdict to disk, and updates a metrics object that tracks FPS, frame drops, and verdict distribution per run. The measured per-stage latency is in Table~\ref{tab:cascade_latency}, and the decision matrix across the three main operating scenarios is given in Table~\ref{tab:cascade_matrix}.
+A camera thread feeds raw frames into an inference thread that runs three models in sequence. Stage~1 is the same YOLOv8s detector described earlier, returning bounding boxes for any class it recognises. Stage~2 takes the crop of each detected person and runs it through a MobileNetV2 classifier that produces a Safe or Weapon label on the crop. Stage~3 runs a MiDaS Small depth estimator on the same crop as a monocular anti-spoof check: a flat printed photo or a screen has a very different depth histogram from a real person standing in front of the camera, and a simple variance threshold on the depth map is enough to reject most spoofs. A post-processing thread then combines the three verdicts, applies a fast RGB-variance check as a quick liveness pre-filter, writes the final verdict to disk, and updates a metrics object that tracks FPS, frame drops, and verdict distribution per run. The measured per-stage latency is in Table~\ref{tab:cascade_latency}, and the decision matrix across the four main operating scenarios is given in Table~\ref{tab:cascade_matrix}.
 
-\begin{table}[!t]
+\begin{table}[H]
 \caption{\textbf{Cascade Latency Budget (Hailo-8L, Pi~5)}}
 \label{tab:cascade_latency}
-\centering
+\centering\small
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Component} & \textbf{Measured Value} \\
@@ -215,8 +363,8 @@ A camera thread feeds raw frames into an inference thread that runs three models
 T$_{\text{capture}}$ (GStreamer appsink pull) & $\sim$1~ms \\
 T$_{\text{YOLO}}$ (NPU, Hailo-8L HW) & 18.38~ms \\
 T$_{\text{crop\_preprocess}}$ (NumPy resize) & $\sim$0.5~ms \\
-T$_{\text{classifier}}$ (MobileNetV2 @ 500+ FPS) & $<$2~ms \\
-T$_{\text{depth}}$ (MiDaS @ 200+ FPS) & $<$5~ms \\
+T$_{\text{classifier}}$ (MobileNetV2 @ 500+~FPS) & $<$2~ms \\
+T$_{\text{depth}}$ (MiDaS @ 200+~FPS) & $<$5~ms \\
 T$_{\text{decision}}$ (NumPy variance) & $<$0.1~ms \\
 T$_{\text{alert}}$ (SMTP, async) & $\sim$800~ms \\
 T$_{\text{alert}}$ (TTS, async) & $\sim$200~ms \\
@@ -238,97 +386,120 @@ T$_{\text{total}}$ (with async alert) & $\sim$22~ms + async \\
 Dangerous object alone & YOLOv8s (v5) & 0.866--0.967 & 52.22 & 22\,ms & Direct YOLO \\
 Person + weapon verification & YOLOv8s + MobileNetV2 & 0.647 + 99.6\% cls. & 52.22 & 24\,ms & Cascade verdict \\
 Photo / screen spoof rejection & YOLOv8s + MiDaS & Depth variance gate & 52.22 & 27\,ms & Spoof label \\
+Low-confidence person (suppressed) & YOLOv8s (conf $<$ 0.60) & n/a & 52.22 & 22\,ms & Watch log only \\
 \hline
 \end{tabular}
 \end{table*}
 
+VDevice multiplexing is the knob that lets all three networks share a single 13~TOPS budget without contention. The three HEFs are loaded onto one VDevice at startup and the inference thread issues sequential \texttt{infer} calls; because MobileNetV2 and MiDaS both run at 200--500+~FPS on this chip, the combined cost per Person crop is under 4~ms --- well inside the 19.2~ms frame budget implied by the baseline 52~FPS target. The anti-spoof decision is grounded in physical geometry: a flat panel (photo, screen) produces a normalised-depth variance $\sigma^2 < 0.005$ in our measurements, while a real person at arm's length produces $\sigma^2 \in [0.022, 0.10]$, giving a $4\times$ safety margin for the 0.05 threshold.
+
+\FloatBarrier
+
 \subsection{Alert Engine}
 The alert engine is the piece that turns a confirmed danger detection into something the user actually notices: a red banner on the dashboard, an email, and, when configured, a piece of encrypted evidence sent to a remote host.
 
-The entry point is a small alert-trigger function. It first grabs the mode lock and short-circuits immediately if Do Not Disturb or Idle mode is active. If neither is set, it raises the active-alert flag and schedules an end time three seconds ahead, so the UI can hold a red banner for exactly that long. At the same moment, an urgent WebSocket push sends a JSON alert payload to every connected dashboard. The browser, the PWA, and the mobile interface all update before the email has even left the Pi.
+The entry point is a small alert-trigger function. It first grabs the mode lock and short-circuits immediately if Do Not Disturb or Idle is active. If neither is set, it raises the active-alert flag and schedules an end time three seconds ahead, so the UI can hold a red banner for exactly that long. At the same moment, an urgent WebSocket push sends a JSON alert payload to every connected dashboard. The browser, the PWA, and the mobile interface all update before the email has even left the Pi.
 
 The email side of the alert is an SMTPS client pointed at a configured outbound server. A 60-second per-alert cooldown stops alert storms when the detector sees the same weapon for a sustained period, and the email-off mode flag can disable mail entirely. Two supporting email paths share the same client: one delivers six-digit one-time passwords for login and password-reset flows, with a 10-minute expiry, and the other sends tamper alerts when the deadman watchdog fires. When evidence capture is turned on, a clip-start / clip-stop pair brackets a short video segment around the triggering frame, an AES-256-CBC encrypt step wraps the file with a key pulled from an environment variable (never checked into source), and a small paramiko SSH uploader pushes the encrypted clip to a remote host.
 
 Privacy mode is honoured inline inside the alert engine. When Privacy is on, a Gaussian blur of kernel size $k=51$ and $\sigma=30$ is applied to every person bounding box before the MJPEG/WebRTC publisher pushes the frame. As a result, stored clips and remote streams never contain an identifiable subject, regardless of who is looking at the stream. The alert flow is summarised in Fig.~\ref{fig:alert}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_alert_engine.drawio.pdf}
 \caption{Alert engine. Mode gate, WebSocket broadcast, SMTPS email with 60\,s cooldown, AES-256-CBC clip encryption, and SSH exfiltration to a remote host.}
 \label{fig:alert}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Voice Assistant Engine (Narada)}
 Narada is the spoken interface to Project Garuda. It runs as a background daemon thread, continuously listens on the system microphone, and routes what it hears through two parsing stages before acting on it.
 
-Audio capture uses the SpeechRecognition library's microphone wrapper, which automatically adjusts its energy threshold against the ambient noise level in the room. Every captured utterance is first tested against a configurable wake word (\texttt{narada} by default). Only utterances that begin with the wake word are forwarded to the speech-to-text recogniser; anything else is discarded without being sent off the device. Once transcribed, the text hits a rule-based dispatcher. The dispatcher runs the transcript against a set of built-in commands (toggle a mode, take a snapshot, query the detection count, read the current event log) and a user-registered set of custom voice commands. If a rule matches, the dispatcher runs the action and speaks a short spoken confirmation back through the system's text-to-speech path. If nothing matches, the transcript is forwarded to a language-model query that calls the Groq API on the \texttt{gpt-oss-120b} model. The LLM is asked to return a structured JSON intent, which a small apply-intent function then maps back to a concrete system action such as toggling a flag, composing an email, or reporting system state. Both paths log their transcripts and replies to an in-memory voice log, and the logging engine flushes that log to disk on the usual cadence. The Narada pipeline is diagrammed in Fig.~\ref{fig:voice}.
+Audio capture uses the SpeechRecognition library's microphone wrapper, which automatically adjusts its energy threshold against the ambient noise level in the room. Every captured utterance is first tested against a configurable wake word (\texttt{narada} by default). Only utterances that begin with the wake word are forwarded to the speech-to-text recogniser; anything else is discarded without being sent off the device. Once transcribed, the text hits a rule-based dispatcher. The dispatcher runs the transcript against a set of built-in commands (toggle a mode, take a snapshot, query the detection count, read the current event log) and a user-registered set of custom voice commands. If a rule matches, the dispatcher runs the action and speaks a short confirmation back through the system's text-to-speech path. If nothing matches, the transcript --- and only the transcript --- is forwarded to a language-model query against the Groq API on the \texttt{gpt-oss-120b} model. The LLM is asked to return a structured JSON intent, and a small apply-intent function then maps that intent back to a concrete system action such as toggling a flag, composing an email, or reporting system state. Both paths log their transcripts and replies to an in-memory voice log, and the logging engine flushes that log to disk on the usual cadence. The Narada pipeline is diagrammed in Fig.~\ref{fig:voice}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_voice_engine.drawio.pdf}
 \caption{Voice assistant Narada. Microphone capture, wake-word gate, speech-to-text, rule-based dispatcher, and Groq LLM fallback for open-ended intents.}
 \label{fig:voice}
 \end{figure}
 
+\subsubsection{Groq API Usage and Data Boundary}
+\label{sec:groq_privacy}
+We draw an explicit privacy boundary at the Groq call. The Groq API is used strictly as a stateless chat-completion endpoint on the current free tier. No raw audio, no video frame, no image crop, and no user identifier leaves the device. What does cross the boundary is a single short transcribed utterance --- the same text the rule-based dispatcher has already failed to match --- sent as the \texttt{user} message in a single-turn completion, together with a fixed system prompt that constrains the reply to a small JSON intent schema. Responses are consumed on-device and discarded. No Groq-hosted conversation history, embedding store, or fine-tune artefact is created. If the administrator disables the voice subsystem or takes the system offline, the Groq integration has nothing to do: no background sync, no telemetry. The same guardrail applies to the dashboard's conversational-chat endpoint, which streams Server-Sent Events from the same Groq model and forwards only user-typed queries.
+
+\FloatBarrier
+
 \subsection{Mode Controller}
 Five boolean flags (Do Not Disturb, email-off, idle, emergency, and privacy) gate behaviour across every other engine. The alert engine checks DND and Idle before broadcasting. The web server checks Privacy before publishing a stream. The voice engine checks Emergency before acting on commands that could be destructive. All flag reads and writes are serialised through a single threading lock so the GStreamer callback thread, the scheduler daemon, and the web request handlers do not race each other on the same flag.
 
 User-defined modes beyond the built-in five are stored in a custom-modes registry and can be added or removed through the configuration API. A schedule-monitor daemon thread wakes every 30 seconds and checks a time-of-day schedule loaded from the configuration file, automatically activating or deactivating modes at the boundaries the user has set. Any runtime change to a flag, whether it comes from the REST API, the voice assistant, or the scheduler, is written back to the configuration file on disk so the same state is restored after a reboot. The controller architecture is shown in Fig.~\ref{fig:mode}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_mode_controller.drawio.pdf}
 \caption{Mode controller. Lock-protected flag store, time-of-day scheduler, and configuration persistence.}
 \label{fig:mode}
 \end{figure}
 
-\subsection{Presence Monitor}
-The presence monitor tracks which known devices are currently on the local network by running periodic ARP scans. A small polling loop invokes \texttt{arp-scan} or \texttt{ip~neigh} through a subprocess call and parses the returned MAC addresses. A known-devices dictionary, mapping MAC addresses to human-readable device names, is loaded from the configuration file at startup and can be edited at runtime through a REST endpoint. After each scan, the engine compares the freshly discovered MAC set against the previous snapshot and fires a WebSocket push whenever a device transitions from offline to online or back. The dashboard updates its device status indicators immediately, without having to poll the server on its own. The scan interval is 30 seconds and the grace window before a device is flagged offline is 90 seconds in the deployed configuration. Unknown MAC addresses are reported to the administrator for registry review. The scan loop is shown in Fig.~\ref{fig:presence}.
+\FloatBarrier
 
-\begin{figure}[!t]
+\subsection{Presence Monitor}
+The presence monitor tracks which known devices are currently on the local network by running periodic ARP scans. A small polling loop invokes \texttt{arp-scan} or \texttt{ip~neigh} through a subprocess call and parses the returned MAC addresses. A known-devices dictionary, mapping MAC addresses to human-readable device names, is loaded from the configuration file at startup and can be edited at runtime through a REST endpoint. After each scan, the engine compares the freshly discovered MAC set against the previous snapshot and fires a WebSocket push whenever a device transitions from offline to online or back. The dashboard updates its device-status indicators immediately, without having to poll the server on its own. The scan interval is 30 seconds and the grace window before a device is flagged offline is 90 seconds in the deployed configuration. Unknown MAC addresses are reported to the administrator for registry review. The scan loop is shown in Fig.~\ref{fig:presence}.
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_presence_monitor.drawio.pdf}
 \caption{Presence monitor. ARP scan loop, known-device comparison, and transition-event WebSocket push.}
 \label{fig:presence}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Web Server}
 The web server is a FastAPI application running under Uvicorn, bound to localhost on port 8080 and exposed to the public Internet through a Cloudflare tunnel at \texttt{api.veeramanikanta.in}. CORS is restricted to the \texttt{veeramanikanta.in} domain, the \texttt{vercel.app} preview domain, and \texttt{localhost}, so only known frontends can hit the API.
 
-The application defines roughly 45 REST routes grouped into five functional areas. Authentication covers login, logout, one-time-password delivery, password reset, and a master-key fallback. System state covers reads and writes of the mode flags, the configuration file, and live system snapshots. Logging covers paginated reads of the detection log, the voice log, and the system event stream, with a SQLite-backed catch-up endpoint for clients that were offline for a while. Conversational AI is a single streaming chat endpoint served as Server-Sent Events against the same Groq model used by the voice assistant. Device and user management covers the known-devices registry, the user registry, and user feedback submissions.
+The application defines roughly 45 REST routes grouped into five functional areas. Authentication covers login, logout, OTP delivery, password reset, and a master-key fallback. System state covers reads and writes of the mode flags, the configuration file, and live system snapshots. Logging covers paginated reads of the detection log, the voice log, and the system event stream, with a SQLite-backed catch-up endpoint for clients that were offline for a while. Conversational AI is a single streaming chat endpoint served as Server-Sent Events against the same Groq model used by the voice assistant, under the same data boundary described in Section~\ref{sec:groq_privacy}. Device and user management covers the known-devices registry, the user registry, and user feedback submissions.
 
-Media is served through three parallel channels. An MJPEG endpoint at \texttt{/stream} pulls the current annotated frame from the detection engine's frame buffer on every GET. WebSocket endpoints carry real-time alert payloads on one path and a binary frame stream on another. A WebRTC track served through aiortc gives the lowest-latency path for peer browsers that can negotiate it. The static files for the Progressive Web App frontend are served directly from the same application at the root path, so the browser client works without needing an external CDN. The server architecture is shown in Fig.~\ref{fig:web}.
+Media is served through three parallel channels. An MJPEG endpoint at \texttt{/stream} pulls the current annotated frame from the detection engine's frame buffer on every GET. WebSocket endpoints carry real-time alert payloads on one path and a binary frame stream on another. A WebRTC track served through aiortc gives the lowest-latency path for peer browsers that can negotiate it. The static files for the Progressive Web App frontend are served directly from the same application at the root path, so the browser client works without an external CDN. The server architecture is shown in Fig.~\ref{fig:web}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_web_server.drawio.pdf}
 \caption{Web server. FastAPI under Uvicorn behind a Cloudflare tunnel, with $\sim$45 REST routes and three parallel media channels (MJPEG, WebSocket, WebRTC).}
 \label{fig:web}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Auth Engine}
 The auth engine handles identity verification and access control for every API consumer. Passwords are stored as PBKDF2-SHA256 hashes computed with 600{,}000 iterations and a unique per-user salt. The resulting hash, the salt, and the role label (admin or user) are persisted in a JSON user store. On a successful login, the server generates a cryptographically random session token, stores it in a server-side session map keyed by token, and sets it on the browser as an HTTP-only cookie. Every later request is authenticated by looking that token up in the session map; an unrecognised or expired token is rejected with a 401.
 
 Admin actions that demand a second factor go through a one-time-password flow: the server generates a six-digit code, sets it to expire in 10 minutes, and delivers it through the same SMTP client the alert engine uses. The same OTP mechanism is reused for password reset. A separate master-key system, kept in its own JSON file, holds privileged keys that remain valid even when the normal user store is inaccessible, so a locked-out administrator can still recover the system. Per-route dependency functions enforce role-based access control: admins have full write access, and regular users are restricted to read operations plus a small set of state changes. The authentication flow is shown in Fig.~\ref{fig:auth}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_auth_engine.drawio.pdf}
 \caption{Auth engine. PBKDF2-SHA256 password store, session-token cookie, OTP 2FA, and separate master-key store.}
 \label{fig:auth}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Deadman Monitor}
 The deadman monitor is the tamper-detection watchdog for the whole system. Its working assumption is that if no authenticated client has sent a heartbeat for a long enough stretch, something has gone wrong on purpose: the camera has been unplugged, the Pi has been covered, the power has been cut, or a network cable has been pulled.
 
-Every authenticated browser session sends a periodic heartbeat POST to the server, and the server updates a last-heartbeat timestamp on each request. A watchdog daemon thread wakes every 10 seconds and computes the elapsed time since that last heartbeat. If the gap exceeds 180 seconds and the system is not in a scheduled maintenance window, the thread treats the silence as a tamper event. On a tamper event, two actions run in parallel: the standard alert pipeline fires (the three-second banner, the WebSocket broadcast, and whatever evidence capture is wired up), and a tamper-specific SMTP email is dispatched to the administrator with the event timestamp and the last known system context. The 180-second threshold is a deliberate compromise, long enough to ride out a brief Wi-Fi drop-out while still short enough to catch a sustained tamper. The watchdog logic is diagrammed in Fig.~\ref{fig:deadman}.
+Every authenticated browser session sends a periodic heartbeat POST to the server, and the server updates a last-heartbeat timestamp on each request. A watchdog daemon thread wakes every 10 seconds and computes the elapsed time since that last heartbeat. If the gap exceeds 180 seconds and the system is not in a scheduled maintenance window, the thread treats the silence as a tamper event. On a tamper event, two actions run in parallel: the standard alert pipeline fires (the three-second banner, the WebSocket broadcast, and whatever evidence capture is wired up), and a tamper-specific SMTP email is dispatched to the administrator with the event timestamp and the last-known system context. The 180-second threshold is a deliberate compromise: long enough to ride out a brief Wi-Fi drop-out, short enough to catch a sustained tamper. The watchdog logic is diagrammed in Fig.~\ref{fig:deadman}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_deadman_monitor.drawio.pdf}
 \caption{Deadman monitor. 10\,s wake, 180\,s heartbeat deadline, and parallel tamper-alert and email branches on violation.}
 \label{fig:deadman}
 \end{figure}
+
+\FloatBarrier
 
 \subsection{Logging Engine}
 The logging engine sits at the bottom of the stack, and every other engine writes to it. The goal is to keep the write path cheap, so no writer thread ever blocks on disk I/O, while still giving the client a durable record to go back to.
@@ -337,16 +508,18 @@ All active log streams (alert history, voice commands, system events, and voice 
 
 In parallel with the text and JSON files, every loggable event is also inserted into a SQLite database with a microsecond-precision timestamp. A REST endpoint at \texttt{/api/events} accepts a \texttt{since=T} parameter and reads from that database, so clients that were offline for an arbitrary length of time can catch up on every missed detection, alert, and state change without the server having to keep a full event buffer in memory. The logging architecture is shown in Fig.~\ref{fig:logging}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{garuda_logging_engine.drawio.pdf}
 \caption{Logging engine. In-memory deques $\to$ flusher daemon $\to$ permanent text and JSON files plus a SQLite database (\texttt{events.db}) with 7-day rotation.}
 \label{fig:logging}
 \end{figure}
 
+\FloatBarrier
+
 \section{System Flowchart and Block Diagram}
 \label{sec:flowchart}
-With the individual engines described, the overall control flow can be read as a single picture. Fig.~\ref{fig:system_flowchart} is the end-to-end system flowchart, laid out as a full-page figure because of its width. Video enters the GStreamer TAPPAS pipeline from the Raspberry Pi Camera Module v3. The YOLOv8s detector runs on the Hailo-8L with non-maximum suppression applied at $\text{IoU}\le0.45$ and confidence $\ge0.35$. Detections are split into watch labels (Person, Backpack) and danger labels (Knife, Scissors, Hammer). A danger detection that passes the three-consecutive-frame gate and the active mode check triggers the full alert fan-out: an SMTPS email with the 60-second cooldown, a WebSocket push to every connected PWA client, and an AES-256-CBC encrypted clip sent over SSH. When Privacy mode is active, a Gaussian blur ($k=51$, $\sigma=30$) is applied to every person bounding box before the MJPEG/WebRTC publisher pushes the frame, so neither the live stream nor the stored clip contains an identifiable subject. The parallel subsystems (the Narada voice assistant with its rule-based dispatcher and Groq LLM fallback, the ARP presence monitor at 30-second poll with 90-second grace, the 180-second deadman watchdog, the scheduled mode transitions, the PBKDF2-SHA256 authentication with OTP 2FA, and the FastAPI server behind the Cloudflare tunnel at \texttt{api.veeramanikanta.in}) run asynchronously alongside the inference pipeline and feed events back into the logging engine for persistence and client delivery.
+With the individual engines described, the overall control flow can be read as a single picture. The end-to-end system flowchart, laid out as a full-page figure because of its width, is shown in Fig.~\ref{fig:system_flowchart}. Video enters the GStreamer TAPPAS pipeline from the Raspberry Pi Camera Module~v3. The YOLOv8s detector runs on the Hailo-8L with non-maximum suppression applied at $\text{IoU} \le 0.45$ and confidence $\ge 0.35$. Detections are split into watch labels (Person, Backpack) and danger labels (Knife, Scissors, Hammer). A danger detection that passes the three-consecutive-frame gate and the active mode check triggers the full alert fan-out: an SMTPS email with the 60-second cooldown, a WebSocket push to every connected PWA client, and an AES-256-CBC encrypted clip sent over SSH. When Privacy mode is active, a Gaussian blur ($k=51$, $\sigma=30$) is applied to every person bounding box before the MJPEG/WebRTC publisher pushes the frame, so neither the live stream nor the stored clip contains an identifiable subject. The parallel subsystems (the Narada voice assistant with its rule-based dispatcher and Groq LLM fallback, the ARP presence monitor at a 30-second poll with 90-second grace, the 180-second deadman watchdog, the scheduled mode transitions, the PBKDF2-SHA256 authentication with OTP 2FA, and the FastAPI server behind the Cloudflare tunnel at \texttt{api.veeramanikanta.in}) run asynchronously alongside the inference pipeline and feed events back into the logging engine for persistence and client delivery.
 
 \begin{figure*}[!p]
 \centering
@@ -355,7 +528,7 @@ With the individual engines described, the overall control flow can be read as a
 \label{fig:system_flowchart}
 \end{figure*}
 
-The same system can also be read as three horizontal layers, which is how the block diagram in Fig.~\ref{fig:block_diagram} lays it out. The inference pipeline layer at the top carries video from the camera through the GStreamer TAPPAS pipeline into the Hailo-8L NPU, which runs YOLOv8s and emits watch or danger classifications. The response and control layer in the middle contains the alert engine, Narada, the mode controller, and the presence monitor; these are the components driven by detection events, and they decide what actions are taken based on the current operating mode. The web server and persistence layer at the bottom handles everything that faces outward: the FastAPI application, the Cloudflare tunnel, PBKDF2 authentication, the deadman watchdog, and the multi-tier logging engine. Every engine in the layers above writes events into this bottom layer for storage and client delivery.
+The same system can also be read as three horizontal layers, which is how the block diagram lays it out in Fig.~\ref{fig:block_diagram}. The inference pipeline layer at the top carries video from the camera through the GStreamer TAPPAS pipeline into the Hailo-8L NPU, which runs YOLOv8s and emits watch or danger classifications. The response and control layer in the middle contains the alert engine, Narada, the mode controller, and the presence monitor; these are the components driven by detection events, and they decide what actions are taken based on the current operating mode. The web server and persistence layer at the bottom handles everything that faces outward: the FastAPI application, the Cloudflare tunnel, PBKDF2 authentication, the deadman watchdog, and the multi-tier logging engine. Every engine in the layers above writes events into this bottom layer for storage and client delivery.
 
 \begin{figure*}[!t]
 \centering
@@ -364,6 +537,8 @@ The same system can also be read as three horizontal layers, which is how the bl
 \label{fig:block_diagram}
 \end{figure*}
 
+\FloatBarrier
+
 \section{Hardware and Software Specifications}
 \label{sec:specs}
 This section consolidates the hardware, software, and model specifications of the deployed system so that the results in Section~\ref{sec:results} can be reproduced on comparable equipment. Only the deployed configuration is listed; development-time alternatives tested during the project are not included.
@@ -371,23 +546,24 @@ This section consolidates the hardware, software, and model specifications of th
 \subsection{Hardware}
 Table~\ref{tab:hw_specs} lists the host board, accelerator, camera, storage, and network interface used for every reported measurement.
 
-\begin{table}[!t]
+\begin{table}[H]
 \caption{\textbf{Hardware Specification}}
 \label{tab:hw_specs}
 \setlength{\tabcolsep}{3pt}
-\centering
+\centering\small
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Component} & \textbf{Specification} \\
 \hline
-Host board & Raspberry Pi 5 (BCM2712) \\
-CPU & Quad-core Arm Cortex-A76 @ 2.4~GHz \\
+Host board & Raspberry Pi~5 (BCM2712) \\
+CPU & Quad-core Arm Cortex-A76 \\
+CPU clock (overclocked) & 2.8~GHz (\texttt{arm\_freq=2800}) \\
 RAM & 16~GB LPDDR4X-4267 \\
-Storage & 1~TB NVMe SSD (on AI HAT+ M.2 carrier) \\
-Neural accelerator & Hailo-8L AI HAT+ (13~TOPS, INT8) \\
+Storage & 1~TB NVMe SSD (USB~3.0 enclosure) \\
+Neural accelerator & Hailo-8L AI HAT (13~TOPS, INT8) \\
 NPU interface & PCIe Gen3 $\times$1 (M.2 M-key) \\
 Device node & \texttt{/dev/hailo0} \\
-Camera & Raspberry Pi Camera Module v3 (Sony IMX708) \\
+Camera & Raspberry Pi Camera Module~v3 (Sony IMX708) \\
 Camera interface & CSI-2 MIPI (libcamera) \\
 Networking & 802.11ac Wi-Fi \\
 Power supply & 5~V / 5~A USB-C (official PSU) \\
@@ -397,13 +573,13 @@ Estimated BOM & US\$450--500 \\
 \end{table}
 
 \subsection{Software Stack}
-The software stack is summarised in Table~\ref{tab:sw_specs}. The Hailo driver is installed as a DKMS module so that kernel upgrades do not break the PCIe interface, and all Python services run under a single virtual environment that is activated by the \texttt{setup\_env.sh} script shipped with the project.
+The software stack is summarised in Table~\ref{tab:sw_specs}. The Hailo driver is installed as a DKMS module so that kernel upgrades do not break the PCIe interface, and all Python services run under a single virtual environment activated by the \texttt{setup\_env.sh} script shipped with the project.
 
-\begin{table}[!t]
+\begin{table}[H]
 \caption{\textbf{Software Stack Specification}}
 \label{tab:sw_specs}
 \setlength{\tabcolsep}{3pt}
-\centering
+\centering\small
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Layer} & \textbf{Version / Package} \\
@@ -419,7 +595,7 @@ Python & 3.11 \\
 Web framework & FastAPI + Uvicorn \\
 ASGI media & aiortc (WebRTC), \texttt{python-multipart} \\
 Speech & \texttt{SpeechRecognition}, \texttt{PyAudio} \\
-LLM backend & Groq API (\texttt{gpt-oss-120b}) \\
+LLM backend & Groq API, \texttt{gpt-oss-120b} (free tier, stateless) \\
 Auth primitives & \texttt{hashlib.pbkdf2\_hmac}, \texttt{secrets} \\
 Crypto & AES-256-CBC (\texttt{cryptography}) \\
 Remote exfiltration & \texttt{paramiko} (SSH) \\
@@ -430,13 +606,13 @@ Public ingress & Cloudflare Tunnel (\texttt{cloudflared}) \\
 \end{table}
 
 \subsection{Models}
-Three neural networks are deployed. The primary detector is a YOLOv8s model fine-tuned on the custom four-class dataset described in Section~\ref{sec:dataset} and post-training-quantised to INT8 for the Hailo-8L. The second model is a MobileNetV2 classifier that runs on cropped person regions to produce a Safe / Weapon label on the crop. The third is MiDaS Small, used as a monocular anti-spoof stage that rejects flat photos and screen replays via depth-variance analysis. All three are summarised in Table~\ref{tab:model_specs}.
+Three neural networks are deployed. The primary detector is a YOLOv8s model fine-tuned on the custom four-class dataset described in Section~\ref{sec:dataset} and post-training-quantised to INT8 for the Hailo-8L. The second model is a MobileNetV2 classifier that runs on cropped person regions to produce a Safe / Weapon label on the crop. The third is MiDaS Small, used as a monocular anti-spoof stage that rejects flat photos and screen replays via depth-variance analysis. All three are summarised in Table~\ref{tab:model_specs}, and the deployed HEF files are listed in Table~\ref{tab:hef_files}.
 
-\begin{table}[!t]
+\begin{table}[H]
 \caption{\textbf{Model Specification}}
 \label{tab:model_specs}
 \setlength{\tabcolsep}{3pt}
-\centering
+\centering\small
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Attribute} & \textbf{Value} \\
@@ -459,44 +635,69 @@ End-to-end detection latency & $\sim$22~ms \\
 \end{tabular}
 \end{table}
 
+\begin{table}[H]
+\caption{\textbf{Deployed HEF Files (Hailo-8L)}}
+\label{tab:hef_files}
+\setlength{\tabcolsep}{2pt}
+\centering\footnotesize
+\begin{tabular}{|l|c|l|c|c|}
+\hline
+\textbf{File} & \textbf{Size} & \textbf{Task} & \textbf{FPS} & \textbf{Latency} \\
+\hline
+\texttt{best\_v5.hef}                & 22.9~MB & Object detection   & 52.22 & 18.38~ms \\
+\texttt{mobilenetv2\_garuda.hef}     & 7.1~MB  & Crop classification & 500+  & $<$2~ms \\
+\texttt{midas\_depth.hef}            & 35~MB   & Monocular depth    & 200+  & $<$5~ms \\
+\texttt{libyolo\_hailortpp\_post.so} & 561~KB  & Custom-label NMS   & ---   & --- \\
+\hline
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
 \section{Results and Evaluation}
 \label{sec:results}
-The deployed system is evaluated on two axes: \textit{model quality} on a held-out 174-image / 351-instance test set that the model never sees during training, and \textit{runtime performance} on the Hailo-8L under the deployed GStreamer pipeline. The evaluation covers training convergence, validation and test mAP, per-class precision/recall/mAP, confusion structure, precision-recall and F1-confidence behaviour, the effect of dataset size on generalisation, the validation-to-test gap, and hardware throughput.
+The deployed system is evaluated on two axes: \textit{model quality} on a held-out test set that the model never sees during training, and \textit{runtime performance} on the Hailo-8L under the deployed GStreamer pipeline. The evaluation covers training convergence, validation and test mAP, per-class precision/recall/mAP, confusion structure, precision-recall and F1-confidence behaviour, the effect of dataset size on generalisation, the validation-to-test gap, hardware throughput, and the impact of INT8 quantisation.
 
 \subsection{Training Loss Convergence}
-All three YOLOv8 loss components (box, classification, and distribution-focus) fall monotonically across the 150 training epochs. Box loss drops from 1.65 to 0.74 and classification loss from 2.80 to 0.49. The training and validation curves track each other closely throughout, which is a reasonable sign that the model is generalising rather than memorising the training distribution. The full training dynamics are in Fig.~\ref{fig:training_losses}.
+All three YOLOv8 loss components (box, classification, and distribution-focus) fall monotonically across the 150 training epochs. Box loss drops from 1.65 to 0.74 and classification loss from 2.80 to 0.49. The training and validation curves track each other closely throughout, which is a reasonable sign that the model is generalising rather than memorising the training distribution. The full training dynamics are plotted in Fig.~\ref{fig:training_losses}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig1_training_losses.pdf}
 \caption{Training loss convergence over 150 epochs. Box, classification, and distribution-focus losses all fall monotonically and the train and validation curves do not diverge.}
 \label{fig:training_losses}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Validation mAP and Precision / Recall}
 mAP{@}0.5 climbs sharply over the first 30 epochs and then plateaus near 0.81 by epoch~100. mAP{@}0.5:0.95 follows roughly 0.20 below at about 0.62. Precision and recall converge near 0.87 and 0.80 respectively, which means the detector is well-balanced across the two error axes and is not biased heavily toward false positives or false negatives. These curves are plotted in Fig.~\ref{fig:training_metrics}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig2_training_metrics.pdf}
 \caption{Validation mAP{@}0.5, mAP{@}0.5:0.95, precision, and recall versus training epoch.}
 \label{fig:training_metrics}
 \end{figure}
 
-\subsection{Three-Model Performance Comparison}
-The default COCO-pretrained YOLOv8s scores near zero on all four metrics on our task. Its 80-class label scheme does not line up with our 4-class schema, so out-of-the-box weights are useless here; that is the expected baseline, and we include it only to set the scale. Fine-tuned v1 (359 training images) recovers to a test mAP{@}0.5 of 0.465. The final fine-tuned v5 (4{,}982 training images, 150 epochs) reaches a test mAP{@}0.5 of 0.847, an 82\% improvement over v1 and a 12\% improvement over v2. The three-way comparison is shown in Fig.~\ref{fig:model_comparison}.
+\FloatBarrier
 
-\begin{figure}[!t]
+\subsection{Three-Model Performance Comparison}
+The default COCO-pretrained YOLOv8s scores near zero on all four metrics on our task. Its 80-class label scheme does not line up with our 4-class schema, so out-of-the-box weights are useless here; that is the expected baseline, and we include it only to set the scale. Fine-tuned v1 (359 training images) recovers to a test mAP{@}0.5 of 0.465. The final fine-tuned v5 (4{,}982 training images, 150 epochs) reaches a test mAP{@}0.5 of 0.847 --- an 82\% improvement over v1 and a 12\% improvement over v2. The three-way comparison is plotted in Fig.~\ref{fig:model_comparison}.
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig3_model_comparison.pdf}
 \caption{Three-model comparison on the held-out test set: default COCO YOLOv8s versus fine-tuned v1 versus final v5.}
 \label{fig:model_comparison}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Per-Class mAP{@}0.5 Progression}
 The largest single-class gain from v1 to v5 is on Knife, which improves by $+0.66$ mAP{@}0.5. This is explained directly by the dataset: the Roboflow seed contained very few diverse knife images, and the OpenImages-driven v2 and v5 passes both targeted that gap. Scissors lands at the highest absolute mAP{@}0.5 in v5 at 0.967. Person remains the hardest class at 0.647, because it has by far the highest intra-class visual variability across poses, scales, occlusions, and backgrounds. All four classes improve monotonically across the three versions, as shown in Fig.~\ref{fig:per_class_map} and Table~\ref{tab:v1_v5}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig4_per_class_map50.pdf}
 \caption{Per-class mAP{@}0.5 at v1, v2, and v5. All four classes improve monotonically with dataset scale.}
@@ -521,21 +722,23 @@ Scissors & 0.761 & 0.929 & +22.1\% & 0.760 & 0.967 & +27.2\% \\
 \end{tabular}
 \end{table*}
 
-\subsection{Full Per-Class Metrics at v5}
-On the held-out test set, Hammer, Knife, and Scissors all reach balanced precision and recall above 0.82. Person is the weakest class with a precision of 0.701 and a recall of 0.609, which is a direct consequence of its higher intra-class visual variability. Scissors achieves an mAP{@}0.5 of 0.967 and an mAP{@}0.5:0.95 of 0.828, which makes it the best-detected class overall. The full per-class breakdown is plotted in Fig.~\ref{fig:perclass_full} and the true-positive / false-negative counts are listed in Table~\ref{tab:perclass_tpfn}.
+\FloatBarrier
 
-\begin{figure}[!t]
+\subsection{Full Per-Class Metrics at v5}
+On the held-out test set, Hammer, Knife, and Scissors all reach balanced precision and recall above 0.82. Person is the weakest class with a precision of 0.701 and a recall of 0.609, which is a direct consequence of its higher intra-class visual variability. Scissors achieves an mAP{@}0.5 of 0.967 and an mAP{@}0.5:0.95 of 0.828, which makes it the best-detected class overall. The full per-class breakdown is plotted in Fig.~\ref{fig:perclass_full}, the true-positive / false-negative counts are listed in Table~\ref{tab:perclass_tpfn}, and the complete scorecard including precision, recall, F1, and false-alarm rate appears in Table~\ref{tab:v5_full}.
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig5_perclass_full_metrics.pdf}
 \caption{Full per-class metrics (precision, recall, mAP{@}0.5, mAP{@}0.5:0.95) for the deployed v5 model.}
 \label{fig:perclass_full}
 \end{figure}
 
-\begin{table}[!t]
+\begin{table}[H]
 \caption{\textbf{Per-Class TP/FN and Detection Recall (v5 Test Set)}}
 \label{tab:perclass_tpfn}
 \setlength{\tabcolsep}{4pt}
-\centering
+\centering\small
 \begin{tabular}{|l|c|c|c|}
 \hline
 \textbf{Class} & \textbf{TP} & \textbf{FN} & \textbf{Recall} \\
@@ -545,62 +748,132 @@ Knife    & \texttildelow130  & \texttildelow29  & 0.817 \\
 Person   & \texttildelow807  & \texttildelow517 & 0.609 \\
 Scissors & \texttildelow118  & \texttildelow9   & 0.929 \\
 \hline
-\textbf{Overall} & \textbf{\texttildelow1,094} & \textbf{\texttildelow562} & \textbf{0.801} \\
+\textbf{Overall} & \textbf{\texttildelow1{,}094} & \textbf{\texttildelow562} & \textbf{0.801} \\
 \hline
 \end{tabular}
 \end{table}
 
+\begin{table}[H]
+\caption{\textbf{Full Per-Class Scorecard at v5 (Test Set, 622 Images, 1{,}656 Instances)}}
+\label{tab:v5_full}
+\setlength{\tabcolsep}{2pt}
+\centering\footnotesize
+\begin{tabular}{|l|c|c|c|c|c|c|}
+\hline
+\textbf{Class} & \textbf{P} & \textbf{R} & \textbf{F1} & \textbf{mAP{@}0.5} & \textbf{mAP{@}0.5:0.95} & \textbf{FAR} \\
+\hline
+Hammer   & 0.930 & 0.848 & 0.887 & 0.889 & 0.720 & 0.070 \\
+Knife    & 0.896 & 0.817 & 0.855 & 0.886 & 0.721 & 0.104 \\
+Person   & 0.701 & 0.609 & 0.652 & 0.647 & 0.373 & 0.299 \\
+Scissors & 0.935 & 0.929 & 0.932 & 0.967 & 0.828 & 0.065 \\
+\hline
+\textbf{Overall} & \textbf{0.866} & \textbf{0.801} & \textbf{0.832} & \textbf{0.847} & \textbf{0.661} & \textbf{0.134} \\
+\hline
+\end{tabular}\\[2pt]
+\raggedright\scriptsize FAR = False Alarm Rate $= 1 - \text{precision}$.
+\end{table}
+
+\FloatBarrier
+
 \subsection{Normalised Confusion Matrix}
 The normalised confusion matrix in Fig.~\ref{fig:confusion} is diagonally dominant, with correct-class recall values of 0.85, 0.82, 0.61, and 0.93 for Hammer, Knife, Person, and Scissors respectively. Inter-class confusion is low, at no more than 0.03 per off-diagonal cell. In other words, almost all of the errors are outright misses (background false negatives) rather than confusions between the four target classes. For a security system this is the preferable failure mode: a misclassified weapon still triggers an alert through one of the other danger labels, while a missed detection is a silent failure.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig6_confusion_matrix.pdf}
 \caption{Normalised confusion matrix on the v5 held-out test set. Diagonal dominance confirms strong per-class discrimination, with inter-class confusion $\leq 0.03$.}
 \label{fig:confusion}
 \end{figure}
 
-\subsection{Precision-Recall Curves}
-Scissors has the highest area under the precision-recall curve (AP = 0.967) and holds high precision well past a recall of 0.90. Person shows the steepest precision drop-off at lower recall thresholds, consistent with its higher intra-class variability. Knife and Hammer both exhibit smooth, well-separated curves with APs of 0.886 and 0.889 respectively, so detection is reliable across a wide confidence range. The full set of PR curves is in Fig.~\ref{fig:pr_curves}.
+\FloatBarrier
 
-\begin{figure}[!t]
+\subsection{Precision-Recall Curves}
+Scissors has the highest area under the precision-recall curve (AP = 0.967) and holds high precision well past a recall of 0.90. Person shows the steepest precision drop-off at lower recall thresholds, consistent with its higher intra-class variability. Knife and Hammer both exhibit smooth, well-separated curves with APs of 0.886 and 0.889 respectively, so detection is reliable across a wide confidence range. The full set of PR curves is plotted in Fig.~\ref{fig:pr_curves}.
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig7_pr_curves.pdf}
 \caption{Per-class precision-recall curves for the deployed v5 detector on the held-out test set.}
 \label{fig:pr_curves}
 \end{figure}
 
-\subsection{Hardware Inference Performance}
-The custom \texttt{best\_v5.hef} model reaches 52.2~FPS at 18.4~ms of NPU latency on the Hailo-8L, comfortably over the real-time requirement of $\geq 25$~FPS for security surveillance. For reference, the Hailo-distributed YOLOv8s runs at 13.2~ms / 58.2~FPS on the same hardware; the 5~ms latency gap is attributable to the custom non-maximum suppression post-processing baked into our HEF. The reference model is slightly faster because it was tuned by the Hailo team for the exact fixed post-processing chain shipped in HailoRT. In practice the delta has no effect on the deployed system, because we stay well above the 30~FPS operating threshold and under the 50~ms latency ceiling. Fig.~\ref{fig:hw_perf} plots the comparison. Compared against prior edge-deployed detectors, our 52.2~FPS exceeds the 36.7~FPS reported by Xu \emph{et~al.}~\cite{b1} for FL-YOLO on an NVIDIA Jetson TX1 and far surpasses the 15~FPS of Al Amin \emph{et~al.}'s FPGA implementation~\cite{b5}, while operating at a competitive mAP{@}0.5 of 0.847 on a domain-specific four-class task.
+\FloatBarrier
 
-\begin{figure}[!t]
+\subsection{Hardware Inference Performance}
+The custom \texttt{best\_v5.hef} model reaches 52.2~FPS at 18.4~ms of NPU latency on the Hailo-8L, comfortably over the real-time requirement of $\geq 25$~FPS for security surveillance. For reference, the Hailo-distributed YOLOv8s runs at 13.2~ms / 58.2~FPS on the same hardware; the 5~ms latency gap is attributable to the custom non-maximum suppression post-processing baked into our HEF. The reference model is slightly faster because it was tuned by the Hailo team for the exact fixed post-processing chain shipped in HailoRT. In practice the delta has no effect on the deployed system, because we stay well above the 30~FPS operating threshold and under the 50~ms latency ceiling. The comparison is plotted in Fig.~\ref{fig:hw_perf}. Compared against prior edge-deployed detectors, our 52.2~FPS exceeds the 36.7~FPS reported by Xu \emph{et~al.}~\cite{b1} for FL-YOLO on an NVIDIA Jetson TX1 and far surpasses the 15~FPS of Al Amin \emph{et~al.}'s FPGA implementation~\cite{b5}, while operating at a competitive mAP{@}0.5 of 0.847 on a domain-specific four-class task.
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig9_hardware_performance.pdf}
 \caption{Hardware inference performance on the Hailo-8L. Custom v5 HEF (52.2~FPS, 18.4~ms) versus the Hailo-provided YOLOv8s reference (58.2~FPS, 13.2~ms).}
 \label{fig:hw_perf}
 \end{figure}
 
-\subsection{F1-Confidence Threshold Curves}
-All four classes reach their peak F1 score in the confidence band 0.25--0.27, which sits essentially on top of YOLO's default threshold of 0.25. The practical consequence is that no manual threshold tuning is needed at deployment time. Scissors achieves the highest peak F1 at 0.690, and Person sits at the lowest 0.473, which matches its lower recall. Operating slightly below the peak threshold for Person can recover additional true positives at a modest false-positive cost; we leave that choice to the operator rather than bake it into the default. The F1-confidence sweep is shown in Fig.~\ref{fig:f1_conf}.
+The choice of YOLOv8s as the detector backbone was made against the variants listed in Table~\ref{tab:arch_select}. YOLOv8n is faster but gives up 7--8 COCO mAP points; YOLOv8m fits inside the 13~TOPS budget only marginally, and at below 20~FPS it falls underneath the 30~FPS surveillance floor. YOLOv8s is the sweet spot.
 
-\begin{figure}[!t]
+\begin{table}[H]
+\caption{\textbf{YOLOv8 Variant Selection (Hailo-8L Budget)}}
+\label{tab:arch_select}
+\setlength{\tabcolsep}{3pt}
+\centering\small
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Model} & \textbf{GFLOPs} & \textbf{FPS (est.)} & \textbf{COCO mAP50} & \textbf{Fits 13~TOPS?} \\
+\hline
+YOLOv8n           & 8.7  & $>$60 & 37.3\% & Yes \\
+\textbf{YOLOv8s (chosen)} & \textbf{28.4} & \textbf{52.22} & \textbf{44.9\%} & \textbf{Yes} \\
+YOLOv8m           & 80.6 & $\sim$18 & 50.2\% & Marginal \\
+YOLOv8l           & 165.2 & $<$10  & 52.9\% & No \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{INT8 Quantisation Impact}
+\label{sec:quant}
+The v5 model was compiled to INT8 via post-training quantisation using 128 calibration images drawn from the v5 training split. The Hailo Dataflow Compiler bakes normalisation (\texttt{normalization([0,0,0],[255,255,255])}) directly into the HEF graph, so the chip accepts the YUV-to-RGB converted frame as-is at inference time. Table~\ref{tab:quant} compares the FP32 PyTorch baseline against the deployed INT8 HEF. The accuracy cost of quantisation is under one mAP{@}0.5 point, while the power envelope drops by an order of magnitude and the on-disk model halves in size --- which is exactly the trade-off a continuously-running embedded system needs.
+
+\begin{table}[H]
+\caption{\textbf{FP32 $\to$ INT8 Quantisation Impact (v5)}}
+\label{tab:quant}
+\setlength{\tabcolsep}{3pt}
+\centering\small
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Metric} & \textbf{FP32 (RTX~4090)} & \textbf{INT8 (Hailo-8L)} & \textbf{Delta} \\
+\hline
+mAP{@}0.5            & $\sim$0.855 (val) & 0.847 (test) & $-0.8\%$ \\
+FPS                  & $\sim$450 (batch) & 52.22        & NPU-limited \\
+Power                & $\sim$100~W (GPU) & $\sim$5~W (NPU+Pi) & $-95\%$ \\
+Model file size      & 44.8~MB (ONNX FP32) & 22.9~MB (HEF) & $-48.9\%$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\FloatBarrier
+
+\subsection{F1-Confidence Threshold Curves}
+All four classes reach their peak F1 score in the confidence band 0.25--0.27, which sits essentially on top of YOLO's default threshold of 0.25. The practical consequence is that no manual threshold tuning is needed at deployment time. Scissors achieves the highest peak F1 at 0.690, and Person sits at the lowest 0.473, which matches its lower recall. Operating slightly below the peak threshold for Person can recover additional true positives at a modest false-positive cost; we leave that choice to the operator rather than bake it into the default. The F1-confidence sweep is plotted in Fig.~\ref{fig:f1_conf}.
+
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig10_f1_confidence.pdf}
 \caption{Per-class F1 score versus confidence threshold. The peak F1 sits in the 0.25--0.27 band for all four classes.}
 \label{fig:f1_conf}
 \end{figure}
 
+\FloatBarrier
+
 \subsection{Effect of Training Dataset Size}
 Fine-tuned v1 (359 images) converges quickly to a high validation mAP of roughly 0.88, but its held-out test mAP is only 0.465. That gap is a textbook case of overfit to a single visual style: the Roboflow seed had a narrow distribution, and the model memorised it. Fine-tuned v2 (1{,}383 images) narrows the gap substantially (validation 0.735, test 0.754), and the final v5 (4{,}982 images, 150 epochs) achieves both a strong validation score of 0.817 and the best test mAP of 0.847. In other words, dataset scale and diversity, not architectural changes, are doing most of the work here. The progression is plotted in Fig.~\ref{fig:v1v2} and summarised in Table~\ref{tab:dataset_versions}.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig11_v1_vs_v2_training.pdf}
 \caption{Validation mAP{@}0.5 progression against training-set size (v1, v2, v5).}
 \label{fig:v1v2}
 \end{figure}
 
-\begin{table}[!t]
+\begin{table}[H]
 \caption{\textbf{Training Dataset Growth and Test mAP}}
 \label{tab:dataset_versions}
 \setlength{\tabcolsep}{2pt}
@@ -616,26 +889,72 @@ v5 & 4{,}982 & 6{,}226 & 16{,}335       & 0.847 & + OI per-class (2{,}276 imgs) 
 \end{tabular}
 \end{table}
 
+\FloatBarrier
+
 \subsection{Validation-to-Test Generalisation Gap}
 Fine-tuned v1 shows a 0.414-point gap between its best validation mAP (0.879) and its held-out test mAP (0.465). That is a clear sign of distribution overfit to the single-source seed. v2 essentially closes the gap ($+0.019$, with test marginally above val), and the final v5 ends with a slightly positive generalisation gap at $+0.030$ (test 0.847 $>$ val 0.817). A test score that beats the validation score is a good indication that the expanded 4{,}982-image training set produced a model that generalises to genuinely unseen imagery rather than just fitting a well-controlled validation set. Fig.~\ref{fig:overfit} captures the progression.
 
-\begin{figure}[!t]
+\begin{figure}[H]
 \centering
 \includegraphics[width=\columnwidth]{fig12_overfitting_gap.pdf}
 \caption{Validation-to-test mAP{@}0.5 gap across v1, v2, and v5. The final v5 achieves a positive gap, with test mAP above validation mAP.}
 \label{fig:overfit}
 \end{figure}
 
+\FloatBarrier
+
+\subsection{Comparative Positioning against Cloud and Edge Baselines}
+To make the numbers in the previous subsections concrete, Tables~\ref{tab:vs_cloud} and~\ref{tab:vs_edge} compare Project Garuda against a representative cloud-based commercial system and against the main edge alternatives that a builder might reasonably consider. The main result is privacy-by-design: raw frames never leave the device, the monthly infrastructure cost is zero after purchase, and the alert latency is an order of magnitude below the 200--2{,}000~ms typical of cloud-backed systems.
+
+\begin{table}[H]
+\caption{\textbf{Project Garuda vs.\ Cloud-Based Systems}}
+\label{tab:vs_cloud}
+\setlength{\tabcolsep}{2pt}
+\centering\footnotesize
+\begin{tabular}{|p{3.2cm}|p{1.9cm}|p{2.2cm}|}
+\hline
+\textbf{Property} & \textbf{Cloud} & \textbf{Garuda (edge)} \\
+\hline
+Processing location     & Remote server    & Raspberry Pi~5 (local) \\
+Alert latency           & 200--2{,}000~ms  & $\sim$22~ms \\
+Internet required       & Yes (always)     & No \\
+Video data exposure     & Frames to cloud  & Frames never leave device \\
+Privacy risk            & High             & None \\
+Offline availability    & None             & Full functionality \\
+Monthly cost            & US\$10--200      & US\$0 after BOM \\
+Custom classes          & Cloud retrain    & Local fine-tune \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\caption{\textbf{Project Garuda vs.\ Other Edge Configurations}}
+\label{tab:vs_edge}
+\setlength{\tabcolsep}{2pt}
+\centering\footnotesize
+\begin{tabular}{|p{2.9cm}|p{1.8cm}|c|p{1.4cm}|c|}
+\hline
+\textbf{System} & \textbf{Hardware} & \textbf{FPS} & \textbf{Custom} & \textbf{Anti-spoof} \\
+\hline
+Pi + CPU YOLOv8s        & RPi~5 (CPU only)         & 3--5    & No       & No \\
+Jetson Nano + YOLOv5    & Jetson Nano              & $\sim$30 & Tune    & No \\
+Coral USB + MobileNet   & Google Coral USB         & $\sim$100 & Limited & No \\
+\textbf{Garuda}         & \textbf{RPi~5 + Hailo-8L} & \textbf{52.22} & \textbf{4-class} & \textbf{MiDaS depth} \\
+\hline
+\end{tabular}
+\end{table}
+
+\FloatBarrier
 
 \section{Conclusion}
 \label{sec:conclusion}
-Project Garuda shows that a self-hosted, privacy-first, cloud-independent AI home security system can be built from consumer hardware for under US\$500 without giving up real-time performance or modern security primitives. The central engineering claim is simple: a Raspberry Pi~5 with 16~GB of RAM, a 1~TB NVMe SSD, and a Hailo-8L AI HAT+ can host the full inference stack (a custom-fine-tuned YOLOv8s detector for four threat-relevant classes, a MobileNetV2 Safe/Weapon classifier, and a MiDaS Small depth estimator for anti-spoof) at 52.22~FPS and 18.38~ms of NPU latency, well inside the real-time envelope for continuous surveillance, while leaving the CPU free to run the FastAPI web server, the Narada voice assistant, the presence monitor, the deadman watchdog, and the logging engine concurrently.
+Project Garuda shows that a self-hosted, privacy-first, cloud-independent AI home security system can be built from consumer hardware for under US\$500 without giving up real-time performance or modern security primitives. The central engineering claim is simple: a Raspberry Pi~5 with 16~GB of RAM, a 1~TB USB~3 SSD, a Hailo-8L AI HAT+, and a CPU overclocked to 2.8~GHz can host the full inference stack (a custom-fine-tuned YOLOv8s detector for four threat-relevant classes, a MobileNetV2 Safe/Weapon classifier, and a MiDaS Small depth estimator for anti-spoof) at a sustained 52.22~FPS and 18.38~ms of NPU latency --- well inside the real-time envelope for continuous surveillance --- while leaving the CPU free to run the FastAPI web server, the Narada voice assistant, the presence monitor, the deadman watchdog, and the logging engine concurrently. The flatness of that 52.22~FPS line across every operating mode is itself a result: it falls out of the asynchronous, CPU-pinned, bounded-queue pipeline architecture described in Section~\ref{sec:async_fps}, not from anything model-specific.
 
-On the model side, the progression from a 359-image v1 ($\text{mAP}_{50}=0.465$) to the 4{,}982-image v5 ($\text{mAP}_{50}=0.847$) with a $+0.030$ positive validation-to-test generalisation gap makes the dominant lever clear: dataset scale and diversity, not architectural tricks, are what produce a robust real-world detector. The COCO baseline of essentially 0.0002~mAP on this four-class task confirms that a generic pretrained detector is simply not useful for domain-specific security classes, which reinforces the need for targeted fine-tuning. The low off-diagonal values in the confusion matrix ($\leq 0.03$) and the alignment of the peak F1 confidence with YOLO's default 0.25 threshold together mean that the model ships without needing any post-deployment threshold tuning.
+On the model side, the progression from a 359-image v1 ($\text{mAP}_{50}=0.465$) to the 4{,}982-image v5 ($\text{mAP}_{50}=0.847$) with a $+0.030$ positive validation-to-test generalisation gap makes the dominant lever clear: dataset scale and diversity, not architectural tricks, are what produce a robust real-world detector. The COCO baseline of essentially 0.0002~mAP on this four-class task confirms that a generic pretrained detector is simply not useful for domain-specific security classes, which reinforces the need for targeted fine-tuning. The low off-diagonal values in the confusion matrix ($\leq 0.03$) and the alignment of the peak F1 confidence with YOLO's default 0.25 threshold together mean that the model ships without needing any post-deployment threshold tuning. INT8 quantisation costs less than one mAP{@}0.5 point while cutting power by an order of magnitude, which is the trade-off a continuously-running embedded system should be willing to make.
 
-On the systems side, the multi-engine architecture (alert fan-out with a 60-second SMTP cooldown, WebSocket push, AES-256-CBC clip encryption, and SSH exfiltration; PBKDF2-SHA256 with 600{,}000 iterations and OTP 2FA; the 180-second deadman watchdog; five lock-guarded and scheduler-driven operating modes; ARP-based LAN presence; and the SQLite-backed offline event sync) closes the gap identified in the introduction between motion-only DIY setups and cloud-dependent professional systems. Every event reaches the dashboard in real time over WebSocket or WebRTC, and every event is also persisted to the multi-tier logger, so browser clients have a coherent view of the system state even after arbitrary network outages.
+On the systems side, the multi-engine architecture --- alert fan-out with a 60-second SMTP cooldown, WebSocket push, AES-256-CBC clip encryption, and SSH exfiltration; PBKDF2-SHA256 with 600{,}000 iterations and OTP 2FA; the 180-second deadman watchdog; five lock-guarded and scheduler-driven operating modes; ARP-based LAN presence; and the SQLite-backed offline event sync --- closes the gap identified in the introduction between motion-only DIY setups and cloud-dependent professional systems. Every event reaches the dashboard in real time over WebSocket or WebRTC, and every event is also persisted to the multi-tier logger, so browser clients have a coherent view of the system state even after arbitrary network outages. The Groq LLM integration is bounded to a stateless, free-tier text-only completion API: transcripts enter, JSON intents return, and no video, audio, image, or persistent conversation context is ever uploaded.
 
-The broader point is that edge AI is no longer a compromise. With the right accelerator, the right post-training quantisation flow, and a disciplined software architecture, a device the size of a paperback can deliver the detection quality, response latency, and security properties that used to require a cloud subscription and a server rack. Worthwhile extensions include pushing the class vocabulary beyond the four threat labels, layering a temporal model for activity recognition on top of the detector, integrating on-device text-to-speech so Narada keeps working when the public network is unavailable, and replacing the current static MiDaS variance threshold with a learned liveness head co-trained with the detector. Night-time operation is available on the same platform by swapping the Raspberry Pi Camera Module v3 for the NoIR Camera Module v3 and retraining the detector on low-light and infrared imagery; we leave a full low-light evaluation to future work.
+The broader point is that edge AI is no longer a compromise. With the right accelerator, the right post-training quantisation flow, and a disciplined software architecture, a device the size of a paperback can deliver the detection quality, response latency, and security properties that used to require a cloud subscription and a server rack. Worthwhile extensions include pushing the class vocabulary beyond the four threat labels, layering a temporal model for activity recognition on top of the detector, integrating on-device text-to-speech so Narada keeps working when the public network is unavailable, and replacing the current static MiDaS variance threshold with a learned liveness head co-trained with the detector. Night-time operation is available on the same platform by swapping the Raspberry Pi Camera Module~v3 for the NoIR Camera Module~v3 and retraining the detector on low-light and infrared imagery; we leave a full low-light evaluation to future work.
 
 
 
