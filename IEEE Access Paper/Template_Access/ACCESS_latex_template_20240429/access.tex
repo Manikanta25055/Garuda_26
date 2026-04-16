@@ -13,6 +13,7 @@
 \graphicspath{{figures/}{./}}
 \tolerance=1000
 \emergencystretch=1.5em
+\raggedbottom
 
 \usepackage{bm}
 \makeatletter
@@ -374,6 +375,8 @@ T$_{\text{total}}$ (with async alert) & $\sim$22~ms + async \\
 \end{tabular}
 \end{table}
 
+VDevice multiplexing is the knob that lets all three networks share a single 13~TOPS budget without contention. The three HEFs are loaded onto one VDevice at startup and the inference thread issues sequential \texttt{infer} calls; because MobileNetV2 and MiDaS both run at 200--500+~FPS on this chip, the combined cost per Person crop is under 4~ms --- well inside the 19.2~ms frame budget implied by the baseline 52~FPS target. The anti-spoof decision is grounded in physical geometry: a flat panel (photo, screen) produces a normalised-depth variance $\sigma^2 < 0.005$ in our measurements, while a real person at arm's length produces $\sigma^2 \in [0.022, 0.10]$, giving a $4\times$ safety margin for the 0.05 threshold.
+
 \begin{table*}[!t]
 \caption{\textbf{Cascade Decision Matrix Across Operating Scenarios}}
 \label{tab:cascade_matrix}
@@ -390,8 +393,6 @@ Low-confidence person (suppressed) & YOLOv8s (conf $<$ 0.60) & n/a & 52.22 & 22\
 \hline
 \end{tabular}
 \end{table*}
-
-VDevice multiplexing is the knob that lets all three networks share a single 13~TOPS budget without contention. The three HEFs are loaded onto one VDevice at startup and the inference thread issues sequential \texttt{infer} calls; because MobileNetV2 and MiDaS both run at 200--500+~FPS on this chip, the combined cost per Person crop is under 4~ms --- well inside the 19.2~ms frame budget implied by the baseline 52~FPS target. The anti-spoof decision is grounded in physical geometry: a flat panel (photo, screen) produces a normalised-depth variance $\sigma^2 < 0.005$ in our measurements, while a real person at arm's length produces $\sigma^2 \in [0.022, 0.10]$, giving a $4\times$ safety margin for the 0.05 threshold.
 
 \FloatBarrier
 
@@ -521,7 +522,7 @@ In parallel with the text and JSON files, every loggable event is also inserted 
 \label{sec:flowchart}
 With the individual engines described, the overall control flow can be read as a single picture. The end-to-end system flowchart, laid out as a full-page figure because of its width, is shown in Fig.~\ref{fig:system_flowchart}. Video enters the GStreamer TAPPAS pipeline from the Raspberry Pi Camera Module~v3. The YOLOv8s detector runs on the Hailo-8L with non-maximum suppression applied at $\text{IoU} \le 0.45$ and confidence $\ge 0.35$. Detections are split into watch labels (Person, Backpack) and danger labels (Knife, Scissors, Hammer). A danger detection that passes the three-consecutive-frame gate and the active mode check triggers the full alert fan-out: an SMTPS email with the 60-second cooldown, a WebSocket push to every connected PWA client, and an AES-256-CBC encrypted clip sent over SSH. When Privacy mode is active, a Gaussian blur ($k=51$, $\sigma=30$) is applied to every person bounding box before the MJPEG/WebRTC publisher pushes the frame, so neither the live stream nor the stored clip contains an identifiable subject. The parallel subsystems (the Narada voice assistant with its rule-based dispatcher and Groq LLM fallback, the ARP presence monitor at a 30-second poll with 90-second grace, the 180-second deadman watchdog, the scheduled mode transitions, the PBKDF2-SHA256 authentication with OTP 2FA, and the FastAPI server behind the Cloudflare tunnel at \texttt{api.veeramanikanta.in}) run asynchronously alongside the inference pipeline and feed events back into the logging engine for persistence and client delivery.
 
-\begin{figure*}[!p]
+\begin{figure*}[t]
 \centering
 \includegraphics[width=0.92\textwidth,height=0.85\textheight,keepaspectratio]{garuda_system_flowchart.drawio.pdf}
 \caption{Project Garuda system flowchart. Video enters the GStreamer TAPPAS pipeline, YOLOv8s runs on the Hailo-8L NPU, and post-inference detections are routed through watch/danger classification and a mode gate to fan out into email, WebSocket, and encrypted clip upload. The parallel subsystems (voice assistant, presence monitor, deadman watchdog, mode scheduler, authentication, and the Cloudflare-tunnelled web server) execute concurrently and feed the multi-tier logging engine.}
@@ -550,8 +551,8 @@ Table~\ref{tab:hw_specs} lists the host board, accelerator, camera, storage, and
 \caption{\textbf{Hardware Specification}}
 \label{tab:hw_specs}
 \setlength{\tabcolsep}{3pt}
-\centering\small
-\begin{tabular}{|l|l|}
+\centering\footnotesize
+\begin{tabular}{|l|p{4.0cm}|}
 \hline
 \textbf{Component} & \textbf{Specification} \\
 \hline
@@ -612,8 +613,8 @@ Three neural networks are deployed. The primary detector is a YOLOv8s model fine
 \caption{\textbf{Model Specification}}
 \label{tab:model_specs}
 \setlength{\tabcolsep}{3pt}
-\centering\small
-\begin{tabular}{|l|l|}
+\centering\footnotesize
+\begin{tabular}{|l|p{4.0cm}|}
 \hline
 \textbf{Attribute} & \textbf{Value} \\
 \hline
@@ -640,6 +641,7 @@ End-to-end detection latency & $\sim$22~ms \\
 \label{tab:hef_files}
 \setlength{\tabcolsep}{2pt}
 \centering\footnotesize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{|l|c|l|c|c|}
 \hline
 \textbf{File} & \textbf{Size} & \textbf{Task} & \textbf{FPS} & \textbf{Latency} \\
@@ -649,7 +651,8 @@ End-to-end detection latency & $\sim$22~ms \\
 \texttt{midas\_depth.hef}            & 35~MB   & Monocular depth    & 200+  & $<$5~ms \\
 \texttt{libyolo\_hailortpp\_post.so} & 561~KB  & Custom-label NMS   & ---   & --- \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \FloatBarrier
@@ -816,6 +819,7 @@ The choice of YOLOv8s as the detector backbone was made against the variants lis
 \label{tab:arch_select}
 \setlength{\tabcolsep}{3pt}
 \centering\small
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{|l|c|c|c|c|}
 \hline
 \textbf{Model} & \textbf{GFLOPs} & \textbf{FPS (est.)} & \textbf{COCO mAP50} & \textbf{Fits 13~TOPS?} \\
@@ -825,7 +829,8 @@ YOLOv8n           & 8.7  & $>$60 & 37.3\% & Yes \\
 YOLOv8m           & 80.6 & $\sim$18 & 50.2\% & Marginal \\
 YOLOv8l           & 165.2 & $<$10  & 52.9\% & No \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \subsection{INT8 Quantisation Impact}
@@ -837,6 +842,7 @@ The v5 model was compiled to INT8 via post-training quantisation using 128 calib
 \label{tab:quant}
 \setlength{\tabcolsep}{3pt}
 \centering\small
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{|l|c|c|c|}
 \hline
 \textbf{Metric} & \textbf{FP32 (RTX~4090)} & \textbf{INT8 (Hailo-8L)} & \textbf{Delta} \\
@@ -846,7 +852,8 @@ FPS                  & $\sim$450 (batch) & 52.22        & NPU-limited \\
 Power                & $\sim$100~W (GPU) & $\sim$5~W (NPU+Pi) & $-95\%$ \\
 Model file size      & 44.8~MB (ONNX FP32) & 22.9~MB (HEF) & $-48.9\%$ \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \FloatBarrier
@@ -932,6 +939,7 @@ Custom classes          & Cloud retrain    & Local fine-tune \\
 \label{tab:vs_edge}
 \setlength{\tabcolsep}{2pt}
 \centering\footnotesize
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{|p{2.9cm}|p{1.8cm}|c|p{1.4cm}|c|}
 \hline
 \textbf{System} & \textbf{Hardware} & \textbf{FPS} & \textbf{Custom} & \textbf{Anti-spoof} \\
@@ -941,7 +949,8 @@ Jetson Nano + YOLOv5    & Jetson Nano              & $\sim$30 & Tune    & No \\
 Coral USB + MobileNet   & Google Coral USB         & $\sim$100 & Limited & No \\
 \textbf{Garuda}         & \textbf{RPi~5 + Hailo-8L} & \textbf{52.22} & \textbf{4-class} & \textbf{MiDaS depth} \\
 \hline
-\end{tabular}
+\end{tabular}%
+}
 \end{table}
 
 \FloatBarrier
