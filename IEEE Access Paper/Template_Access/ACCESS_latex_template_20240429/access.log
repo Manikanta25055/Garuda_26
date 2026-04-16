@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  16 APR 2026 20:18
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  16 APR 2026 21:57
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -311,7 +311,23 @@ Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \@float@everytoks=\toks27
 \@floatcapt=\box62
 )
-(/usr/share/texlive/texmf-dist/tex/latex/tools/bm.sty
+(/usr/share/texlive/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip17
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+(/usr/share/texlive/texmf-dist/tex/latex/hyphenat/hyphenat.sty
+Package: hyphenat 2009/09/02 v2.3c hyphenation utilities
+
+
+Package hyphenat Warning: *******************************
+(hyphenat)                * You have used the htt option.
+(hyphenat)                * You are likely to get many Font Warning messages.
+(hyphenat)                * These can usually be ignored.
+(hyphenat)                *******************************.
+
+\langwohyphens=\language3
+LaTeX Info: Redefining \_ on input line 43.
+) (/usr/share/texlive/texmf-dist/tex/latex/tools/bm.sty
 Package: bm 2022/01/05 v1.2f Bold Symbol Support (DPC/FMi)
 \symboldoperators=\mathgroup6
 \symboldletters=\mathgroup7
@@ -329,79 +345,79 @@ File: l3backend-pdftex.def 2023-01-16 L3 backend support: PDF output (pdfTeX)
 (./access.aux)
 \openout1 = `access.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 29.
-LaTeX Font Info:    ... okay on input line 29.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 33.
+LaTeX Font Info:    ... okay on input line 33.
 
 -- Lines per column: 56 (exact).
 \symNewLetters=\mathgroup9
 \symxsymbols=\mathgroup10
-LaTeX Font Info:    Redeclaring math symbol \ddagger on input line 29.
-LaTeX Font Info:    Redeclaring math symbol \dagger on input line 29.
+LaTeX Font Info:    Redeclaring math symbol \ddagger on input line 33.
+LaTeX Font Info:    Redeclaring math symbol \dagger on input line 33.
 \c@mv@regular=\count290
 LaTeX Font Info:    Encoding `OT1' has changed to `T1' for symbol font
-(Font)              `operators' in the math version `regular' on input line 29.
+(Font)              `operators' in the math version `regular' on input line 33.
 
 LaTeX Font Info:    Overwriting symbol font `operators' in version `regular'
-(Font)                  OT1/cmr/m/n --> T1/formata/n/n on input line 29.
+(Font)                  OT1/cmr/m/n --> T1/formata/n/n on input line 33.
 LaTeX Font Info:    Overwriting symbol font `NewLetters' in version `regular'
-(Font)                  T1/times/n/it --> T1/formata/n/it on input line 29.
+(Font)                  T1/times/n/it --> T1/formata/n/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `regular'
-(Font)                  T1/formata/n/n --> T1/formata/n/n on input line 29.
+(Font)                  T1/formata/n/n --> T1/formata/n/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `regular'
-(Font)                  OT1/cmr/m/it --> T1/formata/n/it on input line 29.
+(Font)                  OT1/cmr/m/it --> T1/formata/n/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `regular'
-(Font)                  OT1/cmr/bx/n --> T1/formata/m/n on input line 29.
+(Font)                  OT1/cmr/bx/n --> T1/formata/m/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `regular'
-(Font)                  OT1/cmtt/m/n --> OT1/pcr/m/n on input line 29.
+(Font)                  OT1/cmtt/m/n --> OT1/pcr/m/n on input line 33.
 \c@mv@medium=\count291
 LaTeX Font Info:    Encoding `OT1' has changed to `T1' for symbol font
-(Font)              `operators' in the math version `medium' on input line 29.
+(Font)              `operators' in the math version `medium' on input line 33.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `medium'
-(Font)                  OT1/cmr/m/n --> T1/formata/m/n on input line 29.
+(Font)                  OT1/cmr/m/n --> T1/formata/m/n on input line 33.
 LaTeX Font Info:    Overwriting symbol font `NewLetters' in version `medium'
-(Font)                  T1/times/n/it --> T1/formata/m/it on input line 29.
+(Font)                  T1/times/n/it --> T1/formata/m/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `medium'
-(Font)                  > T1/formata/m/n on input line 29.
+(Font)                  > T1/formata/m/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `medium'
-(Font)                  OT1/cmr/m/it --> T1/formata/m/it on input line 29.
+(Font)                  OT1/cmr/m/it --> T1/formata/m/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `medium'
-(Font)                  > T1/formata/b/n on input line 29.
+(Font)                  > T1/formata/b/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `medium'
-(Font)                  OT1/cmtt/m/n --> OT1/pcr/b/n on input line 29.
+(Font)                  OT1/cmtt/m/n --> OT1/pcr/b/n on input line 33.
 \c@mv@black=\count292
 LaTeX Font Info:    Encoding `OT1' has changed to `T1' for symbol font
-(Font)              `operators' in the math version `black' on input line 29.
+(Font)              `operators' in the math version `black' on input line 33.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `black'
-(Font)                  OT1/cmr/m/n --> T1/formata/b/n on input line 29.
+(Font)                  OT1/cmr/m/n --> T1/formata/b/n on input line 33.
 LaTeX Font Info:    Overwriting symbol font `NewLetters' in version `black'
-(Font)                  T1/times/n/it --> T1/formata/b/it on input line 29.
+(Font)                  T1/times/n/it --> T1/formata/b/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `black'
-(Font)                  > T1/formata/b/n on input line 29.
+(Font)                  > T1/formata/b/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `black'
-(Font)                  OT1/cmr/m/it --> T1/formata/b/it on input line 29.
+(Font)                  OT1/cmr/m/it --> T1/formata/b/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `black'
-(Font)                  > T1/formata/b/n on input line 29.
+(Font)                  > T1/formata/b/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `black'
-(Font)                  OT1/cmtt/m/n --> OT1/pcr/b/n on input line 29.
-LaTeX Font Info:    Trying to load font information for T1+ptm on input line 29
+(Font)                  OT1/cmtt/m/n --> OT1/pcr/b/n on input line 33.
+LaTeX Font Info:    Trying to load font information for T1+ptm on input line 33
 .
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1ptm.fd
 File: t1ptm.fd 2001/06/04 font definitions for T1/ptm.
 )
 LaTeX Font Info:    Trying to load font information for T1+times on input line 
-29.
+33.
  (./t1times.fd)
 (/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
@@ -425,35 +441,151 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-LaTeX Font Info:    Redeclaring math version `bold' on input line 29.
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 33
+.
+
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <10> not available
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/m/scsl' undefined
+(Font)              using `T1/pcr/m/sc' instead on input line 33.
+
+LaTeX Font Info:    Font shape `T1/pcr/b/it' in size <10> not available
+(Font)              Font shape `T1/pcr/b/sl' tried instead on input line 33.
+
+LaTeX Font Warning: Font shape `T1/pcr/b/scsl' undefined
+(Font)              using `T1/pcr/b/sc' instead on input line 33.
+
+LaTeX Font Info:    Font shape `T1/pcr/bx/n' in size <10> not available
+(Font)              Font shape `T1/pcr/b/n' tried instead on input line 33.
+LaTeX Font Info:    Font shape `T1/pcr/bx/it' in size <10> not available
+(Font)              Font shape `T1/pcr/b/it' tried instead on input line 33.
+LaTeX Font Info:    Font shape `T1/pcr/b/it' in size <10> not available
+(Font)              Font shape `T1/pcr/b/sl' tried instead on input line 33.
+LaTeX Font Info:    Font shape `T1/pcr/bx/sl' in size <10> not available
+(Font)              Font shape `T1/pcr/b/sl' tried instead on input line 33.
+
+LaTeX Font Warning: Font shape `T1/pcr/bx/scsl' undefined
+(Font)              using `T1/pcr/bx/sc' instead on input line 33.
+
+LaTeX Font Info:    Font shape `T1/pcr/bx/sc' in size <10> not available
+(Font)              Font shape `T1/pcr/b/sc' tried instead on input line 33.
+
+LaTeX Font Warning: Font shape `T1/pcr/sbx/sc' undefined
+(Font)              using `T1/pcr/sb/sc' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/sb/n' undefined
+(Font)              using `T1/pcr/m/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/sb/it' undefined
+(Font)              using `T1/pcr/sb/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/sb/sl' undefined
+(Font)              using `T1/pcr/sb/it' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/sb/scit' undefined
+(Font)              using `T1/pcr/sb/sc' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/sb/sc' undefined
+(Font)              using `T1/pcr/sb/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/sbc/sc' undefined
+(Font)              using `T1/pcr/c/sc' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/c/n' undefined
+(Font)              using `T1/pcr/m/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/c/it' undefined
+(Font)              using `T1/pcr/c/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/c/sl' undefined
+(Font)              using `T1/pcr/c/it' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/c/scit' undefined
+(Font)              using `T1/pcr/c/sc' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/c/sc' undefined
+(Font)              using `T1/pcr/c/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/lc/sc' undefined
+(Font)              using `T1/pcr/l/sc' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/l/n' undefined
+(Font)              using `T1/pcr/m/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/l/it' undefined
+(Font)              using `T1/pcr/l/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/l/sl' undefined
+(Font)              using `T1/pcr/l/it' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/l/scit' undefined
+(Font)              using `T1/pcr/l/sc' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/l/sc' undefined
+(Font)              using `T1/pcr/l/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/m/ui' undefined
+(Font)              using `T1/pcr/m/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/bx/ui' undefined
+(Font)              using `T1/pcr/bx/n' instead on input line 33.
+
+
+LaTeX Font Warning: Font shape `T1/pcr/m/In' undefined
+(Font)              using `T1/pcr/m/n' instead on input line 33.
+
+LaTeX Font Info:    Redeclaring math version `bold' on input line 33.
 LaTeX Font Info:    Encoding `OT1' has changed to `T1' for symbol font
-(Font)              `operators' in the math version `bold' on input line 29.
+(Font)              `operators' in the math version `bold' on input line 33.
 LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
-(Font)                  OT1/cmr/m/n --> T1/times/b/n on input line 29.
+(Font)                  OT1/cmr/m/n --> T1/times/b/n on input line 33.
 LaTeX Font Info:    Overwriting symbol font `NewLetters' in version `bold'
-(Font)                  T1/times/n/it --> T1/times/b/it on input line 29.
+(Font)                  T1/times/n/it --> T1/times/b/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathrm' in version `bold'
-(Font)                  > T1/times/b/n on input line 29.
+(Font)                  > T1/times/b/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
-(Font)                  OT1/cmr/m/it --> T1/times/b/it on input line 29.
+(Font)                  OT1/cmr/m/it --> T1/times/b/it on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
-(Font)                  > T1/times/b/n on input line 29.
+(Font)                  > T1/times/b/n on input line 33.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
-(Font)                  OT1/cmtt/m/n --> OT1/pcr/b/n on input line 29.
+(Font)                  OT1/cmtt/m/n --> OT1/pcr/b/n on input line 33.
 LaTeX Font Info:    Overwriting symbol font `symbols' in version `bold'
-(Font)                  OMS/cmsy/m/n --> OMS/cmsy/b/n on input line 29.
+(Font)                  OMS/cmsy/m/n --> OMS/cmsy/b/n on input line 33.
 <bullet.png, id=3, 12.045pt x 35.38219pt>
 File: bullet.png Graphic file (type png)
 <use bullet.png>
-Package pdftex.def Info: bullet.png  used on input line 57.
+Package pdftex.def Info: bullet.png  used on input line 50.
 (pdftex.def)             Requested size: 5.0pt x 14.6871pt.
-LaTeX Font Info:    Trying to load font information for U+msa on input line 63.
-
+LaTeX Font Info:    Trying to load font information for U+msa on input line 53.
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 63.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 53.
 
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd
@@ -461,52 +593,22 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 File: bullet.png Graphic file (type png)
 <use bullet.png>
-Package pdftex.def Info: bullet.png  used on input line 66.
+Package pdftex.def Info: bullet.png  used on input line 58.
 (pdftex.def)             Requested size: 5.0pt x 14.6871pt.
-LaTeX Font Info:    Calculating math sizes for size <9.9> on input line 73.
-LaTeX Font Info:    Calculating math sizes for size <6.6> on input line 73.
+LaTeX Font Info:    Calculating math sizes for size <9.9> on input line 64.
+LaTeX Font Info:    Calculating math sizes for size <6.6> on input line 64.
 
-Overfull \hbox (9.2679pt too wide) in paragraph at lines 73--73
+Overfull \hbox (9.2679pt too wide) in paragraph at lines 64--64
 []  
  []
 
 
-Overfull \hbox (9.2679pt too wide) in paragraph at lines 73--73
+Overfull \hbox (9.2679pt too wide) in paragraph at lines 64--64
 []  
  []
 
 
-Underfull \hbox (badness 1490) in paragraph at lines 77--84
-[]\T1/times/n/n/10 HIS doc-u-ment is a tem-plate for L[]T[]X. If you are
- []
-
-
-Underfull \hbox (badness 1484) in paragraph at lines 77--84
-\T1/times/n/n/10 read-ing a pa-per or PDF ver-sion of this doc-u-ment,
- []
-
-
-Underfull \hbox (badness 3058) in paragraph at lines 77--84
-[]$ \T1/times/n/n/10 so you can use it to pre-pare your
- []
-
-
-Underfull \hbox (badness 2376) in paragraph at lines 77--84
-\T1/times/n/n/10 manuscript. If you would pre-fer to use La-TeX, down-
- []
-
-
-Underfull \hbox (badness 3138) in paragraph at lines 77--84
-\T1/times/n/n/10 at $[]$
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 77--84
-[]$
- []
-
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
+Underfull \vbox (badness 7722) has occurred while \output is active []
 
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
@@ -514,7 +616,7 @@ Underfull \vbox (badness 10000) has occurred while \output is active []
 <logo.png, id=4, 206.27063pt x 53.44969pt>
 File: logo.png Graphic file (type png)
 <use logo.png>
-Package pdftex.def Info: logo.png  used on input line 88.
+Package pdftex.def Info: logo.png  used on input line 69.
 (pdftex.def)             Requested size: 91.32pt x 23.66309pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -540,34 +642,48 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 
  <./logo.png> <./bullet.png>]
-<equation3.png, id=19, 465.23813pt x 69.25874pt>
-File: equation3.png Graphic file (type png)
-<use equation3.png>
-Package pdftex.def Info: equation3.png  used on input line 141.
-(pdftex.def)             Requested size: 241.92522pt x 36.01474pt.
-
-Overfull \hbox (2.25166pt too wide) in paragraph at lines 141--142
-[]$ $[] 
+Underfull \hbox (badness 2951) in paragraph at lines 73--74
+\T1/times/n/n/10 sev-eral do-mains. Xu \T1/times/m/it/10 et al. \T1/times/n/n/1
+0 [1] pro-posed FL-YOLO, a
  []
 
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 15
-1.
-(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1pcr.fd
-File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
-)
 
-LaTeX Font Warning: Font shape `T1/times/m/sc' undefined
-(Font)              using `T1/times/m/n' instead on input line 167.
+Underfull \hbox (badness 3250) in paragraph at lines 73--74
+\T1/times/n/n/10 TX1 in-side a coal-mine surveil-lance sys-tem, achiev-ing
+ []
 
-<notaglinelogo.png, id=21, 169.38281pt x 42.91031pt>
+
+Underfull \hbox (badness 2111) in paragraph at lines 73--74
+\T1/times/n/n/10 frame-work. Al Amin \T1/times/m/it/10 et al. \T1/times/n/n/10 
+[5] im-ple-mented YOLOv3-
+ []
+
+
+Underfull \hbox (badness 3058) in paragraph at lines 73--74
+\T1/times/n/n/10 de-tec-tion; both con-tribute ar-chi-tec-tural ideas for lift-
+ing
+ []
+
+
+Underfull \hbox (badness 5245) in paragraph at lines 81--82
+[]\T1/times/n/n/10 A custom-fine-tuned YOLOv8s de-tec-tor for four
+ []
+
+
+Underfull \hbox (badness 5022) in paragraph at lines 81--82
+\T1/times/n/n/10 security-relevant classes (Ham-mer, Knife, Per-son,
+ []
+
+
+Underfull \hbox (badness 8151) in paragraph at lines 81--82
+\T1/times/n/n/10 Scis-sors) trained on a 4,982-image dataset and
+ []
+
+<notaglinelogo.png, id=18, 169.38281pt x 42.91031pt>
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 189.
+Package pdftex.def Info: notaglinelogo.png  used on input line 97.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 189.
-
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
 []
@@ -583,58 +699,37 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[2 <./notaglinelogo.png> <./equation3.png>]
+[2 <./notaglinelogo.png>]
+<figures//fig8_dataset_distribution.pdf, id=25, 328.88919pt x 185.89761pt>
+File: figures//fig8_dataset_distribution.pdf Graphic file (type pdf)
+<use figures//fig8_dataset_distribution.pdf>
+Package pdftex.def Info: figures//fig8_dataset_distribution.pdf  used on input 
+line 125.
+(pdftex.def)             Requested size: 242.67355pt x 137.17062pt.
 
-LaTeX Font Warning: Font shape `T1/pcr/n/n' undefined
-(Font)              using `T1/pcr/m/n' instead on input line 193.
+Underfull \hbox (badness 1515) in paragraph at lines 130--131
+[]\T1/times/n/n/10 The cas-cade's Mo-bileNetV2 Safe/Weapon clas-si-fier is
+ []
 
-<figures//garuda_hardware_layer.drawio.pdf, id=34, 655.69969pt x 449.42906pt>
+
+Underfull \hbox (badness 2368) in paragraph at lines 154--155
+\T1/times/n/n/10 with a 2.4 GHz quad-core Cortex-A76 and 16 GB of
+ []
+
+
+Underfull \hbox (badness 1721) in paragraph at lines 154--155
+\T1/times/n/n/10 YOLOv8s de-tec-tor, the Mo-bileNetV2 clas-si-fier, and the
+ []
+
+<figures//garuda_hardware_layer.drawio.pdf, id=26, 655.69969pt x 449.42906pt>
 File: figures//garuda_hardware_layer.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_hardware_layer.drawio.pdf>
 Package pdftex.def Info: figures//garuda_hardware_layer.drawio.pdf  used on inp
-ut line 197.
+ut line 160.
 (pdftex.def)             Requested size: 242.67355pt x 166.33414pt.
-
-Underfull \vbox (badness 1231) has occurred while \output is active []
-
-
-Overfull \hbox (28.25633pt too wide) in paragraph at lines 205--206
-\T1/times/m/sc/10 class (\T1/pcr/n/n/10 Garuda_web.py\T1/times/m/sc/10 ) which 
-ex-tends the base \T1/pcr/n/n/10 GStreamerApp
- []
-
-
-Underfull \hbox (badness 1831) in paragraph at lines 205--206
-\T1/times/m/sc/10 from \T1/pcr/n/n/10 hailo_rpi_common.py\T1/times/m/sc/10 . It
- ac-cepts three video
- []
-
-
-Underfull \hbox (badness 5331) in paragraph at lines 205--206
-\T1/times/m/sc/10 source el-e-ment types -- \T1/pcr/n/n/10 v4l2src \T1/times/m/
-sc/10 for USB cam-eras,
- []
-
-
-Underfull \hbox (badness 1509) in paragraph at lines 205--206
-\T1/times/m/sc/10 el-e-ment that dis-patches in-fer-ence re-quests over PCIe to
-
- []
-
-<figures//garuda_gstreamer_engine.drawio-2.pdf, id=35, 550.30594pt x 416.30531p
-t>
-File: figures//garuda_gstreamer_engine.drawio-2.pdf Graphic file (type pdf)
-<use figures//garuda_gstreamer_engine.drawio-2.pdf>
-Package pdftex.def Info: figures//garuda_gstreamer_engine.drawio-2.pdf  used on
- input line 209.
-(pdftex.def)             Requested size: 242.67355pt x 183.58145pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 216.
-
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 216.
+Package pdftex.def Info: notaglinelogo.png  used on input line 169.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -651,312 +746,70 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[3 <./figures//garuda_hardware_layer.drawio.pdf> <./figures//garuda_gstreamer_e
+[3 <./figures//fig8_dataset_distribution.pdf>]
+<figures//garuda_gstreamer_engine.drawio-2.pdf, id=117, 550.30594pt x 416.30531
+pt>
+File: figures//garuda_gstreamer_engine.drawio-2.pdf Graphic file (type pdf)
+<use figures//garuda_gstreamer_engine.drawio-2.pdf>
+Package pdftex.def Info: figures//garuda_gstreamer_engine.drawio-2.pdf  used on
+ input line 172.
+(pdftex.def)             Requested size: 242.67355pt x 183.58145pt.
+
+Underfull \vbox (badness 1960) has occurred while \output is active []
+
+<figures//garuda_detection_engine.drawio.pdf, id=118, 648.17157pt x 460.72125pt
+>
+File: figures//garuda_detection_engine.drawio.pdf Graphic file (type pdf)
+<use figures//garuda_detection_engine.drawio.pdf>
+Package pdftex.def Info: figures//garuda_detection_engine.drawio.pdf  used on i
+nput line 197.
+(pdftex.def)             Requested size: 242.67355pt x 172.49586pt.
+File: notaglinelogo.png Graphic file (type png)
+<use notaglinelogo.png>
+Package pdftex.def Info: notaglinelogo.png  used on input line 204.
+(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
+
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
+ []
+
+
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
+ []
+
+
+Underfull \hbox (badness 10000) has occurred while \output is active
+[]
+ []
+
+[4 <./figures//garuda_hardware_layer.drawio.pdf> <./figures//garuda_gstreamer_e
 ngine.drawio-2.pdf
 
 pdfTeX warning: pdflatex (file ./figures//garuda_gstreamer_engine.drawio-2.pdf)
 : PDF inclusion: multiple pdfs with page group included in a single page
 >]
-Overfull \hbox (7.8616pt too wide) detected at line 218
-[]\T1/times/n/it/10 s \OT1/cmr/m/n/10 = []  [] \OML/cmm/m/it/10 ;  \T1/times/n/
-it/10 p[] \OT1/cmr/m/n/10 = []\OML/cmm/m/it/10 ;  \T1/times/n/it/10 p[] \OT1/cm
-r/m/n/10 = []\OML/cmm/m/it/10 :
+Underfull \hbox (badness 1742) in paragraph at lines 205--206
+\T1/times/n/n/10 YOLOv8s de-tec-tor de-scribed ear-lier, re-turn-ing bound-ing
  []
 
 
-Underfull \hbox (badness 3281) in paragraph at lines 228--229
-[]\T1/times/m/sc/10 The en-gine is im-ple-mented as the \T1/pcr/n/n/10 app_call
-back
+Underfull \hbox (badness 10000) in paragraph at lines 239--239
+[]|\T1/times/m/n/9 YOLOv8s +
  []
 
-
-Underfull \hbox (badness 1769) in paragraph at lines 228--229
-\T1/times/m/sc/10 ter the \T1/pcr/n/n/10 HailoMuxer\T1/times/m/sc/10 . On ev-er
-y buffer the probe calls
- []
-
-
-Underfull \hbox (badness 1675) in paragraph at lines 228--229
-\T1/times/m/sc/10 ing the \T1/pcr/n/n/10 WATCH_LABELS \T1/times/m/sc/10 set (\T
-1/times/m/it/10 Per-son \T1/times/m/sc/10 / \T1/times/m/it/10 per-son\T1/times/
-m/sc/10 ) are ap-
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 228--229
-\T1/times/m/sc/10 set (\T1/times/m/it/10 Knife\T1/times/m/sc/10 , \T1/times/m/i
-t/10 Scis-sors\T1/times/m/sc/10 , \T1/times/m/it/10 Ham-mer\T1/times/m/sc/10 ) 
-in-cre-ment a per-label
- []
-
-
-Underfull \hbox (badness 5316) in paragraph at lines 228--229
-\T1/pcr/n/n/10 _label_consec_frames \T1/times/m/sc/10 counter; once the counter
-
- []
-
-
-Underfull \hbox (badness 5316) in paragraph at lines 228--229
-\T1/times/m/sc/10 de-ployed con-fig-u-ra-tion), \T1/pcr/n/n/10 trigger_software
-_alert
- []
-
-
-Underfull \hbox (badness 2680) in paragraph at lines 228--229
-\T1/times/m/sc/10 lel, \T1/pcr/n/n/10 _class_counts_today\T1/times/m/sc/10 , \T
-1/pcr/n/n/10 _total_frames\T1/times/m/sc/10 , and
- []
-
-
-Overfull \hbox (87.3664pt too wide) in paragraph at lines 228--229
-\T1/times/m/sc/10 dash-board, and the \T1/pcr/n/n/10 user_app_callback_class.se
-t_frame\T1/times/m/sc/10 /\T1/pcr/n/n/10 get_frame
- []
-
-<figures//garuda_detection_engine.drawio.pdf, id=146, 648.17157pt x 460.72125pt
->
-File: figures//garuda_detection_engine.drawio.pdf Graphic file (type pdf)
-<use figures//garuda_detection_engine.drawio.pdf>
-Package pdftex.def Info: figures//garuda_detection_engine.drawio.pdf  used on i
-nput line 232.
-(pdftex.def)             Requested size: 242.67355pt x 172.49586pt.
-
-Underfull \hbox (badness 2653) in paragraph at lines 238--239
-\T1/times/m/sc/10 (or \T1/pcr/n/n/10 gst_camera_thread\T1/times/m/sc/10 ) feeds
- raw frames into an
- []
-
-
-Underfull \hbox (badness 3623) in paragraph at lines 238--239
-\T1/times/m/sc/10 sons and ob-jects and re-turn bound-ing boxes. Stage 2
- []
-
-
-Underfull \hbox (badness 2150) in paragraph at lines 238--239
-\T1/pcr/n/n/10 ClassifierNetwork \T1/times/m/sc/10 (Mo-bileNetV2) for fine-grai
-ned
- []
-
-
-Underfull \hbox (badness 3189) in paragraph at lines 238--239
-\T1/times/m/sc/10 re-turns \T1/pcr/n/n/10 True \T1/times/m/sc/10 -- a gate that
- it-self de-pends on con-fig-
- []
-
-
-Underfull \hbox (badness 4366) in paragraph at lines 238--239
-\T1/times/m/sc/10 u-ra-tion and the \T1/pcr/n/n/10 _is_night() \T1/times/m/sc/1
-0 time-of-day check. A
- []
-
-
-Underfull \hbox (badness 1742) in paragraph at lines 238--239
-\T1/times/m/sc/10 ap-plies \T1/pcr/n/n/10 fast_rgb_spoof \T1/times/m/sc/10 for 
-a fast live-ness vari-ance
- []
-
-
-Overfull \hbox (43.54971pt too wide) in paragraph at lines 266--276
- [][] 
- []
-
-
-Underfull \hbox (badness 6220) in paragraph at lines 279--280
-\T1/times/m/sc/10 The alert en-gine con-verts a con-firmed dan-ger de-tec-
- []
-
-
-Underfull \hbox (badness 3849) in paragraph at lines 279--280
-\T1/times/m/sc/10 tion into a user-visible no-ti-fi-ca-tion and, when con-fig-
- []
-
-
-Underfull \hbox (badness 3396) in paragraph at lines 279--280
-\T1/times/m/sc/10 ured, a per-sis-tent piece of ev-i-dence. En-try is through
- []
-
-
-Overfull \hbox (32.36302pt too wide) in paragraph at lines 279--280
-\T1/pcr/n/n/10 trigger_software_alert\T1/times/m/sc/10 , which first ac-quires 
-\T1/pcr/n/n/10 _mode_lock
- []
-
-
-Overfull \hbox (7.53972pt too wide) in paragraph at lines 279--280
-\T1/times/m/sc/10 oth-er-wise it sets \T1/pcr/n/n/10 _alert_active \T1/times/m/
-sc/10 and \T1/pcr/n/n/10 _alert_end_time
- []
-
-
-Overfull \hbox (5.44962pt too wide) in paragraph at lines 279--280
-\T1/times/m/sc/10 to raise a 3-second ban-ner state, then calls \T1/pcr/n/n/10 
-push_urgent_ws
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 279--280
-\T1/times/m/sc/10 to broad-cast a JSON alert pay-load to ev-ery con-
- []
-
-
-Underfull \hbox (badness 5681) in paragraph at lines 279--280
-\T1/times/m/sc/10 nected Web-Socket client so that browsers, the PWA,
- []
-
-
-Underfull \hbox (badness 4805) in paragraph at lines 279--280
-\T1/times/m/sc/10 and the mo-bile in-ter-face up-date im-me-di-ately. Con-cur-
- []
-
-
-Underfull \hbox (badness 2057) in paragraph at lines 279--280
-\T1/times/m/sc/10 rently, \T1/pcr/n/n/10 send_email_alert \T1/times/m/sc/10 dis
--patches an SMTP-SSL
- []
-
-
-Underfull \hbox (badness 6708) in paragraph at lines 279--280
-\T1/times/m/sc/10 email to the con-fig-ured ad-min-is-tra-tor ad-dress sub-ject
-
- []
-
-
-Underfull \hbox (badness 3482) in paragraph at lines 279--280
-\T1/times/m/sc/10 to a 60-second cooldown and the \T1/pcr/n/n/10 MODE_EMAIL_OFF
-
- []
-
-
-Underfull \hbox (badness 4886) in paragraph at lines 279--280
-\T1/times/m/sc/10 flag, which to-gether pre-vent alert storms on re-peated
- []
-
-
-Underfull \hbox (badness 4569) in paragraph at lines 279--280
-\T1/times/m/sc/10 de-tec-tions. A sep-a-rate path han-dles OTP de-liv-ery via
- []
-
-
-Underfull \hbox (badness 1742) in paragraph at lines 279--280
-\T1/times/m/sc/10 reset flows, while \T1/pcr/n/n/10 _send_tamper_email \T1/time
-s/m/sc/10 is re-served
- []
-
-
-Underfull \hbox (badness 1852) in paragraph at lines 279--280
-\T1/times/m/sc/10 ets a short video seg-ment around the trig-ger-ing frame,
- []
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 280.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 280.
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[4 <./figures//garuda_detection_engine.drawio.pdf>]
-<figures//garuda_alert_engine.drawio.pdf, id=218, 603.0028pt x 344.78813pt>
+<figures//garuda_alert_engine.drawio.pdf, id=235, 603.0028pt x 344.78813pt>
 File: figures//garuda_alert_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_alert_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_alert_engine.drawio.pdf  used on input
- line 283.
+ line 256.
 (pdftex.def)             Requested size: 242.67355pt x 138.75456pt.
 
-Underfull \hbox (badness 1533) in paragraph at lines 289--290
-\T1/times/m/sc/10 ment so that changes in am-bi-ent noise do not pro-duce
- []
-
-
-Underfull \hbox (badness 6428) in paragraph at lines 289--290
-\T1/times/m/sc/10 backed speech-to-text. The tran-scribed text is handed
- []
-
-
-Underfull \hbox (badness 1478) in paragraph at lines 289--290
-\T1/times/m/sc/10 to \T1/pcr/n/n/10 apply_rule_based_command\T1/times/m/sc/10 ,
- which at-tempts to
- []
-
-
-Underfull \hbox (badness 7963) in paragraph at lines 289--290
-\T1/times/m/sc/10 match against a set of built-in rules and the user-
- []
-
-
-Underfull \hbox (badness 3623) in paragraph at lines 289--290
-\T1/times/m/sc/10 turn-ing a match. If no rule matches, the text is for-
- []
-
-
-Underfull \hbox (badness 2698) in paragraph at lines 289--290
-\T1/times/m/sc/10 warded to \T1/pcr/n/n/10 query_local_llm\T1/times/m/sc/10 , w
-hich calls the Groq
- []
-
-
-Underfull \hbox (badness 2635) in paragraph at lines 289--290
-\T1/times/m/sc/10 memory buffers, which the log-ging en-gine pe-ri-od-i-cally
- []
-
-<figures//garuda_voice_engine.drawio.pdf, id=219, 535.2497pt x 314.67563pt>
-File: figures//garuda_voice_engine.drawio.pdf Graphic file (type pdf)
-<use figures//garuda_voice_engine.drawio.pdf>
-Package pdftex.def Info: figures//garuda_voice_engine.drawio.pdf  used on input
- line 293.
-(pdftex.def)             Requested size: 242.67355pt x 142.66866pt.
-
-Overfull \hbox (11.53638pt too wide) in paragraph at lines 299--300
-\T1/times/m/sc/10 Six boolean op-er-at-ing flags -- \T1/pcr/n/n/10 MODE_DND\T1/
-times/m/sc/10 , \T1/pcr/n/n/10 MODE_EMAIL_OFF\T1/times/m/sc/10 ,
- []
-
-
-Underfull \hbox (badness 6691) in paragraph at lines 299--300
-\T1/pcr/n/n/10 MODE_IDLE\T1/times/m/sc/10 , \T1/pcr/n/n/10 MODE_NIGHT\T1/times/
-m/sc/10 , \T1/pcr/n/n/10 MODE_EMERGENCY\T1/times/m/sc/10 , and
- []
-
-
-Underfull \hbox (badness 2809) in paragraph at lines 299--300
-\T1/times/m/sc/10 be-fore act-ing on po-ten-tially de-struc-tive com-mands. All
-
- []
-
-
-Underfull \hbox (badness 5847) in paragraph at lines 299--300
-\T1/times/m/sc/10 (a \T1/pcr/n/n/10 threading.Lock\T1/times/m/sc/10 ) to pre-ve
-nt races be-tween the
- []
-
-
-Underfull \hbox (badness 2626) in paragraph at lines 299--300
-\T1/times/m/sc/10 in six are stored in the \T1/pcr/n/n/10 CUSTOM_MODES \T1/time
-s/m/sc/10 reg-istry and
- []
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 300.
+Underfull \vbox (badness 5667) has occurred while \output is active []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 300.
+Package pdftex.def Info: notaglinelogo.png  used on input line 263.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -973,174 +826,107 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[5 <./figures//garuda_alert_engine.drawio.pdf> <./figures//garuda_voice_engine.
-drawio.pdf
+[5 <./figures//garuda_detection_engine.drawio.pdf> <./figures//garuda_alert_eng
+ine.drawio.pdf
 
-pdfTeX warning: pdflatex (file ./figures//garuda_voice_engine.drawio.pdf): PDF 
+pdfTeX warning: pdflatex (file ./figures//garuda_alert_engine.drawio.pdf): PDF 
 inclusion: multiple pdfs with page group included in a single page
 >]
-<figures//garuda_mode_controller.drawio.pdf, id=307, 520.19344pt x 284.56313pt>
+<figures//garuda_voice_engine.drawio.pdf, id=351, 535.2497pt x 314.67563pt>
+File: figures//garuda_voice_engine.drawio.pdf Graphic file (type pdf)
+<use figures//garuda_voice_engine.drawio.pdf>
+Package pdftex.def Info: figures//garuda_voice_engine.drawio.pdf  used on input
+ line 268.
+(pdftex.def)             Requested size: 242.67355pt x 142.66866pt.
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+<figures//garuda_mode_controller.drawio.pdf, id=352, 520.19344pt x 284.56313pt>
 
 File: figures//garuda_mode_controller.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_mode_controller.drawio.pdf>
 Package pdftex.def Info: figures//garuda_mode_controller.drawio.pdf  used on in
-put line 303.
+put line 280.
 (pdftex.def)             Requested size: 242.67355pt x 132.75034pt.
+File: notaglinelogo.png Graphic file (type png)
+<use notaglinelogo.png>
+Package pdftex.def Info: notaglinelogo.png  used on input line 287.
+(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
-Overfull \hbox (36.29967pt too wide) in paragraph at lines 309--310
-\T1/times/m/sc/10 The pres-ence mon-i-tor (\T1/pcr/n/n/10 _presence_poller \T1/
-times/m/sc/10 in \T1/pcr/n/n/10 Garuda_web.py\T1/times/m/sc/10 )
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
  []
 
 
-Underfull \hbox (badness 2781) in paragraph at lines 309--310
-\T1/times/m/sc/10 tracks the on-line/offline sta-tus of known LAN de-vices
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
  []
 
 
-Underfull \hbox (badness 4144) in paragraph at lines 309--310
-\T1/times/m/sc/10 by run-ning pe-ri-odic ARP scans di-rectly from the Pi.
+Underfull \hbox (badness 10000) has occurred while \output is active
+[]
  []
 
+[6 <./figures//garuda_voice_engine.drawio.pdf> <./figures//garuda_mode_controll
+er.drawio.pdf
 
-Underfull \hbox (badness 1596) in paragraph at lines 309--310
-\T1/times/m/sc/10 It is-sues \T1/pcr/n/n/10 arp-scan \T1/times/m/sc/10 or \T1/p
-cr/n/n/10 ip neigh \T1/times/m/sc/10 com-mands through
- []
-
-
-Underfull \hbox (badness 1755) in paragraph at lines 309--310
-\T1/pcr/n/n/10 subprocess \T1/times/m/sc/10 and parses the re-turned MAC ad-dre
-sses.
- []
-
-
-Underfull \hbox (badness 1478) in paragraph at lines 309--310
-\T1/times/m/sc/10 The \T1/pcr/n/n/10 KNOWN_DEVICES \T1/times/m/sc/10 dic-tio-na
-ry -- map-ping MAC ad-
- []
-
-<figures//garuda_presence_monitor.drawio.pdf, id=308, 520.19344pt x 231.86626pt
+pdfTeX warning: pdflatex (file ./figures//garuda_mode_controller.drawio.pdf): P
+DF inclusion: multiple pdfs with page group included in a single page
+>]
+<figures//garuda_presence_monitor.drawio.pdf, id=424, 520.19344pt x 231.86626pt
 >
 File: figures//garuda_presence_monitor.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_presence_monitor.drawio.pdf>
 Package pdftex.def Info: figures//garuda_presence_monitor.drawio.pdf  used on i
-nput line 313.
+nput line 290.
 (pdftex.def)             Requested size: 242.67355pt x 108.16695pt.
 
-Underfull \hbox (badness 1448) in paragraph at lines 319--320
-\T1/times/m/sc/10 The web server (\T1/pcr/n/n/10 run_web_app \T1/times/m/sc/10 
-in \T1/pcr/n/n/10 Garuda_web.py\T1/times/m/sc/10 )
+Underfull \hbox (badness 1400) in paragraph at lines 296--297
+\T1/times/n/n/10 The web server is a FastAPI ap-pli-ca-tion run-ning un-der
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/times/m/sc/10 runs a FastAPI ap-pli-ca-tion un-der Uvi-corn bound to
+Underfull \hbox (badness 1622) in paragraph at lines 296--297
+\T1/times/n/n/10 Uvi-corn, bound to lo-cal-host on port 8080 and ex-posed
  []
 
 
-Overfull \hbox (22.97969pt too wide) in paragraph at lines 319--320
-\T1/times/m/sc/10 through a Cloud-flare tun-nel at \T1/pcr/n/n/10 garuda.veeram
-anikanta.in\T1/times/m/sc/10 ;
+Underfull \hbox (badness 4673) in paragraph at lines 296--297
+\T1/times/n/n/10 to the pub-lic In-ter-net through a Cloud-flare tun-nel at
  []
 
 
-Overfull \hbox (10.43889pt too wide) in paragraph at lines 319--320
-\T1/times/m/sc/10 CORS is re-stricted to \T1/pcr/n/n/10 veeramanikanta.in\T1/ti
-mes/m/sc/10 , \T1/pcr/n/n/10 vercel.app\T1/times/m/sc/10 ,
+Underfull \hbox (badness 10000) in paragraph at lines 296--297
+\T1/pcr/l/it/10 api.veeramanikanta.in\T1/times/n/n/10 . CORS is re-stricted to
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/times/m/sc/10 and \T1/pcr/n/n/10 localhost \T1/times/m/sc/10 ori-gins so th
-at only known fron-
+Underfull \hbox (badness 2065) in paragraph at lines 296--297
+\T1/times/n/n/10 the \T1/pcr/l/it/10 veera-manikanta.in \T1/times/n/n/10 do-mai
+n, the \T1/pcr/l/it/10 ver-cel.app
  []
 
 
-Underfull \hbox (badness 4779) in paragraph at lines 319--320
-\T1/times/m/sc/10 tends can in-ter-act with the API. The ap-pli-ca-tion de-
+Underfull \hbox (badness 2680) in paragraph at lines 300--301
+[]\T1/times/n/n/10 Media is served through three par-al-lel chan-nels. An
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/times/m/sc/10 tional groups -- au-then-ti-ca-tion (\T1/pcr/n/n/10 /login\T1
-/times/m/sc/10 , \T1/pcr/n/n/10 /logout\T1/times/m/sc/10 ,
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/pcr/n/n/10 /otp\T1/times/m/sc/10 , \T1/pcr/n/n/10 /reset-password\T1/times/
-m/sc/10 , \T1/pcr/n/n/10 /master-key\T1/times/m/sc/10 ), sys-tem
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/times/m/sc/10 state (\T1/pcr/n/n/10 /api/state\T1/times/m/sc/10 , \T1/pcr/n
-/n/10 /api/modes\T1/times/m/sc/10 , \T1/pcr/n/n/10 /api/config\T1/times/m/sc/10
- ),
- []
-
-
-Underfull \hbox (badness 2326) in paragraph at lines 319--320
-\T1/times/m/sc/10 log-ging (\T1/pcr/n/n/10 /api/logs/*\T1/times/m/sc/10 , \T1/p
-cr/n/n/10 /api/events \T1/times/m/sc/10 with SQLite-
- []
-
-
-Underfull \hbox (badness 4505) in paragraph at lines 319--320
-\T1/times/m/sc/10 backed catch-up for of-fline clients), con-ver-sa-tional AI
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/times/m/sc/10 (\T1/pcr/n/n/10 /api/chat/stream \T1/times/m/sc/10 served as 
-Server-Sent Events
- []
-
-
-Underfull \hbox (badness 5924) in paragraph at lines 319--320
-\T1/times/m/sc/10 against the Groq API), de-vice and user man-age-ment
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 319--320
-\T1/times/m/sc/10 (\T1/pcr/n/n/10 /api/devices\T1/times/m/sc/10 , \T1/pcr/n/n/1
-0 /api/users\T1/times/m/sc/10 , \T1/pcr/n/n/10 /api/feedback\T1/times/m/sc/10 )
-,
- []
-
-
-Overfull \hbox (13.06964pt too wide) in paragraph at lines 319--320
-\T1/times/m/sc/10 rent an-no-tated frame from the \T1/pcr/n/n/10 user_app_callb
-ack_class
- []
-
-
-Overfull \hbox (2.14293pt too wide) in paragraph at lines 319--320
-\T1/times/m/sc/10 frame buffer, Web-Socket end-points at \T1/pcr/n/n/10 /ws \T1
-/times/m/sc/10 and \T1/pcr/n/n/10 /ws/stream
- []
-
-
-Underfull \hbox (badness 5374) in paragraph at lines 319--320
-\T1/times/m/sc/10 (\T1/pcr/n/n/10 GarudaVideoTrack\T1/times/m/sc/10 ) served vi
-a \T1/pcr/n/n/10 aiortc \T1/times/m/sc/10 for low-
- []
-
-<figures//garuda_web_server.drawio.pdf, id=309, 580.41844pt x 352.31625pt>
+<figures//garuda_web_server.drawio.pdf, id=425, 580.41844pt x 352.31625pt>
 File: figures//garuda_web_server.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_web_server.drawio.pdf>
 Package pdftex.def Info: figures//garuda_web_server.drawio.pdf  used on input l
-ine 323.
+ine 304.
 (pdftex.def)             Requested size: 242.67355pt x 147.30519pt.
+<figures//garuda_auth_engine.drawio.pdf, id=426, 535.2497pt x 231.86626pt>
+File: figures//garuda_auth_engine.drawio.pdf Graphic file (type pdf)
+<use figures//garuda_auth_engine.drawio.pdf>
+Package pdftex.def Info: figures//garuda_auth_engine.drawio.pdf  used on input 
+line 316.
+(pdftex.def)             Requested size: 242.67355pt x 105.12427pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 330.
+Package pdftex.def Info: notaglinelogo.png  used on input line 323.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 330.
-
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
 []
@@ -1156,190 +942,54 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[6 <./figures//garuda_mode_controller.drawio.pdf> <./figures//garuda_presence_m
-onitor.drawio.pdf
-
-pdfTeX warning: pdflatex (file ./figures//garuda_presence_monitor.drawio.pdf): 
-PDF inclusion: multiple pdfs with page group included in a single page
-> <./figures//garuda_web_server.drawio.pdf
+[7 <./figures//garuda_presence_monitor.drawio.pdf> <./figures//garuda_web_serve
+r.drawio.pdf
 
 pdfTeX warning: pdflatex (file ./figures//garuda_web_server.drawio.pdf): PDF in
 clusion: multiple pdfs with page group included in a single page
+> <./figures//garuda_auth_engine.drawio.pdf
+
+pdfTeX warning: pdflatex (file ./figures//garuda_auth_engine.drawio.pdf): PDF i
+nclusion: multiple pdfs with page group included in a single page
 >]
-<figures//garuda_auth_engine.drawio.pdf, id=413, 535.2497pt x 231.86626pt>
-File: figures//garuda_auth_engine.drawio.pdf Graphic file (type pdf)
-<use figures//garuda_auth_engine.drawio.pdf>
-Package pdftex.def Info: figures//garuda_auth_engine.drawio.pdf  used on input 
-line 333.
-(pdftex.def)             Requested size: 242.67355pt x 105.12427pt.
-
-Overfull \hbox (57.14304pt too wide) in paragraph at lines 339--340
-\T1/times/m/sc/10 The dead-man mon-i-tor (\T1/pcr/n/n/10 _deadman_monitor\T1/ti
-mes/m/sc/10 , \T1/pcr/n/n/10 _send_tamper_email
+Underfull \hbox (badness 1990) in paragraph at lines 324--325
+[]\T1/times/n/n/10 Every au-then-ti-cated browser ses-sion sends a pe-ri-odic
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 339--340
-\T1/times/m/sc/10 in \T1/pcr/n/n/10 Garuda_web.py\T1/times/m/sc/10 ) is a tampe
-r-detection watch-
- []
-
-
-Underfull \hbox (badness 3724) in paragraph at lines 339--340
-\T1/times/m/sc/10 dog that as-sumes the ab-sence of reg-u-lar client heart-
- []
-
-
-Underfull \hbox (badness 2197) in paragraph at lines 339--340
-\T1/times/m/sc/10 beats is ev-i-dence of phys-i-cal in-ter-fer-ence with the de
--
- []
-
-
-Underfull \hbox (badness 3724) in paragraph at lines 339--340
-\T1/times/m/sc/10 vice. Any au-then-ti-cated browser ses-sion sends a pe-ri-
- []
-
-
-Underfull \hbox (badness 1642) in paragraph at lines 339--340
-\T1/times/m/sc/10 odic ping to \T1/pcr/n/n/10 POST /api/heartbeat\T1/times/m/sc
-/10 , which up-dates
- []
-
-
-Underfull \hbox (badness 1831) in paragraph at lines 339--340
-\T1/times/m/sc/10 the \T1/pcr/n/n/10 _last_heartbeat \T1/times/m/sc/10 times-ta
-mp on the server. The
- []
-
-
-Underfull \hbox (badness 1418) in paragraph at lines 339--340
-\T1/times/m/sc/10 ex-e-cute in par-al-lel: \T1/pcr/n/n/10 trigger_software_aler
-t \T1/times/m/sc/10 fires
- []
-
-<figures//garuda_deadman_monitor.drawio.pdf, id=414, 501.37312pt x 231.86626pt>
+<figures//garuda_deadman_monitor.drawio.pdf, id=531, 501.37312pt x 231.86626pt>
 
 File: figures//garuda_deadman_monitor.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_deadman_monitor.drawio.pdf>
 Package pdftex.def Info: figures//garuda_deadman_monitor.drawio.pdf  used on in
-put line 343.
+put line 328.
 (pdftex.def)             Requested size: 242.67355pt x 112.22856pt.
 
-Underfull \hbox (badness 6758) in paragraph at lines 349--350
-\T1/times/m/sc/10 append-only text files (\T1/pcr/n/n/10 perm_detection_log.txt
-\T1/times/m/sc/10 ,
+Underfull \hbox (badness 4132) in paragraph at lines 338--339
+\T1/times/n/n/10 event is also in-serted into a SQLite database with a
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 349--350
-\T1/pcr/n/n/10 perm_system_log.txt\T1/times/m/sc/10 , \T1/pcr/n/n/10 perm_voice
-_log.txt\T1/times/m/sc/10 )
+Underfull \hbox (badness 3803) in paragraph at lines 338--339
+\T1/times/n/n/10 microsecond-precision times-tamp. A REST end-point at
  []
 
-
-Overfull \hbox (30.02547pt too wide) in paragraph at lines 349--350
-\T1/times/m/sc/10 and up-dat-ing struc-tured JSON state files (\T1/pcr/n/n/10 a
-lert_history.json\T1/times/m/sc/10 ,
- []
-
-
-Underfull \hbox (badness 2158) in paragraph at lines 349--350
-\T1/times/m/sc/10 ro-ta-tion pass re-moves en-tries older than seven days to
- []
-
-
-Underfull \hbox (badness 3713) in paragraph at lines 349--350
-\T1/times/m/sc/10 bound disk growth, run-ning ei-ther on the flush cy-cle
- []
-
-
-Underfull \hbox (badness 2503) in paragraph at lines 349--350
-\T1/times/m/sc/10 log-gable event is also in-serted into a SQLite database
- []
-
-
-Underfull \vbox (badness 5756) has occurred while \output is active []
-
-<figures//garuda_logging_engine.drawio.pdf, id=415, 565.36218pt x 322.20375pt>
+<figures//garuda_logging_engine.drawio.pdf, id=532, 565.36218pt x 322.20375pt>
 File: figures//garuda_logging_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_logging_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_logging_engine.drawio.pdf  used on inp
-ut line 353.
+ut line 342.
 (pdftex.def)             Requested size: 242.67355pt x 138.29909pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 361.
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 361.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[7 <./figures//garuda_auth_engine.drawio.pdf> <./figures//garuda_deadman_monito
-r.drawio.pdf
-
-pdfTeX warning: pdflatex (file ./figures//garuda_deadman_monitor.drawio.pdf): P
-DF inclusion: multiple pdfs with page group included in a single page
-> <./figures//garuda_logging_engine.drawio.pdf
-
-pdfTeX warning: pdflatex (file ./figures//garuda_logging_engine.drawio.pdf): PD
-F inclusion: multiple pdfs with page group included in a single page
->]
-<figures//garuda_system_flowchart.drawio.pdf, id=509, 934.24031pt x 1408.51219p
+<figures//garuda_system_flowchart.drawio.pdf, id=533, 934.24031pt x 1408.51219p
 t>
 File: figures//garuda_system_flowchart.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_system_flowchart.drawio.pdf>
 Package pdftex.def Info: figures//garuda_system_flowchart.drawio.pdf  used on i
-nput line 364.
-(pdftex.def)             Requested size: 464.71109pt x 700.62221pt.
-
-
-LaTeX Warning: Float too large for page by 74.56929pt on input line 367.
-
-
-Underfull \hbox (badness 1748) in paragraph at lines 369--370
-\T1/times/m/sc/10 tem into three hor-i-zon-tal lay-ers. The in-fer-ence pipelin
-e
- []
-
-<figures//garuda_block_diagram.drawio-3.pdf, id=510, 773.89125pt x 375.65344pt>
-
-File: figures//garuda_block_diagram.drawio-3.pdf Graphic file (type pdf)
-<use figures//garuda_block_diagram.drawio-3.pdf>
-Package pdftex.def Info: figures//garuda_block_diagram.drawio-3.pdf  used on in
-put line 373.
-(pdftex.def)             Requested size: 454.60649pt x 220.67062pt.
-
-Underfull \vbox (badness 1521) has occurred while \output is active []
-
+nput line 353.
+(pdftex.def)             Requested size: 378.8642pt x 571.19655pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 503.
+Package pdftex.def Info: notaglinelogo.png  used on input line 359.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 503.
-
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
 []
@@ -1355,14 +1005,15 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[8]
+[8 <./figures//garuda_deadman_monitor.drawio.pdf> <./figures//garuda_logging_en
+gine.drawio.pdf
 
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 503.
-
+pdfTeX warning: pdflatex (file ./figures//garuda_logging_engine.drawio.pdf): PD
+F inclusion: multiple pdfs with page group included in a single page
+>]
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 503.
+Package pdftex.def Info: notaglinelogo.png  used on input line 359.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1380,28 +1031,62 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [9 <./figures//garuda_system_flowchart.drawio.pdf>]
-<figures//fig1_training_losses.pdf, id=810, 522.28842pt x 156.83734pt>
+<figures//garuda_block_diagram.drawio-3.pdf, id=893, 773.89125pt x 375.65344pt>
+
+File: figures//garuda_block_diagram.drawio-3.pdf Graphic file (type pdf)
+<use figures//garuda_block_diagram.drawio-3.pdf>
+Package pdftex.def Info: figures//garuda_block_diagram.drawio-3.pdf  used on in
+put line 362.
+(pdftex.def)             Requested size: 454.60649pt x 220.67062pt.
+<figures//fig1_training_losses.pdf, id=894, 522.28842pt x 156.83734pt>
 File: figures//fig1_training_losses.pdf Graphic file (type pdf)
 <use figures//fig1_training_losses.pdf>
 Package pdftex.def Info: figures//fig1_training_losses.pdf  used on input line 
-509.
+471.
 (pdftex.def)             Requested size: 242.67355pt x 72.87115pt.
-<figures//fig2_training_metrics.pdf, id=811, 520.60678pt x 171.29135pt>
+<figures//fig2_training_metrics.pdf, id=895, 520.60678pt x 171.29135pt>
 File: figures//fig2_training_metrics.pdf Graphic file (type pdf)
 <use figures//fig2_training_metrics.pdf>
 Package pdftex.def Info: figures//fig2_training_metrics.pdf  used on input line
- 519.
+ 481.
 (pdftex.def)             Requested size: 242.67355pt x 79.84567pt.
+File: notaglinelogo.png Graphic file (type png)
+<use notaglinelogo.png>
+Package pdftex.def Info: notaglinelogo.png  used on input line 486.
+(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
+
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
+ []
+
+
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
+ []
+
+
+Underfull \hbox (badness 10000) has occurred while \output is active
+[]
+ []
+
+[10]
+<figures//fig3_model_comparison.pdf, id=901, 522.21883pt x 233.98634pt>
+File: figures//fig3_model_comparison.pdf Graphic file (type pdf)
+<use figures//fig3_model_comparison.pdf>
+Package pdftex.def Info: figures//fig3_model_comparison.pdf  used on input line
+ 491.
+(pdftex.def)             Requested size: 242.67355pt x 108.73468pt.
+<figures//fig4_per_class_map50.pdf, id=902, 410.85919pt x 202.41847pt>
+File: figures//fig4_per_class_map50.pdf Graphic file (type pdf)
+<use figures//fig4_per_class_map50.pdf>
+Package pdftex.def Info: figures//fig4_per_class_map50.pdf  used on input line 
+501.
+(pdftex.def)             Requested size: 242.67355pt x 119.56175pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
 Package pdftex.def Info: notaglinelogo.png  used on input line 526.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 526.
-
-
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
 []
  []
@@ -1416,209 +1101,125 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[10 <./figures//garuda_block_diagram.drawio-3.pdf> <./figures//fig1_training_lo
+[11 <./figures//garuda_block_diagram.drawio-3.pdf> <./figures//fig1_training_lo
 sses.pdf
 
 pdfTeX warning: pdflatex (file ./figures//fig1_training_losses.pdf): PDF inclus
 ion: multiple pdfs with page group included in a single page
->]
-<figures//fig3_model_comparison.pdf, id=1061, 522.21883pt x 233.98634pt>
-File: figures//fig3_model_comparison.pdf Graphic file (type pdf)
-<use figures//fig3_model_comparison.pdf>
-Package pdftex.def Info: figures//fig3_model_comparison.pdf  used on input line
- 529.
-(pdftex.def)             Requested size: 242.67355pt x 108.73468pt.
-<figures//fig4_per_class_map50.pdf, id=1062, 410.85919pt x 202.41847pt>
-File: figures//fig4_per_class_map50.pdf Graphic file (type pdf)
-<use figures//fig4_per_class_map50.pdf>
-Package pdftex.def Info: figures//fig4_per_class_map50.pdf  used on input line 
-539.
-(pdftex.def)             Requested size: 242.67355pt x 119.56175pt.
+> <./figures//fig2_training_metrics.pdf
 
-Overfull \hbox (28.93419pt too wide) in paragraph at lines 549--561
- [][] 
- []
-
-
-Underfull \hbox (badness 1762) in paragraph at lines 564--565
-\T1/times/m/sc/10 class vi-sual vari-abil-ity. \T1/times/m/it/10 Scis-sors \T1/
-times/m/sc/10 achieves an ex-cep-tional
- []
-
-<figures//fig5_perclass_full_metrics.pdf, id=1063, 396.15984pt x 205.4186pt>
-File: figures//fig5_perclass_full_metrics.pdf Graphic file (type pdf)
-<use figures//fig5_perclass_full_metrics.pdf>
-Package pdftex.def Info: figures//fig5_perclass_full_metrics.pdf  used on input
- line 568.
-(pdftex.def)             Requested size: 242.67355pt x 125.83173pt.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 582.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 582.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 583.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 583.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 584.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 584.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 585.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 585.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 587.
-Package textcomp Info: Symbol \texttildelow not provided by
-(textcomp)             font family times in TS1 encoding.
-(textcomp)             Default family used instead on input line 587.
-<figures//fig6_confusion_matrix.pdf, id=1064, 294.24744pt x 251.71179pt>
-File: figures//fig6_confusion_matrix.pdf Graphic file (type pdf)
-<use figures//fig6_confusion_matrix.pdf>
-Package pdftex.def Info: figures//fig6_confusion_matrix.pdf  used on input line
- 597.
-(pdftex.def)             Requested size: 242.67355pt x 207.59949pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 604.
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 604.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[11 <./figures//fig2_training_metrics.pdf> <./figures//fig3_model_comparison.pd
-f
+pdfTeX warning: pdflatex (file ./figures//fig2_training_metrics.pdf): PDF inclu
+sion: multiple pdfs with page group included in a single page
+> <./figures//fig3_model_comparison.pdf
 
 pdfTeX warning: pdflatex (file ./figures//fig3_model_comparison.pdf): PDF inclu
 sion: multiple pdfs with page group included in a single page
-> <./figures//fig4_per_class_map50.pdf
+>]
+<figures//fig5_perclass_full_metrics.pdf, id=1520, 396.15984pt x 205.4186pt>
+File: figures//fig5_perclass_full_metrics.pdf Graphic file (type pdf)
+<use figures//fig5_perclass_full_metrics.pdf>
+Package pdftex.def Info: figures//fig5_perclass_full_metrics.pdf  used on input
+ line 529.
+(pdftex.def)             Requested size: 242.67355pt x 125.83173pt.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 543.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 543.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 544.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 544.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 545.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 545.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 546.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 546.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 548.
+Package textcomp Info: Symbol \texttildelow not provided by
+(textcomp)             font family times in TS1 encoding.
+(textcomp)             Default family used instead on input line 548.
+<figures//fig6_confusion_matrix.pdf, id=1521, 294.24744pt x 251.71179pt>
+File: figures//fig6_confusion_matrix.pdf Graphic file (type pdf)
+<use figures//fig6_confusion_matrix.pdf>
+Package pdftex.def Info: figures//fig6_confusion_matrix.pdf  used on input line
+ 558.
+(pdftex.def)             Requested size: 242.67355pt x 207.59949pt.
+<figures//fig7_pr_curves.pdf, id=1522, 287.37018pt x 265.45717pt>
+File: figures//fig7_pr_curves.pdf Graphic file (type pdf)
+<use figures//fig7_pr_curves.pdf>
+Package pdftex.def Info: figures//fig7_pr_curves.pdf  used on input line 568.
+(pdftex.def)             Requested size: 242.67355pt x 224.17334pt.
+File: notaglinelogo.png Graphic file (type png)
+<use notaglinelogo.png>
+Package pdftex.def Info: notaglinelogo.png  used on input line 575.
+(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
-pdfTeX warning: pdflatex (file ./figures//fig4_per_class_map50.pdf): PDF inclus
-ion: multiple pdfs with page group included in a single page
-> <./figures//fig5_perclass_full_metrics.pdf
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
+ []
+
+
+Overfull \hbox (505.12177pt too wide) has occurred while \output is active
+[]
+ []
+
+
+Underfull \hbox (badness 10000) has occurred while \output is active
+[]
+ []
+
+[12 <./figures//fig4_per_class_map50.pdf> <./figures//fig5_perclass_full_metric
+s.pdf
 
 pdfTeX warning: pdflatex (file ./figures//fig5_perclass_full_metrics.pdf): PDF 
 inclusion: multiple pdfs with page group included in a single page
+> <./figures//fig6_confusion_matrix.pdf
+
+pdfTeX warning: pdflatex (file ./figures//fig6_confusion_matrix.pdf): PDF inclu
+sion: multiple pdfs with page group included in a single page
 >]
-<figures//fig7_pr_curves.pdf, id=1697, 287.37018pt x 265.45717pt>
-File: figures//fig7_pr_curves.pdf Graphic file (type pdf)
-<use figures//fig7_pr_curves.pdf>
-Package pdftex.def Info: figures//fig7_pr_curves.pdf  used on input line 607.
-(pdftex.def)             Requested size: 242.67355pt x 224.17334pt.
-<figures//fig8_dataset_distribution.pdf, id=1698, 328.88919pt x 185.89761pt>
-File: figures//fig8_dataset_distribution.pdf Graphic file (type pdf)
-<use figures//fig8_dataset_distribution.pdf>
-Package pdftex.def Info: figures//fig8_dataset_distribution.pdf  used on input 
-line 617.
-(pdftex.def)             Requested size: 242.67355pt x 137.17062pt.
-
-Overfull \hbox (14.42545pt too wide) in paragraph at lines 627--636
- [][] 
- []
-
-
-Underfull \hbox (badness 3343) in paragraph at lines 639--640
-\T1/times/m/sc/10 The Mo-bileNetV2 \T1/times/m/it/10 Safe\T1/times/m/sc/10 /\T1
-/times/m/it/10 Weapon \T1/times/m/sc/10 clas-si-fier is trained on
- []
-
-<figures//fig9_hardware_performance.pdf, id=1699, 522.3084pt x 177.17146pt>
+<figures//fig9_hardware_performance.pdf, id=1818, 522.3084pt x 177.17146pt>
 File: figures//fig9_hardware_performance.pdf Graphic file (type pdf)
 <use figures//fig9_hardware_performance.pdf>
 Package pdftex.def Info: figures//fig9_hardware_performance.pdf  used on input 
-line 661.
+line 578.
 (pdftex.def)             Requested size: 242.67355pt x 82.31627pt.
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 668.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 668.
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[12 <./figures//fig6_confusion_matrix.pdf> <./figures//fig7_pr_curves.pdf
-
-pdfTeX warning: pdflatex (file ./figures//fig7_pr_curves.pdf): PDF inclusion: m
-ultiple pdfs with page group included in a single page
-> <./figures//fig8_dataset_distribution.pdf
-
-pdfTeX warning: pdflatex (file ./figures//fig8_dataset_distribution.pdf): PDF i
-nclusion: multiple pdfs with page group included in a single page
->]
-<figures//fig10_f1_confidence.pdf, id=1969, 287.06999pt x 265.45717pt>
+<figures//fig10_f1_confidence.pdf, id=1819, 287.06999pt x 265.45717pt>
 File: figures//fig10_f1_confidence.pdf Graphic file (type pdf)
 <use figures//fig10_f1_confidence.pdf>
-Package pdftex.def Info: figures//fig10_f1_confidence.pdf  used on input line 6
-71.
+Package pdftex.def Info: figures//fig10_f1_confidence.pdf  used on input line 5
+88.
 (pdftex.def)             Requested size: 242.67355pt x 224.40826pt.
-<figures//fig11_v1_vs_v2_training.pdf, id=1970, 391.22945pt x 185.8658pt>
+
+Underfull \vbox (badness 3758) has occurred while \output is active []
+
+<figures//fig11_v1_vs_v2_training.pdf, id=1820, 391.22945pt x 185.8658pt>
 File: figures//fig11_v1_vs_v2_training.pdf Graphic file (type pdf)
 <use figures//fig11_v1_vs_v2_training.pdf>
 Package pdftex.def Info: figures//fig11_v1_vs_v2_training.pdf  used on input li
-ne 681.
+ne 598.
 (pdftex.def)             Requested size: 242.67355pt x 115.29231pt.
-<figures//fig12_overfitting_gap.pdf, id=1971, 355.75708pt x 223.13475pt>
-File: figures//fig12_overfitting_gap.pdf Graphic file (type pdf)
-<use figures//fig12_overfitting_gap.pdf>
-Package pdftex.def Info: figures//fig12_overfitting_gap.pdf  used on input line
- 691.
-(pdftex.def)             Requested size: 242.67355pt x 152.20967pt.
-<fig1.png, id=1972, 249.3315pt x 189.22694pt>
-File: fig1.png Graphic file (type png)
-<use fig1.png>
-Package pdftex.def Info: fig1.png  used on input line 715.
-(pdftex.def)             Requested size: 249.33087pt x 189.22647pt.
-File: fig1.png Graphic file (type png)
-<use fig1.png>
-Package pdftex.def Info: fig1.png  used on input line 715.
-(pdftex.def)             Requested size: 249.33087pt x 189.22647pt.
 
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 733.
+Underfull \hbox (badness 5533) in paragraph at lines 613--614
+[]|\T1/times/m/n/8 + Open-Im-ages v7 (1,219
+ []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 733.
+Package pdftex.def Info: notaglinelogo.png  used on input line 621.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1635,8 +1236,11 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[13 <./figures//fig9_hardware_performance.pdf> <./figures//fig10_f1_confidence.
-pdf
+[13 <./figures//fig7_pr_curves.pdf> <./figures//fig9_hardware_performance.pdf
+
+pdfTeX warning: pdflatex (file ./figures//fig9_hardware_performance.pdf): PDF i
+nclusion: multiple pdfs with page group included in a single page
+> <./figures//fig10_f1_confidence.pdf
 
 pdfTeX warning: pdflatex (file ./figures//fig10_f1_confidence.pdf): PDF inclusi
 on: multiple pdfs with page group included in a single page
@@ -1644,65 +1248,49 @@ on: multiple pdfs with page group included in a single page
 
 pdfTeX warning: pdflatex (file ./figures//fig11_v1_vs_v2_training.pdf): PDF inc
 lusion: multiple pdfs with page group included in a single page
-> <./figures//fig12_overfitting_gap.pdf
-
-pdfTeX warning: pdflatex (file ./figures//fig12_overfitting_gap.pdf): PDF inclu
-sion: multiple pdfs with page group included in a single page
 >]
-Underfull \hbox (badness 10000) in paragraph at lines 747--749
-[]\T1/times/m/sc/10 A gen-eral IEEE styleguide is avail-able at 
+<figures//fig12_overfitting_gap.pdf, id=2410, 355.75708pt x 223.13475pt>
+File: figures//fig12_overfitting_gap.pdf Graphic file (type pdf)
+<use figures//fig12_overfitting_gap.pdf>
+Package pdftex.def Info: figures//fig12_overfitting_gap.pdf  used on input line
+ 624.
+(pdftex.def)             Requested size: 242.67355pt x 152.20967pt.
+
+Underfull \hbox (badness 2717) in paragraph at lines 636--637
+\T1/times/n/n/10 fan-out with a 60-second SMTP cooldown, Web-Socket
  []
 
 
-Overfull \hbox (14.32645pt too wide) in paragraph at lines 778--838
-[][]
+Underfull \hbox (badness 7221) in paragraph at lines 636--637
+\T1/times/n/n/10 the 180-second dead-man watch-dog; five lock-guarded
+ []
+
+
+Underfull \hbox (badness 1796) in paragraph at lines 636--637
+\T1/times/n/n/10 and scheduler-driven op-er-at-ing modes; ARP-based LAN
+ []
+
+
+Underfull \hbox (badness 6978) in paragraph at lines 648--649
+[]\T1/times/n/n/7.61 Hailo Tech-nolo-gies Ltd., ``Hailo-8L M.2 AI ac-cel-er-a-t
+ion mod-ule
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 648--649
+\T1/times/n/n/7.61 datasheet,'' 2024. [On-line]. Avail-able: https://hailo.ai/p
+roducts/ai-
+ []
+
+
+Underfull \hbox (badness 3271) in paragraph at lines 650--651
+\T1/times/n/n/7.61 for low-cost mi-croscopy ap-pli-ca-tions,'' \T1/times/n/it/7
+.61 Elec-tron-ics\T1/times/n/n/7.61 , vol. 14, no. 6,
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 855.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 855.
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[14 <./fig1.png (PNG copy)>]
-Underfull \hbox (badness 3492) in paragraph at lines 856--863
-\T1/times/m/sc/10 Most charts, graphs, and ta-bles are one col-umn wide
- []
-
-
-Underfull \hbox (badness 1442) in paragraph at lines 856--863
-\T1/times/m/sc/10 (3.5 inches/88 mil-lime-ters/21 pi-cas) or page wide (7.16
- []
-
-
-Underfull \hbox (badness 3364) in paragraph at lines 893--898
-\T1/times/m/sc/10 color space. Grayscale im-ages should be sub-mit-ted in
- []
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 938.
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 938.
+Package pdftex.def Info: notaglinelogo.png  used on input line 666.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1719,260 +1307,26 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[15]
-Underfull \hbox (badness 2302) in paragraph at lines 979--980
-[]\T1/times/m/sc/10 On the sys-tems side, the multi-engine ar-chi-tec-ture --
+[14 <./figures//fig12_overfitting_gap.pdf>]
+Underfull \hbox (badness 10000) in paragraph at lines 676--677
+[]\T1/times/m/n/7.61 Cloudflare, Inc., ``Cloud-flare Tun-nel doc-u-men-ta-tion,
+'' 2024.
  []
 
 
-Underfull \hbox (badness 3302) in paragraph at lines 983--985
-\T1/times/m/sc/10 com-mand be-low. If you have only one ap-pendix, use
+Underfull \hbox (badness 10000) in paragraph at lines 676--677
+\T1/times/m/n/7.61 [On-line]. Avail-able: https://developers.cloudflare.com/clo
+udflare-
  []
 
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 994.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 994.
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[16]
-Underfull \hbox (badness 10000) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 Authors must sub-mit an elec-tronic IEEE Copy-right
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 Form (eCF) upon sub-mit-ting their fi-nal manuscript
- []
-
-
-Underfull \hbox (badness 7030) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 files. You can ac-cess the eCF sys-tem through your
- []
-
-
-Underfull \hbox (badness 6675) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 manuscript sub-mis-sion sys-tem or through the Au-thor
- []
-
-
-Underfull \hbox (badness 5504) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 Gate-way. You are re-spon-si-ble for ob-tain-ing any nec-
- []
-
-
-Underfull \hbox (badness 5519) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 es-sary ap-provals and/or se-cu-rity clear-ances. For ad-di-
- []
-
-
-Underfull \hbox (badness 1874) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 IEEE In-tel-lec-tual Prop-erty Rights de-part-ment web page
- []
-
-
-Underfull \hbox (badness 6032) in paragraph at lines 1028--1035
-\T1/times/m/sc/10 at $[]$
- []
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 1070.
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 1070.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[17]
-Underfull \hbox (badness 3396) in paragraph at lines 1101--1104
-\T1/times/m/sc/10 J. K. Au-thor, ``Name of pa-per,'' \T1/times/m/it/10 Ab-brev.
- Ti-tle of
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1101--1104
-\T1/times/m/it/10 Pe-ri-od-i-cal\T1/times/m/sc/10 , vol. $\T1/times/m/it/10 x$\
-T1/times/m/sc/10 , no. $\T1/times/m/it/10 x$\T1/times/m/sc/10 , pp. \T1/times/m
-/it/10 xxx--xxx\T1/times/m/sc/10 , Ab-brev.
- []
-
-
-Underfull \hbox (badness 2409) in paragraph at lines 1105--1108
-\T1/times/m/sc/10 J.K. Au-thor. (year, month). Ti-tle. pre-sented at ab-
- []
-
-
-Underfull \hbox (badness 1622) in paragraph at lines 1117--1120
-\T1/times/m/sc/10 day). Patent Num-ber [Type of medium]. Avail-able:
- []
-
-
-Underfull \hbox (badness 2435) in paragraph at lines 1141--1142
-[]\T1/times/m/sc/10 J. K. Au-thor, pri-vate com-mu-ni-ca-tion, Ab-brev.
- []
-
-LaTeX Font Info:    Calculating math sizes for size <7.61> on input line 1174.
-
-Underfull \hbox (badness 5578) in paragraph at lines 1176--1177
-[]\T1/times/n/n/7.61 W.-K. Chen, \T1/times/n/it/7.61 Lin-ear Net-works and Sys-
-tems. \T1/times/n/n/7.61 Bel-mont, CA, USA:
- []
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 1179.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 1179.
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[18]
-Underfull \hbox (badness 2951) in paragraph at lines 1192--1197
-[]\T1/times/m/n/7.61 G. O. Young, ``Syn-thetic struc-ture of in-dus-trial plas-
-tics,'' in Plas-
- []
-
-
-Underfull \hbox (badness 1968) in paragraph at lines 1198--1201
-\T1/times/m/n/7.61 Chicago, IL, USA: Univ. Chicago Press, 1987. [On-line]. Avai
-l-able:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1217--1221
-[]\T1/times/m/n/7.61 PROCESS Cor-po-ra-tion, Boston, MA, USA. In-tranets: In-te
-r-net
- []
-
-
-Underfull \hbox (badness 1371) in paragraph at lines 1217--1221
-\T1/times/m/n/7.61 tech-nolo-gies de-ployed be-hind the fire-wall for cor-po-ra
-te pro-duc-tiv-ity.
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1217--1221
-\T1/times/m/n/7.61 Pre-sented at INET96 An-nual Meet-ing. [On-line]. Avail-able
-:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1224--1227
-[]\T1/times/m/n/7.61 Teralyzer. Lytera UG, Kirch-hain, Ger-many [On-line]. Avai
-l-able:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 1224--1227
-[]$\T1/times/m/n/7.61 ,
- []
-
-<author1.png, id=2589, 225.84375pt x 282.30469pt>
-File: author1.png Graphic file (type png)
-<use author1.png>
-Package pdftex.def Info: author1.png  used on input line 1260.
-(pdftex.def)             Requested size: 72.27147pt x 90.33934pt.
-File: author1.png Graphic file (type png)
-<use author1.png>
-Package pdftex.def Info: author1.png  used on input line 1260.
-(pdftex.def)             Requested size: 72.27147pt x 90.33934pt.
-<author2.png, id=2592, 225.84375pt x 282.30469pt>
-File: author2.png Graphic file (type png)
-<use author2.png>
-Package pdftex.def Info: author2.png  used on input line 1280.
-(pdftex.def)             Requested size: 72.27147pt x 90.33934pt.
-File: author2.png Graphic file (type png)
-<use author2.png>
-Package pdftex.def Info: author2.png  used on input line 1280.
-(pdftex.def)             Requested size: 72.27147pt x 90.33934pt.
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 1308.
-
-File: notaglinelogo.png Graphic file (type png)
-<use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 1308.
-(pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Overfull \hbox (505.12177pt too wide) has occurred while \output is active
-[]
- []
-
-
-Underfull \hbox (badness 10000) has occurred while \output is active
-[]
- []
-
-[19 <./author1.png> <./author2.png>]
 File: bullet.png Graphic file (type png)
 <use bullet.png>
-Package pdftex.def Info: bullet.png  used on input line 1331.
+Package pdftex.def Info: bullet.png  used on input line 680.
 (pdftex.def)             Requested size: 5.0pt x 14.6871pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 1333.
+Package pdftex.def Info: notaglinelogo.png  used on input line 682.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
-
-
-LaTeX Font Warning: Font shape `T1/formata/m/sl' undefined
-(Font)              using `T1/formata/m/it' instead on input line 1333.
-
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
 []
@@ -1988,7 +1342,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[20
+[15
 
 ] (./access.aux)
 
@@ -1996,38 +1350,34 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 5155 strings out of 478051
- 87570 string characters out of 5840944
- 1879330 words of memory out of 5000000
- 25150 multiletter control sequences out of 15000+600000
- 614340 words of font info for 195 fonts, out of 8000000 for 9000
+ 5264 strings out of 478051
+ 89367 string characters out of 5840944
+ 1876330 words of memory out of 5000000
+ 25243 multiletter control sequences out of 15000+600000
+ 613327 words of font info for 196 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 72i,14n,76p,1830b,514s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,14n,76p,1580b,512s stack positions out of 10000i,1000n,20000p,200000b,200000s
  </home/manikanta/.texlive2022/texmf-var/fonts/pk/ljfour/jknappen/ec/tcrb0800
 .600pk> </home/manikanta/.texlive2022/texmf-var/fonts/pk/ljfour/jknappen/ec/tcr
 m0800.600pk>{/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/sh
 are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/te
 xlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/
-texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-d
-ist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fon
-ts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type
-1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type1/publi
-c/amsfonts/cm/cmr5.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfon
-ts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cm
-r7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb><
-/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/s
-hare/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/te
-xlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/t
-exmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-di
-st/fonts/type1/public/amsfonts/symbols/msam10.pfb><./t1-formata-bold.pfb><./t1-
-formata-condmedium.pfb><./t1-formata-medium.pfb><./t1-formata-mediumitalic.pfb>
-<./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.pfb><./t1-times-bold.pfb
-><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texlive/texmf-dist/fonts/ty
-pe1/urw/courier/ucrr8a.pfb>
-Output written on access.pdf (20 pages, 3673179 bytes).
+texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texlive/texmf-dist/fon
+ts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts/type
+1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public
+/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/c
+msy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pf
+b></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb><./t1
+-formata-bold.pfb><./t1-formata-condmedium.pfb><./t1-formata-medium.pfb><./t1-f
+ormata-mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.
+pfb><./t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/tex
+live/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
+Output written on access.pdf (15 pages, 3397777 bytes).
 PDF statistics:
- 2719 PDF objects out of 2984 (max. 8388607)
- 1650 compressed objects within 17 object streams
+ 2670 PDF objects out of 2984 (max. 8388607)
+ 1625 compressed objects within 17 object streams
  0 named destinations out of 1000 (max. 500000)
- 193 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 149 words of extra memory for PDF output out of 10000 (max. 10000000)
 

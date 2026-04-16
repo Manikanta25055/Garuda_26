@@ -1,10 +1,10 @@
 \relax 
 \citation{b1}
 \citation{b2}
-\citation{b3}
-\citation{b4}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
 \newlabel{sec:introduction}{{I}{1}}
+\citation{b3}
+\citation{b4}
 \citation{b1}
 \citation{b5}
 \citation{b6}
@@ -15,118 +15,112 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}Related Work}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}Contributions}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-C}}Paper Organisation}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {II}Methodology}{2}{}\protected@file@percent }
-\newlabel{sec:methodology}{{II}{2}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Hardware Engine}{2}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Hardware engine: Raspberry Pi 5 host with the Hailo-8L AI HAT+ attached over PCIe Gen3 $\times $1, CSI-2/USB camera input, and Gigabit Ethernet / Wi-Fi uplink.}}{3}{}\protected@file@percent }
-\newlabel{fig:hw_layer}{{1}{3}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}GStreamer TAPPAS Pipeline Engine}{3}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GStreamer TAPPAS pipeline: source $\to $ preprocess $\to $ (HailoNet + NMS $\parallel $ bypass queue) $\to $ HailoMuxer $\to $ identity callback $\to $ overlay $\to $ sink.}}{3}{}\protected@file@percent }
-\newlabel{fig:gstreamer}{{2}{3}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {II-B}1}Input Preprocessing}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Detection Engine}{3}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Detection engine callback: metadata extraction, confidence filter, watch/danger label routing, and consecutive-frame gating before alert dispatch.}}{4}{}\protected@file@percent }
-\newlabel{fig:detect}{{3}{4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Cascade Architecture (garuda\_cascade.py)}{4}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Latency Budget (Hailo-8L, Pi\nobreakspace  {}5)}}}{4}{}\protected@file@percent }
-\newlabel{tab:cascade_latency}{{1}{4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Alert Engine}{4}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Decision Matrix Across Operating Scenarios}}}{5}{}\protected@file@percent }
-\newlabel{tab:cascade_matrix}{{2}{5}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Alert engine: mode gate, WebSocket broadcast, SMTP email with 60\,s cooldown, AES-256-CBC clip encryption, and SSH exfiltration to a remote host.}}{5}{}\protected@file@percent }
-\newlabel{fig:alert}{{4}{5}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-F}}Voice Assistant Engine (Narada)}{5}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Voice assistant Narada: microphone capture, wake-word gate, speech-to-text, rule-based dispatcher, and Groq LLM fallback for open-ended intents.}}{5}{}\protected@file@percent }
-\newlabel{fig:voice}{{5}{5}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-G}}Mode Controller}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-H}}Presence Monitor}{5}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Mode controller: lock-protected flag store, time-of-day scheduler, and configuration persistence.}}{6}{}\protected@file@percent }
-\newlabel{fig:mode}{{6}{6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Presence monitor: ARP scan loop, known-device comparison, transition-event WebSocket push.}}{6}{}\protected@file@percent }
-\newlabel{fig:presence}{{7}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-I}}Web Server}{6}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Web server: FastAPI under Uvicorn behind a Cloudflare tunnel with $\sim $45 routes and three parallel media channels (MJPEG, WebSocket, WebRTC).}}{6}{}\protected@file@percent }
-\newlabel{fig:web}{{8}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-J}}Auth Engine}{6}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Auth engine: PBKDF2-SHA256 password store, session-token cookie, OTP 2FA, and separate master-key store.}}{7}{}\protected@file@percent }
-\newlabel{fig:auth}{{9}{7}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Deadman monitor: 10\,s wake, 180\,s heartbeat deadline, tamper alert + email branch on violation.}}{7}{}\protected@file@percent }
-\newlabel{fig:deadman}{{10}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-K}}Deadman Monitor}{7}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Logging engine: in-memory deques $\to $ flusher daemon $\to $ permanent text + JSON files + SQLite (\texttt  {events.db}) with 7-day rotation.}}{7}{}\protected@file@percent }
-\newlabel{fig:logging}{{11}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-L}}Logging Engine}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {III}System Flowchart and Block Diagram}{7}{}\protected@file@percent }
-\newlabel{sec:flowchart}{{III}{7}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {H}ardware Specification}}}{8}{}\protected@file@percent }
-\newlabel{tab:hw_specs}{{3}{8}}
-\@writefile{toc}{\contentsline {section}{\numberline {IV}Specifications}{8}{}\protected@file@percent }
-\newlabel{sec:specs}{{IV}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Hardware}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Software Stack}{8}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{8}{}\protected@file@percent }
-\newlabel{tab:sw_specs}{{4}{8}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}odel Specification}}}{8}{}\protected@file@percent }
-\newlabel{tab:model_specs}{{5}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Models}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Dataset (v5)}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {V}Results}{8}{}\protected@file@percent }
-\newlabel{sec:results}{{V}{8}}
-\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Project Garuda system flowchart. Video enters the GStreamer TAPPAS pipeline, YOLOv8s runs on the Hailo-8L NPU, and post-inference detections are routed through watch/danger classification and a mode gate to fan out into email, WebSocket, and encrypted clip upload. Parallel subsystems---voice assistant, presence monitor, deadman watchdog, mode scheduler, authentication, and the Cloudflare-tunnelled web server---execute concurrently and feed the multi-tier logging engine.}}{9}{}\protected@file@percent }
-\newlabel{fig:system_flowchart}{{12}{9}}
-\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Three-layer block diagram. Top: inference pipeline (camera $\to $ GStreamer $\to $ Hailo-8L $\to $ detection classes). Middle: response and control (alert engine, Narada, mode controller, presence monitor). Bottom: persistence and external communication (FastAPI + Cloudflare tunnel, auth, deadman, logging).}}{10}{}\protected@file@percent }
-\newlabel{fig:block_diagram}{{13}{10}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {v}5 Dataset Geometry}}}{10}{}\protected@file@percent }
-\newlabel{tab:dataset}{{6}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Training Loss Convergence}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Validation mAP and Precision/Recall}{10}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Training loss convergence over 150 epochs: box, classification, and distribution-focus losses drop monotonically with no divergence between train and validation curves.}}{10}{}\protected@file@percent }
-\newlabel{fig:training_losses}{{14}{10}}
-\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Validation mAP{@}0.5, mAP\text  {@}0.5{:}0.95, precision, and recall versus epoch.}}{10}{}\protected@file@percent }
-\newlabel{fig:training_metrics}{{15}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Three-Model Performance Comparison}{10}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Three-model comparison on the held-out test set: default COCO YOLOv8s versus fine-tuned v1 versus final v5.}}{11}{}\protected@file@percent }
-\newlabel{fig:model_comparison}{{16}{11}}
-\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Per-class mAP{@}0.5 at v1, v2, and v5. All four classes improve monotonically with dataset scale.}}{11}{}\protected@file@percent }
-\newlabel{fig:per_class_map}{{17}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Per-Class mAP{@}0.5 Progression}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Full Per-Class Metrics at v5}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Normalised Confusion Matrix}{11}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Full per-class metrics (precision, recall, mAP{@}0.5, mAP\text  {@}0.5{:}0.95) for the deployed v5 model.}}{11}{}\protected@file@percent }
-\newlabel{fig:perclass_full}{{18}{11}}
-\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Normalised confusion matrix on the v5 held-out test set. Diagonal dominance confirms strong per-class discrimination with inter-class confusion $\leq 0.03$.}}{11}{}\protected@file@percent }
-\newlabel{fig:confusion}{{19}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Precision-Recall Curves}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Dataset Class Distribution}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {II}Dataset}{2}{}\protected@file@percent }
+\newlabel{sec:dataset}{{II}{2}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {v}5 Dataset Geometry}}}{3}{}\protected@file@percent }
+\newlabel{tab:dataset}{{1}{3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces v5 dataset class distribution across the train, validation, and test splits. Person is the most abundant class; Hammer is the scarcest.}}{3}{}\protected@file@percent }
+\newlabel{fig:dataset_dist}{{1}{3}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 Classifier Dataset}}}{3}{}\protected@file@percent }
+\newlabel{tab:mobilenet}{{2}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}Methodology}{3}{}\protected@file@percent }
+\newlabel{sec:methodology}{{III}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Hardware Engine}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}GStreamer TAPPAS Pipeline Engine}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Hardware engine. Raspberry Pi\nobreakspace  {}5 host with the Hailo-8L AI HAT+ over PCIe Gen3\nobreakspace  {}$\times $1, a Raspberry Pi Camera Module v3 on CSI-2, a 1\nobreakspace  {}TB NVMe SSD on the HAT carrier, and 802.11ac Wi-Fi uplink.}}{4}{}\protected@file@percent }
+\newlabel{fig:hw_layer}{{2}{4}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-B}1}Input Preprocessing}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces GStreamer TAPPAS pipeline: source $\to $ preprocess $\to $ (HailoNet + NMS $\parallel $ bypass queue) $\to $ HailoMuxer $\to $ identity callback $\to $ overlay $\to $ sink.}}{4}{}\protected@file@percent }
+\newlabel{fig:gstreamer}{{3}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Detection Engine}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Detection engine callback. Metadata extraction, confidence filter, watch/danger label routing, and consecutive-frame gating before alert dispatch.}}{5}{}\protected@file@percent }
+\newlabel{fig:detect}{{4}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Cascade Architecture}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Alert Engine}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Latency Budget (Hailo-8L, Pi\nobreakspace  {}5)}}}{5}{}\protected@file@percent }
+\newlabel{tab:cascade_latency}{{3}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Alert engine. Mode gate, WebSocket broadcast, SMTPS email with 60\,s cooldown, AES-256-CBC clip encryption, and SSH exfiltration to a remote host.}}{5}{}\protected@file@percent }
+\newlabel{fig:alert}{{5}{5}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Decision Matrix Across Operating Scenarios}}}{6}{}\protected@file@percent }
+\newlabel{tab:cascade_matrix}{{4}{6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Voice assistant Narada. Microphone capture, wake-word gate, speech-to-text, rule-based dispatcher, and Groq LLM fallback for open-ended intents.}}{6}{}\protected@file@percent }
+\newlabel{fig:voice}{{6}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-F}}Voice Assistant Engine (Narada)}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Mode controller. Lock-protected flag store, time-of-day scheduler, and configuration persistence.}}{6}{}\protected@file@percent }
+\newlabel{fig:mode}{{7}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-G}}Mode Controller}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-H}}Presence Monitor}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Presence monitor. ARP scan loop, known-device comparison, and transition-event WebSocket push.}}{7}{}\protected@file@percent }
+\newlabel{fig:presence}{{8}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-I}}Web Server}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-J}}Auth Engine}{7}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Web server. FastAPI under Uvicorn behind a Cloudflare tunnel, with $\sim $45 REST routes and three parallel media channels (MJPEG, WebSocket, WebRTC).}}{7}{}\protected@file@percent }
+\newlabel{fig:web}{{9}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Auth engine. PBKDF2-SHA256 password store, session-token cookie, OTP 2FA, and separate master-key store.}}{7}{}\protected@file@percent }
+\newlabel{fig:auth}{{10}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-K}}Deadman Monitor}{7}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Deadman monitor. 10\,s wake, 180\,s heartbeat deadline, and parallel tamper-alert and email branches on violation.}}{8}{}\protected@file@percent }
+\newlabel{fig:deadman}{{11}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-L}}Logging Engine}{8}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Logging engine. In-memory deques $\to $ flusher daemon $\to $ permanent text and JSON files plus a SQLite database (\texttt  {events.db}) with 7-day rotation.}}{8}{}\protected@file@percent }
+\newlabel{fig:logging}{{12}{8}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}System Flowchart and Block Diagram}{8}{}\protected@file@percent }
+\newlabel{sec:flowchart}{{IV}{8}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Project Garuda system flowchart. Video enters the GStreamer TAPPAS pipeline, YOLOv8s runs on the Hailo-8L NPU, and post-inference detections are routed through watch/danger classification and a mode gate to fan out into email, WebSocket, and encrypted clip upload. The parallel subsystems (voice assistant, presence monitor, deadman watchdog, mode scheduler, authentication, and the Cloudflare-tunnelled web server) execute concurrently and feed the multi-tier logging engine.}}{9}{}\protected@file@percent }
+\newlabel{fig:system_flowchart}{{13}{9}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {H}ardware Specification}}}{10}{}\protected@file@percent }
+\newlabel{tab:hw_specs}{{5}{10}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Hardware and Software Specifications}{10}{}\protected@file@percent }
+\newlabel{sec:specs}{{V}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Hardware}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Software Stack}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Models}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Results and Evaluation}{10}{}\protected@file@percent }
+\newlabel{sec:results}{{VI}{10}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{10}{}\protected@file@percent }
+\newlabel{tab:sw_specs}{{6}{10}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}odel Specification}}}{10}{}\protected@file@percent }
+\newlabel{tab:model_specs}{{7}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Training Loss Convergence}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Validation mAP and Precision / Recall}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Three-layer block diagram. Top: inference pipeline (camera $\to $ GStreamer $\to $ Hailo-8L $\to $ detection classes). Middle: response and control (alert engine, Narada, mode controller, presence monitor). Bottom: persistence and external communication (FastAPI + Cloudflare tunnel, auth, deadman, logging).}}{11}{}\protected@file@percent }
+\newlabel{fig:block_diagram}{{14}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Training loss convergence over 150 epochs. Box, classification, and distribution-focus losses all fall monotonically and the train and validation curves do not diverge.}}{11}{}\protected@file@percent }
+\newlabel{fig:training_losses}{{15}{11}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Validation mAP{@}0.5, mAP{@}0.5:0.95, precision, and recall versus training epoch.}}{11}{}\protected@file@percent }
+\newlabel{fig:training_metrics}{{16}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Three-Model Performance Comparison}{11}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Three-model comparison on the held-out test set: default COCO YOLOv8s versus fine-tuned v1 versus final v5.}}{11}{}\protected@file@percent }
+\newlabel{fig:model_comparison}{{17}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Per-Class mAP{@}0.5 Progression}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Full Per-Class Metrics at v5}{11}{}\protected@file@percent }
 \citation{b1}
 \citation{b5}
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class Recall and mAP{@}0.5: v1 vs v5 (Deployed)}}}{12}{}\protected@file@percent }
-\newlabel{tab:v1_v5}{{7}{12}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class TP/FN and Detection Recall (v5 Test Set)}}}{12}{}\protected@file@percent }
-\newlabel{tab:perclass_tpfn}{{8}{12}}
-\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Per-class precision-recall curves for the deployed v5 detector on the held-out test set.}}{12}{}\protected@file@percent }
-\newlabel{fig:pr_curves}{{20}{12}}
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}ataset Versions: Growth and Test mAP}}}{12}{}\protected@file@percent }
-\newlabel{tab:dataset_versions}{{9}{12}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-I}}MobileNetV2 Classifier Split}{12}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces v5 dataset class distribution across train, validation, and test splits.}}{12}{}\protected@file@percent }
-\newlabel{fig:dataset_dist}{{21}{12}}
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 Classifier Dataset}}}{12}{}\protected@file@percent }
-\newlabel{tab:mobilenet}{{10}{12}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-J}}Hardware Inference Performance}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-K}}F1-Confidence Threshold Curves}{12}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces Hardware inference performance on the Hailo-8L: custom v5 HEF (52.2\nobreakspace  {}FPS, 18.4\nobreakspace  {}ms) versus the Hailo-provided YOLOv8s reference (58.2\nobreakspace  {}FPS, 13.2\nobreakspace  {}ms).}}{13}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class Recall and mAP{@}0.5: v1 vs v5 (Deployed)}}}{12}{}\protected@file@percent }
+\newlabel{tab:v1_v5}{{8}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Per-class mAP{@}0.5 at v1, v2, and v5. All four classes improve monotonically with dataset scale.}}{12}{}\protected@file@percent }
+\newlabel{fig:per_class_map}{{18}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Full per-class metrics (precision, recall, mAP{@}0.5, mAP{@}0.5:0.95) for the deployed v5 model.}}{12}{}\protected@file@percent }
+\newlabel{fig:perclass_full}{{19}{12}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class TP/FN and Detection Recall (v5 Test Set)}}}{12}{}\protected@file@percent }
+\newlabel{tab:perclass_tpfn}{{9}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-F}}Normalised Confusion Matrix}{12}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Normalised confusion matrix on the v5 held-out test set. Diagonal dominance confirms strong per-class discrimination, with inter-class confusion $\leq 0.03$.}}{12}{}\protected@file@percent }
+\newlabel{fig:confusion}{{20}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-G}}Precision-Recall Curves}{12}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-H}}Hardware Inference Performance}{12}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces Per-class precision-recall curves for the deployed v5 detector on the held-out test set.}}{13}{}\protected@file@percent }
+\newlabel{fig:pr_curves}{{21}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {22}{\ignorespaces Hardware inference performance on the Hailo-8L. Custom v5 HEF (52.2\nobreakspace  {}FPS, 18.4\nobreakspace  {}ms) versus the Hailo-provided YOLOv8s reference (58.2\nobreakspace  {}FPS, 13.2\nobreakspace  {}ms).}}{13}{}\protected@file@percent }
 \newlabel{fig:hw_perf}{{22}{13}}
-\@writefile{lof}{\contentsline {figure}{\numberline {23}{\ignorespaces Per-class F1 score versus confidence threshold; peak F1 sits in the 0.25--0.27 band for all four classes.}}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-I}}F1-Confidence Threshold Curves}{13}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {23}{\ignorespaces Per-class F1 score versus confidence threshold. The peak F1 sits in the 0.25--0.27 band for all four classes.}}{13}{}\protected@file@percent }
 \newlabel{fig:f1_conf}{{23}{13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-L}}Effect of Training Dataset Size}{13}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-M}}Validation-to-Test Generalisation Gap}{13}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {24}{\ignorespaces Validation mAP{@}0.5 progression versus training dataset size (v1, v2, v5).}}{13}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {24}{\ignorespaces Validation mAP{@}0.5 progression against training-set size (v1, v2, v5).}}{13}{}\protected@file@percent }
 \newlabel{fig:v1v2}{{24}{13}}
-\@writefile{lof}{\contentsline {figure}{\numberline {25}{\ignorespaces Validation-to-test mAP{@}0.5 gap across v1, v2, and v5. The final v5 achieves positive generalisation (test $>$ val).}}{13}{}\protected@file@percent }
-\newlabel{fig:overfit}{{25}{13}}
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{13}{}\protected@file@percent }
-\newlabel{sec:conclusion}{{VI}{13}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {T}raining Dataset Growth and Test mAP}}}{13}{}\protected@file@percent }
+\newlabel{tab:dataset_versions}{{10}{13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-J}}Effect of Training Dataset Size}{13}{}\protected@file@percent }
 \bibcite{b1}{1}
 \bibcite{b2}{2}
 \bibcite{b3}{3}
@@ -138,11 +132,16 @@
 \bibcite{b9}{9}
 \bibcite{b10}{10}
 \bibcite{b11}{11}
+\@writefile{lof}{\contentsline {figure}{\numberline {25}{\ignorespaces Validation-to-test mAP{@}0.5 gap across v1, v2, and v5. The final v5 achieves a positive gap, with test mAP above validation mAP.}}{14}{}\protected@file@percent }
+\newlabel{fig:overfit}{{25}{14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-K}}Validation-to-Test Generalisation Gap}{14}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Conclusion}{14}{}\protected@file@percent }
+\newlabel{sec:conclusion}{{VII}{14}}
+\@writefile{toc}{\contentsline {section}{REFERENCES}{14}{}\protected@file@percent }
 \bibcite{b12}{12}
 \bibcite{b13}{13}
 \bibcite{b14}{14}
 \bibcite{b15}{15}
 \bibcite{b16}{16}
 \bibcite{b17}{17}
-\@writefile{toc}{\contentsline {section}{REFERENCES}{14}{}\protected@file@percent }
-\gdef \@abspage@last{14}
+\gdef \@abspage@last{15}
