@@ -375,13 +375,13 @@ mAP{@}0.5 climbs sharply over the first 30 epochs and then plateaus near 0.81 by
 \end{figure}
 
 
-\subsection{Three-Model Performance Comparison}
-The default COCO-pretrained YOLOv8s scores near zero on all four metrics on our task. Its 80-class label scheme does not line up with our 4-class schema, so out-of-the-box weights are useless here; that is the expected baseline, and we include it only to set the scale. Fine-tuned v1 (359 training images) recovers to a test mAP{@}0.5 of 0.465. The final fine-tuned v5 (4{,}982 training images, 150 epochs) reaches a test mAP{@}0.5 of 0.847 --- an 82\% improvement over v1 and a 12\% improvement over v2. The three-way comparison is plotted in Fig.~\ref{fig:model_comparison}.
+\subsection{Four-Model Performance Comparison}
+The default COCO-pretrained YOLOv8s scores near zero on the detection metrics (recall 0.03, mAP{@}0.5 $\approx 0$) on our task. Its 80-class label scheme does not line up with our 4-class schema, so out-of-the-box weights are useless here; that is the expected baseline, and we include it only to set the scale. Fine-tuned v1 (359 training images) recovers to a test mAP{@}0.5 of 0.465. The intermediate fine-tuned v2 (1{,}383 images) reaches 0.754, and the final fine-tuned v5 (4{,}982 images, 150 epochs) reaches 0.847 --- an 82\% improvement over v1 and a 12\% improvement over v2. The four-way comparison is plotted in Fig.~\ref{fig:model_comparison}.
 
 \begin{figure}[ht!]
 \centering
 \includegraphics[width=\columnwidth]{fig3_model_comparison.pdf}
-\caption{Three-model comparison on the held-out test set. COCO-pretrained YOLOv8s scores near zero on this four-class task; fine-tuning on 359 images (v1) recovers to 0.465 mAP{@}0.5, and scaling to 4{,}982 images (v5) reaches 0.847 --- an 82\% gain driven entirely by dataset growth.}
+\caption{Four-model comparison on the held-out test set. COCO-pretrained YOLOv8s scores near zero on this four-class task; fine-tuning on 359 images (v1) recovers to 0.465 mAP{@}0.5, the intermediate v2 (1{,}383 images) reaches 0.754, and v5 (4{,}982 images) reaches 0.847 --- an 82\% gain over v1 driven entirely by dataset growth.}
 \label{fig:model_comparison}
 \end{figure}
 
