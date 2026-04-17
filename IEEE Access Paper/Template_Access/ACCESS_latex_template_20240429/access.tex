@@ -57,7 +57,7 @@
 
 
 \begin{abstract}
-Consumer home security is stuck between cloud-backed cameras that upload every frame and charge a subscription, and bare-bones DIY builds that rarely go beyond motion detection. This paper presents Project Garuda, a privacy-first security system built on a Raspberry Pi~5 and a Hailo-8L neural processing unit (13~TOPS, INT8) for under US\$500. A YOLOv8s detector, fine-tuned on 4{,}982 images covering four threat classes (Hammer, Knife, Person, Scissors), sustains 52.2~FPS at 18.4~ms NPU latency with a held-out test mAP{@}0.5 of 0.847. An asynchronous three-stage cascade adds MobileNetV2 weapon classification and MiDaS depth-based anti-spoof without blocking the primary detector. Around this inference core the system runs encrypted evidence capture, authenticated remote access, a voice assistant, network presence monitoring, and a tamper watchdog --- all on-device, with no cloud inference dependency. A dataset-scaling study from 359 to 4{,}982 training images traces the per-class mAP trajectory and quantifies the INT8 quantisation cost at less than one mAP point.
+Consumer home security is stuck between cloud-backed cameras that upload every frame and charge a subscription, and bare-bones DIY builds that rarely go beyond motion detection. This paper presents Project Garuda, a privacy-first security system built on a Raspberry Pi~5 and a Hailo-8L neural processing unit (13~TOPS, INT8) for under US\$500. A YOLOv8s detector, fine-tuned on 4{,}982 images covering four threat classes (Hammer, Knife, Person, Scissors), sustains 52.2~FPS at 18.4~ms NPU latency with a held-out test mAP{@}0.5 of 0.847. An asynchronous three-stage cascade adds MobileNetV2 weapon classification and MiDaS depth-based anti-spoof without blocking the primary detector. Around this inference core the system runs encrypted evidence capture, authenticated remote access, a voice assistant, network presence monitoring, and a tamper watchdog --- all on-device, with no cloud inference dependency. A dataset-scaling study from 359 to 4{,}982 training images traces the per-class mAP trajectory, and the compiled 22.9~MB INT8 HEF delivers the 52.2~FPS / 5~W deployment envelope on the Hailo-8L.
 \end{abstract}
 
 \begin{keywords}
@@ -519,24 +519,27 @@ Second, expensive side-effects (email, SSH clip upload, TTS, Groq LLM, WebSocket
 
 Third, thread-to-core affinity is pinned via \texttt{os.sched\_setaffinity}: camera capture on Core~0, HailoRT VDevice calls on Core~1, cascade secondary worker on Core~2, and Core~3 reserved for the OS and FastAPI. The OS scheduler cannot migrate the inference thread onto a busy core, so jitter stays bounded. The net effect is the flat line in Fig.~\ref{fig:hw_perf}: across all five operating modes the measured rate sits between 52.29 and 52.36~FPS with zero camera-side drops.
 
-\subsection{INT8 Quantisation Impact}
+\subsection{INT8 Quantisation and Deployment Characteristics}
 \label{sec:quant}
-The v5 model was compiled to INT8 via post-training quantisation using 128 calibration images drawn from the v5 training split. The Hailo Dataflow Compiler embeds normalisation (\texttt{normalization([0,0,0],[255,255,255])}) directly into the HEF graph, so the chip accepts the YUV-to-RGB converted frame without further preprocessing at inference time. Table~\ref{tab:quant} compares the FP32 PyTorch baseline against the deployed INT8 HEF. The accuracy cost of quantisation is below one mAP{@}0.5 point, while the power envelope drops by approximately an order of magnitude and the on-disk model size halves --- an appropriate trade-off for continuously-running embedded deployment.
+The v5 model was compiled to INT8 via post-training quantisation using 128 calibration images drawn from the v5 training split. The Hailo Dataflow Compiler embeds normalisation (\texttt{normalization([0,0,0],[255,255,255])}) directly into the HEF graph, so the chip accepts the YUV-to-RGB converted frame without further preprocessing at inference time. Table~\ref{tab:quant} reports the FP32 PyTorch baseline on the held-out test split together with the hardware characteristics of the deployed INT8 HEF. We intentionally do \emph{not} publish an INT8-vs-FP32 mAP delta: an independent INT8 evaluation on the same test split could not be completed within the available RunPod budget, because the Hailo on-chip NMS output layout produced by \texttt{SDK\_QUANTIZED} emulator inference did not match the bbox-decoding convention used by our post-processing code, yielding near-zero mAP until the layout mismatch is resolved. Rather than cite an apples-to-oranges comparison (FP32 on validation vs.\ INT8 on test), we restrict quantitative accuracy claims to the FP32 test result and describe the quantisation step by its hardware-measured deployment benefits: throughput, power, and on-disk size.
 
 \begin{table}[ht!]
-\caption{\textbf{FP32 $\to$ INT8 Quantisation Impact (v5)}}
+\caption{\textbf{FP32 Baseline (test split) and INT8 Deployment Characteristics.} FP32 mAP measured on the held-out test split (622~images, 1{,}656~instances; Ultralytics \texttt{val} with \texttt{conf=0.001}, \texttt{iou=0.7}). Independent INT8-on-test mAP was not completed (see text).}
 \label{tab:quant}
 \setlength{\tabcolsep}{3pt}
 \centering\small
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{|l|c|c|c|}
+\begin{tabular}{|l|c|c|}
 \hline
-\textbf{Metric} & \textbf{FP32 (RTX~4090)} & \textbf{INT8 (Hailo-8L)} & \textbf{Delta} \\
+\textbf{Metric} & \textbf{FP32 (RTX~4090)} & \textbf{INT8 (Hailo-8L)} \\
 \hline
-mAP{@}0.5            & $\sim$0.855 (val) & 0.847 (test) & $-0.8\%$ \\
-FPS                  & $\sim$450 (batch) & 52.2        & NPU-limited \\
-Power                & $\sim$100~W (GPU) & $\sim$5~W (NPU+Pi) & $-95\%$ \\
-Model file size      & 44.8~MB (ONNX FP32) & 22.9~MB (HEF) & $-48.9\%$ \\
+mAP{@}0.5 (test)       & 0.847            & not independently measured \\
+mAP{@}0.5:0.95 (test)  & 0.661            & not independently measured \\
+Throughput             & 146.6~FPS @ bs=1 & 52.2~FPS (on-chip, bs=1) \\
+                       & 872.4~FPS @ bs=32 & --- \\
+Latency                & 6.82~ms @ bs=1   & 18.4~ms (end-to-end) \\
+Power envelope         & $\sim$100~W (GPU)  & $\sim$5~W (NPU+Pi) \\
+Model file size        & 42.68~MB (ONNX FP32) & 22.9~MB (HEF) \\
 \hline
 \end{tabular}%
 }

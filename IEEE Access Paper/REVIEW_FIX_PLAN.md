@@ -15,10 +15,15 @@ File: `Template_Access/ACCESS_latex_template_20240429/access.tex`
 - [x] Update contribution list (Sec I-A, item 2) -- now states async secondary path with bounded non-blocking queue
 - Abstract also updated to reflect deployed cascade.
 
-### P0-2. Quantisation comparison is apples-to-oranges
-- Table 15: FP32 mAP reported on **val** (~0.855), INT8 mAP on **test** (0.847). Different splits. Cannot call delta "-0.8%".
-- [ ] Re-evaluate FP32 model on the same held-out test set
-- [ ] Update Table 15 with same-split numbers
+### P0-2. Quantisation comparison is apples-to-oranges -- DONE
+- ~~Table 15: FP32 mAP reported on **val** (~0.855), INT8 mAP on **test** (0.847). Different splits. Cannot call delta "-0.8%".~~
+- [x] Re-evaluated FP32 model on held-out test split (622 imgs / 1,656 instances): mAP@0.5 = 0.847, mAP@0.5:0.95 = 0.661, P = 0.866, R = 0.801 (Ultralytics `val`, conf=0.001, iou=0.7)
+- [x] Discovered the original "INT8-on-TEST 0.847" figure in GARUDA_CASCADE_REPORT.md §5 was numerically identical (P=0.866, R=0.801, mAP=0.847, mAP@0.5:0.95=0.661) to this FP32 test result -- i.e. the reported INT8-on-test number was the FP32 PyTorch result mis-attributed; no independent INT8-on-test mAP was ever conducted
+- [x] INT8 emulator evaluation was attempted (calibrated `best_v5_nms_eval.har`, SDK_QUANTIZED inference on all 622 test images) but the HailortPP on-chip NMS output bbox-layout did not match the post-processing decoder, producing near-zero mAP. Debugging was not completed within the pod budget
+- [x] Rewrote Sec V-D `INT8 Quantisation Impact` -> `INT8 Quantisation and Deployment Characteristics`: dropped the invalid mAP delta row; published only FP32-on-test mAP and hardware-measured INT8 deployment characteristics (52.2 FPS, 5 W, 22.9 MB HEF, 18.4 ms latency); added explicit note explaining the INT8-on-test was not independently measured
+- [x] Updated Table `tab:quant` with FP32 speed measured on RTX 4090 (146.6 FPS @ bs=1, 872.4 FPS @ bs=32), ONNX FP32 size corrected to 42.68 MB
+- [x] Reworded abstract sentence: "compiled 22.9 MB INT8 HEF delivers the 52.2 FPS / 5 W deployment envelope on the Hailo-8L" (was: "quantifies the INT8 quantisation cost at less than one mAP point")
+- Artefacts: `fp32_eval/fp32_test_eval_report.md`, `fp32_eval/eval_fp32_test_results.json`, `fp32_eval/bench_fp32_results.json`
 
 ### P0-3. MobileNetV2 validation is fatally weak
 - ~~Table 7: only 24 Weapon validation crops. 99.6% accuracy on 24 samples is statistically meaningless.~~
@@ -138,7 +143,7 @@ File: `Template_Access/ACCESS_latex_template_20240429/access.tex`
 | ID | Task | Status |
 |----|------|--------|
 | P0-1 | Cascade deployment decision | DONE |
-| P0-2 | Fix quantisation split | NOT STARTED |
+| P0-2 | Fix quantisation split | DONE |
 | P0-3 | MobileNetV2 validation | DONE |
 | P0-4 | Anti-spoof evaluation | DONE |
 | P1-1 | Expand references (20+) | NOT STARTED |
