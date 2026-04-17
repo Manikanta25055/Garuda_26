@@ -83,9 +83,13 @@ File: `Template_Access/ACCESS_latex_template_20240429/access.tex`
 - [ ] At run completion: fold `summary.json` into new "System-Level Evaluation" subsection in Sec VI.
 
 ### P1-5. Person recall (0.609) is acknowledged but not addressed
-- Person is the primary security class, worst recall and mAP.
-- [ ] Add Discussion paragraph: concrete steps to improve (larger person set, class-weighted loss, dedicated person head, fusion with person detector)
-- [ ] Explain why not pursued in this version
+- ~~Person is the primary security class, worst recall and mAP.~~
+- [x] Fetched v6 experiment artefacts from RunPod (`project/train_v6.py`, `train_v6_log.txt`, `build_v6_log.txt`, `download_person_extra.py`)
+- [x] v6 attempt: +1,903 OI Person images (total 4,720 primary-class, 13,014 instances), copy_paste=0.5, mixup=0.2, label_smoothing=0.05, 200 ep, fresh COCO init
+- [x] v6 result: overall test mAP50 fell 0.847 -> 0.741 (conf=0.25); Person R fell 0.609 -> 0.481; Hammer R fell 0.848 -> 0.765; only Knife R improved (0.817 -> 0.913). Lowering conf to 0.10 recovered mAP only to 0.766
+- [x] Root cause: distribution shift from OI Person injection degraded the curated v5 balance; aggressive copy-paste/mixup over-regularised the cls head
+- [x] Added subsubsection `Why Person Recall Is Low, and Why We Did Not Chase It Further` after Table `tab:v5_full`, reporting v6 numbers as a negative result and listing four concrete improvement directions (class-weighted loss, dedicated Person head, high-res proposal stage, temporal smoothing)
+- Artefacts: `person_recall_eval/*.py`, `person_recall_eval/*.txt`
 
 ### P1-6. FPS comparison against outdated hardware is misleading
 - Comparing 52.2 FPS vs Jetson TX1 (2016) and FPGA (different task) is not meaningful.
@@ -141,7 +145,7 @@ File: `Template_Access/ACCESS_latex_template_20240429/access.tex`
 | P1-2 | Rewrite research gap | NOT STARTED |
 | P1-3 | Fix edge comparison table | NOT STARTED |
 | P1-4 | Real-world deployment eval | DONE (36 h run in progress, harness + bypass deployed) |
-| P1-5 | Person recall discussion | NOT STARTED |
+| P1-5 | Person recall discussion | DONE |
 | P1-6 | FPS comparison update | NOT STARTED |
 | P2-1 | Novelty framing rewrite | DONE |
 | P2-2 | Trim abstract | DONE |

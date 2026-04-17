@@ -1,0 +1,37 @@
+Collecting v5 dataset...
+  train: 4982
+  val: 622
+  test: 622
+
+Collecting extra Person images...
+  Person extra: 1903
+
+Total: 8129  →  train=6505, val=812, test=812
+
+=== Dataset v6 Summary ===
+
+  train: 6505 images
+    Hammer  : 149 primary-class images
+    Knife   : 960 primary-class images
+    Person  : 4720 primary-class images
+    scissors: 676 primary-class images
+
+  val: 812 images
+    Hammer  : 26 primary-class images
+    Knife   : 96 primary-class images
+    Person  : 599 primary-class images
+    scissors: 91 primary-class images
+
+  test: 812 images
+    Hammer  : 18 primary-class images
+    Knife   : 107 primary-class images
+    Person  : 599 primary-class images
+    scissors: 88 primary-class images
+
+Instance counts (train):
+  Hammer  : 264
+  Knife   : 1,405
+  Person  : 13,014
+  scissors: 983
+
+data.yaml → /workspace/datasets/dataset_v6/data.yaml
