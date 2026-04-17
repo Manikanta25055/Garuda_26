@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  17 APR 2026 14:13
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  17 APR 2026 14:22
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -614,7 +614,7 @@ Overfull \hbox (9.2679pt too wide) in paragraph at lines 69--69
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
-Underfull \vbox (badness 2809) has occurred while \output is active []
+Underfull \vbox (badness 1558) has occurred while \output is active []
 
 <logo.png, id=4, 206.27063pt x 53.44969pt>
 File: logo.png Graphic file (type png)
@@ -681,7 +681,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [2 <./notaglinelogo.png>]
-<figures//garuda_system_flowchart.drawio.pdf, id=27, 934.24031pt x 1408.51219pt
+<figures//garuda_system_flowchart.drawio.pdf, id=28, 934.24031pt x 1408.51219pt
 >
 File: figures//garuda_system_flowchart.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_system_flowchart.drawio.pdf>
@@ -737,7 +737,7 @@ Underfull \hbox (badness 1895) in paragraph at lines 187--188
 \T1/times/n/n/10 in the merged tree, each file is pre-fixed by its source
  []
 
-<figures//fig8_dataset_distribution.pdf, id=399, 328.88919pt x 185.89761pt>
+<figures//fig8_dataset_distribution.pdf, id=400, 328.88919pt x 185.89761pt>
 File: figures//fig8_dataset_distribution.pdf Graphic file (type pdf)
 <use figures//fig8_dataset_distribution.pdf>
 Package pdftex.def Info: figures//fig8_dataset_distribution.pdf  used on input 
@@ -783,7 +783,7 @@ Underfull \hbox (badness 4036) in paragraph at lines 313--314
 \T1/times/n/n/10 Rasp-berry Pi OS. Un-der con-tin-u-ous three-model NPU
  []
 
-<figures//garuda_hardware_layer.drawio.pdf, id=492, 655.69969pt x 449.42906pt>
+<figures//garuda_hardware_layer.drawio.pdf, id=493, 655.69969pt x 449.42906pt>
 File: figures//garuda_hardware_layer.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_hardware_layer.drawio.pdf>
 Package pdftex.def Info: figures//garuda_hardware_layer.drawio.pdf  used on inp
@@ -792,7 +792,7 @@ ut line 319.
 
 Underfull \vbox (badness 3281) has occurred while \output is active []
 
-<figures//garuda_gstreamer_engine.drawio-2.pdf, id=493, 550.30594pt x 416.30531
+<figures//garuda_gstreamer_engine.drawio-2.pdf, id=494, 550.30594pt x 416.30531
 pt>
 File: figures//garuda_gstreamer_engine.drawio-2.pdf Graphic file (type pdf)
 <use figures//garuda_gstreamer_engine.drawio-2.pdf>
@@ -819,7 +819,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [6 <./figures//garuda_hardware_layer.drawio.pdf>]
-<figures//garuda_detection_engine.drawio.pdf, id=555, 648.17157pt x 460.72125pt
+<figures//garuda_detection_engine.drawio.pdf, id=556, 648.17157pt x 460.72125pt
 >
 File: figures//garuda_detection_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_detection_engine.drawio.pdf>
@@ -860,7 +860,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 415--415
 []|\T1/times/m/n/9 Low-confidence per-son
  []
 
-<figures//garuda_alert_engine.drawio.pdf, id=613, 603.0028pt x 344.78813pt>
+<figures//garuda_alert_engine.drawio.pdf, id=614, 603.0028pt x 344.78813pt>
 File: figures//garuda_alert_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_alert_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_alert_engine.drawio.pdf  used on input
@@ -891,13 +891,13 @@ ine.drawio.pdf
 pdfTeX warning: pdflatex (file ./figures//garuda_alert_engine.drawio.pdf): PDF 
 inclusion: multiple pdfs with page group included in a single page
 >]
-<figures//garuda_voice_engine.drawio.pdf, id=729, 535.2497pt x 314.67563pt>
+<figures//garuda_voice_engine.drawio.pdf, id=730, 535.2497pt x 314.67563pt>
 File: figures//garuda_voice_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_voice_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_voice_engine.drawio.pdf  used on input
  line 445.
 (pdftex.def)             Requested size: 242.67355pt x 142.66866pt.
-<figures//garuda_mode_controller.drawio.pdf, id=730, 520.19344pt x 284.56313pt>
+<figures//garuda_mode_controller.drawio.pdf, id=731, 520.19344pt x 284.56313pt>
 
 File: figures//garuda_mode_controller.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_mode_controller.drawio.pdf>
@@ -924,7 +924,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [9 <./figures//garuda_voice_engine.drawio.pdf>]
-<figures//garuda_presence_monitor.drawio.pdf, id=772, 520.19344pt x 231.86626pt
+<figures//garuda_presence_monitor.drawio.pdf, id=773, 520.19344pt x 231.86626pt
 >
 File: figures//garuda_presence_monitor.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_presence_monitor.drawio.pdf>
@@ -962,7 +962,7 @@ Underfull \hbox (badness 2680) in paragraph at lines 484--485
 []\T1/times/n/n/10 Media is served through three par-al-lel chan-nels. An
  []
 
-<figures//garuda_web_server.drawio.pdf, id=773, 580.41844pt x 352.31625pt>
+<figures//garuda_web_server.drawio.pdf, id=774, 580.41844pt x 352.31625pt>
 File: figures//garuda_web_server.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_web_server.drawio.pdf>
 Package pdftex.def Info: figures//garuda_web_server.drawio.pdf  used on input l
@@ -997,13 +997,13 @@ PDF inclusion: multiple pdfs with page group included in a single page
 pdfTeX warning: pdflatex (file ./figures//garuda_web_server.drawio.pdf): PDF in
 clusion: multiple pdfs with page group included in a single page
 >]
-<figures//garuda_auth_engine.drawio.pdf, id=878, 535.2497pt x 231.86626pt>
+<figures//garuda_auth_engine.drawio.pdf, id=879, 535.2497pt x 231.86626pt>
 File: figures//garuda_auth_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_auth_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_auth_engine.drawio.pdf  used on input 
 line 501.
 (pdftex.def)             Requested size: 242.67355pt x 105.12427pt.
-<figures//garuda_deadman_monitor.drawio.pdf, id=879, 501.37312pt x 231.86626pt>
+<figures//garuda_deadman_monitor.drawio.pdf, id=880, 501.37312pt x 231.86626pt>
 
 File: figures//garuda_deadman_monitor.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_deadman_monitor.drawio.pdf>
@@ -1020,7 +1020,7 @@ Underfull \hbox (badness 3803) in paragraph at lines 525--526
 \T1/times/n/n/10 microsecond-precision times-tamp. A REST end-point at
  []
 
-<figures//garuda_logging_engine.drawio.pdf, id=880, 565.36218pt x 322.20375pt>
+<figures//garuda_logging_engine.drawio.pdf, id=881, 565.36218pt x 322.20375pt>
 File: figures//garuda_logging_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_logging_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_logging_engine.drawio.pdf  used on inp
@@ -1055,31 +1055,31 @@ DF inclusion: multiple pdfs with page group included in a single page
 pdfTeX warning: pdflatex (file ./figures//garuda_logging_engine.drawio.pdf): PD
 F inclusion: multiple pdfs with page group included in a single page
 >]
-<figures//fig1_training_losses.pdf, id=972, 522.28842pt x 156.83734pt>
+<figures//fig1_training_losses.pdf, id=973, 522.28842pt x 156.83734pt>
 File: figures//fig1_training_losses.pdf Graphic file (type pdf)
 <use figures//fig1_training_losses.pdf>
 Package pdftex.def Info: figures//fig1_training_losses.pdf  used on input line 
 545.
 (pdftex.def)             Requested size: 242.67355pt x 72.87115pt.
-<figures//fig2_training_metrics.pdf, id=973, 520.60678pt x 171.29135pt>
+<figures//fig2_training_metrics.pdf, id=974, 520.60678pt x 171.29135pt>
 File: figures//fig2_training_metrics.pdf Graphic file (type pdf)
 <use figures//fig2_training_metrics.pdf>
 Package pdftex.def Info: figures//fig2_training_metrics.pdf  used on input line
  556.
 (pdftex.def)             Requested size: 242.67355pt x 79.84567pt.
-<figures//fig3_model_comparison.pdf, id=974, 522.21883pt x 233.98634pt>
+<figures//fig3_model_comparison.pdf, id=975, 522.21883pt x 233.98634pt>
 File: figures//fig3_model_comparison.pdf Graphic file (type pdf)
 <use figures//fig3_model_comparison.pdf>
 Package pdftex.def Info: figures//fig3_model_comparison.pdf  used on input line
  567.
 (pdftex.def)             Requested size: 242.67355pt x 108.73468pt.
-<figures//fig4_per_class_map50.pdf, id=975, 410.85919pt x 202.41847pt>
+<figures//fig4_per_class_map50.pdf, id=976, 410.85919pt x 202.41847pt>
 File: figures//fig4_per_class_map50.pdf Graphic file (type pdf)
 <use figures//fig4_per_class_map50.pdf>
 Package pdftex.def Info: figures//fig4_per_class_map50.pdf  used on input line 
 578.
 (pdftex.def)             Requested size: 242.67355pt x 119.56175pt.
-<figures//fig5_perclass_full_metrics.pdf, id=976, 396.15984pt x 205.4186pt>
+<figures//fig5_perclass_full_metrics.pdf, id=977, 396.15984pt x 205.4186pt>
 File: figures//fig5_perclass_full_metrics.pdf Graphic file (type pdf)
 <use figures//fig5_perclass_full_metrics.pdf>
 Package pdftex.def Info: figures//fig5_perclass_full_metrics.pdf  used on input
@@ -1118,13 +1118,13 @@ sion: multiple pdfs with page group included in a single page
 pdfTeX warning: pdflatex (file ./figures//fig4_per_class_map50.pdf): PDF inclus
 ion: multiple pdfs with page group included in a single page
 >]
-<figures//fig6_confusion_matrix.pdf, id=1647, 294.24744pt x 251.71179pt>
+<figures//fig6_confusion_matrix.pdf, id=1648, 294.24744pt x 251.71179pt>
 File: figures//fig6_confusion_matrix.pdf Graphic file (type pdf)
 <use figures//fig6_confusion_matrix.pdf>
 Package pdftex.def Info: figures//fig6_confusion_matrix.pdf  used on input line
  660.
 (pdftex.def)             Requested size: 242.67355pt x 207.59949pt.
-<figures//fig7_pr_curves.pdf, id=1648, 287.37018pt x 265.45717pt>
+<figures//fig7_pr_curves.pdf, id=1649, 287.37018pt x 265.45717pt>
 File: figures//fig7_pr_curves.pdf Graphic file (type pdf)
 <use figures//fig7_pr_curves.pdf>
 Package pdftex.def Info: figures//fig7_pr_curves.pdf  used on input line 671.
@@ -1161,19 +1161,19 @@ sion: multiple pdfs with page group included in a single page
 pdfTeX warning: pdflatex (file ./figures//fig7_pr_curves.pdf): PDF inclusion: m
 ultiple pdfs with page group included in a single page
 >]
-<figures//fig9_hardware_performance.pdf, id=1966, 522.3084pt x 177.17146pt>
+<figures//fig9_hardware_performance.pdf, id=1967, 522.3084pt x 177.17146pt>
 File: figures//fig9_hardware_performance.pdf Graphic file (type pdf)
 <use figures//fig9_hardware_performance.pdf>
 Package pdftex.def Info: figures//fig9_hardware_performance.pdf  used on input 
 line 682.
 (pdftex.def)             Requested size: 242.67355pt x 82.31627pt.
-<figures//fig10_f1_confidence.pdf, id=1967, 287.06999pt x 265.45717pt>
+<figures//fig10_f1_confidence.pdf, id=1968, 287.06999pt x 265.45717pt>
 File: figures//fig10_f1_confidence.pdf Graphic file (type pdf)
 <use figures//fig10_f1_confidence.pdf>
 Package pdftex.def Info: figures//fig10_f1_confidence.pdf  used on input line 7
 37.
 (pdftex.def)             Requested size: 242.67355pt x 224.40826pt.
-<figures//fig11_v1_vs_v2_training.pdf, id=1968, 391.22945pt x 185.8658pt>
+<figures//fig11_v1_vs_v2_training.pdf, id=1969, 391.22945pt x 185.8658pt>
 File: figures//fig11_v1_vs_v2_training.pdf Graphic file (type pdf)
 <use figures//fig11_v1_vs_v2_training.pdf>
 Package pdftex.def Info: figures//fig11_v1_vs_v2_training.pdf  used on input li
@@ -1209,7 +1209,7 @@ pdf
 pdfTeX warning: pdflatex (file ./figures//fig10_f1_confidence.pdf): PDF inclusi
 on: multiple pdfs with page group included in a single page
 >]
-<figures//fig12_overfitting_gap.pdf, id=2279, 355.75708pt x 223.13475pt>
+<figures//fig12_overfitting_gap.pdf, id=2280, 355.75708pt x 223.13475pt>
 File: figures//fig12_overfitting_gap.pdf Graphic file (type pdf)
 <use figures//fig12_overfitting_gap.pdf>
 Package pdftex.def Info: figures//fig12_overfitting_gap.pdf  used on input line
@@ -1359,11 +1359,11 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 5302 strings out of 478051
- 90306 string characters out of 5840944
+ 5304 strings out of 478051
+ 90340 string characters out of 5840944
  1883330 words of memory out of 5000000
- 25281 multiletter control sequences out of 15000+600000
- 611434 words of font info for 192 fonts, out of 8000000 for 9000
+ 25282 multiletter control sequences out of 15000+600000
+ 611830 words of font info for 193 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  72i,14n,76p,1806b,518s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
@@ -1380,14 +1380,14 @@ re/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/share/texlive/tex
 mf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/texlive/texmf-dist
 /fonts/type1/public/amsfonts/cm/cmsy9.pfb><./t1-formata-bold.pfb><./t1-formata-
-condmedium.pfb><./t1-formata-medium.pfb><./t1-formata-mediumitalic.pfb><./t1-fo
-rmata-regular.pfb><./t1-giovannistd-bookitalic.pfb><./t1-times-bold.pfb><./t1-t
-imes-italic.pfb><./t1-times.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/
-courier/ucrr8a.pfb>
-Output written on access.pdf (17 pages, 3454184 bytes).
+condmedium.pfb><./t1-formata-italic.pfb><./t1-formata-medium.pfb><./t1-formata-
+mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.pfb><./
+t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texlive/te
+xmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
+Output written on access.pdf (17 pages, 3473056 bytes).
 PDF statistics:
- 2683 PDF objects out of 2984 (max. 8388607)
- 1632 compressed objects within 17 object streams
+ 2688 PDF objects out of 2984 (max. 8388607)
+ 1635 compressed objects within 17 object streams
  0 named destinations out of 1000 (max. 500000)
  149 words of extra memory for PDF output out of 10000 (max. 10000000)
 
