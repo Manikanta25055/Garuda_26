@@ -1,0 +1,47 @@
+{
+  "n_total": 301,
+  "n_safe": 301,
+  "n_weapon_FP": 0,
+  "open_set_specificity (P(Safe | clutter))": 1.0,
+  "skipped_small_boxes": 5,
+  "min_box_px": 32,
+  "per_class": {
+    "Coffee cup": {
+      "n": 91,
+      "n_safe": 91,
+      "n_weapon_FP": 0,
+      "safe_rate": 1.0,
+      "weapon_score_mean": 0.1381
+    },
+    "Mobile phone": {
+      "n": 60,
+      "n_safe": 60,
+      "n_weapon_FP": 0,
+      "safe_rate": 1.0,
+      "weapon_score_mean": 0.1812
+    },
+    "Bottle": {
+      "n": 147,
+      "n_safe": 147,
+      "n_weapon_FP": 0,
+      "safe_rate": 1.0,
+      "weapon_score_mean": 0.1455
+    },
+    "Wrench": {
+      "n": 1,
+      "n_safe": 1,
+      "n_weapon_FP": 0,
+      "safe_rate": 1.0,
+      "weapon_score_mean": 0.197
+    },
+    "Screwdriver": {
+      "n": 2,
+      "n_safe": 2,
+      "n_weapon_FP": 0,
+      "safe_rate": 1.0,
+      "weapon_score_mean": 0.0654
+    }
+  },
+  "hef": "/home/manikanta/Projects/Garuda_26/resources/mobilenetv2_garuda.hef",
+  "data_source": "Open Images V7 validation, classes: Coffee cup, Mobile phone, Bottle, Wrench, Screwdriver"
+}

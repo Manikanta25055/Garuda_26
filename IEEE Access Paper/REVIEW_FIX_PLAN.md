@@ -15,7 +15,7 @@ File: `Template_Access/ACCESS_latex_template_20240429/access.tex`
 - [x] Update contribution list (Sec I-A, item 2) -- now states async secondary path with bounded non-blocking queue
 - Abstract also updated to reflect deployed cascade.
 
-### P0-2. Quantisation comparison is apples-to-oranges -- DONE
+### P0-2. Quantisation comparison is apples-to-oranges -- DONE (superseded 2026-04-18: INT8 now independently measured)
 - ~~Table 15: FP32 mAP reported on **val** (~0.855), INT8 mAP on **test** (0.847). Different splits. Cannot call delta "-0.8%".~~
 - [x] Re-evaluated FP32 model on held-out test split (622 imgs / 1,656 instances): mAP@0.5 = 0.847, mAP@0.5:0.95 = 0.661, P = 0.866, R = 0.801 (Ultralytics `val`, conf=0.001, iou=0.7)
 - [x] Discovered the original "INT8-on-TEST 0.847" figure in GARUDA_CASCADE_REPORT.md §5 was numerically identical (P=0.866, R=0.801, mAP=0.847, mAP@0.5:0.95=0.661) to this FP32 test result -- i.e. the reported INT8-on-test number was the FP32 PyTorch result mis-attributed; no independent INT8-on-test mAP was ever conducted
@@ -23,7 +23,8 @@ File: `Template_Access/ACCESS_latex_template_20240429/access.tex`
 - [x] Rewrote Sec V-D `INT8 Quantisation Impact` -> `INT8 Quantisation and Deployment Characteristics`: dropped the invalid mAP delta row; published only FP32-on-test mAP and hardware-measured INT8 deployment characteristics (52.2 FPS, 5 W, 22.9 MB HEF, 18.4 ms latency); added explicit note explaining the INT8-on-test was not independently measured
 - [x] Updated Table `tab:quant` with FP32 speed measured on RTX 4090 (146.6 FPS @ bs=1, 872.4 FPS @ bs=32), ONNX FP32 size corrected to 42.68 MB
 - [x] Reworded abstract sentence: "compiled 22.9 MB INT8 HEF delivers the 52.2 FPS / 5 W deployment envelope on the Hailo-8L" (was: "quantifies the INT8 quantisation cost at less than one mAP point")
-- Artefacts: `fp32_eval/fp32_test_eval_report.md`, `fp32_eval/eval_fp32_test_results.json`, `fp32_eval/bench_fp32_results.json`
+- [x] **2026-04-18 update — INT8 measured on-device.** Ran the deployed `best_v5.hef` directly on the Hailo-8L attached to the Pi 5 via HailoRT `InferVStreams` (avoids the x86 SDK emulator and its `HAILO_NMS_BY_CLASS` decoding bug); 622 test images in 17.1 s end-to-end. **INT8 mAP@0.5 = 0.854** vs FP32 0.847 (Δ = +0.007); **mAP@0.5:0.95 = 0.682** vs 0.661 (Δ = +0.021). Per-class INT8 mAP@0.5: Hammer 0.886, Knife 0.885, Person 0.679, scissors 0.968. Caveat: on-chip NMS uses deployment thresholds (conf=0.25, iou=0.45), FP32 ref uses academic (conf=0.001, iou=0.7) — that asymmetry, not quantisation, accounts for the small positive Δ. Table `tab:quant`, `sec:quant`, abstract, and Sec VII conclusion paragraph updated accordingly; the previous "not independently measured" rows replaced with measured numbers + Precision/Recall rows added.
+- Artefacts: `fp32_eval/fp32_test_eval_report.md`, `fp32_eval/eval_fp32_test_results.json`, `fp32_eval/bench_fp32_results.json`, `evaluation/int8_eval/eval_int8_pi.py`, `evaluation/int8_eval/eval_int8_pi_results.json`
 
 ### P0-3. MobileNetV2 validation is fatally weak
 - ~~Table 7: only 24 Weapon validation crops. 99.6% accuracy on 24 samples is statistically meaningless.~~
