@@ -4,6 +4,7 @@
 \citation{b4}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
 \newlabel{sec:introduction}{{I}{1}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}Contributions}{1}{}\protected@file@percent }
 \citation{b15}
 \citation{b14}
 \citation{b2}
@@ -19,134 +20,133 @@
 \citation{b3,b4}
 \citation{b14}
 \citation{b15}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}Contributions}{2}{}\protected@file@percent }
+\citation{b12}
+\citation{b17}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}Paper Organisation}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{}\protected@file@percent }
 \newlabel{sec:related_work}{{II}{2}}
-\citation{b12}
-\citation{b17}
-\@writefile{toc}{\contentsline {section}{\numberline {III}System Overview}{3}{}\protected@file@percent }
-\newlabel{sec:overview}{{III}{3}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}System Overview}{2}{}\protected@file@percent }
+\newlabel{sec:overview}{{III}{2}}
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Dataset}{3}{}\protected@file@percent }
 \newlabel{sec:dataset}{{IV}{3}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Source Datasets}{3}{}\protected@file@percent }
 \newlabel{sec:sources}{{\mbox  {IV-A}}{3}}
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {I}mage Counts Contributed by Each Source (v5 Splits)}}}{3}{}\protected@file@percent }
 \newlabel{tab:sources}{{1}{3}}
+\newlabel{sec:dataset_limits}{{\mbox  {IV-A}}{3}}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Three-layer block diagram of Project Garuda. The top layer offloads all neural inference to the Hailo-8L, the middle layer routes detections through mode-gated response engines, and the bottom layer handles persistence and external access --- separating concerns so that no single layer's failure propagates upward.}}{4}{}\protected@file@percent }
 \newlabel{fig:block_diagram}{{1}{4}}
-\newlabel{sec:dataset_limits}{{\mbox  {IV-A}}{4}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Preprocessing and Validation Pipeline}{4}{}\protected@file@percent }
 \newlabel{sec:preprocess}{{\mbox  {IV-B}}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Final Dataset Geometry}{4}{}\protected@file@percent }
+\newlabel{sec:dataset_geometry}{{\mbox  {IV-C}}{4}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces End-to-end runtime flowchart. A danger detection traverses the full path from camera to email/WebSocket/clip upload in under 25\,ms of on-device processing; the mode gate short-circuits all downstream work during quiet periods, and six parallel subsystems run asynchronously without blocking the inference thread.}}{5}{}\protected@file@percent }
 \newlabel{fig:system_flowchart}{{2}{5}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Final Dataset Geometry}{5}{}\protected@file@percent }
-\newlabel{sec:dataset_geometry}{{\mbox  {IV-C}}{5}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {A}nnotated Instance Counts per Class per Split}}}{6}{}\protected@file@percent }
-\newlabel{tab:instances}{{2}{6}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces v5 dataset class distribution across train, validation, and test splits. Person dominates with 13{,}057 instances while Hammer accounts for only 335, a 39:1 imbalance; despite this, Hammer retains strong per-class recall (0.848) because its images are tight and object-centric, whereas Person is the weakest class on per-frame metrics (recall 0.609) due to crowded-scene composition and a long tail of small, occluded, and truncated boxes (Section\nobreakspace  {}\ref {sec:person_recall_discussion}).}}{6}{}\protected@file@percent }
-\newlabel{fig:dataset_dist}{{3}{6}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {A}nnotated Instance Counts per Class per Split}}}{5}{}\protected@file@percent }
+\newlabel{tab:instances}{{2}{5}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces v5 dataset class distribution across train, validation, and test splits. Person dominates with 13{,}057 instances while Hammer accounts for only 335, a 39:1 imbalance; despite this, Hammer retains strong per-class recall (0.848) because its images are tight and object-centric, whereas Person is the weakest class on per-frame metrics (recall 0.609) due to crowded-scene composition and a long tail of small, occluded, and truncated boxes (Section\nobreakspace  {}\ref {sec:person_recall_discussion}).}}{5}{}\protected@file@percent }
+\newlabel{fig:dataset_dist}{{3}{5}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 Classifier Dataset (v2)}}}{6}{}\protected@file@percent }
 \newlabel{tab:mobilenet}{{3}{6}}
 \@writefile{toc}{\contentsline {section}{\numberline {V}Methodology}{6}{}\protected@file@percent }
 \newlabel{sec:methodology}{{V}{6}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Hardware Engine}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Hardware topology. All neural inference is offloaded to the Hailo-8L over the single PCIe Gen3\nobreakspace  {}$\times $1 lane, freeing all four Cortex-A76 cores for the web server, voice assistant, and logging --- the key constraint that shapes every software design decision.}}{6}{}\protected@file@percent }
+\newlabel{fig:hw_layer}{{4}{6}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}GStreamer TAPPAS Pipeline Engine}{6}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Hardware topology. All neural inference is offloaded to the Hailo-8L over the single PCIe Gen3\nobreakspace  {}$\times $1 lane, freeing all four Cortex-A76 cores for the web server, voice assistant, and logging --- the key constraint that shapes every software design decision.}}{7}{}\protected@file@percent }
-\newlabel{fig:hw_layer}{{4}{7}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Detection Engine}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Cascade Architecture}{6}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces GStreamer TAPPAS pipeline topology. The fork-and-mux design lets the bypass queue hold the raw frame while HailoNet runs inference on the NPU, so the CPU touches each frame only at the identity callback probe --- enabling the sustained 52.2\,FPS reported in Section\nobreakspace  {}\ref {sec:async_fps}.}}{7}{}\protected@file@percent }
 \newlabel{fig:gstreamer}{{5}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Detection Engine}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Cascade Architecture}{7}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Latency Budget (Hailo-8L, Pi\nobreakspace  {}5)}}}{7}{}\protected@file@percent }
 \newlabel{tab:cascade_latency}{{4}{7}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Alert Engine}{8}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Alert engine dataflow. The mode gate at the entry point short-circuits all downstream work during Do Not Disturb or Idle, while three parallel channels (WebSocket, SMTPS with 60\,s cooldown, and AES-256-CBC encrypted clip upload) ensure sub-second alert delivery when active.}}{8}{}\protected@file@percent }
-\newlabel{fig:alert}{{6}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Voice Assistant Engine (Narada)}{8}{}\protected@file@percent }
-\newlabel{sec:groq_privacy}{{\mbox  {V-F}}{8}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Mode Controller}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Presence Monitor}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-I}}Web Server}{8}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-J}}Auth Engine}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Alert Engine}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Voice Assistant Engine (Narada)}{7}{}\protected@file@percent }
+\newlabel{sec:groq_privacy}{{\mbox  {V-F}}{7}}
 \citation{b16}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Decision Matrix Across Operating Scenarios}}}{9}{}\protected@file@percent }
-\newlabel{tab:cascade_matrix}{{5}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-K}}Deadman Monitor}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-L}}Logging Engine}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-M}}Design Decisions and Trade-offs}{9}{}\protected@file@percent }
-\newlabel{sec:design_decisions}{{\mbox  {V-M}}{9}}
+\citation{b16}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Decision Matrix Across Operating Scenarios}}}{8}{}\protected@file@percent }
+\newlabel{tab:cascade_matrix}{{5}{8}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Alert engine dataflow. The mode gate short-circuits all downstream work during Do Not Disturb or Idle; the three asynchronous channels (WebSocket, SMTPS, AES-256-CBC encrypted clip upload) keep the slow paths off the inference thread, which is the precondition for the FPS-flatness result of Sec.\nobreakspace  {}\ref {sec:async_fps}.}}{8}{}\protected@file@percent }
+\newlabel{fig:alert}{{6}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Concurrent CPU-side Services}{8}{}\protected@file@percent }
+\newlabel{sec:cpu_services}{{\mbox  {V-G}}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Design Decisions and Trade-offs}{8}{}\protected@file@percent }
+\newlabel{sec:design_decisions}{{\mbox  {V-H}}{8}}
 \@writefile{toc}{\contentsline {section}{\numberline {VI}Results and Evaluation}{9}{}\protected@file@percent }
 \newlabel{sec:results}{{VI}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Training Loss Convergence}{10}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Validation mAP and Precision / Recall}{10}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Training loss convergence over 150 epochs. All three loss components fall monotonically (box: $1.65 \to 0.74$; classification: $2.80 \to 0.49$), and the train--validation gap stays narrow throughout, indicating generalisation rather than memorisation.}}{10}{}\protected@file@percent }
-\newlabel{fig:training_losses}{{7}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Training Loss Convergence}{9}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Training loss convergence over 150 epochs. All three loss components fall monotonically (box: $1.65 \to 0.74$; classification: $2.80 \to 0.49$), and the train--validation gap stays narrow throughout, indicating generalisation rather than memorisation.}}{9}{}\protected@file@percent }
+\newlabel{fig:training_losses}{{7}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Validation mAP and Precision / Recall}{9}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Four-Model Performance Comparison}{9}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Validation metrics versus training epoch. mAP{@}0.5 plateaus near 0.81 by epoch\nobreakspace  {}100, while precision (0.87) and recall (0.80) converge to a balanced operating point with no sign of precision--recall trade-off collapse.}}{10}{}\protected@file@percent }
 \newlabel{fig:training_metrics}{{8}{10}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Four-Model Performance Comparison}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Four-model comparison on the held-out test set. COCO-pretrained YOLOv8s scores near zero on this four-class task; fine-tuning on 359 images (v1) recovers to 0.465 mAP{@}0.5, the intermediate v2 (1{,}383 images) reaches 0.754, and v5 (4{,}982 images) reaches 0.847 --- an 82\% gain over v1 driven entirely by dataset growth.}}{10}{}\protected@file@percent }
+\newlabel{fig:model_comparison}{{9}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Per-Class mAP{@}0.5 Progression}{10}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Four-model comparison on the held-out test set. COCO-pretrained YOLOv8s scores near zero on this four-class task; fine-tuning on 359 images (v1) recovers to 0.465 mAP{@}0.5, the intermediate v2 (1{,}383 images) reaches 0.754, and v5 (4{,}982 images) reaches 0.847 --- an 82\% gain over v1 driven entirely by dataset growth.}}{11}{}\protected@file@percent }
-\newlabel{fig:model_comparison}{{9}{11}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Per-class mAP{@}0.5 progression across v1, v2, and v5. Knife shows the largest single-class gain ($+0.66$); Scissors reaches the highest absolute score (0.967); Person remains the hardest class at 0.647. All four classes improve monotonically with dataset scale.}}{11}{}\protected@file@percent }
-\newlabel{fig:per_class_map}{{10}{11}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class Recall and mAP{@}0.5: v1 vs v5 (Deployed)}}}{11}{}\protected@file@percent }
-\newlabel{tab:v1_v5}{{6}{11}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Full Per-Class Metrics at v5}{11}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {VI-E}1}Why Person Recall Is Low, and Why We Did Not Chase It Further}{11}{}\protected@file@percent }
-\newlabel{sec:person_recall_discussion}{{\mbox  {VI-E}1}{11}}
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Full per-class metrics for the deployed v5 model. Scissors leads at 0.967 mAP{@}0.5 with balanced P/R above 0.92; Person lags at 0.647 mAP{@}0.5 with the lowest recall (0.609), reflecting its higher intra-class variability and small-object fraction.}}{11}{}\protected@file@percent }
-\newlabel{fig:perclass_full}{{11}{11}}
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}ull Per-Class Scorecard at v5 (Test Set, 622 Images, 1{,}656 Instances)}}}{11}{}\protected@file@percent }
-\newlabel{tab:v5_full}{{7}{11}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class Recall and mAP{@}0.5: v1 vs v5 (Deployed)}}}{10}{}\protected@file@percent }
+\newlabel{tab:v1_v5}{{6}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Full Per-Class Metrics at v5}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Per-class mAP{@}0.5 progression across v1, v2, and v5. Knife shows the largest single-class gain ($+0.66$); Scissors reaches the highest absolute score (0.967); Person remains the hardest class at 0.647. All four classes improve monotonically with dataset scale.}}{10}{}\protected@file@percent }
+\newlabel{fig:per_class_map}{{10}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Full per-class metrics for the deployed v5 model. Scissors leads at 0.967 mAP{@}0.5 with balanced P/R above 0.92; Person lags at 0.647 mAP{@}0.5 with the lowest recall (0.609), reflecting its higher intra-class variability and small-object fraction.}}{10}{}\protected@file@percent }
+\newlabel{fig:perclass_full}{{11}{10}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}ull Per-Class Scorecard at v5 (Test Set, 622 Images, 1{,}656 Instances)}}}{10}{}\protected@file@percent }
+\newlabel{tab:v5_full}{{7}{10}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {VI-E}1}Why Person Recall Is Low, and Why We Did Not Chase It Further}{10}{}\protected@file@percent }
+\newlabel{sec:person_recall_discussion}{{\mbox  {VI-E}1}{10}}
 \citation{b1}
 \citation{b5}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-F}}Normalised Confusion Matrix}{12}{}\protected@file@percent }
-\newlabel{sec:confusion}{{\mbox  {VI-F}}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-F}}Normalised Confusion Matrix}{11}{}\protected@file@percent }
+\newlabel{sec:confusion}{{\mbox  {VI-F}}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-G}}Precision-Recall Curves}{11}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-H}}Hardware Inference Performance}{11}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Normalised confusion matrix on the v5 held-out test set. Off-diagonal confusion is at most 0.03; the dominant error mode is background false negatives (missed detections), not inter-class misclassification --- the safer failure mode for a security system, where a misclassified weapon still triggers an alert.}}{12}{}\protected@file@percent }
 \newlabel{fig:confusion}{{12}{12}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-G}}Precision-Recall Curves}{12}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-H}}Hardware Inference Performance}{12}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Per-class precision--recall curves for the deployed v5 detector. Person exhibits the steepest precision drop-off, falling below 0.80 at low recall thresholds; Scissors holds $P > 0.90$ past $R = 0.90$ (AP\,=\,0.967). Knife and Hammer maintain smooth, well-separated curves (AP 0.886 and 0.889).}}{13}{}\protected@file@percent }
-\newlabel{fig:pr_curves}{{13}{13}}
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Hardware inference performance on the Hailo-8L. The custom v5 HEF runs at 52.2\,FPS (18.4\,ms), 6\,FPS below the Hailo-provided reference (58.2\,FPS, 13.2\,ms); the 5\,ms gap is attributable to the baked-in custom NMS, and both sit well above the 30\,FPS surveillance floor.}}{13}{}\protected@file@percent }
-\newlabel{fig:hw_perf}{{14}{13}}
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {Y}OLOv8 Variant Selection (Hailo-8L Budget)}}}{13}{}\protected@file@percent }
-\newlabel{tab:arch_select}{{8}{13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-I}}Sustained FPS Across Operating Modes}{13}{}\protected@file@percent }
-\newlabel{sec:async_fps}{{\mbox  {VI-I}}{13}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Per-class precision--recall curves for the deployed v5 detector. Person exhibits the steepest precision drop-off, falling below 0.80 at low recall thresholds; Scissors holds $P > 0.90$ past $R = 0.90$ (AP\,=\,0.967). Knife and Hammer maintain smooth, well-separated curves (AP 0.886 and 0.889).}}{12}{}\protected@file@percent }
+\newlabel{fig:pr_curves}{{13}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Hardware inference performance on the Hailo-8L. The custom v5 HEF runs at 52.2\,FPS (18.4\,ms), 6\,FPS below the Hailo-provided reference (58.2\,FPS, 13.2\,ms); the 5\,ms gap is attributable to the baked-in custom NMS, and both sit well above the 30\,FPS surveillance floor.}}{12}{}\protected@file@percent }
+\newlabel{fig:hw_perf}{{14}{12}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {Y}OLOv8 Variant Selection (Hailo-8L Budget)}}}{12}{}\protected@file@percent }
+\newlabel{tab:arch_select}{{8}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-I}}Sustained FPS Across Operating Modes}{12}{}\protected@file@percent }
+\newlabel{sec:async_fps}{{\mbox  {VI-I}}{12}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces FPS-across-modes time series (1\nobreakspace  {}Hz probe). Shaded regions mark the scheduled mode windows; red dotted lines mark injected load events (9 danger triggers, 3 voice queries). The overall mean is $52.01 \pm 1.44$\nobreakspace  {}FPS; per-window means span only a 0.9\nobreakspace  {}FPS band, confirming the flat-envelope property of the asynchronous pipeline.}}{13}{}\protected@file@percent }
+\newlabel{fig:fps_ts}{{15}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-J}}INT8 Quantisation and Deployment Characteristics}{13}{}\protected@file@percent }
 \newlabel{sec:quant}{{\mbox  {VI-J}}{13}}
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}P32 Baseline (test split) and INT8 Deployment Characteristics.} FP32 mAP measured on the held-out test split (622\nobreakspace  {}images, 1{,}656\nobreakspace  {}instances; Ultralytics \texttt  {val} with \texttt  {conf=0.001}, \texttt  {iou=0.7}). Independent INT8-on-test mAP was not completed (see text).}}{14}{}\protected@file@percent }
-\newlabel{tab:quant}{{9}{14}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-K}}MobileNetV2 Classifier Evaluation}{14}{}\protected@file@percent }
-\newlabel{sec:classifier_eval}{{\mbox  {VI-K}}{14}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}P32 Baseline (test split) and INT8 Deployment Characteristics.} FP32 mAP measured on the held-out test split (622\nobreakspace  {}images, 1{,}656\nobreakspace  {}instances; Ultralytics \texttt  {val} with \texttt  {conf=0.001}, \texttt  {iou=0.7}). Independent INT8-on-test mAP was not completed (see text).}}{13}{}\protected@file@percent }
+\newlabel{tab:quant}{{9}{13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-K}}MobileNetV2 Classifier Evaluation}{13}{}\protected@file@percent }
+\newlabel{sec:classifier_eval}{{\mbox  {VI-K}}{13}}
 \@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 v2 Confusion Matrix (500-Crop Held-Out Set, $t{=}0.50$)}}}{14}{}\protected@file@percent }
 \newlabel{tab:cls_confusion}{{10}{14}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-L}}Anti-Spoof Stage Evaluation}{14}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-L}}Scope of the Depth-Variance Pre-Filter}{14}{}\protected@file@percent }
 \newlabel{sec:antispoof_eval}{{\mbox  {VI-L}}{14}}
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {A}nti-Spoof Evaluation on CelebA-Spoof Held-Out Test Split ($n{=}600$; AUC 95\% CI from 1{,}000-Iter Bootstrap)}}}{15}{}\protected@file@percent }
-\newlabel{tab:antispoof}{{11}{15}}
-\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Anti-spoof ROC on CelebA-Spoof held-out ($n{=}600$). The deployed depth-variance threshold (AUC 0.56) is barely above chance; the proposed 25-dim descriptor with an RBF-SVM reaches AUC 0.95, improving on reimplemented LBP+SVM (0.85) and HSV colour-texture (0.90) baselines with non-overlapping 95\% CIs.}}{15}{}\protected@file@percent }
-\newlabel{fig:antispoof_roc}{{15}{15}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-M}}F1-Confidence Threshold Curves}{15}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Per-class F1 score versus confidence threshold. All four classes peak in the 0.25--0.27 band, matching YOLO's default threshold and eliminating the need for manual per-class tuning at deployment. Scissors reaches the highest peak F1 (0.690); Person the lowest (0.473).}}{15}{}\protected@file@percent }
-\newlabel{fig:f1_conf}{{16}{15}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-N}}Effect of Training Dataset Size}{15}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Validation mAP{@}0.5 progression against training-set size. v1 (359 images) converges to a deceptively high val mAP ($\sim $0.88) that does not transfer (test 0.465); v5 (4{,}982 images) converges to 0.817 val and 0.847 test. The trajectory is single-seed, single-split, and the v2$\rightarrow $v5 additions are targeted at the weakest class (Section\nobreakspace  {}\ref {sec:dataset_limits}), so it is an empirical trajectory on one corpus rather than a randomised scaling law.}}{16}{}\protected@file@percent }
-\newlabel{fig:v1v2}{{17}{16}}
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {T}raining Dataset Growth and Test mAP}}}{16}{}\protected@file@percent }
-\newlabel{tab:dataset_versions}{{12}{16}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-O}}Validation-to-Test Generalisation Gap}{16}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-P}}Comparative Positioning}{16}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Validation-to-test mAP{@}0.5 gap across dataset versions. v1's 0.414-point gap (classic single-source overfit) collapses to $+0.030$ at v5, where test mAP exceeds validation mAP --- evidence that dataset diversity, not architecture changes, is the dominant lever for generalisation.}}{16}{}\protected@file@percent }
-\newlabel{fig:overfit}{{18}{16}}
-\@writefile{toc}{\contentsline {section}{\numberline {VII}Conclusion}{16}{}\protected@file@percent }
-\newlabel{sec:conclusion}{{VII}{16}}
-\@writefile{toc}{\contentsline {section}{\numberline {A}Hardware, Software, and Model Specifications}{17}{}\protected@file@percent }
-\newlabel{sec:specs}{{A}{17}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-A}}Hardware}{17}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-B}}Software Stack}{17}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-M}}F1-Confidence Threshold Curves}{14}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Per-class F1 score versus confidence threshold. All four classes peak in the 0.25--0.27 band, matching YOLO's default threshold and eliminating the need for manual per-class tuning at deployment. Scissors reaches the highest peak F1 (0.690); Person the lowest (0.473).}}{14}{}\protected@file@percent }
+\newlabel{fig:f1_conf}{{16}{14}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-N}}Effect of Training Dataset Size}{14}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-O}}Validation-to-Test Generalisation Gap}{14}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Validation mAP{@}0.5 progression against training-set size. v1 (359 images) converges to a deceptively high val mAP ($\sim $0.88) that does not transfer (test 0.465); v5 (4{,}982 images) converges to 0.817 val and 0.847 test. The trajectory is single-seed, single-split, and the v2$\rightarrow $v5 additions are targeted at the weakest class (Section\nobreakspace  {}\ref {sec:dataset_limits}), so it is an empirical trajectory on one corpus rather than a randomised scaling law.}}{15}{}\protected@file@percent }
+\newlabel{fig:v1v2}{{17}{15}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {T}raining Dataset Growth and Test mAP}}}{15}{}\protected@file@percent }
+\newlabel{tab:dataset_versions}{{11}{15}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Validation-to-test mAP{@}0.5 gap across dataset versions. v1's 0.414-point gap (classic single-source overfit) collapses to $+0.030$ at v5, where test mAP exceeds validation mAP --- evidence that dataset diversity, not architecture changes, is the dominant lever for generalisation.}}{15}{}\protected@file@percent }
+\newlabel{fig:overfit}{{18}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-P}}Comparative Positioning}{15}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VII}Conclusion}{15}{}\protected@file@percent }
+\newlabel{sec:conclusion}{{VII}{15}}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Hardware, Software, and Model Specifications}{16}{}\protected@file@percent }
+\newlabel{sec:specs}{{A}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-A}}Hardware}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {H}ardware Specification}}}{16}{}\protected@file@percent }
+\newlabel{tab:hw_specs}{{12}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-B}}Software Stack}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{16}{}\protected@file@percent }
+\newlabel{tab:sw_specs}{{13}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{16}{}\protected@file@percent }
 \bibcite{b1}{1}
 \bibcite{b2}{2}
 \bibcite{b3}{3}
@@ -164,12 +164,11 @@
 \bibcite{b15}{15}
 \bibcite{b16}{16}
 \bibcite{b17}{17}
-\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {H}ardware Specification}}}{18}{}\protected@file@percent }
-\newlabel{tab:hw_specs}{{13}{18}}
-\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{18}{}\protected@file@percent }
-\newlabel{tab:sw_specs}{{14}{18}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{18}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}eployed Models and Artefacts (Hailo-8L)}}}{18}{}\protected@file@percent }
-\newlabel{tab:model_specs}{{15}{18}}
-\@writefile{toc}{\contentsline {section}{REFERENCES}{18}{}\protected@file@percent }
-\gdef \@abspage@last{18}
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}eployed Models and Artefacts (Hailo-8L)}}}{17}{}\protected@file@percent }
+\newlabel{tab:model_specs}{{14}{17}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-D}}Service-side Parameters}{17}{}\protected@file@percent }
+\newlabel{sec:service_params}{{\mbox  {A-D}}{17}}
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}ervice-side Implementation Parameters}}}{17}{}\protected@file@percent }
+\newlabel{tab:service_params}{{15}{17}}
+\@writefile{toc}{\contentsline {section}{REFERENCES}{17}{}\protected@file@percent }
+\gdef \@abspage@last{17}
