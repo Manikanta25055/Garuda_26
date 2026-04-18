@@ -112,23 +112,21 @@ This section presents two complementary high-level views of the system before th
 
 The three-layer split is not a product diagram; it is the partition that makes the empirical claims of this paper testable in isolation. The top (inference) layer is the only consumer of NPU time, so the per-stage latency budget reported in Section~\ref{sec:results} is attributable to a single resource path. The middle (response and control) layer contains the event-driven components whose mode-gating semantics determine whether a given detection produces downstream work; it is the locus of the cost-of-quiet measurements. The bottom (web server and persistence) layer carries all outward-facing traffic --- FastAPI~\cite{b12}, the Cloudflare tunnel~\cite{b17}, authentication, the deadman watchdog, and the logging engine --- and is the source of the concurrent CPU load against which the FPS-flatness result of Section~\ref{sec:async_fps} is measured.
 
-\begin{figure*}[!t]
+\begin{figure}[htbp]
 \centering
-\includegraphics[width=0.9\textwidth,keepaspectratio]{garuda_block_diagram.drawio-3.pdf}
+\includegraphics[width=\columnwidth,keepaspectratio]{garuda_block_diagram.drawio-3.pdf}
 \caption{Three-layer block diagram of the proposed system. The top layer offloads all neural inference to the Hailo-8L, the middle layer routes detections through mode-gated response engines, and the bottom layer handles persistence and external access --- separating concerns so that no single layer's failure propagates upward.}
 \label{fig:block_diagram}
-\end{figure*}
+\end{figure}
 
 Fig.~\ref{fig:system_flowchart} traces the runtime path of a single detection event so that the latency numbers in Section~\ref{sec:results} can be located on the diagram. Frames enter the GStreamer TAPPAS pipeline from the Raspberry Pi Camera Module~v3 and are classified on the Hailo-8L by YOLOv8s with NMS at $\text{IoU} \le 0.45$ and confidence $\ge 0.35$. Outputs are partitioned into watch labels (Person) and danger labels (Knife, Scissors, Hammer); a danger detection that passes both the three-consecutive-frame gate and the active mode check enters the alert fan-out path. The remaining CPU-side services (Section~\ref{sec:cpu_services}) run off the inference thread and are the load against which the FPS-flatness result of Section~\ref{sec:async_fps} is measured.
 
-\begin{figure*}[!t]
+\begin{figure*}[tbp]
 \centering
-\includegraphics[width=0.88\textwidth,height=0.55\textheight,keepaspectratio]{garuda_system_flowchart.drawio.pdf}
+\includegraphics[width=0.78\textwidth,height=0.48\textheight,keepaspectratio]{garuda_system_flowchart.drawio.pdf}
 \caption{End-to-end runtime diagram of a danger event. The full path from camera to email/WebSocket/clip upload completes in under 25\,ms of on-device processing; the mode gate short-circuits all downstream work during quiet periods, and six parallel subsystems run asynchronously without blocking the inference thread.}
 \label{fig:system_flowchart}
 \end{figure*}
-
-\FloatBarrier
 
 \section{Dataset}
 \label{sec:dataset}
