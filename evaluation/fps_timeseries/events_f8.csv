@@ -1,0 +1,15 @@
+t_epoch,kind,payload,result
+1776533215.9979913,inject_email,"{'label': 'Knife', 'confidence': 0.92, 'email': True}",200
+1776533275.9978402,chat,{'message': 'what is the current status'},200
+1776533335.9978037,clip_start,{},200
+1776533350.9977841,clip_stop,{},200
+1776533455.9977849,chat,{'message': 'turn on privacy mode'},200
+1776533485.9991398,clip_start,{},200
+1776533500.9978123,clip_stop,{},200
+1776533515.9977782,inject_email,"{'label': 'Hammer', 'confidence': 0.88, 'email': True}",200
+1776533605.9980023,inject_email,"{'label': 'Scissors', 'confidence': 0.91, 'email': True}",200
+1776533695.9977796,inject_email,"{'label': 'Knife', 'confidence': 0.95, 'email': True}",200
+1776533725.9988463,clip_start,{},200
+1776533740.9978023,clip_stop,{},200
+1776533785.9977763,inject_email,"{'label': 'Hammer', 'confidence': 0.87, 'email': True}",200
+1776533845.997818,chat,{'message': 'how many detections today'},200

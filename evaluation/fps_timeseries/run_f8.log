@@ -1,0 +1,22 @@
+[mode] t+   0s window=baseline dur=60
+[load] t+  30s inject_email -> 200
+[mode] t+  60s window=idle dur=120
+[load] t+  90s chat -> 200
+[load] t+ 150s clip_start -> 200
+[load] t+ 165s clip_stop -> 200
+[mode] t+ 180s window=dnd dur=120
+[load] t+ 270s chat -> 200
+[load] t+ 300s clip_start -> 200
+[mode] t+ 300s window=privacy dur=120
+[load] t+ 315s clip_stop -> 200
+[load] t+ 330s inject_email -> 200
+[load] t+ 420s inject_email -> 200
+[mode] t+ 420s window=emergency dur=120
+[load] t+ 510s inject_email -> 200
+[load] t+ 540s clip_start -> 200
+[mode] t+ 540s window=active dur=120
+[load] t+ 555s clip_stop -> 200
+[load] t+ 600s inject_email -> 200
+[load] t+ 660s chat -> 200
+[mjpeg] closed after 583.4 MB
+[done] wrote trace_f8.csv (41491 bytes) and events_f8.csv
