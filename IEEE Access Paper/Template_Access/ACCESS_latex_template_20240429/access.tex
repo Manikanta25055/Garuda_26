@@ -255,6 +255,13 @@ The founding constraint is that neural inference must live on a dedicated accele
 \label{fig:hw_layer}
 \end{figure}
 
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=0.85\columnwidth]{figures/fig_hardware_setup.pdf}
+\caption{Deployed hardware. The assembled rig pictured here is the exact system on which every measurement in Section~\ref{sec:results} was taken: Raspberry Pi~5 (red active-cooled case) with the Hailo-8L AI HAT+ visible on the M.2 slot (heat-spreader-clad board), Camera Module~v3 (Sony IMX708) connected over the CSI-2 ribbon, and a 1~TB Crucial BX-series NVMe SSD in a USB~3 enclosure for HEF storage and the SQLite event database. Total assembled BOM US\$450--500 (Table~\ref{tab:hw_specs}, Appendix~\ref{sec:specs}); board power under deployed concurrent inference load is $5.89 \pm 1.43$~W (Section~\ref{sec:quant}).}
+\label{fig:hw_photo}
+\end{figure}
+
 
 \subsection{GStreamer TAPPAS Pipeline Engine}
 The pipeline extends the base Hailo TAPPAS GStreamer application. A \texttt{libcamerasrc} element captures frames from the camera, and a short \texttt{videoscale}~/~\texttt{videoconvert} stage letterbox-resizes them to the $640\times640$ input the network expects, preserving the aspect ratio so bounding boxes can be mapped back to the original resolution. From there the pipeline forks: the inference branch dispatches each frame to the Hailo-8L via a HailoNet element and runs NMS in a HailoFilter (IoU~0.45, confidence~0.35), while a bypass branch holds the raw frame in a queue. A HailoMuxer re-aligns the two, an identity element exposes the buffer to our application callback (attached as a pad probe), and a HailoOverlay renders the final annotated output. The topology is shown in Fig.~\ref{fig:gstreamer}. The runtime behaviour of this pipeline --- sustained 52.2~FPS across all operating modes, bounded-queue decoupling, and per-core thread affinity --- is evaluated in Section~\ref{sec:async_fps}.
@@ -346,6 +353,13 @@ The remaining services --- mode controller, presence monitor, FastAPI web server
 \end{itemize}
 
 Per-engine implementation parameters --- ARP poll interval and grace window, deadman threshold, REST route count, route-level role checks, log rotation period --- are listed in the appendix and are not load-bearing for any result reported here.
+
+\begin{figure}[ht!]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig_dashboard.pdf}
+\caption{Operator dashboard served by the FastAPI web layer over the Cloudflare tunnel; this is the surface against which the concurrent CPU load measured in Section~\ref{sec:async_fps} is generated. Visible elements map directly to engines described above: the live feed and FPS gauge come from the GStreamer callback (Section~\ref{sec:methodology}); the System Modes column toggles the five mode-controller flags (DND, Privacy Blur, Night, Idle, Email Alerts off, Emergency); the Hub Health card surfaces CPU/RAM/temperature/FPS/disk telemetry sampled by the metrics monitor; the Activity panel and System Console replay the catch-up log buffers; and the Recent Detections column reflects the alert engine's per-label cooldowns. The screen pictured is the deployed system at idle (``ALL CLEAR'', detection threshold 0.82, FPS 52, NPU temp 73~$^\circ$C) under the live cascade. The dashboard, the Narada chat surface, and the operator command surface are all served from the same single Pi --- no auxiliary host.}
+\label{fig:dashboard}
+\end{figure}
 
 
 \subsection{Design Decisions and Trade-offs}
