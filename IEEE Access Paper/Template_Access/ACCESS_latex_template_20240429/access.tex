@@ -90,9 +90,9 @@ This paper presents a reference architecture for NPU-accelerated edge security t
 \end{enumerate}
 
 \subsection{Paper Organisation}
-Section~\ref{sec:related_work} surveys prior work; Section~\ref{sec:overview} gives the system overview; Sections~\ref{sec:dataset}--\ref{sec:methodology} cover the dataset and the engine-by-engine methodology; Section~\ref{sec:results} reports training and inference results; Section~\ref{sec:conclusion} concludes. Hardware, software, and model specifications are in Appendix~\ref{sec:specs}.
+Section~\ref{sec:overview} gives the system overview; Sections~\ref{sec:dataset}--\ref{sec:methodology} cover the dataset and the engine-by-engine methodology; Section~\ref{sec:results} reports training and inference results; Section~\ref{sec:conclusion} concludes. Hardware, software, and model specifications are in Appendix~\ref{sec:specs}.
 
-\section{Related Work}
+\subsection{Literature Review}
 \label{sec:related_work}
 We group the prior art into four themes that collectively define the baseline against which this paper is measured: (i) edge-deployed YOLO detectors and their architectural optimisations, (ii) weapon detection in CCTV surveillance, (iii) face anti-spoofing and presentation-attack detection, and (iv) edge-AI hardware benchmarking and open-source NVR stacks for home security.
 
@@ -108,7 +108,7 @@ The prior work surveyed above establishes two points relevant to this paper. Fir
 
 \section{System Overview}
 \label{sec:overview}
-This section presents two complementary high-level views of the system before the detailed engine-by-engine methodology. Fig.~\ref{fig:block_diagram} shows the three-layer block diagram, which organises the system by architectural role, and Fig.~\ref{fig:system_flowchart} shows the end-to-end flowchart, which traces the runtime path of a detection event.
+This section presents two complementary high-level views of the system before the detailed engine-by-engine methodology. Fig.~\ref{fig:block_diagram} shows the three-layer block diagram, which organises the system by architectural role, and Fig.~\ref{fig:system_flowchart} traces the runtime path of a detection event.
 
 The three-layer split is not a product diagram; it is the partition that makes the empirical claims of this paper testable in isolation. The top (inference) layer is the only consumer of NPU time, so the per-stage latency budget reported in Section~\ref{sec:results} is attributable to a single resource path. The middle (response and control) layer contains the event-driven components whose mode-gating semantics determine whether a given detection produces downstream work; it is the locus of the cost-of-quiet measurements. The bottom (web server and persistence) layer carries all outward-facing traffic --- FastAPI~\cite{b12}, the Cloudflare tunnel~\cite{b17}, authentication, the deadman watchdog, and the logging engine --- and is the source of the concurrent CPU load against which the FPS-flatness result of Section~\ref{sec:async_fps} is measured.
 
@@ -119,15 +119,16 @@ The three-layer split is not a product diagram; it is the partition that makes t
 \label{fig:block_diagram}
 \end{figure*}
 
-The flowchart traces the runtime path of a single detection event so that the latency numbers in Section~\ref{sec:results} can be located on the diagram. Frames enter the GStreamer TAPPAS pipeline from the Raspberry Pi Camera Module~v3 and are classified on the Hailo-8L by YOLOv8s with NMS at $\text{IoU} \le 0.45$ and confidence $\ge 0.35$. Outputs are partitioned into watch labels (Person) and danger labels (Knife, Scissors, Hammer); a danger detection that passes both the three-consecutive-frame gate and the active mode check enters the alert fan-out path. The remaining CPU-side services (Section~\ref{sec:cpu_services}) run off the inference thread and are the load against which the FPS-flatness result of Section~\ref{sec:async_fps} is measured.
+Fig.~\ref{fig:system_flowchart} traces the runtime path of a single detection event so that the latency numbers in Section~\ref{sec:results} can be located on the diagram. Frames enter the GStreamer TAPPAS pipeline from the Raspberry Pi Camera Module~v3 and are classified on the Hailo-8L by YOLOv8s with NMS at $\text{IoU} \le 0.45$ and confidence $\ge 0.35$. Outputs are partitioned into watch labels (Person) and danger labels (Knife, Scissors, Hammer); a danger detection that passes both the three-consecutive-frame gate and the active mode check enters the alert fan-out path. The remaining CPU-side services (Section~\ref{sec:cpu_services}) run off the inference thread and are the load against which the FPS-flatness result of Section~\ref{sec:async_fps} is measured.
 
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=0.88\textwidth,height=0.55\textheight,keepaspectratio]{garuda_system_flowchart.drawio.pdf}
-\caption{End-to-end runtime flowchart. A danger detection traverses the full path from camera to email/WebSocket/clip upload in under 25\,ms of on-device processing; the mode gate short-circuits all downstream work during quiet periods, and six parallel subsystems run asynchronously without blocking the inference thread.}
+\caption{End-to-end runtime diagram of a danger event. The full path from camera to email/WebSocket/clip upload completes in under 25\,ms of on-device processing; the mode gate short-circuits all downstream work during quiet periods, and six parallel subsystems run asynchronously without blocking the inference thread.}
 \label{fig:system_flowchart}
 \end{figure*}
 
+\FloatBarrier
 
 \section{Dataset}
 \label{sec:dataset}
