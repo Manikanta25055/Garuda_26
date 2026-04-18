@@ -34,10 +34,10 @@
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {I}mage Counts Contributed by Each Source (v5 Splits)}}}{3}{}\protected@file@percent }
 \newlabel{tab:sources}{{1}{3}}
 \newlabel{sec:dataset_limits}{{\mbox  {IV-A}}{3}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Preprocessing and Validation Pipeline}{3}{}\protected@file@percent }
+\newlabel{sec:preprocess}{{\mbox  {IV-B}}{3}}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Three-layer block diagram of Project Garuda. The top layer offloads all neural inference to the Hailo-8L, the middle layer routes detections through mode-gated response engines, and the bottom layer handles persistence and external access --- separating concerns so that no single layer's failure propagates upward.}}{4}{}\protected@file@percent }
 \newlabel{fig:block_diagram}{{1}{4}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Preprocessing and Validation Pipeline}{4}{}\protected@file@percent }
-\newlabel{sec:preprocess}{{\mbox  {IV-B}}{4}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Final Dataset Geometry}{4}{}\protected@file@percent }
 \newlabel{sec:dataset_geometry}{{\mbox  {IV-C}}{4}}
 \@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces End-to-end runtime flowchart. A danger detection traverses the full path from camera to email/WebSocket/clip upload in under 25\,ms of on-device processing; the mode gate short-circuits all downstream work during quiet periods, and six parallel subsystems run asynchronously without blocking the inference thread.}}{5}{}\protected@file@percent }
@@ -51,24 +51,24 @@
 \@writefile{toc}{\contentsline {section}{\numberline {V}Methodology}{6}{}\protected@file@percent }
 \newlabel{sec:methodology}{{V}{6}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Hardware Engine}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}GStreamer TAPPAS Pipeline Engine}{6}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Hardware topology. All neural inference is offloaded to the Hailo-8L over the single PCIe Gen3\nobreakspace  {}$\times $1 lane, freeing all four Cortex-A76 cores for the web server, voice assistant, and logging --- the key constraint that shapes every software design decision.}}{6}{}\protected@file@percent }
 \newlabel{fig:hw_layer}{{4}{6}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}GStreamer TAPPAS Pipeline Engine}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Detection Engine}{6}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Cascade Architecture}{6}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces GStreamer TAPPAS pipeline topology. The fork-and-mux design lets the bypass queue hold the raw frame while HailoNet runs inference on the NPU, so the CPU touches each frame only at the identity callback probe --- enabling the sustained 52.2\,FPS reported in Section\nobreakspace  {}\ref {sec:async_fps}.}}{7}{}\protected@file@percent }
-\newlabel{fig:gstreamer}{{5}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces GStreamer TAPPAS pipeline topology. The fork-and-mux design lets the bypass queue hold the raw frame while HailoNet runs inference on the NPU, so the CPU touches each frame only at the identity callback probe --- enabling the sustained 52.2\,FPS reported in Section\nobreakspace  {}\ref {sec:async_fps}.}}{6}{}\protected@file@percent }
+\newlabel{fig:gstreamer}{{5}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Detection Engine}{7}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Cascade Architecture}{7}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Latency Budget (Hailo-8L, Pi\nobreakspace  {}5)}}}{7}{}\protected@file@percent }
 \newlabel{tab:cascade_latency}{{4}{7}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Alert Engine}{7}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Voice Assistant Engine (Narada)}{7}{}\protected@file@percent }
-\newlabel{sec:groq_privacy}{{\mbox  {V-F}}{7}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Alert engine dataflow. The mode gate short-circuits all downstream work during Do Not Disturb or Idle; the three asynchronous channels (WebSocket, SMTPS, AES-256-CBC encrypted clip upload) keep the slow paths off the inference thread, which is the precondition for the FPS-flatness result of Sec.\nobreakspace  {}\ref {sec:async_fps}.}}{7}{}\protected@file@percent }
+\newlabel{fig:alert}{{6}{7}}
 \citation{b16}
 \citation{b16}
 \@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {C}ascade Decision Matrix Across Operating Scenarios}}}{8}{}\protected@file@percent }
 \newlabel{tab:cascade_matrix}{{5}{8}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Alert engine dataflow. The mode gate short-circuits all downstream work during Do Not Disturb or Idle; the three asynchronous channels (WebSocket, SMTPS, AES-256-CBC encrypted clip upload) keep the slow paths off the inference thread, which is the precondition for the FPS-flatness result of Sec.\nobreakspace  {}\ref {sec:async_fps}.}}{8}{}\protected@file@percent }
-\newlabel{fig:alert}{{6}{8}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Voice Assistant Engine (Narada)}{8}{}\protected@file@percent }
+\newlabel{sec:groq_privacy}{{\mbox  {V-F}}{8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Concurrent CPU-side Services}{8}{}\protected@file@percent }
 \newlabel{sec:cpu_services}{{\mbox  {V-G}}{8}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Design Decisions and Trade-offs}{8}{}\protected@file@percent }
@@ -79,17 +79,17 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Training loss convergence over 150 epochs. All three loss components fall monotonically (box: $1.65 \to 0.74$; classification: $2.80 \to 0.49$), and the train--validation gap stays narrow throughout, indicating generalisation rather than memorisation.}}{9}{}\protected@file@percent }
 \newlabel{fig:training_losses}{{7}{9}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Validation mAP and Precision / Recall}{9}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Four-Model Performance Comparison}{9}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Validation metrics versus training epoch. mAP{@}0.5 plateaus near 0.81 by epoch\nobreakspace  {}100, while precision (0.87) and recall (0.80) converge to a balanced operating point with no sign of precision--recall trade-off collapse.}}{10}{}\protected@file@percent }
-\newlabel{fig:training_metrics}{{8}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Validation metrics versus training epoch. mAP{@}0.5 plateaus near 0.81 by epoch\nobreakspace  {}100, while precision (0.87) and recall (0.80) converge to a balanced operating point with no sign of precision--recall trade-off collapse.}}{9}{}\protected@file@percent }
+\newlabel{fig:training_metrics}{{8}{9}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Four-Model Performance Comparison}{10}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Four-model comparison on the held-out test set. COCO-pretrained YOLOv8s scores near zero on this four-class task; fine-tuning on 359 images (v1) recovers to 0.465 mAP{@}0.5, the intermediate v2 (1{,}383 images) reaches 0.754, and v5 (4{,}982 images) reaches 0.847 --- an 82\% gain over v1 driven entirely by dataset growth.}}{10}{}\protected@file@percent }
 \newlabel{fig:model_comparison}{{9}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Per-Class mAP{@}0.5 Progression}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Per-class mAP{@}0.5 progression across v1, v2, and v5. Knife shows the largest single-class gain ($+0.66$); Scissors reaches the highest absolute score (0.967); Person remains the hardest class at 0.647. All four classes improve monotonically with dataset scale.}}{10}{}\protected@file@percent }
+\newlabel{fig:per_class_map}{{10}{10}}
 \@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class Recall and mAP{@}0.5: v1 vs v5 (Deployed)}}}{10}{}\protected@file@percent }
 \newlabel{tab:v1_v5}{{6}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Full Per-Class Metrics at v5}{10}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Per-class mAP{@}0.5 progression across v1, v2, and v5. Knife shows the largest single-class gain ($+0.66$); Scissors reaches the highest absolute score (0.967); Person remains the hardest class at 0.647. All four classes improve monotonically with dataset scale.}}{10}{}\protected@file@percent }
-\newlabel{fig:per_class_map}{{10}{10}}
 \@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Full per-class metrics for the deployed v5 model. Scissors leads at 0.967 mAP{@}0.5 with balanced P/R above 0.92; Person lags at 0.647 mAP{@}0.5 with the lowest recall (0.609), reflecting its higher intra-class variability and small-object fraction.}}{10}{}\protected@file@percent }
 \newlabel{fig:perclass_full}{{11}{10}}
 \@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}ull Per-Class Scorecard at v5 (Test Set, 622 Images, 1{,}656 Instances)}}}{10}{}\protected@file@percent }
