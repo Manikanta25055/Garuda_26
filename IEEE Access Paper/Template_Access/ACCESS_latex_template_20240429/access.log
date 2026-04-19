@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:04
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:22
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1024,11 +1024,11 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [12 <./fig5_perclass_full_metrics.pdf>]
-<fig6_confusion_matrix.pdf, id=907, 294.41618pt x 251.86139pt>
+<fig6_confusion_matrix.pdf, id=907, 293.75371pt x 251.25589pt>
 File: fig6_confusion_matrix.pdf Graphic file (type pdf)
 <use fig6_confusion_matrix.pdf>
 Package pdftex.def Info: fig6_confusion_matrix.pdf  used on input line 506.
-(pdftex.def)             Requested size: 242.67355pt x 207.60373pt.
+(pdftex.def)             Requested size: 242.67355pt x 207.5647pt.
 <fig7_pr_curves.pdf, id=908, 287.24126pt x 265.48787pt>
 File: fig7_pr_curves.pdf Graphic file (type pdf)
 <use fig7_pr_curves.pdf>
@@ -1579,7 +1579,7 @@ rmata-condmedium.pfb><./t1-formata-italic.pfb><./t1-formata-medium.pfb><./t1-fo
 rmata-mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.p
 fb><./t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
-Output written on access.pdf (22 pages, 5545416 bytes).
+Output written on access.pdf (22 pages, 5545274 bytes).
 PDF statistics:
  1475 PDF objects out of 1728 (max. 8388607)
  477 compressed objects within 5 object streams
