@@ -128,9 +128,9 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Normalised confusion matrix on the v5 held-out test set. Diagonal (recall) is $0.85$, $0.82$, $0.61$, $0.93$ for Hammer, Knife, Person, Scissors. The largest inter-class confusion is Person$\rightarrow $Knife at $0.11$; the remainder of each true-class mass falls into the background column (missed detections), which is the dominant error mode --- the safer failure mode for a security system, where a misclassified weapon still triggers an alert.}}{13}{}\protected@file@percent }
 \newlabel{fig:confusion}{{14}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Precision-Recall Curves}{13}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Hardware Inference Performance}{13}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Per-class precision--recall curves for the deployed v5 detector. Person exhibits the steepest precision drop-off, falling below 0.80 at low recall thresholds; Scissors holds $P > 0.90$ past $R = 0.90$ (AP\,=\,0.967). Knife and Hammer maintain smooth, well-separated curves (AP 0.886 and 0.889).}}{13}{}\protected@file@percent }
 \newlabel{fig:pr_curves}{{15}{13}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Hardware Inference Performance}{13}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Hardware inference performance on the Hailo-8L. The custom v5 HEF runs at 52.2\,FPS (18.4\,ms), 6\,FPS below the Hailo-provided reference (58.2\,FPS, 13.2\,ms); the 5\,ms gap is attributable to the baked-in custom NMS, and both sit well above the 30\,FPS surveillance floor.}}{13}{}\protected@file@percent }
 \newlabel{fig:hw_perf}{{16}{13}}
 \citation{b3}
@@ -142,10 +142,10 @@
 \newlabel{fig:fps_ts}{{17}{14}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-J}}INT8 Quantisation and Deployment Characteristics}{14}{}\protected@file@percent }
 \newlabel{sec:quant}{{\mbox  {V-J}}{14}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-K}}MobileNetV2 Classifier Evaluation}{15}{}\protected@file@percent }
-\newlabel{sec:classifier_eval}{{\mbox  {V-K}}{15}}
 \@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}P32 Baseline and INT8 Deployment on the Same Test Split.} Both columns evaluated on the identical held-out test split (622\nobreakspace  {}images, 351\nobreakspace  {}instances). FP32: Ultralytics \texttt  {val} on RTX\nobreakspace  {}4090, \texttt  {conf=0.001}, \texttt  {iou=0.7}. INT8: \texttt  {best\_v5.hef} on the deployed Hailo-8L, on-chip \texttt  {HAILO\_NMS\_BY\_CLASS} (deployment thresholds \texttt  {conf=0.25}, \texttt  {iou=0.45}), letterboxed input, COCO-style 101-point AP integration matched to Ultralytics' \texttt  {DetMetrics}.}}{15}{}\protected@file@percent }
 \newlabel{tab:quant}{{9}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-K}}MobileNetV2 Classifier Evaluation}{15}{}\protected@file@percent }
+\newlabel{sec:classifier_eval}{{\mbox  {V-K}}{15}}
 \@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 v2 Confusion Matrix (500-Crop Held-Out Set, $t{=}0.50$)}}}{16}{}\protected@file@percent }
 \newlabel{tab:cls_confusion}{{10}{16}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-L}}Scope of the Depth-Variance Pre-Filter}{16}{}\protected@file@percent }
@@ -185,7 +185,7 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-B}}Software Stack}{19}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{19}{}\protected@file@percent }
 \newlabel{tab:sw_specs}{{13}{19}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{20}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{19}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}eployed Models and Artefacts (Hailo-8L)}}}{20}{}\protected@file@percent }
 \newlabel{tab:model_specs}{{14}{20}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-D}}Service-side Parameters}{20}{}\protected@file@percent }
@@ -222,12 +222,12 @@
 \bibcite{b24}{22}
 \bibcite{b25}{23}
 \bibcite{b26}{24}
-\newlabel{sec:ethics}{{\mbox  {A-E}}{21}}
-\@writefile{toc}{\contentsline {section}{REFERENCES}{21}{}\protected@file@percent }
 \bibcite{b27}{25}
 \bibcite{b28}{26}
 \bibcite{b29}{27}
 \bibcite{b30}{28}
+\newlabel{sec:ethics}{{\mbox  {A-E}}{21}}
+\@writefile{toc}{\contentsline {section}{REFERENCES}{21}{}\protected@file@percent }
 \bibcite{b31}{29}
 \bibcite{b32}{30}
 \bibcite{b33}{31}
