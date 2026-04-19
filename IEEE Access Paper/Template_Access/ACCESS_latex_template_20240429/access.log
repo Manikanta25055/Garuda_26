@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:30
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:58
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -614,12 +614,17 @@ Overfull \hbox (9.2679pt too wide) in paragraph at lines 75--75
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
+Underfull \hbox (badness 3482) in paragraph at lines 84--85
+\T1/times/n/n/10 This pa-per presents a ref-er-ence ar-chi-tec-ture for NPU-
+ []
+
+
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 <logo.png, id=4, 206.27063pt x 53.44969pt>
 File: logo.png Graphic file (type png)
 <use logo.png>
-Package pdftex.def Info: logo.png  used on input line 82.
+Package pdftex.def Info: logo.png  used on input line 85.
 (pdftex.def)             Requested size: 91.32pt x 23.66309pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -645,20 +650,6 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 
  <./logo.png> <./bullet.png>]
-Underfull \hbox (badness 3482) in paragraph at lines 84--85
-\T1/times/n/n/10 This pa-per presents a ref-er-ence ar-chi-tec-ture for NPU-
- []
-
-
-Underfull \hbox (badness 3579) in paragraph at lines 84--85
-\T1/times/n/n/10 of this con-fig-u-ra-tion. Each maps to a spe-cific re-sults
- []
-
-
-Underfull \hbox (badness 1946) in paragraph at lines 89--90
-\T1/times/n/n/10 path and the CPU-resident ser-vices (FastAPI web
- []
-
 <notaglinelogo.png, id=22, 169.38281pt x 42.91031pt>
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
@@ -682,6 +673,11 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 [2 <./notaglinelogo.png>]
 Underfull \hbox (badness 1430) in paragraph at lines 105--106
 []\T1/times/m/it/10 Edge-AI hard-ware bench-marks and open-source NVR.
+ []
+
+
+Underfull \hbox (badness 1377) in paragraph at lines 107--108
+\T1/times/n/n/10 [24], [27], monoc-u-lar depth es-ti-ma-tors for scene un-der-
  []
 
 File: notaglinelogo.png Graphic file (type png)
@@ -719,7 +715,7 @@ nput line 126.
 (pdftex.def)             Requested size: 213.94415pt x 322.554pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 170.
+Package pdftex.def Info: notaglinelogo.png  used on input line 171.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -739,7 +735,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 [4 <./figures//garuda_block_diagram.drawio-3.pdf>]
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 183.
+Package pdftex.def Info: notaglinelogo.png  used on input line 185.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -768,13 +764,24 @@ Package pdftex.def Info: fig8_dataset_distribution.pdf  used on input line 217.
 
 (pdftex.def)             Requested size: 242.67355pt x 137.15927pt.
 
-Underfull \hbox (badness 1655) in paragraph at lines 247--248
-\T1/times/n/n/10 on a ded-i-cated ac-cel-er-a-tor so the quad-core CPU stays
+Underfull \hbox (badness 3849) in paragraph at lines 247--248
+\T1/times/n/n/10 A Rasp-berry Pi 5 (Broad-com BCM2712, Cortex-A76)
  []
 
 
-Underfull \hbox (badness 1400) in paragraph at lines 247--248
-\T1/times/n/n/10 the sys-tem un-der 64-bit Rasp-berry Pi OS. The CPU is
+Underfull \hbox (badness 2326) in paragraph at lines 247--248
+\T1/times/n/n/10 the 2.4 GHz stock base, set via \T1/pcr/l/it/10 arm_-freq=2800
+ \T1/times/n/n/10 in
+ []
+
+
+Underfull \hbox (badness 1852) in paragraph at lines 247--248
+\T1/pcr/l/it/10 /boot/firmware/config.txt \T1/times/n/n/10 and paired with the
+ []
+
+
+Underfull \hbox (badness 1983) in paragraph at lines 247--248
+\T1/times/n/n/10 LPDDR4X-4267 mem-ory gives plenty of head-room for
  []
 
 File: notaglinelogo.png Graphic file (type png)
@@ -801,12 +808,12 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 File: figures//garuda_hardware_layer.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_hardware_layer.drawio.pdf>
 Package pdftex.def Info: figures//garuda_hardware_layer.drawio.pdf  used on inp
-ut line 251.
+ut line 255.
 (pdftex.def)             Requested size: 242.67355pt x 166.33414pt.
 <figures/fig_hardware_setup.pdf, id=458, 3035.34pt x 4047.12pt>
 File: figures/fig_hardware_setup.pdf Graphic file (type pdf)
 <use figures/fig_hardware_setup.pdf>
-Package pdftex.def Info: figures/fig_hardware_setup.pdf  used on input line 258
+Package pdftex.def Info: figures/fig_hardware_setup.pdf  used on input line 262
 .
 (pdftex.def)             Requested size: 157.73633pt x 210.27237pt.
 <figures//garuda_gstreamer_engine.drawio-2.pdf, id=459, 550.30594pt x 416.30531
@@ -814,11 +821,11 @@ pt>
 File: figures//garuda_gstreamer_engine.drawio-2.pdf Graphic file (type pdf)
 <use figures//garuda_gstreamer_engine.drawio-2.pdf>
 Package pdftex.def Info: figures//garuda_gstreamer_engine.drawio-2.pdf  used on
- input line 269.
+ input line 273.
 (pdftex.def)             Requested size: 242.67355pt x 183.58145pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 277.
+Package pdftex.def Info: notaglinelogo.png  used on input line 281.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -837,38 +844,38 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 [7 <./figures//garuda_hardware_layer.drawio.pdf> <./figures/fig_hardware_setup.
 pdf>]
-Underfull \hbox (badness 10000) in paragraph at lines 320--320
+Underfull \hbox (badness 10000) in paragraph at lines 324--324
 []|\T1/times/m/n/9 0.886--0.967
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 321--321
+Underfull \hbox (badness 10000) in paragraph at lines 325--325
 []|\T1/times/m/n/9 YOLOv8s +
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 321--321
+Underfull \hbox (badness 10000) in paragraph at lines 325--325
 []|\T1/times/m/n/9 99.0% cls. (in-dist.,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 322--322
+Underfull \hbox (badness 10000) in paragraph at lines 326--326
 []|\T1/times/m/n/9 YOLOv8s + Mi-DaS
  []
 
 
-Underfull \hbox (badness 1769) in paragraph at lines 322--322
+Underfull \hbox (badness 1769) in paragraph at lines 326--326
 []|\T1/times/m/n/9 Cheap front-end only;
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 323--323
+Underfull \hbox (badness 10000) in paragraph at lines 327--327
 []|\T1/times/m/n/9 Low-confidence per-son
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 326.
+Package pdftex.def Info: notaglinelogo.png  used on input line 335.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -890,21 +897,21 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 File: figures//garuda_alert_engine.drawio.pdf Graphic file (type pdf)
 <use figures//garuda_alert_engine.drawio.pdf>
 Package pdftex.def Info: figures//garuda_alert_engine.drawio.pdf  used on input
- line 334.
+ line 338.
 (pdftex.def)             Requested size: 242.67355pt x 138.75456pt.
 
-Underfull \hbox (badness 1472) in paragraph at lines 347--348
+Underfull \hbox (badness 1472) in paragraph at lines 351--352
 \T1/times/n/n/10 i-tor, FastAPI web server with Cloudflare-tunnel ingress,
  []
 
 <figures/fig_dashboard.pdf, id=583, 1611.01875pt x 1133.23375pt>
 File: figures/fig_dashboard.pdf Graphic file (type pdf)
 <use figures/fig_dashboard.pdf>
-Package pdftex.def Info: figures/fig_dashboard.pdf  used on input line 359.
+Package pdftex.def Info: figures/fig_dashboard.pdf  used on input line 363.
 (pdftex.def)             Requested size: 242.67355pt x 170.70398pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 373.
+Package pdftex.def Info: notaglinelogo.png  used on input line 366.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -922,24 +929,39 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [9 <./figures//garuda_alert_engine.drawio.pdf>]
-Underfull \hbox (badness 6658) in paragraph at lines 373--374
+Underfull \hbox (badness 1596) in paragraph at lines 373--374
+\T1/times/n/n/10 rec-om-men-da-tion of 600,000 for PBKDF2-SHA256 [14].
+ []
+
+
+Underfull \hbox (badness 6658) in paragraph at lines 377--378
 []\T1/times/b/n/10 SQLite over a time-series database. \T1/times/n/n/10 In-flux
 DB or
  []
 
 
-Underfull \hbox (badness 2486) in paragraph at lines 375--376
+Underfull \hbox (badness 2486) in paragraph at lines 379--380
 []\T1/times/b/n/10 Bounded queue with in-ten-tional drops over back-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 383--384
-\T1/times/n/n/10 Everything in this sec-tion is image-level de-tec-
+Underfull \hbox (badness 4403) in paragraph at lines 394--395
+\T1/times/n/n/10 en-gi-neer-ing con-jec-ture built on these com-po-nents, not
+ []
+
+
+Underfull \hbox (badness 3148) in paragraph at lines 394--395
+\T1/times/n/n/10 a di-rectly mea-sured re-sult. The continuous-deployment,
+ []
+
+
+Underfull \hbox (badness 3240) in paragraph at lines 394--395
+\T1/times/n/n/10 nuisance-condition, fault-injection, and matched-stimulus
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 391.
+Package pdftex.def Info: notaglinelogo.png  used on input line 395.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -960,26 +982,26 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 <fig1_training_losses.pdf, id=641, 522.12944pt x 156.85854pt>
 File: fig1_training_losses.pdf Graphic file (type pdf)
 <use fig1_training_losses.pdf>
-Package pdftex.def Info: fig1_training_losses.pdf  used on input line 397.
+Package pdftex.def Info: fig1_training_losses.pdf  used on input line 401.
 (pdftex.def)             Requested size: 242.67355pt x 72.90256pt.
 <fig2_training_metrics.pdf, id=642, 520.60783pt x 171.31252pt>
 File: fig2_training_metrics.pdf Graphic file (type pdf)
 <use fig2_training_metrics.pdf>
-Package pdftex.def Info: fig2_training_metrics.pdf  used on input line 408.
+Package pdftex.def Info: fig2_training_metrics.pdf  used on input line 412.
 (pdftex.def)             Requested size: 242.67355pt x 79.85553pt.
 <fig3_model_comparison.pdf, id=643, 522.15579pt x 234.10843pt>
 File: fig3_model_comparison.pdf Graphic file (type pdf)
 <use fig3_model_comparison.pdf>
-Package pdftex.def Info: fig3_model_comparison.pdf  used on input line 419.
+Package pdftex.def Info: fig3_model_comparison.pdf  used on input line 423.
 (pdftex.def)             Requested size: 242.67355pt x 108.80212pt.
 <fig4_per_class_map50.pdf, id=644, 410.81293pt x 202.43344pt>
 File: fig4_per_class_map50.pdf Graphic file (type pdf)
 <use fig4_per_class_map50.pdf>
-Package pdftex.def Info: fig4_per_class_map50.pdf  used on input line 430.
+Package pdftex.def Info: fig4_per_class_map50.pdf  used on input line 434.
 (pdftex.def)             Requested size: 242.67355pt x 119.58295pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 459.
+Package pdftex.def Info: notaglinelogo.png  used on input line 463.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1001,12 +1023,12 @@ mparison.pdf> <./fig4_per_class_map50.pdf>]
 <fig5_perclass_full_metrics.pdf, id=855, 391.16638pt x 205.43082pt>
 File: fig5_perclass_full_metrics.pdf Graphic file (type pdf)
 <use fig5_perclass_full_metrics.pdf>
-Package pdftex.def Info: fig5_perclass_full_metrics.pdf  used on input line 462
+Package pdftex.def Info: fig5_perclass_full_metrics.pdf  used on input line 466
 .
 (pdftex.def)             Requested size: 242.67355pt x 127.44728pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 498.
+Package pdftex.def Info: notaglinelogo.png  used on input line 504.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1027,22 +1049,22 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 <fig6_confusion_matrix.pdf, id=907, 348.3528pt x 305.86754pt>
 File: fig6_confusion_matrix.pdf Graphic file (type pdf)
 <use fig6_confusion_matrix.pdf>
-Package pdftex.def Info: fig6_confusion_matrix.pdf  used on input line 506.
+Package pdftex.def Info: fig6_confusion_matrix.pdf  used on input line 510.
 (pdftex.def)             Requested size: 242.67355pt x 213.07903pt.
 <fig7_pr_curves.pdf, id=908, 287.24126pt x 265.48787pt>
 File: fig7_pr_curves.pdf Graphic file (type pdf)
 <use fig7_pr_curves.pdf>
-Package pdftex.def Info: fig7_pr_curves.pdf  used on input line 517.
+Package pdftex.def Info: fig7_pr_curves.pdf  used on input line 521.
 (pdftex.def)             Requested size: 242.67355pt x 224.29651pt.
 <fig9_hardware_performance.pdf, id=909, 522.18213pt x 180.28165pt>
 File: fig9_hardware_performance.pdf Graphic file (type pdf)
 <use fig9_hardware_performance.pdf>
-Package pdftex.def Info: fig9_hardware_performance.pdf  used on input line 528.
+Package pdftex.def Info: fig9_hardware_performance.pdf  used on input line 532.
 
 (pdftex.def)             Requested size: 242.67355pt x 83.78333pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 534.
+Package pdftex.def Info: notaglinelogo.png  used on input line 538.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1061,80 +1083,84 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 [13 <./fig6_confusion_matrix.pdf> <./fig7_pr_curves.pdf> <./fig9_hardware_perfo
 rmance.pdf>]
+Underfull \hbox (badness 2726) in paragraph at lines 560--561
+\T1/times/n/n/10 monitoring, alert-ing, stream-ing over We-bRTC, han-dling
+ []
+
 <fig13_fps_timeseries.pdf, id=1111, 505.89pt x 231.26399pt>
 File: fig13_fps_timeseries.pdf Graphic file (type pdf)
 <use fig13_fps_timeseries.pdf>
-Package pdftex.def Info: fig13_fps_timeseries.pdf  used on input line 568.
+Package pdftex.def Info: fig13_fps_timeseries.pdf  used on input line 572.
 (pdftex.def)             Requested size: 242.67355pt x 110.9384pt.
 
-Underfull \hbox (badness 10000) in paragraph at lines 575--576
+Underfull \hbox (badness 10000) in paragraph at lines 579--580
 \T1/times/n/n/10 (\T1/pcr/l/it/10 normalization([0,0,0],[255,255,255])\T1/times
 /n/n/10 )
  []
 
 
-Underfull \hbox (badness 1990) in paragraph at lines 575--576
+Underfull \hbox (badness 1990) in paragraph at lines 579--580
 \T1/times/n/n/10 on the held-out test split to-gether with an in-de-pen-dent
  []
 
 
-Underfull \hbox (badness 5652) in paragraph at lines 575--576
+Underfull \hbox (badness 5652) in paragraph at lines 579--580
 \T1/times/n/n/10 INT8 re-evaluation on the de-ployed Hailo-8L on the
  []
 
 
-Underfull \hbox (badness 3849) in paragraph at lines 575--576
+Underfull \hbox (badness 3849) in paragraph at lines 579--580
 \T1/times/n/n/10 runs the pro-duc-tion \T1/pcr/l/it/10 best_-v5.hef \T1/times/n
 /n/10 on-device through
  []
 
 
-Underfull \hbox (badness 4492) in paragraph at lines 575--576
+Underfull \hbox (badness 4492) in paragraph at lines 579--580
 \T1/times/n/n/10 the HailoRT \T1/pcr/l/it/10 In-fer-VStreams \T1/times/n/n/10 A
 PI, de-codes the on-
  []
 
 
-Underfull \hbox (badness 4168) in paragraph at lines 575--576
+Underfull \hbox (badness 4168) in paragraph at lines 579--580
 \T1/times/n/n/10 chip \T1/pcr/l/it/10 HAILO_-NMS_-BY_-CLASS \T1/times/n/n/10 ou
 t-put, let-ter-boxes each
  []
 
 
-Underfull \hbox (badness 2384) in paragraph at lines 575--576
+Underfull \hbox (badness 2384) in paragraph at lines 579--580
 \T1/times/n/n/10 columns of Ta-ble 9[] are di-rectly com-pa-ra-ble. The chip
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 575--576
+Underfull \hbox (badness 10000) in paragraph at lines 579--580
 \T1/times/n/n/10 (\T1/pcr/l/it/10 nms_-scores_-th=0.25\T1/times/n/n/10 , \T1/pc
 r/l/it/10 nms_-iou_-th=0.45\T1/times/n/n/10 ) that
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 575--576
+Underfull \hbox (badness 10000) in paragraph at lines 579--580
 \T1/times/n/n/10 uses academic-evaluation thresh-olds (\T1/pcr/l/it/10 conf=0.0
 01\T1/times/n/n/10 ,
  []
 
 
-Underfull \hbox (badness 2126) in paragraph at lines 575--576
+Underfull \hbox (badness 2126) in paragraph at lines 579--580
 \T1/times/n/n/10 no mea-sur-able ac-cu-racy loss within the 622-image test
  []
 
 
-Underfull \hbox (badness 4013) in paragraph at lines 575--576
+Underfull \hbox (badness 4013) in paragraph at lines 579--580
 \T1/times/n/n/10 sam-ple. To-tal board power was mea-sured di-rectly via
  []
 
 
-Underfull \hbox (badness 1603) in paragraph at lines 575--576
+Underfull \hbox (badness 1603) in paragraph at lines 579--580
 \T1/times/n/n/10 the live cas-cade. Mean board power un-der this load is
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 576.
+Package pdftex.def Info: notaglinelogo.png  used on input line 580.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1154,7 +1180,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 [14 <./fig13_fps_timeseries.pdf>]
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 613.
+Package pdftex.def Info: notaglinelogo.png  used on input line 617.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1172,28 +1198,28 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [15]
-Underfull \hbox (badness 1701) in paragraph at lines 635--636
+Underfull \hbox (badness 1701) in paragraph at lines 639--640
 \T1/times/n/n/10 The de-ployed pipeline ap-plies a fixed thresh-old on the
  []
 
 <fig10_f1_confidence.pdf, id=1166, 287.0631pt x 265.48787pt>
 File: fig10_f1_confidence.pdf Graphic file (type pdf)
 <use fig10_f1_confidence.pdf>
-Package pdftex.def Info: fig10_f1_confidence.pdf  used on input line 643.
+Package pdftex.def Info: fig10_f1_confidence.pdf  used on input line 647.
 (pdftex.def)             Requested size: 242.67355pt x 224.4464pt.
 <fig11_v1_vs_v2_training.pdf, id=1167, 391.16638pt x 185.88698pt>
 File: fig11_v1_vs_v2_training.pdf Graphic file (type pdf)
 <use fig11_v1_vs_v2_training.pdf>
-Package pdftex.def Info: fig11_v1_vs_v2_training.pdf  used on input line 654.
+Package pdftex.def Info: fig11_v1_vs_v2_training.pdf  used on input line 658.
 (pdftex.def)             Requested size: 242.67355pt x 115.32246pt.
 
-Underfull \hbox (badness 5533) in paragraph at lines 669--670
+Underfull \hbox (badness 5533) in paragraph at lines 673--674
 []|\T1/times/m/n/8 + Open-Im-ages v7 (1,219
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 678.
+Package pdftex.def Info: notaglinelogo.png  used on input line 682.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1214,7 +1240,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 <fig12_overfitting_gap.pdf, id=1219, 355.86075pt x 223.29187pt>
 File: fig12_overfitting_gap.pdf Graphic file (type pdf)
 <use fig12_overfitting_gap.pdf>
-Package pdftex.def Info: fig12_overfitting_gap.pdf  used on input line 681.
+Package pdftex.def Info: fig12_overfitting_gap.pdf  used on input line 685.
 (pdftex.def)             Requested size: 242.67355pt x 152.26917pt.
 
 Underfull \vbox (badness 3199) has occurred while \output is active []
@@ -1222,11 +1248,11 @@ Underfull \vbox (badness 3199) has occurred while \output is active []
 <fig14_48h_telemetry.pdf, id=1220, 505.89pt x 202.356pt>
 File: fig14_48h_telemetry.pdf Graphic file (type pdf)
 <use fig14_48h_telemetry.pdf>
-Package pdftex.def Info: fig14_48h_telemetry.pdf  used on input line 696.
+Package pdftex.def Info: fig14_48h_telemetry.pdf  used on input line 700.
 (pdftex.def)             Requested size: 242.67355pt x 97.0711pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 703.
+Package pdftex.def Info: notaglinelogo.png  used on input line 707.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1247,7 +1273,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 telemetry.pdf>]
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 714.
+Package pdftex.def Info: notaglinelogo.png  used on input line 720.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1265,59 +1291,57 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [18]
-Underfull \hbox (badness 2318) in paragraph at lines 717--718
-\T1/times/n/n/10 claim: NPU-equipped single-board com-put-ers now have
+Underfull \hbox (badness 2426) in paragraph at lines 723--724
+\T1/times/n/n/10 claim. NPU-equipped single-board com-put-ers now have
  []
 
 
-Underfull \hbox (badness 4621) in paragraph at lines 717--718
+Underfull \hbox (badness 4621) in paragraph at lines 723--724
 \T1/times/n/n/10 with-out cloud of-fload, at real-time frame rates, given
  []
 
 
-Underfull \hbox (badness 2809) in paragraph at lines 717--718
-\T1/times/n/n/10 Whether such a de-vice re-places a spe-cific com-mer-cial
- []
-
-
-Underfull \hbox (badness 1472) in paragraph at lines 717--718
+Underfull \hbox (badness 1472) in paragraph at lines 723--724
 \T1/times/n/n/10 cloud-backed cam-era in prac-tice is a sep-a-rate em-pir-i-cal
 
  []
 
 
-Underfull \hbox (badness 2096) in paragraph at lines 726--727
+Underfull \hbox (badness 2096) in paragraph at lines 732--733
 \T1/times/n/n/10 This ap-pendix con-sol-i-dates the hard-ware, soft-ware, and
  []
 
 
-Underfull \hbox (badness 7186) in paragraph at lines 726--727
+Underfull \hbox (badness 7186) in paragraph at lines 732--733
 \T1/times/n/n/10 model spec-i-fi-ca-tions of the de-ployed sys-tem so that
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 778--779
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 784--785
 []|\T1/times/m/n/8 aiortc (We-bRTC),
  []
 
 
-Underfull \hbox (badness 6910) in paragraph at lines 780--781
+Underfull \hbox (badness 6910) in paragraph at lines 786--787
 []|\T1/times/m/n/8 Groq API, \T1/pcr/m/n/8 gpt-oss-120b \T1/times/m/n/8 (free
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 781--782
+Underfull \hbox (badness 10000) in paragraph at lines 787--788
 []|\T1/pcr/m/n/8 hashlib.pbkdf2_-hmac\T1/times/m/n/8 ,
  []
 
 
-Underfull \hbox (badness 1990) in paragraph at lines 791--792
+Underfull \hbox (badness 1990) in paragraph at lines 797--798
 \T1/times/n/n/10 HEF files for the Hailo-8L. The pri-mary de-tec-tor is a
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 792.
+Package pdftex.def Info: notaglinelogo.png  used on input line 798.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1335,82 +1359,82 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [19]
-Underfull \hbox (badness 3312) in paragraph at lines 815--816
+Underfull \hbox (badness 3312) in paragraph at lines 821--822
 \T1/times/n/n/10 Sec-tion [][] are split into two ta-bles for read-abil-ity:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 815--816
+Underfull \hbox (badness 10000) in paragraph at lines 821--822
 \T1/times/n/n/10 the security-relevant prim-i-tives (Ta-ble 15[]) and the
  []
 
 
-Underfull \hbox (badness 1783) in paragraph at lines 815--816
+Underfull \hbox (badness 1783) in paragraph at lines 821--822
 \T1/times/n/n/10 op-er-a-tional/scheduling val-ues (Ta-ble 16[]). None of these
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 827--828
+Underfull \hbox (badness 10000) in paragraph at lines 833--834
 []|\T1/times/m/n/8 HTTP-only cookie, server-side
  []
 
 
-Underfull \hbox (badness 2941) in paragraph at lines 855--856
+Underfull \hbox (badness 2941) in paragraph at lines 861--862
 []|\T1/times/m/n/8 MJPEG, Web-Socket bi-nary, We-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 857--858
+Underfull \hbox (badness 10000) in paragraph at lines 863--864
 []|\T1/pcr/m/n/8 /api/events?since=T
  []
 
 
-Underfull \hbox (badness 2213) in paragraph at lines 865--866
+Underfull \hbox (badness 2213) in paragraph at lines 871--872
 \T1/times/n/n/10 here for re-pro-ducibil-ity. The v6 fine-tune used a fresh
  []
 
 
-Underfull \hbox (badness 3375) in paragraph at lines 865--866
+Underfull \hbox (badness 3375) in paragraph at lines 871--872
 \T1/times/n/n/10 YOLOv8s ini-tial-i-sa-tion trained on an ex-panded cor-pus
  []
 
 
-Underfull \hbox (badness 5667) in paragraph at lines 865--866
+Underfull \hbox (badness 5667) in paragraph at lines 871--872
 \T1/times/n/n/10 of 4,720 primary-class Per-son im-ages (13,014 Per-son
  []
 
 
-Underfull \hbox (badness 1968) in paragraph at lines 865--866
+Underfull \hbox (badness 1968) in paragraph at lines 871--872
 \T1/times/n/n/10 scene di-ver-sity. The aug-men-ta-tion sched-ule was pushed
  []
 
 
-Underfull \hbox (badness 2368) in paragraph at lines 877--878
+Underfull \hbox (badness 2368) in paragraph at lines 883--884
 \T1/times/n/n/10 au-then-ti-ca-tion and evidence-capture sub-sys-tems, dataset-
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 877--878
+Underfull \hbox (badness 10000) in paragraph at lines 883--884
 \T1/times/n/n/10 at $https : / / github . com / Manikanta25055 / Garuda _ 26$. 
 The
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 877--878
+Underfull \hbox (badness 10000) in paragraph at lines 883--884
 \T1/times/n/n/10 pre-filter) and the \T1/pcr/l/it/10 liby-olo_-hailortpp_-post.
 so
  []
 
 
-Underfull \hbox (badness 1735) in paragraph at lines 877--878
+Underfull \hbox (badness 1735) in paragraph at lines 883--884
 \T1/times/n/n/10 split can be re-con-structed from the up-stream Roboflow
  []
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 878.
+Package pdftex.def Info: notaglinelogo.png  used on input line 884.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1428,62 +1452,50 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [20]
-Underfull \hbox (badness 6978) in paragraph at lines 892--893
+Underfull \hbox (badness 6978) in paragraph at lines 898--899
 []\T1/times/n/n/7.61 Hailo Tech-nolo-gies Ltd., ``Hailo-8L M.2 AI ac-cel-er-a-t
 ion mod-ule
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 892--893
+Underfull \hbox (badness 10000) in paragraph at lines 898--899
 \T1/times/n/n/7.61 datasheet,'' 2024. [On-line]. Avail-able: https://hailo.ai/p
 roducts/ai-
  []
 
 
-Underfull \hbox (badness 3271) in paragraph at lines 894--895
+Underfull \hbox (badness 3271) in paragraph at lines 900--901
 \T1/times/n/n/7.61 for low-cost mi-croscopy ap-pli-ca-tions,'' \T1/times/n/it/7
 .61 Elec-tron-ics\T1/times/n/n/7.61 , vol. 14, no. 6,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 916--917
+Underfull \hbox (badness 10000) in paragraph at lines 922--923
 []\T1/times/n/n/7.61 Cloudflare, Inc., ``Cloud-flare Tun-nel doc-u-men-ta-tion,
 '' 2024.
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 916--917
+Underfull \hbox (badness 10000) in paragraph at lines 922--923
 \T1/times/n/n/7.61 [On-line]. Avail-able: https://developers.cloudflare.com/clo
 udflare-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 930--931
+Underfull \hbox (badness 10000) in paragraph at lines 936--937
 []\T1/times/n/n/7.61 B. Black-s-hear, ``Frigate --- NVR with re-al-time lo-cal 
 ob-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 930--931
+Underfull \hbox (badness 10000) in paragraph at lines 936--937
 \T1/times/n/n/7.61 ject de-tec-tion for IP cam-eras,'' 2024. [On-line]. Avail-a
 ble:
  []
 
-
-Underfull \hbox (badness 3199) in paragraph at lines 936--937
-\T1/times/n/n/7.61 ``Tran-sCNN: Hy-brid CNN and trans-former mech-a-nism for su
-rveil-
- []
-
-
-Underfull \hbox (badness 4303) in paragraph at lines 936--937
-\T1/times/n/n/7.61 lance anomaly de-tec-tion,'' \T1/times/n/it/7.61 IEEE Trans.
- Ind. In-for-mat.\T1/times/n/n/7.61 , 2022, doi:
- []
-
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 939.
+Package pdftex.def Info: notaglinelogo.png  used on input line 941.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1501,40 +1513,52 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [21]
-Underfull \hbox (badness 10000) in paragraph at lines 950--951
+Underfull \hbox (badness 3199) in paragraph at lines 942--943
+\T1/times/m/n/7.61 ``Tran-sCNN: Hy-brid CNN and trans-former mech-a-nism for su
+rveil-
+ []
+
+
+Underfull \hbox (badness 4303) in paragraph at lines 942--943
+\T1/times/m/n/7.61 lance anomaly de-tec-tion,'' \T1/times/n/it/7.61 IEEE Trans.
+ Ind. In-for-mat.\T1/times/m/n/7.61 , 2022, doi:
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 956--957
 []\T1/times/m/n/7.61 Ring LLC, ``Ring Pro-tect plans,'' 2026. [On-line]. Avail-
 able:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 954--955
+Underfull \hbox (badness 10000) in paragraph at lines 960--961
 []\T1/times/m/n/7.61 Google LLC, ``Google Home Pre-mium (for-merly Nest
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 954--955
+Underfull \hbox (badness 10000) in paragraph at lines 960--961
 \T1/times/m/n/7.61 Aware),'' Google Store, 2026. [On-line]. Avail-able:
  []
 
 
-Underfull \hbox (badness 1424) in paragraph at lines 956--957
+Underfull \hbox (badness 1424) in paragraph at lines 962--963
 []\T1/times/m/n/7.61 SimpliSafe, Inc., ``Out-door Se-cu-rity Cam-era Bun-dle,''
  prod-uct page,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 956--957
+Underfull \hbox (badness 10000) in paragraph at lines 962--963
 \T1/times/m/n/7.61 2026. [On-line]. Avail-able: https://simplisafe.com/outdoor-
 security-
  []
 
 File: bullet.png Graphic file (type png)
 <use bullet.png>
-Package pdftex.def Info: bullet.png  used on input line 966.
+Package pdftex.def Info: bullet.png  used on input line 972.
 (pdftex.def)             Requested size: 5.0pt x 14.6871pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 968.
+Package pdftex.def Info: notaglinelogo.png  used on input line 974.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1561,7 +1585,7 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 Here is how much of TeX's memory you used:
  5265 strings out of 478051
  86935 string characters out of 5840944
- 1877330 words of memory out of 5000000
+ 1878330 words of memory out of 5000000
  25246 multiletter control sequences out of 15000+600000
  610684 words of font info for 193 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
@@ -1583,7 +1607,7 @@ rmata-condmedium.pfb><./t1-formata-italic.pfb><./t1-formata-medium.pfb><./t1-fo
 rmata-mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.p
 fb><./t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
-Output written on access.pdf (22 pages, 5551872 bytes).
+Output written on access.pdf (22 pages, 5552028 bytes).
 PDF statistics:
  1497 PDF objects out of 1728 (max. 8388607)
  476 compressed objects within 5 object streams

@@ -84,7 +84,8 @@
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}econdary Verifier Path: Per-Stage Latency Budget (Hailo-8L, Pi\nobreakspace  {}5)}}}{8}{}\protected@file@percent }
 \newlabel{tab:cascade_latency}{{4}{8}}
 \citation{b16}
-\citation{b16}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}econdary Verifier Path: Decision Matrix Across Operating Scenarios}}}{9}{}\protected@file@percent }
+\newlabel{tab:cascade_matrix}{{5}{9}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Alert Engine}{9}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Alert engine dataflow. The mode gate short-circuits all downstream work during Do Not Disturb or Idle; the three asynchronous channels (WebSocket, SMTPS, AES-256-CBC encrypted clip upload) keep the slow paths off the inference thread, which is the precondition for the FPS-flatness result of Sec.\nobreakspace  {}\ref {sec:async_fps}.}}{9}{}\protected@file@percent }
 \newlabel{fig:alert}{{7}{9}}
@@ -92,12 +93,11 @@
 \newlabel{sec:groq_privacy}{{\mbox  {IV-F}}{9}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Concurrent CPU-side Services}{9}{}\protected@file@percent }
 \newlabel{sec:cpu_services}{{\mbox  {IV-G}}{9}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Design Decisions and Trade-offs}{9}{}\protected@file@percent }
-\newlabel{sec:design_decisions}{{\mbox  {IV-H}}{9}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}econdary Verifier Path: Decision Matrix Across Operating Scenarios}}}{10}{}\protected@file@percent }
-\newlabel{tab:cascade_matrix}{{5}{10}}
+\citation{b16}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Operator dashboard served by the FastAPI web layer over the Cloudflare tunnel; this is the surface against which the concurrent CPU load measured in Section\nobreakspace  {}\ref {sec:async_fps} is generated. Visible elements map directly to engines described above: the live feed and FPS gauge come from the GStreamer callback (Section\nobreakspace  {}\ref {sec:methodology}); the System Modes column toggles the five mode-controller flags (DND, Privacy Blur, Night, Idle, Email Alerts off, Emergency); the Hub Health card surfaces CPU/RAM/temperature/FPS/disk telemetry sampled by the metrics monitor; the Activity panel and System Console replay the catch-up log buffers; and the Recent Detections column reflects the alert engine's per-label cooldowns. The screen pictured is the deployed system at idle (``ALL CLEAR'', detection threshold 0.82, FPS 52, SoC temp 73\nobreakspace  {}$^\circ $C --- the Pi\nobreakspace  {}5 CPU package sensor, not the Hailo-8L NPU; see Section\nobreakspace  {}\ref {sec:quant}) under the live cascade. The dashboard, the Narada chat surface, and the operator command surface are all served from the same single Pi --- no auxiliary host.}}{10}{}\protected@file@percent }
 \newlabel{fig:dashboard}{{8}{10}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Design Decisions and Trade-offs}{10}{}\protected@file@percent }
+\newlabel{sec:design_decisions}{{\mbox  {IV-H}}{10}}
 \@writefile{toc}{\contentsline {section}{\numberline {V}Results and Evaluation}{10}{}\protected@file@percent }
 \newlabel{sec:results}{{V}{10}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Training Loss Convergence}{11}{}\protected@file@percent }
@@ -185,7 +185,7 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-B}}Software Stack}{19}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{19}{}\protected@file@percent }
 \newlabel{tab:sw_specs}{{13}{19}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{19}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{20}{}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}eployed Models and Artefacts (Hailo-8L)}}}{20}{}\protected@file@percent }
 \newlabel{tab:model_specs}{{14}{20}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-D}}Service-side Parameters}{20}{}\protected@file@percent }
@@ -222,10 +222,10 @@
 \bibcite{b24}{22}
 \bibcite{b25}{23}
 \bibcite{b26}{24}
-\bibcite{b27}{25}
-\bibcite{b28}{26}
 \newlabel{sec:ethics}{{\mbox  {A-E}}{21}}
 \@writefile{toc}{\contentsline {section}{REFERENCES}{21}{}\protected@file@percent }
+\bibcite{b27}{25}
+\bibcite{b28}{26}
 \bibcite{b29}{27}
 \bibcite{b30}{28}
 \bibcite{b31}{29}
