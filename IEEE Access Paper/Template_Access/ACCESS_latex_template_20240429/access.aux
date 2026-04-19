@@ -125,12 +125,12 @@
 \citation{b5}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Normalised Confusion Matrix}{13}{}\protected@file@percent }
 \newlabel{sec:confusion}{{\mbox  {V-F}}{13}}
-\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Normalised confusion matrix on the v5 held-out test set. Off-diagonal confusion is at most 0.03; the dominant error mode is background false negatives (missed detections), not inter-class misclassification --- the safer failure mode for a security system, where a misclassified weapon still triggers an alert.}}{13}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Normalised confusion matrix on the v5 held-out test set. Diagonal (recall) is $0.85$, $0.82$, $0.61$, $0.93$ for Hammer, Knife, Person, Scissors. The largest inter-class confusion is Person$\rightarrow $Knife at $0.11$; the remainder of each true-class mass falls into the background column (missed detections), which is the dominant error mode --- the safer failure mode for a security system, where a misclassified weapon still triggers an alert.}}{13}{}\protected@file@percent }
 \newlabel{fig:confusion}{{14}{13}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Precision-Recall Curves}{13}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Hardware Inference Performance}{13}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Per-class precision--recall curves for the deployed v5 detector. Person exhibits the steepest precision drop-off, falling below 0.80 at low recall thresholds; Scissors holds $P > 0.90$ past $R = 0.90$ (AP\,=\,0.967). Knife and Hammer maintain smooth, well-separated curves (AP 0.886 and 0.889).}}{13}{}\protected@file@percent }
 \newlabel{fig:pr_curves}{{15}{13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Hardware Inference Performance}{13}{}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Hardware inference performance on the Hailo-8L. The custom v5 HEF runs at 52.2\,FPS (18.4\,ms), 6\,FPS below the Hailo-provided reference (58.2\,FPS, 13.2\,ms); the 5\,ms gap is attributable to the baked-in custom NMS, and both sit well above the 30\,FPS surveillance floor.}}{13}{}\protected@file@percent }
 \newlabel{fig:hw_perf}{{16}{13}}
 \citation{b3}
@@ -142,10 +142,10 @@
 \newlabel{fig:fps_ts}{{17}{14}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-J}}INT8 Quantisation and Deployment Characteristics}{14}{}\protected@file@percent }
 \newlabel{sec:quant}{{\mbox  {V-J}}{14}}
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}P32 Baseline and INT8 Deployment on the Same Test Split.} Both columns evaluated on the identical held-out test split (622\nobreakspace  {}images, 351\nobreakspace  {}instances). FP32: Ultralytics \texttt  {val} on RTX\nobreakspace  {}4090, \texttt  {conf=0.001}, \texttt  {iou=0.7}. INT8: \texttt  {best\_v5.hef} on the deployed Hailo-8L, on-chip \texttt  {HAILO\_NMS\_BY\_CLASS} (deployment thresholds \texttt  {conf=0.25}, \texttt  {iou=0.45}), letterboxed input, COCO-style 101-point AP integration matched to Ultralytics' \texttt  {DetMetrics}.}}{15}{}\protected@file@percent }
-\newlabel{tab:quant}{{9}{15}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-K}}MobileNetV2 Classifier Evaluation}{15}{}\protected@file@percent }
 \newlabel{sec:classifier_eval}{{\mbox  {V-K}}{15}}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}P32 Baseline and INT8 Deployment on the Same Test Split.} Both columns evaluated on the identical held-out test split (622\nobreakspace  {}images, 351\nobreakspace  {}instances). FP32: Ultralytics \texttt  {val} on RTX\nobreakspace  {}4090, \texttt  {conf=0.001}, \texttt  {iou=0.7}. INT8: \texttt  {best\_v5.hef} on the deployed Hailo-8L, on-chip \texttt  {HAILO\_NMS\_BY\_CLASS} (deployment thresholds \texttt  {conf=0.25}, \texttt  {iou=0.45}), letterboxed input, COCO-style 101-point AP integration matched to Ultralytics' \texttt  {DetMetrics}.}}{15}{}\protected@file@percent }
+\newlabel{tab:quant}{{9}{15}}
 \@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 v2 Confusion Matrix (500-Crop Held-Out Set, $t{=}0.50$)}}}{16}{}\protected@file@percent }
 \newlabel{tab:cls_confusion}{{10}{16}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-L}}Scope of the Depth-Variance Pre-Filter}{16}{}\protected@file@percent }
@@ -154,11 +154,11 @@
 \@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Per-class F1 score versus confidence threshold. All four classes peak in the 0.25--0.27 band, matching YOLO's default threshold and eliminating the need for manual per-class tuning at deployment. Scissors reaches the highest peak F1 (0.690); Person the lowest (0.473).}}{16}{}\protected@file@percent }
 \newlabel{fig:f1_conf}{{18}{16}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-N}}Effect of Training Dataset Size}{16}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Validation mAP{@}0.5 against training-set size for v1, v2, and v5. Takeaway: the v1 validation score fails to transfer to the test split, whereas v5 does --- an existence proof of within-corpus scaling (see Section\nobreakspace  {}\ref {sec:dataset_limits} for scope).}}{16}{}\protected@file@percent }
-\newlabel{fig:v1v2}{{19}{16}}
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {T}raining Dataset Growth and Test mAP}}}{17}{}\protected@file@percent }
-\newlabel{tab:dataset_versions}{{11}{17}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-O}}Validation-to-Test Generalisation Gap}{17}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {T}raining Dataset Growth and Test mAP}}}{16}{}\protected@file@percent }
+\newlabel{tab:dataset_versions}{{11}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-O}}Validation-to-Test Generalisation Gap}{16}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Validation mAP{@}0.5 against training-set size for v1, v2, and v5. Takeaway: the v1 validation score fails to transfer to the test split, whereas v5 does --- an existence proof of within-corpus scaling (see Section\nobreakspace  {}\ref {sec:dataset_limits} for scope).}}{17}{}\protected@file@percent }
+\newlabel{fig:v1v2}{{19}{17}}
 \@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Validation-to-test mAP{@}0.5 gap across dataset versions. Takeaway: the $0.414$-point v1 gap collapses to $+0.030$ at v5, consistent with dataset diversity (rather than architecture) driving generalisation.}}{17}{}\protected@file@percent }
 \newlabel{fig:overfit}{{20}{17}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-P}}Continuous-Deployment Telemetry and Functional Soak}{17}{}\protected@file@percent }
@@ -186,10 +186,10 @@
 \@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{19}{}\protected@file@percent }
 \newlabel{tab:sw_specs}{{13}{19}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{19}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-D}}Service-side Parameters}{19}{}\protected@file@percent }
-\newlabel{sec:service_params}{{\mbox  {A-D}}{19}}
 \@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}eployed Models and Artefacts (Hailo-8L)}}}{20}{}\protected@file@percent }
 \newlabel{tab:model_specs}{{14}{20}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-D}}Service-side Parameters}{20}{}\protected@file@percent }
+\newlabel{sec:service_params}{{\mbox  {A-D}}{20}}
 \@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}ecurity-relevant Primitives}}}{20}{}\protected@file@percent }
 \newlabel{tab:security_params}{{15}{20}}
 \@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {O}perational and Scheduling Parameters}}}{20}{}\protected@file@percent }
@@ -224,12 +224,12 @@
 \bibcite{b26}{24}
 \bibcite{b27}{25}
 \bibcite{b28}{26}
+\newlabel{sec:ethics}{{\mbox  {A-E}}{21}}
+\@writefile{toc}{\contentsline {section}{REFERENCES}{21}{}\protected@file@percent }
 \bibcite{b29}{27}
 \bibcite{b30}{28}
 \bibcite{b31}{29}
 \bibcite{b32}{30}
-\newlabel{sec:ethics}{{\mbox  {A-E}}{21}}
-\@writefile{toc}{\contentsline {section}{REFERENCES}{21}{}\protected@file@percent }
 \bibcite{b33}{31}
 \bibcite{b34}{32}
 \bibcite{b35}{33}

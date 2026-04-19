@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:22
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:30
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1024,11 +1024,11 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [12 <./fig5_perclass_full_metrics.pdf>]
-<fig6_confusion_matrix.pdf, id=907, 293.75371pt x 251.25589pt>
+<fig6_confusion_matrix.pdf, id=907, 348.3528pt x 305.86754pt>
 File: fig6_confusion_matrix.pdf Graphic file (type pdf)
 <use fig6_confusion_matrix.pdf>
 Package pdftex.def Info: fig6_confusion_matrix.pdf  used on input line 506.
-(pdftex.def)             Requested size: 242.67355pt x 207.5647pt.
+(pdftex.def)             Requested size: 242.67355pt x 213.07903pt.
 <fig7_pr_curves.pdf, id=908, 287.24126pt x 265.48787pt>
 File: fig7_pr_curves.pdf Graphic file (type pdf)
 <use fig7_pr_curves.pdf>
@@ -1042,7 +1042,7 @@ Package pdftex.def Info: fig9_hardware_performance.pdf  used on input line 528.
 (pdftex.def)             Requested size: 242.67355pt x 83.78333pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 554.
+Package pdftex.def Info: notaglinelogo.png  used on input line 534.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1061,7 +1061,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 
 [13 <./fig6_confusion_matrix.pdf> <./fig7_pr_curves.pdf> <./fig9_hardware_perfo
 rmance.pdf>]
-<fig13_fps_timeseries.pdf, id=1089, 505.89pt x 231.26399pt>
+<fig13_fps_timeseries.pdf, id=1111, 505.89pt x 231.26399pt>
 File: fig13_fps_timeseries.pdf Graphic file (type pdf)
 <use fig13_fps_timeseries.pdf>
 Package pdftex.def Info: fig13_fps_timeseries.pdf  used on input line 568.
@@ -1176,12 +1176,12 @@ Underfull \hbox (badness 1701) in paragraph at lines 635--636
 \T1/times/n/n/10 The de-ployed pipeline ap-plies a fixed thresh-old on the
  []
 
-<fig10_f1_confidence.pdf, id=1144, 287.0631pt x 265.48787pt>
+<fig10_f1_confidence.pdf, id=1166, 287.0631pt x 265.48787pt>
 File: fig10_f1_confidence.pdf Graphic file (type pdf)
 <use fig10_f1_confidence.pdf>
 Package pdftex.def Info: fig10_f1_confidence.pdf  used on input line 643.
 (pdftex.def)             Requested size: 242.67355pt x 224.4464pt.
-<fig11_v1_vs_v2_training.pdf, id=1145, 391.16638pt x 185.88698pt>
+<fig11_v1_vs_v2_training.pdf, id=1167, 391.16638pt x 185.88698pt>
 File: fig11_v1_vs_v2_training.pdf Graphic file (type pdf)
 <use fig11_v1_vs_v2_training.pdf>
 Package pdftex.def Info: fig11_v1_vs_v2_training.pdf  used on input line 654.
@@ -1193,7 +1193,7 @@ Underfull \hbox (badness 5533) in paragraph at lines 669--670
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 676.
+Package pdftex.def Info: notaglinelogo.png  used on input line 678.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1210,13 +1210,16 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[16 <./fig10_f1_confidence.pdf> <./fig11_v1_vs_v2_training.pdf>]
-<fig12_overfitting_gap.pdf, id=1249, 355.86075pt x 223.29187pt>
+[16 <./fig10_f1_confidence.pdf>]
+<fig12_overfitting_gap.pdf, id=1219, 355.86075pt x 223.29187pt>
 File: fig12_overfitting_gap.pdf Graphic file (type pdf)
 <use fig12_overfitting_gap.pdf>
 Package pdftex.def Info: fig12_overfitting_gap.pdf  used on input line 681.
 (pdftex.def)             Requested size: 242.67355pt x 152.26917pt.
-<fig14_48h_telemetry.pdf, id=1250, 505.89pt x 202.356pt>
+
+Underfull \vbox (badness 3199) has occurred while \output is active []
+
+<fig14_48h_telemetry.pdf, id=1220, 505.89pt x 202.356pt>
 File: fig14_48h_telemetry.pdf Graphic file (type pdf)
 <use fig14_48h_telemetry.pdf>
 Package pdftex.def Info: fig14_48h_telemetry.pdf  used on input line 696.
@@ -1240,7 +1243,8 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[17 <./fig12_overfitting_gap.pdf> <./fig14_48h_telemetry.pdf>]
+[17 <./fig11_v1_vs_v2_training.pdf> <./fig12_overfitting_gap.pdf> <./fig14_48h_
+telemetry.pdf>]
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
 Package pdftex.def Info: notaglinelogo.png  used on input line 714.
@@ -1311,25 +1315,9 @@ Underfull \hbox (badness 1990) in paragraph at lines 791--792
 \T1/times/n/n/10 HEF files for the Hailo-8L. The pri-mary de-tec-tor is a
  []
 
-
-Underfull \hbox (badness 3312) in paragraph at lines 815--816
-\T1/times/n/n/10 Sec-tion [][] are split into two ta-bles for read-abil-ity:
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 815--816
-\T1/times/n/n/10 the security-relevant prim-i-tives (Ta-ble 15[]) and the
- []
-
-
-Underfull \hbox (badness 1783) in paragraph at lines 815--816
-\T1/times/n/n/10 op-er-a-tional/scheduling val-ues (Ta-ble 16[]). None of these
-
- []
-
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 816.
+Package pdftex.def Info: notaglinelogo.png  used on input line 792.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1347,6 +1335,22 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [19]
+Underfull \hbox (badness 3312) in paragraph at lines 815--816
+\T1/times/n/n/10 Sec-tion [][] are split into two ta-bles for read-abil-ity:
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 815--816
+\T1/times/n/n/10 the security-relevant prim-i-tives (Ta-ble 15[]) and the
+ []
+
+
+Underfull \hbox (badness 1783) in paragraph at lines 815--816
+\T1/times/n/n/10 op-er-a-tional/scheduling val-ues (Ta-ble 16[]). None of these
+
+ []
+
+
 Underfull \hbox (badness 10000) in paragraph at lines 827--828
 []|\T1/times/m/n/8 HTTP-only cookie, server-side
  []
@@ -1406,7 +1410,7 @@ Underfull \hbox (badness 1735) in paragraph at lines 877--878
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 882.
+Package pdftex.def Info: notaglinelogo.png  used on input line 878.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1479,7 +1483,7 @@ Underfull \hbox (badness 4303) in paragraph at lines 936--937
 
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 947.
+Package pdftex.def Info: notaglinelogo.png  used on input line 939.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1555,11 +1559,11 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 5266 strings out of 478051
- 86953 string characters out of 5840944
- 1879330 words of memory out of 5000000
- 25247 multiletter control sequences out of 15000+600000
- 611897 words of font info for 194 fonts, out of 8000000 for 9000
+ 5265 strings out of 478051
+ 86935 string characters out of 5840944
+ 1877330 words of memory out of 5000000
+ 25246 multiletter control sequences out of 15000+600000
+ 610684 words of font info for 193 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  72i,14n,76p,3382b,512s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
@@ -1579,10 +1583,10 @@ rmata-condmedium.pfb><./t1-formata-italic.pfb><./t1-formata-medium.pfb><./t1-fo
 rmata-mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.p
 fb><./t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
-Output written on access.pdf (22 pages, 5545274 bytes).
+Output written on access.pdf (22 pages, 5551872 bytes).
 PDF statistics:
- 1475 PDF objects out of 1728 (max. 8388607)
- 477 compressed objects within 5 object streams
+ 1497 PDF objects out of 1728 (max. 8388607)
+ 476 compressed objects within 5 object streams
  0 named destinations out of 1000 (max. 500000)
  129 words of extra memory for PDF output out of 10000 (max. 10000000)
 
