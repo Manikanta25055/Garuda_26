@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:04
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 13:18
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1579,7 +1579,7 @@ rmata-condmedium.pfb><./t1-formata-italic.pfb><./t1-formata-medium.pfb><./t1-fo
 rmata-mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.p
 fb><./t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
-Output written on access.pdf (22 pages, 5545416 bytes).
+Output written on access.pdf (22 pages, 5546176 bytes).
 PDF statistics:
  1475 PDF objects out of 1728 (max. 8388607)
  477 compressed objects within 5 object streams
