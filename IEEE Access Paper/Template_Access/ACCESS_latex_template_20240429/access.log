@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 14:15
+This is pdfTeX, Version 3.141592653-2.6-1.40.24 (TeX Live 2022/Debian) (preloaded format=pdflatex 2026.4.9)  19 APR 2026 14:22
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1466,38 +1466,26 @@ Underfull \hbox (badness 1735) in paragraph at lines 884--885
  []
 
 
-Underfull \hbox (badness 6978) in paragraph at lines 899--900
+Underfull \hbox (badness 6978) in paragraph at lines 902--903
 []\T1/times/n/n/7.61 Hailo Tech-nolo-gies Ltd., ``Hailo-8L M.2 AI ac-cel-er-a-t
 ion mod-ule
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 899--900
+Underfull \hbox (badness 10000) in paragraph at lines 902--903
 \T1/times/n/n/7.61 datasheet,'' 2024. [On-line]. Avail-able: https://hailo.ai/p
 roducts/ai-
  []
 
 
-Underfull \hbox (badness 3271) in paragraph at lines 901--902
+Underfull \hbox (badness 3271) in paragraph at lines 904--905
 \T1/times/n/n/7.61 for low-cost mi-croscopy ap-pli-ca-tions,'' \T1/times/n/it/7
 .61 Elec-tron-ics\T1/times/n/n/7.61 , vol. 14, no. 6,
  []
 
-
-Underfull \hbox (badness 10000) in paragraph at lines 923--924
-[]\T1/times/n/n/7.61 Cloudflare, Inc., ``Cloud-flare Tun-nel doc-u-men-ta-tion,
-'' 2024.
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 923--924
-\T1/times/n/n/7.61 [On-line]. Avail-able: https://developers.cloudflare.com/clo
-udflare-
- []
-
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 932.
+Package pdftex.def Info: notaglinelogo.png  used on input line 926.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1515,64 +1503,76 @@ Underfull \hbox (badness 10000) has occurred while \output is active
  []
 
 [21]
-Underfull \hbox (badness 10000) in paragraph at lines 937--938
+Underfull \hbox (badness 10000) in paragraph at lines 926--927
+[]\T1/times/m/n/7.61 Cloudflare, Inc., ``Cloud-flare Tun-nel doc-u-men-ta-tion,
+'' 2024.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 926--927
+\T1/times/m/n/7.61 [On-line]. Avail-able: https://developers.cloudflare.com/clo
+udflare-
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 940--941
 []\T1/times/m/n/7.61 B. Black-s-hear, ``Frigate --- NVR with re-al-time lo-cal 
 ob-
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 937--938
+Underfull \hbox (badness 10000) in paragraph at lines 940--941
 \T1/times/m/n/7.61 ject de-tec-tion for IP cam-eras,'' 2024. [On-line]. Avail-a
 ble:
  []
 
 
-Underfull \hbox (badness 3199) in paragraph at lines 943--944
+Underfull \hbox (badness 3199) in paragraph at lines 946--947
 \T1/times/m/n/7.61 ``Tran-sCNN: Hy-brid CNN and trans-former mech-a-nism for su
 rveil-
  []
 
 
-Underfull \hbox (badness 4303) in paragraph at lines 943--944
+Underfull \hbox (badness 4303) in paragraph at lines 946--947
 \T1/times/m/n/7.61 lance anomaly de-tec-tion,'' \T1/times/n/it/7.61 IEEE Trans.
  Ind. In-for-mat.\T1/times/m/n/7.61 , 2022, doi:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 957--958
+Underfull \hbox (badness 10000) in paragraph at lines 960--961
 []\T1/times/m/n/7.61 Ring LLC, ``Ring Pro-tect plans,'' 2026. [On-line]. Avail-
 able:
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 961--962
+Underfull \hbox (badness 10000) in paragraph at lines 964--965
 []\T1/times/m/n/7.61 Google LLC, ``Google Home Pre-mium (for-merly Nest
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 961--962
+Underfull \hbox (badness 10000) in paragraph at lines 964--965
 \T1/times/m/n/7.61 Aware),'' Google Store, 2026. [On-line]. Avail-able:
  []
 
 
-Underfull \hbox (badness 1424) in paragraph at lines 963--964
+Underfull \hbox (badness 1424) in paragraph at lines 966--967
 []\T1/times/m/n/7.61 SimpliSafe, Inc., ``Out-door Se-cu-rity Cam-era Bun-dle,''
  prod-uct page,
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 963--964
+Underfull \hbox (badness 10000) in paragraph at lines 966--967
 \T1/times/m/n/7.61 2026. [On-line]. Avail-able: https://simplisafe.com/outdoor-
 security-
  []
 
 File: bullet.png Graphic file (type png)
 <use bullet.png>
-Package pdftex.def Info: bullet.png  used on input line 973.
+Package pdftex.def Info: bullet.png  used on input line 976.
 (pdftex.def)             Requested size: 5.0pt x 14.6871pt.
 File: notaglinelogo.png Graphic file (type png)
 <use notaglinelogo.png>
-Package pdftex.def Info: notaglinelogo.png  used on input line 975.
+Package pdftex.def Info: notaglinelogo.png  used on input line 978.
 (pdftex.def)             Requested size: 91.32pt x 23.1352pt.
 
 Overfull \hbox (505.12177pt too wide) has occurred while \output is active
@@ -1589,9 +1589,7 @@ Underfull \hbox (badness 10000) has occurred while \output is active
 []
  []
 
-[22
-
-] (./access.aux)
+[22] (./access.aux)
 
 LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
@@ -1603,7 +1601,7 @@ Here is how much of TeX's memory you used:
  25246 multiletter control sequences out of 15000+600000
  610684 words of font info for 193 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 72i,14n,76p,3382b,512s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 72i,14n,76p,3382b,510s stack positions out of 10000i,1000n,20000p,200000b,200000s
 {/usr/share/texlive/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/share/texliv
 e/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texm
 f-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/
@@ -1621,7 +1619,7 @@ rmata-condmedium.pfb><./t1-formata-italic.pfb><./t1-formata-medium.pfb><./t1-fo
 rmata-mediumitalic.pfb><./t1-formata-regular.pfb><./t1-giovannistd-bookitalic.p
 fb><./t1-times-bold.pfb><./t1-times-italic.pfb><./t1-times.pfb></usr/share/texl
 ive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb>
-Output written on access.pdf (22 pages, 5553502 bytes).
+Output written on access.pdf (22 pages, 5554634 bytes).
 PDF statistics:
  1497 PDF objects out of 1728 (max. 8388607)
  476 compressed objects within 5 object streams
