@@ -1,0 +1,59 @@
+{"kind": "login", "ok": true, "t": 1776501588.3998847}
+{"kind": "sys_log", "ts": 1776501573.0, "msg": "[WATCH] Person (0.90)", "t": 1776501609.9441981}
+{"kind": "sys_log", "ts": 1776501588.0, "msg": "Login: svc_eval", "t": 1776501609.9444025}
+{"kind": "sys_log", "ts": 1776501593.0, "msg": "OTP email sent to mgonugondlamanikanta@gmail.com", "t": 1776501609.9444625}
+{"kind": "sys_log", "ts": 1776501603.0, "msg": "[WATCH] Person (0.92)", "t": 1776501609.9445078}
+{"kind": "sys_log", "ts": 1776501633.0, "msg": "[WATCH] Person (0.94)", "t": 1776501670.010931}
+{"kind": "sys_log", "ts": 1776501663.0, "msg": "[WATCH] Person (0.88)", "t": 1776501670.0111387}
+{"kind": "sys_log", "ts": 1776501693.0, "msg": "[WATCH] Person (0.93)", "t": 1776501730.1018302}
+{"kind": "sys_log", "ts": 1776501723.0, "msg": "[WATCH] Person (0.85)", "t": 1776501730.102086}
+{"kind": "sys_log", "ts": 1776501753.0, "msg": "[WATCH] Person (0.90)", "t": 1776501790.1635647}
+{"kind": "sys_log", "ts": 1776501783.0, "msg": "[WATCH] Person (0.93)", "t": 1776501790.1639664}
+{"kind": "sys_log", "ts": 1776501797.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1776501857.736281}
+{"kind": "sys_log", "ts": 1776501797.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776501857.7364857}
+{"kind": "sys_log", "ts": 1776501797.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1776501857.7365346}
+{"kind": "sys_log", "ts": 1776501797.0, "msg": "Pipeline started.", "t": 1776501857.736575}
+{"kind": "sys_log", "ts": 1776501797.0, "msg": "[WATCH] Person (0.94)", "t": 1776501857.7366118}
+{"kind": "sys_log", "ts": 1776501827.0, "msg": "[WATCH] Person (0.90)", "t": 1776501857.736647}
+{"kind": "sys_log", "ts": 1776501857.0, "msg": "[WATCH] Person (0.82)", "t": 1776501917.7991242}
+{"kind": "sys_log", "ts": 1776501888.0, "msg": "[WATCH] Person (0.90)", "t": 1776501917.7993898}
+{"kind": "sys_log", "ts": 1776501894.0, "msg": "Login: svc_eval", "t": 1776501917.7994468}
+{"kind": "sys_log", "ts": 1776501918.0, "msg": "[WATCH] Person (0.82)", "t": 1776501977.8601255}
+{"kind": "sys_log", "ts": 1776501946.0, "msg": "Login: svc_eval", "t": 1776501977.860473}
+{"kind": "sys_log", "ts": 1776501946.0, "msg": "Mode dnd set to False by svc_eval", "t": 1776501977.860594}
+{"kind": "sys_log", "ts": 1776501946.0, "msg": "Mode idle set to False by svc_eval", "t": 1776501977.860665}
+{"kind": "sys_log", "ts": 1776501949.0, "msg": "[WATCH] Person (0.85)", "t": 1776501977.8607247}
+{"kind": "sys_log", "ts": 1776501979.0, "msg": "[WATCH] Person (0.90)", "t": 1776502037.9380405}
+{"kind": "sys_log", "ts": 1776502009.0, "msg": "[WATCH] Person (0.83)", "t": 1776502037.938242}
+{"kind": "sys_log", "ts": 1776502040.0, "msg": "[WATCH] Person (0.83)", "t": 1776502044.9429727}
+{"kind": "sys_log", "ts": 1776502045.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1776502106.0030787}
+{"kind": "sys_log", "ts": 1776502045.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776502106.003328}
+{"kind": "sys_log", "ts": 1776502045.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1776502106.003394}
+{"kind": "sys_log", "ts": 1776502045.0, "msg": "Pipeline started.", "t": 1776502106.0034451}
+{"kind": "sys_log", "ts": 1776502045.0, "msg": "[WATCH] Person (0.83)", "t": 1776502106.0034864}
+{"kind": "sys_log", "ts": 1776502075.0, "msg": "[WATCH] Person (0.88)", "t": 1776502106.0035295}
+{"kind": "sys_log", "ts": 1776502089.0, "msg": "Login: svc_eval", "t": 1776502106.0037847}
+{"kind": "sys_log", "ts": 1776502089.0, "msg": "Mode dnd set to False by svc_eval", "t": 1776502106.00387}
+{"kind": "sys_log", "ts": 1776502089.0, "msg": "Mode idle set to False by svc_eval", "t": 1776502106.003936}
+{"kind": "sys_log", "ts": 1776502089.0, "msg": "Mode privacy set to False by svc_eval", "t": 1776502106.0039911}
+{"kind": "sys_log", "ts": 1776502090.0, "msg": "Mode emergency set to False by svc_eval", "t": 1776502106.0040343}
+{"kind": "sys_log", "ts": 1776502090.0, "msg": "Mode email_off set to False by svc_eval", "t": 1776502106.0040836}
+{"kind": "sys_log", "ts": 1776502090.0, "msg": "Mode night set to False by svc_eval", "t": 1776502106.004127}
+{"kind": "sys_log", "ts": 1776502091.0, "msg": "Mode dnd set to False by svc_eval", "t": 1776502106.0041943}
+{"kind": "sys_log", "ts": 1776502091.0, "msg": "Mode idle set to False by svc_eval", "t": 1776502106.0043712}
+{"kind": "sys_log", "ts": 1776502105.0, "msg": "[WATCH] Person (0.92)", "t": 1776502165.5719192}
+{"kind": "sys_log", "ts": 1776502109.0, "msg": "Mode privacy set to False by svc_eval", "t": 1776502165.5724232}
+{"kind": "sys_log", "ts": 1776502121.0, "msg": "[EVAL_INJECT] Knife conf=0.92", "t": 1776502165.572569}
+{"kind": "sys_log", "ts": 1776502121.0, "msg": "Alert triggered.", "t": 1776502165.5726376}
+{"kind": "sys_log", "ts": 1776502135.0, "msg": "[WATCH] Person (0.92)", "t": 1776502165.5726936}
+{"kind": "sys_log", "ts": 1776502138.0, "msg": "Mode email_off set to False by svc_eval", "t": 1776502165.5727391}
+{"kind": "sys_log", "ts": 1776502148.0, "msg": "Mode night set to False by svc_eval", "t": 1776502165.5727808}
+{"kind": "sys_log", "ts": 1776502151.0, "msg": "Mode dnd set to False by svc_eval", "t": 1776502165.5728166}
+{"kind": "sys_log", "ts": 1776502151.0, "msg": "Mode idle set to False by svc_eval", "t": 1776502165.5728524}
+{"kind": "sys_log", "ts": 1776502151.0, "msg": "Mode privacy set to False by svc_eval", "t": 1776502165.5728867}
+{"kind": "sys_log", "ts": 1776502152.0, "msg": "Mode emergency set to False by svc_eval", "t": 1776502165.5729203}
+{"kind": "sys_log", "ts": 1776502152.0, "msg": "Mode email_off set to False by svc_eval", "t": 1776502165.572955}
+{"kind": "sys_log", "ts": 1776502152.0, "msg": "Mode night set to False by svc_eval", "t": 1776502165.572989}
+{"kind": "sys_log", "ts": 1776502153.0, "msg": "Mode idle set to True by svc_eval", "t": 1776502165.5730238}
+{"kind": "sys_log", "ts": 1776502165.0, "msg": "[WATCH] Person (0.90)", "t": 1776502225.657371}
+{"kind": "sys_log", "ts": 1776502195.0, "msg": "[WATCH] Person (0.92)", "t": 1776502225.6583223}

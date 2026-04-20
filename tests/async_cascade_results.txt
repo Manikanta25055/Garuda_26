@@ -1,0 +1,12 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.2, pytest-9.0.2, pluggy-1.6.0
+rootdir: /home/manikanta/Projects/Garuda_26
+configfile: pytest.ini
+plugins: anyio-4.12.1, asyncio-1.3.0, hypothesis-6.67.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collected 78 items / 7 deselected / 71 selected
+
+tests/test_async_cascade.py ............................                 [ 39%]
+tests/test_cascade.py ...........................................        [100%]
+
+======================= 71 passed, 7 deselected in 3.29s =======================

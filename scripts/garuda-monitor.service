@@ -1,0 +1,18 @@
+[Unit]
+Description=Garuda System Metrics Monitor (48h)
+After=network.target
+
+[Service]
+Type=simple
+User=manikanta
+WorkingDirectory=/home/manikanta/Projects/Garuda_26
+Environment=GARUDA_MON_USER=user
+Environment=GARUDA_MON_PASS=user
+ExecStart=/usr/bin/python3 /home/manikanta/Projects/Garuda_26/monitor_metrics.py --hours 48 --interval 10
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+Setting up the environment...
+Setting up the environment for hailo-tappas-core...
+TAPPAS_VERSION is 3.31.0. Proceeding...
+You are not in the venv_hailo_rpi5_examples virtual environment.
+Virtual environment exists. Activating...
+TAPPAS_POST_PROC_DIR set to /usr/lib/aarch64-linux-gnu/hailo/tappas/post_processes
+Device Architecture is set to: HAILO8L
+ERROR:    [Errno 98] error while attempting to bind on address ('127.0.0.1', 8080): address already in use
+
+============================================================
+  Garuda Web UI is running at http://localhost:8080
+  (Cloudflare tunnel handles external access)
+============================================================
+
+[HailoRT] [error] CHECK failed - Failed to create vdevice. there are not enough free devices. requested: 1, found: 0
+[HailoRT] [error] CHECK_SUCCESS failed with status=HAILO_OUT_OF_PHYSICAL_DEVICES(74)
+[HailoRT] [error] CHECK_SUCCESS failed with status=HAILO_OUT_OF_PHYSICAL_DEVICES(74)
+[HailoRT] [error] CHECK_SUCCESS failed with status=HAILO_OUT_OF_PHYSICAL_DEVICES(74)
+[HailoRT] [error] CHECK_SUCCESS failed with status=HAILO_OUT_OF_PHYSICAL_DEVICES(74)
+CHECK_EXPECTED failed with status=74

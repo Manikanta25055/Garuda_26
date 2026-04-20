@@ -1,0 +1,32 @@
+[load] t+  30s inject -> 200
+[warn] clear emergency: 429 Client Error: Too Many Requests for url: http://localhost:8080/api/modes
+[mode] t+   0s window=baseline dur=60
+[mode] t+  60s window=idle dur=120
+[load] t+  90s chat -> 200
+[load] t+ 150s inject -> 200
+[mode] t+ 180s window=dnd dur=120
+[load] t+ 210s inject -> 200
+[load] t+ 270s chat -> 200
+[warn] clear night: 429 Client Error: Too Many Requests for url: http://localhost:8080/api/modes
+Exception in thread Thread-2 (schedule_modes):
+Traceback (most recent call last):
+  File "/usr/lib/python3.11/threading.py", line 1038, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.11/threading.py", line 975, in run
+    self._target(*self._args, **self._kwargs)
+  File "/home/manikanta/Projects/Garuda_26/evaluation/fps_timeseries/run_trace.py", line 184, in schedule_modes
+    apply_mode_window(session, args.base, name)
+  File "/home/manikanta/Projects/Garuda_26/evaluation/fps_timeseries/run_trace.py", line 89, in apply_mode_window
+    set_mode(session, base, "privacy", True)
+  File "/home/manikanta/Projects/Garuda_26/evaluation/fps_timeseries/run_trace.py", line 63, in set_mode
+    r.raise_for_status()
+  File "/usr/lib/python3/dist-packages/requests/models.py", line 1021, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 429 Client Error: Too Many Requests for url: http://localhost:8080/api/modes
+[load] t+ 330s inject -> 200
+[load] t+ 390s chat -> 200
+[load] t+ 450s inject -> 200
+[load] t+ 510s inject -> 200
+[load] t+ 570s chat -> 200
+[load] t+ 630s inject -> 200
+[done] wrote trace.csv (39428 bytes) and events.csv

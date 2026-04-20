@@ -1,0 +1,66 @@
+{"kind": "danger", "ts": 1776665743.0, "label": "Knife", "conf": 0.87, "t": 1776665762.8164306}
+{"kind": "danger", "ts": 1776670300.0, "label": "Knife", "conf": 0.84, "t": 1776670332.168519}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776670300.0, "label": "Knife", "conf": 0.84, "t": 1776670332.168519}, "email_ts": 1776670300.0, "latency_s": 0.0, "t": 1776670332.3656945}
+{"kind": "danger", "ts": 1776670409.0, "label": "Knife", "conf": 0.82, "t": 1776670452.2938843}
+{"kind": "danger", "ts": 1776674023.0, "label": "Knife", "conf": 0.83, "t": 1776674076.64962}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776674023.0, "label": "Knife", "conf": 0.83, "t": 1776674076.64962}, "email_ts": 1776674023.0, "latency_s": 0.0, "t": 1776674076.8101916}
+{"kind": "danger", "ts": 1776674085.0, "label": "Knife", "conf": 0.84, "t": 1776674136.693752}
+{"kind": "danger", "ts": 1776674150.0, "label": "Knife", "conf": 0.82, "t": 1776674196.750032}
+{"kind": "danger", "ts": 1776674241.0, "label": "Knife", "conf": 0.84, "t": 1776674256.8004136}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776674150.0, "label": "Knife", "conf": 0.82, "t": 1776674196.750032}, "email_ts": 1776674242.0, "latency_s": 92.0, "t": 1776674256.9807525}
+{"kind": "danger", "ts": 1776674304.0, "label": "Knife", "conf": 0.83, "t": 1776674316.85371}
+{"kind": "danger", "ts": 1776674373.0, "label": "Knife", "conf": 0.84, "t": 1776674376.9073517}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776674304.0, "label": "Knife", "conf": 0.83, "t": 1776674316.85371}, "email_ts": 1776674422.0, "latency_s": 118.0, "t": 1776674436.6660423}
+{"kind": "danger", "ts": 1776674478.0, "label": "Knife", "conf": 0.83, "t": 1776674497.0162408}
+{"kind": "danger", "ts": 1776674557.0, "label": "Knife", "conf": 0.82, "t": 1776674616.6553643}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776674557.0, "label": "Knife", "conf": 0.82, "t": 1776674616.6553643}, "email_ts": 1776674611.0, "latency_s": 54.0, "t": 1776674616.8461866}
+{"kind": "danger", "ts": 1776674664.0, "label": "Knife", "conf": 0.83, "t": 1776674676.7303693}
+{"kind": "danger", "ts": 1776674734.0, "label": "Knife", "conf": 0.83, "t": 1776674736.7792664}
+{"kind": "danger", "ts": 1776674855.0, "label": "Knife", "conf": 0.83, "t": 1776674856.8819907}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776674855.0, "label": "Knife", "conf": 0.83, "t": 1776674856.8819907}, "email_ts": 1776674855.0, "latency_s": 0.0, "t": 1776674857.1011095}
+{"kind": "danger", "ts": 1776674920.0, "label": "Knife", "conf": 0.83, "t": 1776674976.9978592}
+{"kind": "danger", "ts": 1776674982.0, "label": "Knife", "conf": 0.83, "t": 1776675037.052392}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776674982.0, "label": "Knife", "conf": 0.83, "t": 1776675037.052392}, "email_ts": 1776675050.0, "latency_s": 68.0, "t": 1776675096.8493881}
+{"kind": "danger", "ts": 1776675050.0, "label": "Knife", "conf": 0.82, "t": 1776675097.0968418}
+{"kind": "danger", "ts": 1776675122.0, "label": "Knife", "conf": 0.85, "t": 1776675156.6415613}
+{"kind": "danger", "ts": 1776675184.0, "label": "Knife", "conf": 0.84, "t": 1776675216.717633}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776675184.0, "label": "Knife", "conf": 0.84, "t": 1776675216.717633}, "email_ts": 1776675253.0, "latency_s": 69.0, "t": 1776675302.026822}
+{"kind": "danger", "ts": 1776675253.0, "label": "Knife", "conf": 0.83, "t": 1776675302.2871904}
+{"kind": "danger", "ts": 1776675410.0, "label": "Knife", "conf": 0.83, "t": 1776675431.923247}
+{"kind": "danger", "ts": 1776675547.0, "label": "Knife", "conf": 0.83, "t": 1776675551.5318584}
+{"kind": "danger", "ts": 1776675667.0, "label": "Knife", "conf": 0.83, "t": 1776675671.6405644}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776675547.0, "label": "Knife", "conf": 0.83, "t": 1776675551.5318584}, "email_ts": 1776675667.0, "latency_s": 120.0, "t": 1776675671.8527477}
+{"kind": "danger", "ts": 1776675882.0, "label": "Knife", "conf": 0.85, "t": 1776675922.8440373}
+{"kind": "danger", "ts": 1776676113.0, "label": "Knife", "conf": 0.84, "t": 1776676162.5337224}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776676113.0, "label": "Knife", "conf": 0.84, "t": 1776676162.5337224}, "email_ts": 1776676113.0, "latency_s": 0.0, "t": 1776676162.8645678}
+{"kind": "danger", "ts": 1776676179.0, "label": "Knife", "conf": 0.83, "t": 1776676222.5763843}
+{"kind": "danger", "ts": 1776676255.0, "label": "Knife", "conf": 0.83, "t": 1776676282.6338232}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776676255.0, "label": "Knife", "conf": 0.83, "t": 1776676282.6338232}, "email_ts": 1776676301.0, "latency_s": 46.0, "t": 1776676342.5325499}
+{"kind": "danger", "ts": 1776676357.0, "label": "Knife", "conf": 0.83, "t": 1776676402.7334998}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776676357.0, "label": "Knife", "conf": 0.83, "t": 1776676402.7334998}, "email_ts": 1776676422.0, "latency_s": 65.0, "t": 1776676467.6492784}
+{"kind": "danger", "ts": 1776676422.0, "label": "Knife", "conf": 0.84, "t": 1776676467.7898033}
+{"kind": "danger", "ts": 1776676486.0, "label": "Knife", "conf": 0.83, "t": 1776676527.845786}
+{"kind": "danger", "ts": 1776676580.0, "label": "Knife", "conf": 0.83, "t": 1776676587.9156644}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776676580.0, "label": "Knife", "conf": 0.83, "t": 1776676587.9156644}, "email_ts": 1776676655.0, "latency_s": 75.0, "t": 1776676707.9251122}
+{"kind": "danger", "ts": 1776676655.0, "label": "Knife", "conf": 0.83, "t": 1776676708.0154417}
+{"kind": "danger", "ts": 1776676726.0, "label": "Knife", "conf": 0.83, "t": 1776676768.0605435}
+{"kind": "danger", "ts": 1776676843.0, "label": "Knife", "conf": 0.83, "t": 1776676887.693781}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776676726.0, "label": "Knife", "conf": 0.83, "t": 1776676768.0605435}, "email_ts": 1776676843.0, "latency_s": 117.0, "t": 1776676888.1089785}
+{"kind": "danger", "ts": 1776676956.0, "label": "Knife", "conf": 0.85, "t": 1776677007.7895281}
+{"kind": "danger", "ts": 1776677135.0, "label": "Knife", "conf": 0.84, "t": 1776677187.9458344}
+{"kind": "danger", "ts": 1776677235.0, "label": "Knife", "conf": 0.83, "t": 1776677247.9984527}
+{"kind": "danger", "ts": 1776677302.0, "label": "Knife", "conf": 0.82, "t": 1776677308.0489357}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776677235.0, "label": "Knife", "conf": 0.83, "t": 1776677247.9984527}, "email_ts": 1776677317.0, "latency_s": 82.0, "t": 1776677368.094701}
+{"kind": "danger", "ts": 1776677373.0, "label": "Knife", "conf": 0.84, "t": 1776677428.1567621}
+{"kind": "danger", "ts": 1776677438.0, "label": "Knife", "conf": 0.85, "t": 1776677487.7099166}
+{"kind": "danger", "ts": 1776677593.0, "label": "Knife", "conf": 0.83, "t": 1776677607.8415642}
+{"kind": "danger", "ts": 1776677679.0, "label": "Knife", "conf": 0.84, "t": 1776677727.9536433}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776677679.0, "label": "Knife", "conf": 0.84, "t": 1776677727.9536433}, "email_ts": 1776677775.0, "latency_s": 96.0, "t": 1776677787.9740286}
+{"kind": "danger", "ts": 1776677741.0, "label": "Knife", "conf": 0.83, "t": 1776677788.0138547}
+{"kind": "danger", "ts": 1776677802.0, "label": "Knife", "conf": 0.85, "t": 1776677848.0580175}
+{"kind": "danger", "ts": 1776677863.0, "label": "Knife", "conf": 0.82, "t": 1776677908.122951}
+{"kind": "danger", "ts": 1776677933.0, "label": "Knife", "conf": 0.83, "t": 1776677967.6849475}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776677863.0, "label": "Knife", "conf": 0.82, "t": 1776677908.122951}, "email_ts": 1776677970.0, "latency_s": 107.0, "t": 1776678027.7342453}
+{"kind": "danger", "ts": 1776678020.0, "label": "Knife", "conf": 0.83, "t": 1776678027.7423565}
+{"kind": "danger", "ts": 1776678179.0, "label": "Knife", "conf": 0.83, "t": 1776678207.8977764}
+                                                                                                

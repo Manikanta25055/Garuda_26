@@ -1,0 +1,6 @@
+[19:08:18] evaluation running; deadline in 24.0 h
+[19:16:28] watchdog: server back up after 2 failures
+[19:31:19] watchdog: server back up after 1 failures
+[19:32:39] watchdog: server back up after 1 failures
+[19:36:48] finalising
+[19:36:48] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_190817_61636b/summary.json

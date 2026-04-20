@@ -1,0 +1,58 @@
+{"kind": "login", "ok": true, "t": 1776500106.169335}
+{"kind": "sys_log", "ts": 1776500102.0, "msg": "[WATCH] Person (0.87)", "t": 1776500134.7249687}
+{"kind": "sys_log", "ts": 1776500106.0, "msg": "Login: user", "t": 1776500134.7251625}
+{"kind": "sys_log", "ts": 1776500132.0, "msg": "[WATCH] Person (0.83)", "t": 1776500134.7252254}
+{"kind": "sys_log", "ts": 1776500165.0, "msg": "[WATCH] Person (0.82)", "t": 1776500194.800902}
+{"kind": "sys_log", "ts": 1776500197.0, "msg": "[WATCH] Person (0.83)", "t": 1776500254.8460443}
+{"kind": "sys_log", "ts": 1776500227.0, "msg": "[WATCH] Person (0.88)", "t": 1776500254.8462257}
+{"kind": "sys_log", "ts": 1776500259.0, "msg": "[WATCH] Person (0.83)", "t": 1776500314.888369}
+{"kind": "sys_log", "ts": 1776500290.0, "msg": "[WATCH] Person (0.82)", "t": 1776500314.8885777}
+{"kind": "sys_log", "ts": 1776500321.0, "msg": "[WATCH] Person (0.83)", "t": 1776500374.9432678}
+{"kind": "sys_log", "ts": 1776500351.0, "msg": "[WATCH] Person (0.89)", "t": 1776500374.9435878}
+{"kind": "sys_log", "ts": 1776500381.0, "msg": "[WATCH] Person (0.92)", "t": 1776500435.00429}
+{"kind": "sys_log", "ts": 1776500411.0, "msg": "[WATCH] Person (0.91)", "t": 1776500435.004588}
+{"kind": "sys_log", "ts": 1776500441.0, "msg": "[WATCH] Person (0.82)", "t": 1776500495.0531917}
+{"kind": "sys_log", "ts": 1776500471.0, "msg": "[WATCH] Person (0.85)", "t": 1776500495.0533698}
+{"kind": "sys_log", "ts": 1776500501.0, "msg": "[WATCH] Person (0.89)", "t": 1776500555.1343703}
+{"kind": "sys_log", "ts": 1776500531.0, "msg": "[WATCH] Person (0.86)", "t": 1776500555.134732}
+{"kind": "sys_log", "ts": 1776500561.0, "msg": "[WATCH] Person (0.90)", "t": 1776500615.1954021}
+{"kind": "sys_log", "ts": 1776500591.0, "msg": "[WATCH] Person (0.86)", "t": 1776500615.1958127}
+{"kind": "sys_log", "ts": 1776500621.0, "msg": "[WATCH] Person (0.88)", "t": 1776500674.7582307}
+{"kind": "sys_log", "ts": 1776500651.0, "msg": "[WATCH] Person (0.93)", "t": 1776500674.759095}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb586d290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1776500696.595773}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb588a9d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1776500696.873734}
+{"kind": "sys_log", "ts": 1776500698.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1776500750.8351204}
+{"kind": "sys_log", "ts": 1776500698.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776500750.8354154}
+{"kind": "sys_log", "ts": 1776500698.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1776500750.8355114}
+{"kind": "sys_log", "ts": 1776500698.0, "msg": "Pipeline started.", "t": 1776500750.8355858}
+{"kind": "sys_log", "ts": 1776500714.0, "msg": "[WATCH] Person (0.85)", "t": 1776500750.8356528}
+{"kind": "sys_log", "ts": 1776500744.0, "msg": "[WATCH] Person (0.92)", "t": 1776500750.8357098}
+{"kind": "sys_log", "ts": 1776500751.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1776500811.897411}
+{"kind": "sys_log", "ts": 1776500751.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776500811.8975844}
+{"kind": "sys_log", "ts": 1776500751.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1776500811.8976345}
+{"kind": "sys_log", "ts": 1776500751.0, "msg": "Pipeline started.", "t": 1776500811.8976896}
+{"kind": "sys_log", "ts": 1776500754.0, "msg": "[WATCH] Person (0.83)", "t": 1776500811.8977337}
+{"kind": "sys_log", "ts": 1776500777.0, "msg": "[EVAL_INJECT] Knife conf=0.88", "t": 1776500811.8977704}
+{"kind": "sys_log", "ts": 1776500777.0, "msg": "Alert triggered.", "t": 1776500811.8978062}
+{"kind": "sys_log", "ts": 1776500777.0, "msg": "[EVAL_TAG] smoke_test \u2014 post-restart", "t": 1776500811.8978431}
+{"kind": "sys_log", "ts": 1776500784.0, "msg": "[WATCH] Person (0.94)", "t": 1776500811.8978937}
+{"kind": "sys_log", "ts": 1776500794.0, "msg": "Login: user", "t": 1776500811.8979282}
+{"kind": "sys_log", "ts": 1776500889.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1776500950.0006428}
+{"kind": "sys_log", "ts": 1776500889.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776500950.000818}
+{"kind": "sys_log", "ts": 1776500889.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1776500950.0008698}
+{"kind": "sys_log", "ts": 1776500889.0, "msg": "Pipeline started.", "t": 1776500950.0009124}
+{"kind": "sys_log", "ts": 1776500909.0, "msg": "Login: svc_eval", "t": 1776500950.00095}
+{"kind": "sys_log", "ts": 1776500976.0, "msg": "[WATCH] Person (0.84)", "t": 1776501010.054226}
+{"kind": "sys_log", "ts": 1776501037.0, "msg": "[WATCH] Person (0.88)", "t": 1776501070.1102905}
+{"kind": "sys_log", "ts": 1776501212.0, "msg": "[WATCH] Person (0.89)", "t": 1776501250.2982867}
+{"kind": "sys_log", "ts": 1776501243.0, "msg": "[WATCH] Person (0.93)", "t": 1776501250.2986526}
+{"kind": "sys_log", "ts": 1776501273.0, "msg": "[WATCH] Person (0.93)", "t": 1776501309.8462532}
+{"kind": "sys_log", "ts": 1776501303.0, "msg": "[WATCH] Person (0.94)", "t": 1776501309.8465223}
+{"kind": "sys_log", "ts": 1776501333.0, "msg": "[WATCH] Person (0.92)", "t": 1776501369.9136574}
+{"kind": "sys_log", "ts": 1776501363.0, "msg": "[WATCH] Person (0.92)", "t": 1776501369.9138534}
+{"kind": "sys_log", "ts": 1776501393.0, "msg": "[WATCH] Person (0.96)", "t": 1776501429.9711006}
+{"kind": "sys_log", "ts": 1776501423.0, "msg": "[WATCH] Person (0.85)", "t": 1776501429.9713519}
+{"kind": "sys_log", "ts": 1776501453.0, "msg": "[WATCH] Person (0.96)", "t": 1776501490.0580108}
+{"kind": "sys_log", "ts": 1776501483.0, "msg": "[WATCH] Person (0.96)", "t": 1776501490.058731}
+{"kind": "sys_log", "ts": 1776501513.0, "msg": "[WATCH] Person (0.92)", "t": 1776501550.1306448}
+{"kind": "sys_log", "ts": 1776501543.0, "msg": "[WATCH] Person (0.92)", "t": 1776501550.13098}

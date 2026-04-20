@@ -1,0 +1,4 @@
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776501590.4567797}
+{"engine": "snapshot", "ok": true, "t": 1776501590.4691377}
+{"engine": "email", "ok": true, "t": 1776501593.662397}
+{"engine": "chat", "ok": true, "latency_s": 0.9201712608337402, "body": "{\"response\":\"Currently, only **Email-Off** mode is active, which means Garuda will not send email alerts, but local alarms will still sound.\"}", "t": 1776501594.5831342}

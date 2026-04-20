@@ -1,0 +1,52 @@
+[13:42:31] evaluation running; deadline in 24.0 h
+[13:43:36] finalising
+[13:43:36] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_134231_4f5cd0/summary.json
+[13:45:06] evaluation running; deadline in 24.0 h
+[13:55:06] watchdog: server back up after 1 failures
+[14:09:46] finalising
+[14:09:46] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_134505_93a843/summary.json
+[14:09:48] evaluation running; deadline in 24.0 h
+[14:18:29] watchdog: server back up after 1 failures
+[14:19:29] watchdog: server back up after 1 failures
+[14:20:33] finalising
+[14:20:33] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_140948_0b4b61/summary.json
+[14:20:34] evaluation running; deadline in 24.0 h
+[14:21:34] watchdog: server back up after 2 failures
+[14:47:55] watchdog: server back up after 1 failures
+[16:42:10] watchdog: server back up after 1 failures
+[17:54:02] watchdog: server back up after 1 failures
+[18:08:32] watchdog: server back up after 1 failures
+[18:22:33] watchdog: server back up after 1 failures
+[18:42:44] watchdog: server back up after 2 failures
+[18:52:04] watchdog: server back up after 1 failures
+[18:53:34] watchdog: server back up after 1 failures
+[18:54:54] watchdog: server back up after 1 failures
+[19:06:51] finalising
+[19:06:51] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_142034_bb3a91/summary.json
+[19:08:18] evaluation running; deadline in 24.0 h
+[19:16:28] watchdog: server back up after 2 failures
+[19:31:19] watchdog: server back up after 1 failures
+[19:32:39] watchdog: server back up after 1 failures
+[19:36:48] finalising
+[19:36:48] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_190817_61636b/summary.json
+[19:37:15] evaluation running; deadline in 24.0 h
+[21:24:39] watchdog: server back up after 1 failures
+[22:56:01] finalising
+[22:56:01] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260418_193715_d0f775/summary.json
+[23:08:53] evaluation running; deadline in 24.0 h
+[23:42:04] watchdog: server back up after 1 failures
+[23:57:25] watchdog: server back up after 1 failures
+[00:35:56] watchdog: server back up after 1 failures
+[00:59:57] watchdog: server back up after 1 failures
+[01:09:57] watchdog: server back up after 1 failures
+[05:56:03] evaluation running; deadline in 24.0 h
+[12:56:17] watchdog: server back up after 1 failures
+[13:27:48] watchdog: server back up after 1 failures
+[17:56:05] deadman test: suppressing heartbeat for 240 s
+[18:00:05] deadman test: heartbeat resumed
+[05:56:03] finalising
+[05:56:03] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260419_055603_3630eb/summary.json
+[10:57:23] evaluation running; deadline in 24.0 h
+[12:11:58] watchdog: server back up after 1 failures
+[15:14:28] evaluation running; deadline in 24.0 h
+[00:03:38] watchdog: server back up after 1 failures

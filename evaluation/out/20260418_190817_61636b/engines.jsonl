@@ -1,0 +1,4 @@
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776519500.7592127}
+{"engine": "snapshot", "ok": true, "t": 1776519500.777504}
+{"engine": "email", "ok": true, "t": 1776519504.124148}
+{"engine": "chat", "ok": true, "latency_s": 0.7131116390228271, "body": "{\"response\":\"**No modes are currently active**. The system is running with its default settings.\"}", "t": 1776519504.837467}

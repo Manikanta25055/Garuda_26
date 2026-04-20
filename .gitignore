@@ -57,3 +57,17 @@ Documents/Knives*/
 Documents/scissors_dataset/
 Documents/openimages_dataset/
 Documents/__MACOSX/
+tmp/
+
+# Runtime logs and metrics
+metrics_log.csv
+monitor_metrics.log
+system_logs/
+
+# Temporary files
+tmp/
+*.bak_eval
+clip_*.mp4
+
+# Claude Code dev config
+.claude/

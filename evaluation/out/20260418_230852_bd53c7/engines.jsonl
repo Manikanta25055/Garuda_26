@@ -1,0 +1,31 @@
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776533935.1707625}
+{"engine": "snapshot", "ok": true, "t": 1776533935.1781456}
+{"engine": "email", "ok": true, "t": 1776533938.6338472}
+{"engine": "chat", "ok": true, "latency_s": 0.7010371685028076, "body": "{\"response\":\"Currently, **Privacy** mode is active, which masks detected objects on the camera feed for privacy.\"}", "t": 1776533939.3350837}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776535741.4430945}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776537543.5492446}
+{"engine": "snapshot", "ok": true, "t": 1776537543.5644457}
+{"engine": "chat", "ok": true, "latency_s": 0.7137269973754883, "body": "{\"response\":\"The **Privacy** mode is currently active, which means detected objects on the camera feed are masked for privacy.\"}", "t": 1776537544.2784162}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776539346.3750098}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776541148.4634736}
+{"engine": "snapshot", "ok": true, "t": 1776541148.4790776}
+{"engine": "chat", "ok": true, "latency_s": 0.8115177154541016, "body": "{\"response\":\"The **Privacy** mode is currently active, which means detected objects on the camera feed are masked for privacy.\"}", "t": 1776541149.2908769}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776542951.3674078}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776544753.4448977}
+{"engine": "snapshot", "ok": true, "t": 1776544753.4546518}
+{"engine": "chat", "ok": true, "latency_s": 0.7374787330627441, "body": "{\"response\":\"**Privacy** mode is currently active, which masks detected objects on the camera feed for privacy.\"}", "t": 1776544754.192449}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776546556.2526386}
+{"engine": "email", "ok": true, "t": 1776548339.4948483}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776548361.5085573}
+{"engine": "snapshot", "ok": true, "t": 1776548361.5155644}
+{"engine": "chat", "ok": true, "latency_s": 0.6420304775238037, "body": "{\"response\":\"The **Privacy** mode is currently active, which means detected objects on the camera feed are masked for privacy.\"}", "t": 1776548362.1580112}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776550164.2612004}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776551966.3703425}
+{"engine": "snapshot", "ok": true, "t": 1776551966.3766515}
+{"engine": "chat", "ok": true, "latency_s": 0.6137025356292725, "body": "{\"response\":\"The **Privacy** mode is currently active, which masks detected objects on the camera feed for privacy.\"}", "t": 1776551966.9905062}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776553769.1006052}
+{"engine": "clip", "ok": true, "start": true, "stop": true, "t": 1776555547.2138765}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776555569.2287674}
+{"engine": "snapshot", "ok": true, "t": 1776555569.2335389}
+{"engine": "chat", "ok": true, "latency_s": 0.6894323825836182, "body": "{\"response\":\"**Privacy mode** is currently active, which means detected objects are masked on the camera feed for privacy.\"}", "t": 1776555569.923203}
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776557372.0174189}

@@ -1,0 +1,263 @@
+{"kind": "login", "ok": true, "t": 1776521235.570014}
+{"kind": "sys_log", "ts": 1776521232.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1776521292.6434379}
+{"kind": "sys_log", "ts": 1776521232.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776521292.6439548}
+{"kind": "sys_log", "ts": 1776521232.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1776521292.6440852}
+{"kind": "sys_log", "ts": 1776521232.0, "msg": "Pipeline started.", "t": 1776521292.6441343}
+{"kind": "sys_log", "ts": 1776521232.0, "msg": "[WATCH] Person (0.86)", "t": 1776521292.6441772}
+{"kind": "sys_log", "ts": 1776521235.0, "msg": "Login: svc_eval", "t": 1776521292.6442146}
+{"kind": "sys_log", "ts": 1776521235.0, "msg": "Login: user", "t": 1776521292.64425}
+{"kind": "sys_log", "ts": 1776521241.0, "msg": "OTP email sent to mgonugondlamanikanta@gmail.com", "t": 1776521292.6442873}
+{"kind": "sys_log", "ts": 1776521262.0, "msg": "[WATCH] Person (0.89)", "t": 1776521292.6443229}
+{"kind": "sys_log", "ts": 1776521292.0, "msg": "[WATCH] Person (0.89)", "t": 1776521352.7036932}
+{"kind": "sys_log", "ts": 1776521322.0, "msg": "[WATCH] Person (0.92)", "t": 1776521352.7042177}
+{"kind": "sys_log", "ts": 1776521352.0, "msg": "[WATCH] Person (0.91)", "t": 1776521412.7603047}
+{"kind": "sys_log", "ts": 1776521382.0, "msg": "[WATCH] Person (0.92)", "t": 1776521412.7609873}
+{"kind": "sys_log", "ts": 1776521412.0, "msg": "[WATCH] Person (0.88)", "t": 1776521472.830496}
+{"kind": "sys_log", "ts": 1776521442.0, "msg": "[WATCH] Person (0.90)", "t": 1776521472.8307412}
+{"kind": "sys_log", "ts": 1776521472.0, "msg": "[WATCH] Person (0.86)", "t": 1776521532.8944044}
+{"kind": "sys_log", "ts": 1776521502.0, "msg": "[WATCH] Person (0.88)", "t": 1776521532.8946252}
+{"kind": "sys_log", "ts": 1776521532.0, "msg": "[WATCH] Person (0.92)", "t": 1776521592.9579532}
+{"kind": "sys_log", "ts": 1776521562.0, "msg": "[WATCH] Person (0.91)", "t": 1776521592.9582183}
+{"kind": "sys_log", "ts": 1776521592.0, "msg": "[WATCH] Person (0.92)", "t": 1776521652.535058}
+{"kind": "sys_log", "ts": 1776521623.0, "msg": "[WATCH] Person (0.96)", "t": 1776521652.5353377}
+{"kind": "sys_log", "ts": 1776521653.0, "msg": "[WATCH] Person (0.96)", "t": 1776521712.5870228}
+{"kind": "sys_log", "ts": 1776521683.0, "msg": "[WATCH] Person (0.90)", "t": 1776521712.5872817}
+{"kind": "sys_log", "ts": 1776521713.0, "msg": "[WATCH] Person (0.88)", "t": 1776521772.6381238}
+{"kind": "sys_log", "ts": 1776521743.0, "msg": "[WATCH] Person (0.95)", "t": 1776521772.6382868}
+{"kind": "sys_log", "ts": 1776521773.0, "msg": "[WATCH] Person (0.94)", "t": 1776521832.7022123}
+{"kind": "sys_log", "ts": 1776521803.0, "msg": "[WATCH] Person (0.91)", "t": 1776521832.7024167}
+{"kind": "sys_log", "ts": 1776521833.0, "msg": "[WATCH] Person (0.91)", "t": 1776521892.752008}
+{"kind": "sys_log", "ts": 1776521863.0, "msg": "[WATCH] Person (0.91)", "t": 1776521892.7527864}
+{"kind": "sys_log", "ts": 1776521893.0, "msg": "[WATCH] Person (0.91)", "t": 1776521952.7985096}
+{"kind": "sys_log", "ts": 1776521923.0, "msg": "[WATCH] Person (0.91)", "t": 1776521952.7987263}
+{"kind": "sys_log", "ts": 1776521953.0, "msg": "[WATCH] Person (0.89)", "t": 1776522012.850306}
+{"kind": "sys_log", "ts": 1776521983.0, "msg": "[WATCH] Person (0.92)", "t": 1776522012.8506835}
+{"kind": "sys_log", "ts": 1776522013.0, "msg": "[WATCH] Person (0.89)", "t": 1776522072.9139557}
+{"kind": "sys_log", "ts": 1776522043.0, "msg": "[WATCH] Person (0.84)", "t": 1776522072.9142127}
+{"kind": "sys_log", "ts": 1776522073.0, "msg": "[WATCH] Person (0.88)", "t": 1776522132.9782083}
+{"kind": "sys_log", "ts": 1776522103.0, "msg": "[WATCH] Person (0.90)", "t": 1776522132.978687}
+{"kind": "reauth", "ok": true, "t": 1776522137.2358875}
+{"kind": "sys_log", "ts": 1776522133.0, "msg": "[WATCH] Person (0.89)", "t": 1776522192.5435865}
+{"kind": "sys_log", "ts": 1776522137.0, "msg": "Login: svc_eval", "t": 1776522192.5437627}
+{"kind": "sys_log", "ts": 1776522167.0, "msg": "[WATCH] Person (0.87)", "t": 1776522192.5438178}
+{"kind": "sys_log", "ts": 1776522197.0, "msg": "[WATCH] Person (0.95)", "t": 1776522252.603421}
+{"kind": "sys_log", "ts": 1776522227.0, "msg": "[WATCH] Person (0.96)", "t": 1776522252.603608}
+{"kind": "sys_log", "ts": 1776522257.0, "msg": "[WATCH] Person (0.88)", "t": 1776522312.6658092}
+{"kind": "sys_log", "ts": 1776522287.0, "msg": "[WATCH] Person (0.88)", "t": 1776522312.6659951}
+{"kind": "sys_log", "ts": 1776522317.0, "msg": "[WATCH] Person (0.83)", "t": 1776522372.716703}
+{"kind": "sys_log", "ts": 1776522347.0, "msg": "[WATCH] Person (0.88)", "t": 1776522372.7169425}
+{"kind": "sys_log", "ts": 1776522377.0, "msg": "[WATCH] Person (0.87)", "t": 1776522432.7719734}
+{"kind": "sys_log", "ts": 1776522407.0, "msg": "[WATCH] Person (0.96)", "t": 1776522432.7724001}
+{"kind": "sys_log", "ts": 1776522437.0, "msg": "[WATCH] Person (0.96)", "t": 1776522492.8382456}
+{"kind": "sys_log", "ts": 1776522467.0, "msg": "[WATCH] Person (0.96)", "t": 1776522492.839243}
+{"kind": "sys_log", "ts": 1776522497.0, "msg": "[WATCH] Person (0.95)", "t": 1776522552.8802035}
+{"kind": "sys_log", "ts": 1776522527.0, "msg": "[WATCH] Person (0.91)", "t": 1776522552.8809671}
+{"kind": "sys_log", "ts": 1776522557.0, "msg": "[WATCH] Person (0.96)", "t": 1776522612.9484596}
+{"kind": "sys_log", "ts": 1776522587.0, "msg": "[WATCH] Person (0.94)", "t": 1776522612.9489374}
+{"kind": "sys_log", "ts": 1776522617.0, "msg": "[WATCH] Person (0.93)", "t": 1776522672.5046968}
+{"kind": "sys_log", "ts": 1776522647.0, "msg": "[WATCH] Person (0.91)", "t": 1776522672.5049014}
+{"kind": "sys_log", "ts": 1776522677.0, "msg": "[WATCH] Person (0.94)", "t": 1776522732.5458417}
+{"kind": "sys_log", "ts": 1776522707.0, "msg": "[WATCH] Person (0.93)", "t": 1776522732.5460467}
+{"kind": "sys_log", "ts": 1776522737.0, "msg": "[WATCH] Person (0.93)", "t": 1776522792.58645}
+{"kind": "sys_log", "ts": 1776522767.0, "msg": "[WATCH] Person (0.88)", "t": 1776522792.5866773}
+{"kind": "sys_log", "ts": 1776522797.0, "msg": "[WATCH] Person (0.91)", "t": 1776522852.642993}
+{"kind": "sys_log", "ts": 1776522827.0, "msg": "[WATCH] Person (0.84)", "t": 1776522852.6437635}
+{"kind": "sys_log", "ts": 1776522857.0, "msg": "[WATCH] Person (0.94)", "t": 1776522912.6982155}
+{"kind": "sys_log", "ts": 1776522887.0, "msg": "[WATCH] Person (0.92)", "t": 1776522912.6990814}
+{"kind": "sys_log", "ts": 1776522917.0, "msg": "[WATCH] Person (0.86)", "t": 1776522972.7614872}
+{"kind": "sys_log", "ts": 1776522947.0, "msg": "[WATCH] Person (0.90)", "t": 1776522972.7617064}
+{"kind": "sys_log", "ts": 1776522977.0, "msg": "[WATCH] Person (0.91)", "t": 1776523032.821418}
+{"kind": "sys_log", "ts": 1776523007.0, "msg": "[WATCH] Person (0.94)", "t": 1776523032.8216174}
+{"kind": "reauth", "ok": true, "t": 1776523038.3951387}
+{"kind": "sys_log", "ts": 1776523037.0, "msg": "[WATCH] Person (0.90)", "t": 1776523092.8771067}
+{"kind": "sys_log", "ts": 1776523038.0, "msg": "Login: svc_eval", "t": 1776523092.8772762}
+{"kind": "sys_log", "ts": 1776523067.0, "msg": "[WATCH] Person (0.94)", "t": 1776523092.8773227}
+{"kind": "sys_log", "ts": 1776523097.0, "msg": "[WATCH] Person (0.94)", "t": 1776523152.950546}
+{"kind": "sys_log", "ts": 1776523127.0, "msg": "[WATCH] Person (0.91)", "t": 1776523152.950787}
+{"kind": "sys_log", "ts": 1776523157.0, "msg": "[WATCH] Person (0.92)", "t": 1776523212.5069258}
+{"kind": "sys_log", "ts": 1776523187.0, "msg": "[WATCH] Person (0.94)", "t": 1776523212.507111}
+{"kind": "sys_log", "ts": 1776523217.0, "msg": "[WATCH] Person (0.93)", "t": 1776523272.5511923}
+{"kind": "sys_log", "ts": 1776523247.0, "msg": "[WATCH] Person (0.91)", "t": 1776523272.5515695}
+{"kind": "sys_log", "ts": 1776523277.0, "msg": "[WATCH] Person (0.92)", "t": 1776523332.6028795}
+{"kind": "sys_log", "ts": 1776523307.0, "msg": "[WATCH] Person (0.94)", "t": 1776523332.6032434}
+{"kind": "sys_log", "ts": 1776523337.0, "msg": "[WATCH] Person (0.92)", "t": 1776523392.6369338}
+{"kind": "sys_log", "ts": 1776523367.0, "msg": "[WATCH] Person (0.86)", "t": 1776523392.637317}
+{"kind": "sys_log", "ts": 1776523397.0, "msg": "[WATCH] Person (0.89)", "t": 1776523452.6900642}
+{"kind": "sys_log", "ts": 1776523427.0, "msg": "[WATCH] Person (0.93)", "t": 1776523452.6908715}
+{"kind": "sys_log", "ts": 1776523457.0, "msg": "[WATCH] Person (0.86)", "t": 1776523512.7340772}
+{"kind": "sys_log", "ts": 1776523487.0, "msg": "[WATCH] Person (0.89)", "t": 1776523512.7345855}
+{"kind": "sys_log", "ts": 1776523517.0, "msg": "[WATCH] Person (0.89)", "t": 1776523572.7798223}
+{"kind": "sys_log", "ts": 1776523547.0, "msg": "[WATCH] Person (0.91)", "t": 1776523572.780012}
+{"kind": "sys_log", "ts": 1776523577.0, "msg": "[WATCH] Person (0.91)", "t": 1776523632.8178062}
+{"kind": "sys_log", "ts": 1776523607.0, "msg": "[WATCH] Person (0.86)", "t": 1776523632.8180788}
+{"kind": "sys_log", "ts": 1776523637.0, "msg": "[WATCH] Person (0.89)", "t": 1776523692.8724668}
+{"kind": "sys_log", "ts": 1776523667.0, "msg": "[WATCH] Person (0.87)", "t": 1776523692.8726363}
+{"kind": "sys_log", "ts": 1776523697.0, "msg": "[WATCH] Person (0.89)", "t": 1776523752.9160693}
+{"kind": "sys_log", "ts": 1776523727.0, "msg": "[WATCH] Person (0.90)", "t": 1776523752.9162621}
+{"kind": "sys_log", "ts": 1776523757.0, "msg": "[WATCH] Person (0.89)", "t": 1776523812.9648447}
+{"kind": "sys_log", "ts": 1776523787.0, "msg": "[WATCH] Person (0.83)", "t": 1776523812.9650564}
+{"kind": "sys_log", "ts": 1776523823.0, "msg": "[WATCH] Person (0.82)", "t": 1776523872.5177722}
+{"kind": "sys_log", "ts": 1776523853.0, "msg": "[WATCH] Person (0.82)", "t": 1776523872.5179424}
+{"kind": "sys_log", "ts": 1776523883.0, "msg": "[WATCH] Person (0.83)", "t": 1776523932.56905}
+{"kind": "sys_log", "ts": 1776523913.0, "msg": "[WATCH] Person (0.86)", "t": 1776523932.5692575}
+{"kind": "reauth", "ok": true, "t": 1776523939.6022809}
+{"kind": "sys_log", "ts": 1776523939.0, "msg": "Login: svc_eval", "t": 1776523992.6301737}
+{"kind": "sys_log", "ts": 1776523943.0, "msg": "[WATCH] Person (0.90)", "t": 1776523992.63035}
+{"kind": "sys_log", "ts": 1776523974.0, "msg": "[WATCH] Person (0.84)", "t": 1776523992.6303992}
+{"kind": "sys_log", "ts": 1776524004.0, "msg": "[WATCH] Person (0.90)", "t": 1776524052.672565}
+{"kind": "sys_log", "ts": 1776524035.0, "msg": "[WATCH] Person (0.83)", "t": 1776524052.6727655}
+{"kind": "sys_log", "ts": 1776524066.0, "msg": "[WATCH] Person (0.82)", "t": 1776524112.7196033}
+{"kind": "sys_log", "ts": 1776524096.0, "msg": "[WATCH] Person (0.96)", "t": 1776524112.719812}
+{"kind": "sys_log", "ts": 1776524126.0, "msg": "[WATCH] Person (0.96)", "t": 1776524172.781368}
+{"kind": "sys_log", "ts": 1776524156.0, "msg": "[WATCH] Person (0.84)", "t": 1776524172.7815366}
+{"kind": "sys_log", "ts": 1776524186.0, "msg": "[WATCH] Person (0.90)", "t": 1776524232.8351624}
+{"kind": "sys_log", "ts": 1776524216.0, "msg": "[WATCH] Person (0.88)", "t": 1776524232.835364}
+{"kind": "sys_log", "ts": 1776524246.0, "msg": "[WATCH] Person (0.89)", "t": 1776524292.8743486}
+{"kind": "sys_log", "ts": 1776524276.0, "msg": "[WATCH] Person (0.96)", "t": 1776524292.8748505}
+{"kind": "sys_log", "ts": 1776524306.0, "msg": "[WATCH] Person (0.94)", "t": 1776524352.9148421}
+{"kind": "sys_log", "ts": 1776524336.0, "msg": "[WATCH] Person (0.92)", "t": 1776524352.9150636}
+{"kind": "sys_log", "ts": 1776524367.0, "msg": "[WATCH] Person (0.83)", "t": 1776524412.972301}
+{"kind": "sys_log", "ts": 1776524397.0, "msg": "[WATCH] Person (0.92)", "t": 1776524412.972774}
+{"kind": "sys_log", "ts": 1776524427.0, "msg": "[WATCH] Person (0.89)", "t": 1776524472.526216}
+{"kind": "sys_log", "ts": 1776524457.0, "msg": "[WATCH] Person (0.92)", "t": 1776524472.5265892}
+{"kind": "sys_log", "ts": 1776524487.0, "msg": "[WATCH] Person (0.83)", "t": 1776524532.5821443}
+{"kind": "sys_log", "ts": 1776524517.0, "msg": "[WATCH] Person (0.87)", "t": 1776524532.5823379}
+{"kind": "sys_log", "ts": 1776524547.0, "msg": "[WATCH] Person (0.91)", "t": 1776524592.6319468}
+{"kind": "sys_log", "ts": 1776524577.0, "msg": "[WATCH] Person (0.92)", "t": 1776524592.6323135}
+{"kind": "sys_log", "ts": 1776524607.0, "msg": "[WATCH] Person (0.89)", "t": 1776524652.6900897}
+{"kind": "sys_log", "ts": 1776524637.0, "msg": "[WATCH] Person (0.93)", "t": 1776524652.6904554}
+{"kind": "sys_log", "ts": 1776524667.0, "msg": "[WATCH] Person (0.95)", "t": 1776524712.7459123}
+{"kind": "sys_log", "ts": 1776524697.0, "msg": "[WATCH] Person (0.90)", "t": 1776524712.7461052}
+{"kind": "sys_log", "ts": 1776524727.0, "msg": "[WATCH] Person (0.93)", "t": 1776524772.7939405}
+{"kind": "sys_log", "ts": 1776524757.0, "msg": "[WATCH] Person (0.92)", "t": 1776524772.79412}
+{"kind": "sys_log", "ts": 1776524787.0, "msg": "[WATCH] Person (0.83)", "t": 1776524832.8426514}
+{"kind": "sys_log", "ts": 1776524817.0, "msg": "[WATCH] Person (0.93)", "t": 1776524832.842881}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 13.71, "resp": {"ok": true, "t_request": 1776524835.6005745, "t_alert": 1776524835.6036189, "latency_ms": 3.05, "label": "Knife", "confidence": 0.9}, "t": 1776524835.6075366}
+{"kind": "reauth", "ok": true, "t": 1776524840.811203}
+{"kind": "sys_log", "ts": 1776524835.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1776524892.8859634}
+{"kind": "sys_log", "ts": 1776524835.0, "msg": "Alert triggered.", "t": 1776524892.8861852}
+{"kind": "sys_log", "ts": 1776524836.0, "msg": "Login: user", "t": 1776524892.8862417}
+{"kind": "sys_log", "ts": 1776524840.0, "msg": "Login: svc_eval", "t": 1776524892.8862822}
+{"kind": "sys_log", "ts": 1776524847.0, "msg": "[WATCH] Person (0.93)", "t": 1776524892.886319}
+{"kind": "sys_log", "ts": 1776524877.0, "msg": "[WATCH] Person (0.95)", "t": 1776524892.8863544}
+{"kind": "sys_log", "ts": 1776524907.0, "msg": "[WATCH] Person (0.87)", "t": 1776524952.9386282}
+{"kind": "sys_log", "ts": 1776524937.0, "msg": "[WATCH] Person (0.86)", "t": 1776524952.9391282}
+{"kind": "sys_log", "ts": 1776524967.0, "msg": "[WATCH] Person (0.96)", "t": 1776525012.9934163}
+{"kind": "sys_log", "ts": 1776524997.0, "msg": "[WATCH] Person (0.87)", "t": 1776525012.9938922}
+{"kind": "sys_log", "ts": 1776525027.0, "msg": "[WATCH] Person (0.82)", "t": 1776525072.535213}
+{"kind": "sys_log", "ts": 1776525057.0, "msg": "[WATCH] Person (0.93)", "t": 1776525072.5357974}
+{"kind": "sys_log", "ts": 1776525087.0, "msg": "[WATCH] Person (0.95)", "t": 1776525132.5859761}
+{"kind": "sys_log", "ts": 1776525117.0, "msg": "[WATCH] Person (0.90)", "t": 1776525132.5864513}
+{"kind": "sys_log", "ts": 1776525148.0, "msg": "[WATCH] Person (0.85)", "t": 1776525192.6433933}
+{"kind": "sys_log", "ts": 1776525178.0, "msg": "[WATCH] Person (0.94)", "t": 1776525192.6436157}
+{"kind": "sys_log", "ts": 1776525208.0, "msg": "[WATCH] Person (0.96)", "t": 1776525252.7053602}
+{"kind": "sys_log", "ts": 1776525317.0, "msg": "[WATCH] Person (0.83)", "t": 1776525372.7904158}
+{"kind": "sys_log", "ts": 1776525347.0, "msg": "[WATCH] Person (0.86)", "t": 1776525372.7905765}
+{"kind": "sys_log", "ts": 1776525377.0, "msg": "[WATCH] Person (0.83)", "t": 1776525432.8379018}
+{"kind": "sys_log", "ts": 1776525410.0, "msg": "[WATCH] Person (0.89)", "t": 1776525432.8381221}
+{"kind": "sys_log", "ts": 1776525440.0, "msg": "[WATCH] Person (0.95)", "t": 1776525492.8824944}
+{"kind": "sys_log", "ts": 1776525470.0, "msg": "[WATCH] Person (0.92)", "t": 1776525492.8827138}
+{"kind": "sys_log", "ts": 1776525500.0, "msg": "[WATCH] Person (0.89)", "t": 1776525552.93051}
+{"kind": "sys_log", "ts": 1776525530.0, "msg": "[WATCH] Person (0.94)", "t": 1776525552.9309196}
+{"kind": "sys_log", "ts": 1776525560.0, "msg": "[WATCH] Person (0.92)", "t": 1776525612.9825287}
+{"kind": "sys_log", "ts": 1776525590.0, "msg": "[WATCH] Person (0.90)", "t": 1776525612.9827266}
+{"kind": "sys_log", "ts": 1776525620.0, "msg": "[WATCH] Person (0.92)", "t": 1776525672.5458775}
+{"kind": "sys_log", "ts": 1776525650.0, "msg": "[WATCH] Person (0.95)", "t": 1776525672.5460823}
+{"kind": "sys_log", "ts": 1776525680.0, "msg": "[WATCH] Person (0.96)", "t": 1776525732.5984578}
+{"kind": "sys_log", "ts": 1776525710.0, "msg": "[WATCH] Person (0.96)", "t": 1776525732.5986223}
+{"kind": "reauth", "ok": true, "t": 1776525741.9250743}
+{"kind": "sys_log", "ts": 1776525740.0, "msg": "[WATCH] Person (0.93)", "t": 1776525792.650172}
+{"kind": "sys_log", "ts": 1776525741.0, "msg": "Login: svc_eval", "t": 1776525792.6506548}
+{"kind": "sys_log", "ts": 1776525770.0, "msg": "[WATCH] Person (0.96)", "t": 1776525792.6509187}
+{"kind": "sys_log", "ts": 1776525800.0, "msg": "[WATCH] Person (0.93)", "t": 1776525852.6966832}
+{"kind": "sys_log", "ts": 1776525830.0, "msg": "[WATCH] Person (0.96)", "t": 1776525852.6970575}
+{"kind": "sys_log", "ts": 1776525860.0, "msg": "[WATCH] Person (0.96)", "t": 1776525912.7581975}
+{"kind": "sys_log", "ts": 1776525890.0, "msg": "[WATCH] Person (0.96)", "t": 1776525912.7583702}
+{"kind": "sys_log", "ts": 1776525920.0, "msg": "[WATCH] Person (0.92)", "t": 1776525972.8093338}
+{"kind": "sys_log", "ts": 1776525950.0, "msg": "[WATCH] Person (0.94)", "t": 1776525972.8095186}
+{"kind": "sys_log", "ts": 1776525980.0, "msg": "[WATCH] Person (0.89)", "t": 1776526032.8400376}
+{"kind": "sys_log", "ts": 1776526010.0, "msg": "[WATCH] Person (0.94)", "t": 1776526032.8402107}
+{"kind": "sys_log", "ts": 1776526040.0, "msg": "[WATCH] Person (0.95)", "t": 1776526092.883828}
+{"kind": "sys_log", "ts": 1776526070.0, "msg": "[WATCH] Person (0.92)", "t": 1776526092.8840022}
+{"kind": "sys_log", "ts": 1776526100.0, "msg": "[WATCH] Person (0.91)", "t": 1776526152.942163}
+{"kind": "sys_log", "ts": 1776526130.0, "msg": "[WATCH] Person (0.92)", "t": 1776526152.9423392}
+{"kind": "sys_log", "ts": 1776526160.0, "msg": "[WATCH] Person (0.91)", "t": 1776526212.9977663}
+{"kind": "sys_log", "ts": 1776526190.0, "msg": "[WATCH] Person (0.95)", "t": 1776526212.9982045}
+{"kind": "sys_log", "ts": 1776526220.0, "msg": "[WATCH] Person (0.90)", "t": 1776526273.0478382}
+{"kind": "sys_log", "ts": 1776526250.0, "msg": "[WATCH] Person (0.92)", "t": 1776526273.0482147}
+{"kind": "sys_log", "ts": 1776526280.0, "msg": "[WATCH] Person (0.86)", "t": 1776526332.5886717}
+{"kind": "sys_log", "ts": 1776526310.0, "msg": "[WATCH] Person (0.92)", "t": 1776526332.5889125}
+{"kind": "sys_log", "ts": 1776526340.0, "msg": "[WATCH] Person (0.90)", "t": 1776526392.6422188}
+{"kind": "sys_log", "ts": 1776526370.0, "msg": "[WATCH] Person (0.92)", "t": 1776526392.642566}
+{"kind": "sys_log", "ts": 1776526400.0, "msg": "[WATCH] Person (0.85)", "t": 1776526452.687672}
+{"kind": "sys_log", "ts": 1776526430.0, "msg": "[WATCH] Person (0.93)", "t": 1776526452.6878707}
+{"kind": "sys_log", "ts": 1776526460.0, "msg": "[WATCH] Person (0.93)", "t": 1776526512.7439036}
+{"kind": "sys_log", "ts": 1776526490.0, "msg": "[WATCH] Person (0.92)", "t": 1776526512.74471}
+{"kind": "sys_log", "ts": 1776526521.0, "msg": "[WATCH] Person (0.89)", "t": 1776526572.788643}
+{"kind": "sys_log", "ts": 1776526551.0, "msg": "[WATCH] Person (0.95)", "t": 1776526572.7888448}
+{"kind": "sys_log", "ts": 1776526602.0, "msg": "[WATCH] Person (0.87)", "t": 1776526632.854081}
+{"kind": "reauth", "ok": true, "t": 1776526643.1307013}
+{"kind": "sys_log", "ts": 1776526632.0, "msg": "[WATCH] Person (0.95)", "t": 1776526692.9101195}
+{"kind": "sys_log", "ts": 1776526643.0, "msg": "Login: svc_eval", "t": 1776526692.9103005}
+{"kind": "sys_log", "ts": 1776526662.0, "msg": "[WATCH] Person (0.92)", "t": 1776526692.9103544}
+{"kind": "sys_log", "ts": 1776526692.0, "msg": "[WATCH] Person (0.88)", "t": 1776526752.95151}
+{"kind": "sys_log", "ts": 1776526722.0, "msg": "[WATCH] Person (0.91)", "t": 1776526752.9517355}
+{"kind": "sys_log", "ts": 1776526752.0, "msg": "[WATCH] Person (0.90)", "t": 1776526812.9971118}
+{"kind": "sys_log", "ts": 1776526782.0, "msg": "[WATCH] Person (0.91)", "t": 1776526812.9972906}
+{"kind": "sys_log", "ts": 1776526812.0, "msg": "[WATCH] Person (0.93)", "t": 1776526873.059408}
+{"kind": "sys_log", "ts": 1776526842.0, "msg": "[WATCH] Person (0.90)", "t": 1776526873.0595806}
+{"kind": "sys_log", "ts": 1776526872.0, "msg": "[WATCH] Person (0.94)", "t": 1776526932.6191514}
+{"kind": "sys_log", "ts": 1776526902.0, "msg": "[WATCH] Person (0.92)", "t": 1776526932.6195247}
+{"kind": "sys_log", "ts": 1776526932.0, "msg": "[WATCH] Person (0.90)", "t": 1776526992.6666586}
+{"kind": "sys_log", "ts": 1776526962.0, "msg": "[WATCH] Person (0.82)", "t": 1776526992.666832}
+{"kind": "sys_log", "ts": 1776526992.0, "msg": "[WATCH] Person (0.96)", "t": 1776527052.7182407}
+{"kind": "sys_log", "ts": 1776527022.0, "msg": "[WATCH] Person (0.92)", "t": 1776527052.7184975}
+{"kind": "sys_log", "ts": 1776527052.0, "msg": "[WATCH] Person (0.89)", "t": 1776527112.7935119}
+{"kind": "sys_log", "ts": 1776527082.0, "msg": "[WATCH] Person (0.89)", "t": 1776527112.7937882}
+{"kind": "sys_log", "ts": 1776527113.0, "msg": "[WATCH] Person (0.83)", "t": 1776527172.8579032}
+{"kind": "sys_log", "ts": 1776527143.0, "msg": "[WATCH] Person (0.96)", "t": 1776527172.8581126}
+{"kind": "sys_log", "ts": 1776527173.0, "msg": "[WATCH] Person (0.89)", "t": 1776527232.904698}
+{"kind": "sys_log", "ts": 1776527203.0, "msg": "[WATCH] Person (0.88)", "t": 1776527232.905081}
+{"kind": "sys_log", "ts": 1776527233.0, "msg": "[WATCH] Person (0.88)", "t": 1776527292.9521663}
+{"kind": "sys_log", "ts": 1776527370.0, "msg": "[WATCH] Person (0.89)", "t": 1776527412.5780177}
+{"kind": "sys_log", "ts": 1776527400.0, "msg": "[WATCH] Person (0.94)", "t": 1776527412.578195}
+{"kind": "sys_log", "ts": 1776527528.0, "msg": "[WATCH] Person (0.86)", "t": 1776527532.6767128}
+{"kind": "reauth", "ok": true, "t": 1776527544.2661386}
+{"kind": "sys_log", "ts": 1776527544.0, "msg": "Login: svc_eval", "t": 1776527592.7267406}
+{"kind": "sys_log", "ts": 1776527558.0, "msg": "[WATCH] Person (0.96)", "t": 1776527592.727117}
+{"kind": "sys_log", "ts": 1776527588.0, "msg": "[WATCH] Person (0.94)", "t": 1776527592.7271817}
+{"kind": "sys_log", "ts": 1776527633.0, "msg": "[WATCH] Person (0.85)", "t": 1776527652.7824233}
+{"kind": "http_error", "path": "/api/state", "err": "('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))", "t": 1776527674.3932796}
+{"kind": "sys_log", "ts": 1776527994.0, "msg": "[WATCH] Person (0.85)", "t": 1776528012.6292012}
+{"kind": "sys_log", "ts": 1776528076.0, "msg": "[WATCH] Person (0.82)", "t": 1776528132.7305744}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 11.1, "resp": {"ok": true, "t_request": 1776528435.6119423, "t_alert": 1776528435.615609, "latency_ms": 3.67, "label": "scissors", "confidence": 0.9}, "t": 1776528435.6191697}
+{"kind": "reauth", "ok": true, "t": 1776528445.3809798}
+{"kind": "sys_log", "ts": 1776528435.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1776528493.0743937}
+{"kind": "sys_log", "ts": 1776528435.0, "msg": "Alert triggered.", "t": 1776528493.0748136}
+{"kind": "sys_log", "ts": 1776528445.0, "msg": "Login: svc_eval", "t": 1776528493.074868}
+{"kind": "sys_log", "ts": 1776528446.0, "msg": "Login: user", "t": 1776528493.074912}
+{"kind": "sys_log", "ts": 1776528655.0, "msg": "[WATCH] Person (0.86)", "t": 1776528672.7424426}
+{"kind": "sys_log", "ts": 1776528750.0, "msg": "[WATCH] Person (0.89)", "t": 1776528792.8239746}
+{"kind": "sys_log", "ts": 1776528784.0, "msg": "[WATCH] Person (0.88)", "t": 1776528792.8242624}
+{"kind": "sys_log", "ts": 1776528816.0, "msg": "[WATCH] Person (0.84)", "t": 1776528852.8672924}
+{"kind": "reauth", "ok": true, "t": 1776529346.5310755}
+{"kind": "sys_log", "ts": 1776529346.0, "msg": "Login: svc_eval", "t": 1776529392.8503523}
+{"kind": "reauth", "ok": true, "t": 1776530247.6671145}
+{"kind": "sys_log", "ts": 1776530247.0, "msg": "Login: svc_eval", "t": 1776530292.6383326}
+{"kind": "sys_log", "ts": 1776530522.0, "msg": "[WATCH] Person (0.87)", "t": 1776530532.8345451}
+{"kind": "sys_log", "ts": 1776530557.0, "msg": "[WATCH] Person (0.85)", "t": 1776530592.8929274}
+{"kind": "sys_log", "ts": 1776530719.0, "msg": "[WATCH] Person (0.87)", "t": 1776530773.045863}
+{"kind": "sys_log", "ts": 1776531094.0, "msg": "[WATCH] Person (0.84)", "t": 1776531132.8344593}
+{"kind": "reauth", "ok": true, "t": 1776531148.840205}
+{"kind": "sys_log", "ts": 1776531148.0, "msg": "Login: svc_eval", "t": 1776531192.9036458}
+{"kind": "sys_log", "ts": 1776531790.0, "msg": "[WATCH] Person (0.92)", "t": 1776531792.9741607}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 13.28, "resp": {"ok": true, "t_request": 1776532035.6250901, "t_alert": 1776532035.6290998, "latency_ms": 4.01, "label": "Hammer", "confidence": 0.9}, "t": 1776532035.6350203}
+{"kind": "reauth", "ok": true, "t": 1776532050.1744144}
+{"kind": "sys_log", "ts": 1776532035.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1776532092.782673}
+{"kind": "sys_log", "ts": 1776532035.0, "msg": "Alert triggered.", "t": 1776532092.7828548}
+{"kind": "sys_log", "ts": 1776532050.0, "msg": "Login: svc_eval", "t": 1776532092.7829082}
+{"kind": "sys_log", "ts": 1776532280.0, "msg": "[WATCH] Person (0.89)", "t": 1776532333.0009267}
+{"kind": "sys_log", "ts": 1776532444.0, "msg": "[WATCH] Person (0.85)", "t": 1776532452.6340208}
+{"kind": "sys_log", "ts": 1776532502.0, "msg": "[WATCH] Person (0.83)", "t": 1776532512.6903389}
+{"kind": "reauth", "ok": true, "t": 1776532951.5048008}
+{"kind": "sys_log", "ts": 1776532951.0, "msg": "Login: svc_eval", "t": 1776532992.6707034}

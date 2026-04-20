@@ -1,0 +1,12 @@
+[
+  {"text": "narada turn on dnd",             "intent": "dnd_on"},
+  {"text": "narada turn off dnd",            "intent": "dnd_off"},
+  {"text": "narada enable night mode",       "intent": "night_on"},
+  {"text": "narada disable night mode",      "intent": "night_off"},
+  {"text": "narada start recording",         "intent": "clip_start"},
+  {"text": "narada stop recording",          "intent": "clip_stop"},
+  {"text": "narada what is the status",      "intent": "status"},
+  {"text": "narada emergency",               "intent": "emergency"},
+  {"text": "narada cancel emergency",        "intent": "emergency_off"},
+  {"text": "narada turn off email alerts",   "intent": "email_off"}
+]

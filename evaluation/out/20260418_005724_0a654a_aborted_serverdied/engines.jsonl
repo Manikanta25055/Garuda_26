@@ -1,0 +1,57 @@
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1776454047.0250404}
+{"engine": "snapshot", "ok": true, "t": 1776454047.0416095}
+{"engine": "email", "ok": true, "t": 1776454050.342852}
+{"engine": "chat", "ok": true, "latency_s": 0.008176326751708984, "body": "{\"response\":\"Narada is not configured yet. Please go to Admin \u2192 Settings \u2192 Narada and enter your Groq API key, then click Save Settings.\"}", "t": 1776454050.3512168}
+{"engine": "presence", "ok": false, "t": 1776455850.388645}
+{"engine": "presence", "ok": false, "t": 1776457650.4104593}
+{"engine": "snapshot", "ok": false, "t": 1776457650.4119205}
+{"engine": "chat", "ok": false, "latency_s": 0.0012929439544677734, "body": "", "t": 1776457650.4132762}
+{"engine": "presence", "ok": false, "t": 1776459450.4315932}
+{"engine": "presence", "ok": false, "t": 1776461250.4497132}
+{"engine": "snapshot", "ok": false, "t": 1776461250.4513884}
+{"engine": "chat", "ok": false, "latency_s": 0.0015382766723632812, "body": "", "t": 1776461250.4529912}
+{"engine": "presence", "ok": false, "t": 1776463050.4725115}
+{"engine": "presence", "ok": false, "t": 1776464850.4900172}
+{"engine": "snapshot", "ok": false, "t": 1776464850.491435}
+{"engine": "chat", "ok": false, "latency_s": 0.0012996196746826172, "body": "", "t": 1776464850.4927938}
+{"engine": "presence", "ok": false, "t": 1776466650.5102005}
+{"engine": "presence", "ok": false, "t": 1776468450.5273643}
+{"engine": "snapshot", "ok": false, "t": 1776468450.5289488}
+{"engine": "email", "ok": false, "t": 1776468450.5303512}
+{"engine": "chat", "ok": false, "latency_s": 0.0016984939575195312, "body": "", "t": 1776468450.532108}
+{"engine": "presence", "ok": false, "t": 1776470250.5493839}
+{"engine": "presence", "ok": false, "t": 1776472050.5672708}
+{"engine": "snapshot", "ok": false, "t": 1776472050.568682}
+{"engine": "chat", "ok": false, "latency_s": 0.001308441162109375, "body": "", "t": 1776472050.5700488}
+{"engine": "presence", "ok": false, "t": 1776473850.5871043}
+{"engine": "presence", "ok": false, "t": 1776475650.6040962}
+{"engine": "snapshot", "ok": false, "t": 1776475650.6055129}
+{"engine": "chat", "ok": false, "latency_s": 0.001360177993774414, "body": "", "t": 1776475650.6069374}
+{"engine": "clip", "ok": false, "start": false, "stop": false, "t": 1776475658.6101608}
+{"engine": "presence", "ok": false, "t": 1776477458.6273212}
+{"engine": "presence", "ok": false, "t": 1776479258.645749}
+{"engine": "snapshot", "ok": false, "t": 1776479258.6472354}
+{"engine": "chat", "ok": false, "latency_s": 0.001302480697631836, "body": "", "t": 1776479258.6485996}
+{"engine": "presence", "ok": false, "t": 1776481058.666432}
+{"engine": "presence", "ok": false, "t": 1776482858.6832623}
+{"engine": "snapshot", "ok": false, "t": 1776482858.6846623}
+{"engine": "email", "ok": false, "t": 1776482858.6862001}
+{"engine": "chat", "ok": false, "latency_s": 0.0012674331665039062, "body": "", "t": 1776482858.687525}
+{"engine": "presence", "ok": false, "t": 1776484658.7047405}
+{"engine": "presence", "ok": false, "t": 1776486458.7221045}
+{"engine": "snapshot", "ok": false, "t": 1776486458.7235346}
+{"engine": "chat", "ok": false, "latency_s": 0.0012617111206054688, "body": "", "t": 1776486458.7248547}
+{"engine": "presence", "ok": false, "t": 1776488258.7421987}
+{"engine": "presence", "ok": false, "t": 1776490058.7593858}
+{"engine": "snapshot", "ok": false, "t": 1776490058.7607768}
+{"engine": "chat", "ok": false, "latency_s": 0.0012967586517333984, "body": "", "t": 1776490058.762135}
+{"engine": "presence", "ok": false, "t": 1776491858.7807016}
+{"engine": "presence", "ok": false, "t": 1776493658.799254}
+{"engine": "snapshot", "ok": false, "t": 1776493658.8006427}
+{"engine": "chat", "ok": false, "latency_s": 0.001313924789428711, "body": "", "t": 1776493658.802016}
+{"engine": "presence", "ok": false, "t": 1776495458.8196537}
+{"engine": "presence", "ok": false, "t": 1776497498.8423154}
+{"engine": "snapshot", "ok": false, "t": 1776497498.8437226}
+{"engine": "email", "ok": false, "t": 1776497498.844994}
+{"engine": "chat", "ok": false, "latency_s": 0.001680612564086914, "body": "", "t": 1776497498.84673}
+{"engine": "presence", "ok": false, "t": 1776499298.8638072}

@@ -1,0 +1,2 @@
+{"kind": "danger", "ts": 1776711028.0, "label": "Knife", "conf": 0.89, "t": 1776711039.4743211}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1776711028.0, "label": "Knife", "conf": 0.89, "t": 1776711039.4743211}, "email_ts": 1776711031.0, "latency_s": 3.0, "t": 1776711039.5849032}
