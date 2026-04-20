@@ -299,14 +299,19 @@ All training was done on a RunPod cloud instance (RTX 4090, 24 GB VRAM). Trainin
 **S3 endpoint:** `https://s3api-us-il-1.runpod.io`  
 **Bucket:** `wbeta1c4ev`
 
-Credentails to access the S3 server:
-Access key - user_3CCqL5IC5SyiZKCYMAuUzHtWOTS
-Secret access key - rps_0OS1AFV1HVS9HDV2S7449IKHRW9G4LTVJSJ9H1NR1mkvk1
-region - us-il-1
-format - json
+```bash
+aws configure
+```
+
+> Credentails to access the S3 server:
+> Access key - user_3CCqL5IC5SyiZKCYMAuUzHtWOTS
+> Secret access key - rps_0OS1AFV1HVS9HDV2S7449IKHRW9G4LTVJSJ9H1NR1mkvk1
+> region - us-il-1
+> format - json
 
 (Please use this only for the evaluation purposes)
-NO MISUSES ARE ENTERTAINED
+
+**NO MISUSES ARE ENTERTAINED**
 
 ### Dataset sources (publicly citable)
 
