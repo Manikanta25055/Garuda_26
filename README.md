@@ -78,13 +78,13 @@ Project Garuda is a home security system where all inference, streaming, authent
 
 ### Key contributions (paper claims)
 
-- **27 FPS** real-time detection on Hailo-8L at **~6.8 W** system power
-- **Two-tier threat model**: general intrusion vs. elevated-threat objects (configurable COCO-class list)
-- **Privacy-preserving architecture**: all processing local; no cloud account or internet required for core operation
-- **Cascade pipeline** (`garuda_cascade.py`): lightweight pre-filter reduces full-model invocations by ~40%
-- **Adaptive mode switching**: Active / DND / Idle / Night Mode with schedule-based transitions
-- Local voice assistant (**Narada**) — offline, no external API required for core commands
-- ARP-based occupant presence detection for alert suppression
+1. **Integration architecture** — asynchronous, CPU-pinned, bounded-queue design co-locating a primary detector, a secondary MobileNetV2 verifier, and a MiDaS depth-variance pre-filter on one 13 TOPS Hailo-8L device; FastAPI web stack, voice assistant, authentication, remote-access, encrypted-evidence, and logging services run concurrently on the same Raspberry Pi 5, with NPU and CPU paths engineered to be non-interfering by construction.
+
+2. **INT8 deployment characterisation** — four-class domestic-threat YOLOv8s compiled to a 22.9 MB HEF binary, re-evaluated on-chip on the held-out test split: **mAP@0.5 = 0.854**, **mAP@0.5:0.95 = 0.682** — within +0.007 / +0.012 of the FP32 reference.
+
+3. **Per-stage latency and throughput budget** — **52.2 FPS** at 18.4 ms primary detection latency; MobileNetV2 verifier and MiDaS pre-filter share the same device inside a detect-to-decision envelope of 22–27 ms.
+
+4. **FPS flatness under concurrent load** — **52.26 ± 0.76 FPS** across six operating modes (Baseline, Idle, DND, Privacy, Emergency, Active) with zero camera-side frame drops while SMTP alerts, AES-encrypted SFTP clip uploads, voice queries, and MJPEG streaming run concurrently on the CPU side; system power **5.8 W**.
 
 ### Models evaluated
 
@@ -159,9 +159,18 @@ pip install -r requirements.txt
 
 ```bash
 source setup_env.sh
-python basic_pipelines/Garuda_web.py
-# Dashboard available at http://<device-ip>:8080
+
+# Raspberry Pi camera (standard hardware setup)
+python basic_pipelines/Garuda_web.py --input rpi
+
+# USB camera
+python basic_pipelines/Garuda_web.py --input /dev/video0
+
+# Video file (for testing without camera)
+python basic_pipelines/Garuda_web.py --input resources/detection0.mp4
 ```
+
+Dashboard available at `http://<device-ip>:8080`.
 
 ### Run evaluation scripts
 
