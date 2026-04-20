@@ -1,0 +1,9 @@
+train: datasets/dataset_v5/train/images
+val:   datasets/dataset_v5/val/images
+test:  datasets/dataset_v5/test/images
+
+nc: 4
+names: ['Hammer', 'Knife', 'Person', 'scissors']
+
+# Dataset v5 — merged + Open Images extra
+# Built for: Hailo-8L on Raspberry Pi 5 security system
