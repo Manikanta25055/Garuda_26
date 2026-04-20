@@ -22,6 +22,7 @@ Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processi
 | Main application code | [`basic_pipelines/Garuda_web.py`](basic_pipelines/Garuda_web.py) |
 | Cascade pipeline | [`basic_pipelines/garuda_cascade.py`](basic_pipelines/garuda_cascade.py) |
 | Test suite | [`tests/`](tests/) |
+| Training datasets + trained HEF models | S3 (RunPod) — see [Datasets & Models](#datasets--models) below |
 
 ---
 
@@ -274,6 +275,78 @@ ngrok http 8080
 | Email-Off | Full | No email | `detections.jsonl` |
 
 Modes switch via dashboard, iOS app, voice command, or auto-schedule.
+
+---
+
+## Datasets & Models
+
+All training was done on a RunPod cloud instance (RTX 4090, 24 GB VRAM). Training artifacts, raw datasets, and compiled HEF models are stored on a RunPod S3 bucket.
+
+**S3 endpoint:** `https://s3api-us-il-1.runpod.io`  
+**Bucket:** `wbeta1c4ev`
+
+> Access requires credentials. Contact the authors if you are a reviewer and need access.
+
+### Dataset sources (publicly citable)
+
+| Dataset | Source | License | Used for |
+|---|---|---|---|
+| Roboflow Knives & Scissors Training v2 | Roboflow Universe | CC BY 4.0 | Weapon class seed images (359 imgs) |
+| COCO 2017 | cocodataset.org | CC BY 4.0 | Person class (~1,200 imgs extracted) |
+| OpenImages v7 — Hammer, Knife, Person, Scissors | storage.googleapis.com/openimages | CC BY 4.0 | Bulk class images (~4,600 imgs v5; +2,000 Person in v6) |
+| CelebA-Spoof | mmlab.ie.cuhk.edu.hk | Research only | Anti-spoof classifier training |
+
+### Training datasets on S3
+
+| Path | Description | Split sizes |
+|---|---|---|
+| `datasets/knives_scissors/` | Dataset v5 — 4 classes (Hammer, Knife, Person, Scissors) | Train 4,982 / Val 622 / Test 622 |
+| `datasets/merged_dataset/` | Dataset v6 — v5 + 2,000 extra Person images | Train 6,505 / Val 812 / Test 812 |
+| `datasets/openimages/` | OpenImages v7 subset (raw, pre-merge) | — |
+| `datasets/openimages_extra/` | Extra OpenImages Person images | — |
+| `antispoof_val/` | Anti-spoof validation set (real / spoof / spoof\_print / spoof\_screen) | — |
+
+### Trained models on S3
+
+| Path | Description |
+|---|---|
+| `models/hef/yolo.hef` | YOLOv8s retrained on dataset v6, compiled for Hailo-8L |
+| `models/hef/classifier.hef` | MobileNetV2 threat classifier (Safe / Weapon), compiled for Hailo-8L |
+| `models/hef/depth.hef` | Depth estimation model for anti-spoof stage |
+| `models/mobilenetv2_garuda_final.pth` | PyTorch checkpoint (pre-compile) |
+| `ieee_access_submission/access.pdf` | Final paper PDF as submitted |
+
+### Downloading artifacts
+
+```bash
+# requires AWS CLI with RunPod credentials configured
+export AWS_ENDPOINT_URL=https://s3api-us-il-1.runpod.io
+
+# Download trained HEF models
+aws s3 cp s3://wbeta1c4ev/models/hef/yolo.hef resources/
+aws s3 cp s3://wbeta1c4ev/models/hef/classifier.hef resources/
+aws s3 cp s3://wbeta1c4ev/models/hef/depth.hef resources/
+
+# Download paper PDF
+aws s3 cp s3://wbeta1c4ev/ieee_access_submission/access.pdf docs/
+
+# Download a dataset
+aws s3 sync s3://wbeta1c4ev/datasets/merged_dataset/ datasets/merged_dataset/
+```
+
+### Evaluation scripts
+
+Training and evaluation scripts are in the S3 bucket root:
+
+| Script | Purpose |
+|---|---|
+| `eval_antispoof_v4.py` | Anti-spoof classifier evaluation (ROC, confusion matrix) |
+| `eval_int8_test.py` | INT8 quantisation accuracy check |
+| `eval_fp32_test.py` | FP32 baseline accuracy check |
+| `build_hefs.py` | Compile ONNX → HEF via Hailo SDK |
+| `retrain_classifier_v2.py` | MobileNetV2 classifier training |
+
+Local evaluation scripts (no S3 required) are in [`evaluation/`](evaluation/).
 
 ---
 
