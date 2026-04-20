@@ -7,6 +7,8 @@ Developed for and described in the IEEE Access submission:
 
 Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processing)
 
+**Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)
+
 ---
 
 ## For IEEE Reviewers
@@ -23,6 +25,7 @@ Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processi
 | Cascade pipeline | [`basic_pipelines/garuda_cascade.py`](basic_pipelines/garuda_cascade.py) |
 | Test suite | [`tests/`](tests/) |
 | Training datasets + trained HEF models | S3 (RunPod) — see [Datasets & Models](#datasets--models) below |
+| Live system demo | [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in) |
 
 ---
 
