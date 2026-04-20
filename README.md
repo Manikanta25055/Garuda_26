@@ -8,6 +8,7 @@ Developed for and described in the IEEE Access submission:
 Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processing)
 
 **Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)
+NOTE: backend is served through api.veeramanikanta.in
 
 ---
 
@@ -91,11 +92,12 @@ Project Garuda is a home security system where all inference, streaming, authent
 | Model | Task | Notes |
 |---|---|---|
 | YOLOv6n | Detection | Default; fastest |
-| YOLOv8s | Detection | Best accuracy |
+| **YOLOv8s **| Detection | Best accuracy |
 | YOLOx-S | Detection | Paper ablation |
 | YOLOv8s Pose | Pose estimation | Supplementary |
 | YOLOv5n Seg | Instance segmentation | Supplementary |
 
+Tuned YOLOv8s is used for the evaluation of the system. 
 ---
 
 ## Architecture
@@ -297,7 +299,14 @@ All training was done on a RunPod cloud instance (RTX 4090, 24 GB VRAM). Trainin
 **S3 endpoint:** `https://s3api-us-il-1.runpod.io`  
 **Bucket:** `wbeta1c4ev`
 
-> Access requires credentials. Contact the authors if you are a reviewer and need access.
+Credentails to access the S3 server:
+Access key - user_3CCqL5IC5SyiZKCYMAuUzHtWOTS
+Secret access key - rps_0OS1AFV1HVS9HDV2S7449IKHRW9G4LTVJSJ9H1NR1mkvk1
+region - us-il-1
+format - json
+
+(Please use this only for the evaluation purposes)
+NO MISUSES ARE ENTERTAINED
 
 ### Dataset sources (publicly citable)
 
