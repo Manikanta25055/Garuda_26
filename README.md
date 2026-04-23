@@ -8,8 +8,9 @@ Developed for and described in the IEEE Access submission:
 Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processing)
 
 **Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)
-NOTE: backend is served through api.veeramanikanta.in
-Credentails - user, user
+NOTE: backend is served through api.veeramanikanta.in  
+Credentails - user, user  
+
 
 ---
 
