@@ -9,6 +9,7 @@ Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processi
 
 **Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)
 NOTE: backend is served through api.veeramanikanta.in
+Credentails - user, user
 
 ---
 
