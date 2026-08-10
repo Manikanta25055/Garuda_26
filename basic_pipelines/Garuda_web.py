@@ -213,10 +213,19 @@ _alert_lock = threading.Lock()   # guards _alert_active/_alert_end_time/_danger_
 _last_heartbeat = time.time()      # updated by GET /api/heartbeat
 _DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper alert
 _deadman_alert_sent = False
+_heartbeat_ever = False            # True only after a real heartbeat is received
+# Opt-in: the dead-man switch is only meaningful when an external monitor
+# (e.g. UptimeRobot) is hitting /api/heartbeat. Disabled by default so a
+# deployment WITHOUT such a monitor does not spam "missed heartbeat" alerts.
+_DEADMAN_ENABLED = os.environ.get("DEADMAN_ENABLED", "0") == "1"
+_DEADMAN_REALERT_INTERVAL = 3600   # min seconds between repeat alerts (anti-spam)
+_deadman_last_alert = 0.0
 
 # ── Camera blindness detection ───────────────────────────
 _blind_frame_count = 0
 _blind_alert_sent = False
+_last_tamper_email = 0.0            # last camera-tamper email time (anti-spam)
+_TAMPER_EMAIL_COOLDOWN = 3600      # min seconds between camera-tamper emails
 _class_counts_today = {}   # class_name → count since startup
 _total_frames = 0          # total inference frames (for avg FPS)
 _watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
@@ -1150,9 +1159,18 @@ def log_scissors_detection(label: str = "danger"):
     _perm_write(SCISSORS_LOG_FILE, f"[{stamp}] DANGER DETECTED: {label.upper()}")
 
 def _send_tamper_email():
-    """Maximum-priority tamper alert — bypasses DND/idle/email-off modes."""
+    """Maximum-priority tamper alert — bypasses DND/idle/email-off modes.
+
+    Rate-limited to one email per _TAMPER_EMAIL_COOLDOWN so a flickering /
+    intermittently-dark camera cannot spam the recipient.
+    """
+    global _last_tamper_email
     if not EMAIL_SENDER or not EMAIL_RECIPIENTS:
         return
+    now = time.time()
+    if (now - _last_tamper_email) < _TAMPER_EMAIL_COOLDOWN:
+        return
+    _last_tamper_email = now
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     msg = MIMEText(
         f"CRITICAL: Camera tamper detected at {now_str}.\n"
@@ -2164,13 +2182,28 @@ def get_state_dict():
 # DEAD MAN'S SWITCH MONITOR
 ##############################################################################
 def _deadman_monitor():
-    """Background thread: if no /api/heartbeat in _DEADMAN_TIMEOUT seconds, send tamper alert."""
-    global _deadman_alert_sent
+    """Background thread: if no /api/heartbeat in _DEADMAN_TIMEOUT seconds, send tamper alert.
+
+    Opt-in via DEADMAN_ENABLED=1. Only meaningful with an external monitor
+    hitting /api/heartbeat. Anti-spam guards: never alarms unless at least one
+    real heartbeat has been received (otherwise there is simply no heartbeat
+    source), and repeat alerts are rate-limited to _DEADMAN_REALERT_INTERVAL.
+    """
+    global _deadman_alert_sent, _deadman_last_alert
+    if not _DEADMAN_ENABLED:
+        log_system_update("[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).")
+        return
     while True:
         time.sleep(60)
+        # No heartbeat has ever arrived → no monitor configured, not tampering.
+        if not _heartbeat_ever:
+            continue
         elapsed = time.time() - _last_heartbeat
-        if elapsed > _DEADMAN_TIMEOUT and not _deadman_alert_sent:
+        now = time.time()
+        if elapsed > _DEADMAN_TIMEOUT and not _deadman_alert_sent \
+                and (now - _deadman_last_alert) > _DEADMAN_REALERT_INTERVAL:
             _deadman_alert_sent = True
+            _deadman_last_alert = now
             log_system_update(f"[TAMPER] No heartbeat in {int(elapsed)}s — possible system tampering!")
             # Send tamper alert email
             try:
@@ -3283,13 +3316,14 @@ async def heartbeat(request: Request, key: Optional[str] = None):
     the dead-man reset. Without a key the endpoint still returns health data
     but does NOT reset the deadman timer (prevents unauthenticated suppression).
     """
-    global _last_heartbeat, _deadman_alert_sent
+    global _last_heartbeat, _deadman_alert_sent, _heartbeat_ever
     _HEARTBEAT_KEY = os.environ.get("HEARTBEAT_KEY", "")
     provided = key or request.headers.get("X-Heartbeat-Key", "")
     # Only reset dead-man's switch if key matches (or no key configured)
     if not _HEARTBEAT_KEY or provided == _HEARTBEAT_KEY:
         _last_heartbeat = time.time()
         _deadman_alert_sent = False
+        _heartbeat_ever = True
     return {"ok": True, "uptime": int(time.time() - _app_start_time)}
 
 @fastapi_app.post("/api/emergency-stop")
