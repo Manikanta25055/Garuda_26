@@ -1,0 +1,229 @@
+\relax 
+\citation{b2}
+\citation{b1}
+\citation{b5}
+\citation{b6}
+\citation{b25,b26}
+\citation{b27}
+\citation{b29}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\newlabel{sec:introduction}{{I}{1}{}{}{}}
+\citation{b9}
+\citation{b10}
+\citation{b13}
+\citation{b11}
+\citation{b4}
+\citation{b18}
+\citation{b30}
+\citation{b19}
+\citation{b20}
+\citation{b32}
+\citation{b28}
+\citation{b21}
+\citation{b22}
+\citation{b23}
+\citation{b14}
+\citation{b15}
+\citation{b31}
+\citation{b24}
+\citation{b12}
+\citation{b17}
+\citation{b12}
+\citation{b17}
+\@writefile{toc}{\contentsline {section}{\numberline {II}System Overview}{2}{}\protected@file@percent }
+\newlabel{sec:overview}{{II}{2}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Three-layer block diagram of the proposed system.}}{2}{}\protected@file@percent }
+\newlabel{fig:block_diagram}{{1}{2}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces End-to-end runtime diagram of a danger event.}}{3}{}\protected@file@percent }
+\newlabel{fig:system_flowchart}{{2}{3}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}Dataset}{3}{}\protected@file@percent }
+\newlabel{sec:dataset}{{III}{3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Source Datasets}{3}{}\protected@file@percent }
+\newlabel{sec:sources}{{\mbox  {III-A}}{3}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {I}mage Counts Contributed by Each Source (v5 Splits)}}}{3}{}\protected@file@percent }
+\newlabel{tab:sources}{{1}{3}{}{}{}}
+\newlabel{sec:dataset_limits}{{\mbox  {III-A}}{3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Preprocessing and Validation Pipeline}{4}{}\protected@file@percent }
+\newlabel{sec:preprocess}{{\mbox  {III-B}}{4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Final Dataset Geometry}{4}{}\protected@file@percent }
+\newlabel{sec:dataset_geometry}{{\mbox  {III-C}}{4}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {A}nnotated Instance Counts per Class per Split}}}{4}{}\protected@file@percent }
+\newlabel{tab:instances}{{2}{4}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces v5 dataset class distribution across splits (graphical view of the counts in Table~\ref {tab:instances}).}}{4}{}\protected@file@percent }
+\newlabel{fig:dataset_dist}{{3}{4}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 Classifier Dataset (v2)}}}{5}{}\protected@file@percent }
+\newlabel{tab:mobilenet}{{3}{5}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Methodology}{5}{}\protected@file@percent }
+\newlabel{sec:methodology}{{IV}{5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Hardware Engine}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Hardware topology.}}{5}{}\protected@file@percent }
+\newlabel{fig:hw_layer}{{4}{5}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Deployed hardware rig (Pi~5, Hailo-8L, Camera~v3, SATA SSD).}}{5}{}\protected@file@percent }
+\newlabel{fig:hw_photo}{{5}{5}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}GStreamer TAPPAS Pipeline Engine}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces GStreamer TAPPAS pipeline topology.}}{6}{}\protected@file@percent }
+\newlabel{fig:gstreamer}{{6}{6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Detection Engine}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Asynchronous Secondary Verifier Path}{6}{}\protected@file@percent }
+\newlabel{sec:verifier_path}{{\mbox  {IV-D}}{6}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}econdary Verifier Path: Per-Stage Latency Budget (Hailo-8L, Pi~5). Entries marked $\sim $ or $<$ are design-budget targets from short-run observation, not measured point estimates; the end-to-end pipeline figures are measured directly.}}}{6}{}\protected@file@percent }
+\newlabel{tab:cascade_latency}{{4}{6}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Alert Engine}{6}{}\protected@file@percent }
+\citation{b16}
+\citation{b41}
+\citation{b16}
+\citation{b41}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}econdary Verifier Path: Decision Matrix Across Operating Scenarios}}}{7}{}\protected@file@percent }
+\newlabel{tab:cascade_matrix}{{5}{7}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Alert engine dataflow.}}{7}{}\protected@file@percent }
+\newlabel{fig:alert}{{7}{7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Voice Assistant Engine (Narada)}{7}{}\protected@file@percent }
+\newlabel{sec:groq_privacy}{{\mbox  {IV-F}}{7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Concurrent CPU-side Services}{7}{}\protected@file@percent }
+\newlabel{sec:cpu_services}{{\mbox  {IV-G}}{7}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Design Decisions and Trade-offs}{7}{}\protected@file@percent }
+\newlabel{sec:design_decisions}{{\mbox  {IV-H}}{7}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Operator dashboard served by the FastAPI web layer.}}{8}{}\protected@file@percent }
+\newlabel{fig:dashboard}{{8}{8}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Results and Evaluation}{8}{}\protected@file@percent }
+\newlabel{sec:results}{{V}{8}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Training Loss Convergence}{8}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Validation mAP and Precision / Recall}{8}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Training loss convergence over 150 epochs.}}{9}{}\protected@file@percent }
+\newlabel{fig:training_losses}{{9}{9}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Validation metrics versus training epoch.}}{9}{}\protected@file@percent }
+\newlabel{fig:training_metrics}{{10}{9}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Four-Model Performance Comparison}{9}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Four-model comparison on the held-out test set.}}{9}{}\protected@file@percent }
+\newlabel{fig:model_comparison}{{11}{9}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Per-Class mAP{@}0.5 Progression}{9}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces Per-class mAP{@}0.5 across v1, v2, and v5.}}{9}{}\protected@file@percent }
+\newlabel{fig:per_class_map}{{12}{9}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {P}er-Class Recall and mAP{@}0.5: v1 vs v5 (Deployed)}}}{9}{}\protected@file@percent }
+\newlabel{tab:v1_v5}{{6}{9}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Full Per-Class Metrics at v5}{9}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces Per-class scorecard at v5 (test set).}}{9}{}\protected@file@percent }
+\newlabel{fig:perclass_full}{{13}{9}{}{}{}}
+\citation{b1}
+\citation{b5}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}ull Per-Class Scorecard at v5 (Test Set, 622 Images, 351 Instances)}}}{10}{}\protected@file@percent }
+\newlabel{tab:v5_full}{{7}{10}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-E}1}Why Person Recall Is Low, and Why It Was Not Chased Further}{10}{}\protected@file@percent }
+\newlabel{sec:person_recall_discussion}{{\mbox  {V-E}1}{10}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-F}}Normalised Confusion Matrix}{10}{}\protected@file@percent }
+\newlabel{sec:confusion}{{\mbox  {V-F}}{10}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces Normalised confusion matrix on the v5 held-out test set.}}{10}{}\protected@file@percent }
+\newlabel{fig:confusion}{{14}{10}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-G}}Precision-Recall Curves}{10}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces Per-class precision--recall curves (v5, test set).}}{10}{}\protected@file@percent }
+\newlabel{fig:pr_curves}{{15}{10}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-H}}Hardware Inference Performance}{11}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces Hardware inference performance on the Hailo-8L.}}{11}{}\protected@file@percent }
+\newlabel{fig:hw_perf}{{16}{11}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {Y}OLOv8 Variant Selection (Hailo-8L Budget). YOLOv8s FPS is the directly measured on-chip value; YOLOv8n, YOLOv8m, and YOLOv8l FPS figures are scaled from GFLOPs against the measured YOLOv8s operating point ($\mathrm  {FPS}_{\mathrm  {var}} \approx \mathrm  {FPS}_{s} \cdot \mathrm  {GFLOPs}_{s} / \mathrm  {GFLOPs}_{\mathrm  {var}}$) and cross-checked against Hailo Model Zoo reference latencies.}}}{11}{}\protected@file@percent }
+\newlabel{tab:arch_select}{{8}{11}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-I}}Sustained FPS Across Operating Modes}{11}{}\protected@file@percent }
+\newlabel{sec:async_fps}{{\mbox  {V-I}}{11}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces FPS-across-modes time series under full concurrent load.}}{11}{}\protected@file@percent }
+\newlabel{fig:fps_ts}{{17}{11}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-J}}INT8 Quantisation and Deployment Characteristics}{11}{}\protected@file@percent }
+\newlabel{sec:quant}{{\mbox  {V-J}}{11}{}{}{}}
+\citation{b3}
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {F}P32 Baseline and INT8 Deployment on the Same Test Split}}}{12}{}\protected@file@percent }
+\newlabel{tab:quant}{{9}{12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-K}}MobileNetV2 Classifier Evaluation}{12}{}\protected@file@percent }
+\newlabel{sec:classifier_eval}{{\mbox  {V-K}}{12}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {M}obileNetV2 v2 Confusion Matrix (500-Crop Held-Out Set, $t{=}0.50$)}}}{12}{}\protected@file@percent }
+\newlabel{tab:cls_confusion}{{10}{12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-L}}Scope of the Depth-Variance Pre-Filter}{12}{}\protected@file@percent }
+\newlabel{sec:antispoof_eval}{{\mbox  {V-L}}{12}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-M}}F1-Confidence Threshold Curves}{13}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Per-class F1 score versus confidence threshold.}}{13}{}\protected@file@percent }
+\newlabel{fig:f1_conf}{{18}{13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-N}}Effect of Training Dataset Size}{13}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Validation mAP{@}0.5 versus training-set size.}}{13}{}\protected@file@percent }
+\newlabel{fig:v1v2}{{19}{13}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {T}raining Dataset Growth and Test mAP}}}{13}{}\protected@file@percent }
+\newlabel{tab:dataset_versions}{{11}{13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-O}}Validation-to-Test Generalisation Gap}{13}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {20}{\ignorespaces Validation-to-test mAP{@}0.5 gap across dataset versions.}}{13}{}\protected@file@percent }
+\newlabel{fig:overfit}{{20}{13}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-P}}Continuous-Deployment Telemetry and Functional Soak}{14}{}\protected@file@percent }
+\newlabel{sec:soak}{{\mbox  {V-P}}{14}{}{}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {21}{\ignorespaces 48~h continuous host-level telemetry on the deployed Pi~5.}}{14}{}\protected@file@percent }
+\newlabel{fig:telemetry48h}{{21}{14}{}{}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{14}{}\protected@file@percent }
+\newlabel{sec:conclusion}{{VI}{14}{}{}{}}
+\citation{b33}
+\citation{b34}
+\citation{b35}
+\citation{b36}
+\citation{b37}
+\citation{b38}
+\citation{b39}
+\citation{b40}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Hardware, Software, and Model Specifications}{15}{}\protected@file@percent }
+\newlabel{sec:specs}{{A}{15}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-A}}Hardware}{15}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {H}ardware Specification}}}{15}{}\protected@file@percent }
+\newlabel{tab:hw_specs}{{12}{15}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {I}temised Bill of Materials (2026 list prices; INR at point of sale, USD at $1\,\text  {USD}=92.6\,\text  {INR}$)}}}{15}{}\protected@file@percent }
+\newlabel{tab:bom}{{13}{15}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-B}}Software Stack}{15}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}oftware Stack Specification}}}{15}{}\protected@file@percent }
+\newlabel{tab:sw_specs}{{14}{15}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-C}}Models}{16}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {D}eployed Models and Artefacts (Hailo-8L)}}}{16}{}\protected@file@percent }
+\newlabel{tab:model_specs}{{15}{16}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-D}}Service-side Parameters}{16}{}\protected@file@percent }
+\newlabel{sec:service_params}{{\mbox  {A-D}}{16}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {S}ecurity-relevant Primitives}}}{16}{}\protected@file@percent }
+\newlabel{tab:security_params}{{16}{16}{}{}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces {\fontencoding  {T1}\fontseries  {b}\selectfont  {O}perational and Scheduling Parameters}}}{16}{}\protected@file@percent }
+\newlabel{tab:operational_params}{{17}{16}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {A-E}}v6 Fine-tune: Full Configuration and Per-Class Regression Analysis}{16}{}\protected@file@percent }
+\newlabel{sec:v6_details}{{\mbox  {A-E}}{16}{}{}{}}
+\newlabel{sec:code_data}{{\mbox  {A-E}}{16}{}{}{}}
+\bibcite{b2}{1}
+\bibcite{b1}{2}
+\bibcite{b5}{3}
+\bibcite{b6}{4}
+\bibcite{b25}{5}
+\bibcite{b26}{6}
+\bibcite{b27}{7}
+\bibcite{b29}{8}
+\bibcite{b9}{9}
+\bibcite{b10}{10}
+\bibcite{b13}{11}
+\bibcite{b11}{12}
+\bibcite{b4}{13}
+\bibcite{b18}{14}
+\bibcite{b30}{15}
+\bibcite{b19}{16}
+\bibcite{b20}{17}
+\bibcite{b32}{18}
+\bibcite{b28}{19}
+\bibcite{b21}{20}
+\bibcite{b22}{21}
+\bibcite{b23}{22}
+\bibcite{b14}{23}
+\bibcite{b15}{24}
+\bibcite{b31}{25}
+\newlabel{sec:ethics}{{\mbox  {A-E}}{17}{}{}{}}
+\@writefile{toc}{\contentsline {section}{REFERENCES}{17}{}\protected@file@percent }
+\bibcite{b24}{26}
+\bibcite{b12}{27}
+\bibcite{b17}{28}
+\bibcite{b16}{29}
+\bibcite{b41}{30}
+\bibcite{b3}{31}
+\bibcite{b33}{32}
+\bibcite{b34}{33}
+\bibcite{b35}{34}
+\bibcite{b36}{35}
+\bibcite{b37}{36}
+\bibcite{b38}{37}
+\bibcite{b39}{38}
+\bibcite{b40}{39}
+\@writefile{toc}{\contentsline {subsection}{Gonugondla Veera Manikanta}{18}{}\protected@file@percent }
+\gdef \@abspage@last{18}

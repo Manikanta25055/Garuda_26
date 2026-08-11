@@ -1,0 +1,377 @@
+\documentclass[12pt,a4paper]{article}
+
+% ---------- Fonts: Times New Roman family ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{newtxtext,newtxmath}   % Times-compatible text + math
+\usepackage{textcomp}
+
+% ---------- Page geometry ----------
+\usepackage[a4paper,top=1in,bottom=1in,left=1.1in,right=1.1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{microtype}                 % better justification, fewer overfull boxes
+\setlength{\emergencystretch}{3em}      % mop up residual tight lines
+
+% ---------- Structure / layout ----------
+\usepackage{titlesec}
+\usepackage{titling}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{ragged2e}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,urlcolor=blue!55!black,citecolor=black}
+
+% ---------- Heading sizes: main 16pt, sub 14pt, subsub 12pt ----------
+\titleformat{\section}{\normalfont\fontsize{16}{19}\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalfont\fontsize{14}{17}\bfseries}{\thesubsection}{0.6em}{}
+\titleformat{\subsubsection}{\normalfont\fontsize{12}{15}\bfseries}{\thesubsubsection}{0.6em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
+\titlespacing*{\subsubsection}{0pt}{10pt}{4pt}
+
+% ---------- Header / footer ----------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+\fancyhead[L]{\small AR933 --- Claims Requiring Reconstruction}
+\fancyhead[R]{\small Why / How / What}
+\fancyfoot[L]{\small Confidential --- Inventor's Suggestions}
+\fancyfoot[R]{\small Page \thepage\ of \pageref{LastPage}}
+\usepackage{lastpage}
+
+% ---------- Helpers ----------
+\usepackage{url}
+\DeclareUrlCommand\code{\urlstyle{tt}}
+\makeatletter
+\g@addto@macro\UrlBreaks{\do\_\do\:\do\-\do\,\do\/\do\.}
+\makeatother
+\newcommand{\clm}[1]{\textbf{Claim~#1}}
+\definecolor{hdrgray}{gray}{0.92}
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash}p{#1}}
+
+% Callout boxes
+\usepackage{tcolorbox}
+\newtcolorbox{advisory}[1][]{colback=red!4,colframe=red!45!black,
+  boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=5pt,bottom=5pt,#1}
+\newtcolorbox{notebox}[1][]{colback=blue!3,colframe=blue!35!black,
+  boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=5pt,bottom=5pt,#1}
+% Box for proposed replacement claim language (the "What")
+\newtcolorbox{whatbox}[1][]{colback=green!4,colframe=green!40!black,
+  boxrule=0.6pt,arc=2pt,left=6pt,right=6pt,top=5pt,bottom=5pt,#1}
+
+\begin{document}
+
+% =====================================================================
+% TITLE PAGE
+% =====================================================================
+\begin{titlepage}
+\centering
+\vspace*{1.2cm}
+{\fontsize{13}{16}\selectfont CLAIMS REQUIRING RECONSTRUCTION\par}
+\vspace{0.4cm}
+{\color{gray}\rule{0.75\textwidth}{0.8pt}}\par
+\vspace{0.9cm}
+{\fontsize{20}{24}\bfseries Which Claims to Re-Draft, and\\[4pt]
+the Exact Wording to Use\par}
+\vspace{0.6cm}
+{\fontsize{14}{18}\selectfont \itshape ``A System and Method for Privacy-Preserving\\[2pt]
+Edge-Based Threat Detection in a Domestic Environment''\par}
+\vspace{0.9cm}
+{\color{gray}\rule{0.75\textwidth}{0.8pt}}\par
+\vspace{1.4cm}
+
+\begin{tabular}{@{}r >{\raggedright\arraybackslash}p{0.62\textwidth}@{}}
+\textbf{Application reference} & AR933 (Complete Specification, Form~2)\\[3pt]
+\textbf{Claims to reconstruct} & Claims 1, 5, and 7 only\\[3pt]
+\textbf{Claims requiring no change} & Claims 2, 3, 4, 6, 8, 9, 10\\[3pt]
+\textbf{Inventors} & Gonugondla Veera Manikanta; Dr Swathi Tangi\\[3pt]
+\textbf{Prepared for} & Adv.\ Pranav Bhat (IN/PA~4580), Patent Agent\\[3pt]
+\textbf{Prepared by} & Gonugondla Veera Manikanta (Inventor)\\[3pt]
+\textbf{Source of record} & Repository \code{Manikanta25055/Garuda_26}, branch \code{main}\\[2pt]
+ & \href{https://github.com/Manikanta25055/Garuda_26}{\code{https://github.com/Manikanta25055/Garuda_26}}\\[3pt]
+\textbf{Document status} & Confidential --- for prosecution use\\
+\end{tabular}
+
+\vfill
+{\small This document suggests re-drafting \textbf{only} the claims that the working
+implementation does not support as presently worded. For each such claim it states
+\textbf{Why} the current wording is not enabled, \textbf{How} to fix it, and \textbf{What}
+exact replacement language could be used. All other claims are already aligned, or will be
+brought into alignment by code changes the inventor is making, and need no change. These are
+suggestions from the inventor's side and are open to discussion.\par}
+\vspace{0.8cm}
+\end{titlepage}
+
+% =====================================================================
+\section{How to Read This Document}
+% =====================================================================
+
+\begin{notebox}
+\textbf{These are the inventor's suggestions, not instructions.} The reconstructions proposed
+here reflect what the working code can honestly support today. They are offered to help align
+the claims with the implementation --- they are not a direction to the agent. If any claim
+should be kept as originally drafted for strategy, scope, or prosecution reasons, please flag
+it and we will discuss before anything is changed. Where a divergence can be closed by a code
+change instead of a claim amendment, the inventor will make that change.
+\end{notebox}
+
+Three of the ten claims recite behaviour that the actual working code does not perform,
+and cannot be made to perform by drafting alone or by a small code change. Those three ---
+\clm{1}, \clm{5}, and \clm{7} --- must be reconstructed. This document gives, for each:
+
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]
+  \item \textbf{Why} --- the specific clause that is not enabled, and the technical reason
+        the implementation cannot deliver it as worded.
+  \item \textbf{How} --- the drafting approach: what to re-scope, narrow, or replace.
+  \item \textbf{What} --- ready-to-insert replacement language, shown in a shaded box.
+\end{itemize}
+
+Every other claim is either already implemented exactly as written, or differs only in a
+parameter value that the inventor is correcting in code so the claim stays as drafted.
+Those claims need no change from our side. Section~\ref{sec:scope} lists the full
+disposition so the scope is clear.
+
+% =====================================================================
+\section{Scope --- Which Claims to Touch}\label{sec:scope}
+% =====================================================================
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{longtable}{@{}c L{2.7cm} L{7.2cm}@{}}
+\toprule
+\textbf{Claim} & \textbf{Action} & \textbf{Reason}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Claim} & \textbf{Action} & \textbf{Reason}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\textbf{1} & \textbf{Reconstruct} & Two clauses not enabled: the secondary network's recited function, and the absolute restriction on video egress. See Sec.~\ref{sec:c1}.\\
+\textbf{2} & Keep (verify data) & Wording stands. The 50~fps figure depends on re-measurement --- see the advisory in Sec.~\ref{sec:c5}.\\
+\textbf{3} & Keep & Code corrected to the 3-consecutive-frame gate; claim now matches.\\
+\textbf{4} & Keep & Code corrected to the 0.60 / 0.25--0.35 asymmetric thresholds; claim now matches.\\
+\textbf{5} & \textbf{Reconstruct} & The ``less than 4 milliseconds'' figure is physically unattainable for the real secondary models. See Sec.~\ref{sec:c5}.\\
+\textbf{6} & Keep & Power-draw limit measured and satisfied.\\
+\textbf{7} & \textbf{Reconstruct} & Independent method claim; mirrors \clm{1} and carries the same two defects. See Sec.~\ref{sec:c7}.\\
+\textbf{8} & Keep & Thermal limit satisfied.\\
+\textbf{9} & Keep & 20~ms hardware inference latency measured and satisfied.\\
+\textbf{10} & Keep & Operating-mode flags under a single lock implemented as claimed.\\
+\end{longtable}
+\end{center}
+
+\begin{notebox}
+\textbf{One-line summary:} we suggest re-drafting \clm{1}, \clm{5}, and \clm{7} using the
+shaded ``What'' text below, and leaving every other claim untouched --- subject to your review.
+\end{notebox}
+
+% =====================================================================
+\section{Claim 1 --- System Claim (Reconstruct)}\label{sec:c1}
+% =====================================================================
+
+\clm{1} carries two clauses that the code does not support. They are independent of each
+other; both must be re-drafted.
+
+% ---------------------------------------------------------------
+\subsection{Clause 1A --- The Secondary Network's Recited Function}
+% ---------------------------------------------------------------
+
+\subsubsection{Why (present wording is not enabled)}
+The claim recites the secondary network as one that re-checks the primary's own class label:
+
+\begin{quote}\itshape
+``\ldots at least one secondary verification neural network configured to independently
+re-evaluate a cropped image region \ldots and to generate a verification output
+\textbf{confirming or rejecting a classification} \textbf{assigned by the primary
+detection neural network}.''
+\end{quote}
+
+The implemented secondary network does not do this. It is a binary \emph{Safe-versus-Weapon}
+classifier (MobileNetV2) combined with a depth-variance anti-spoof (MiDaS Small), and it is
+run on \emph{person} crops only. Weapon-class detections from the primary are treated as
+final outputs of the primary and are never routed to the secondary
+(\code{garuda_cascade.py:439--447}). The secondary therefore never ``confirms or rejects''
+the primary's weapon-class label; it answers a different question --- ``is this person
+associated with a weapon, and is the person a real three-dimensional subject rather than a
+photo or screen.'' As worded, the clause describes a function the system does not perform and
+is not enabled for the weapon classes.
+
+\subsubsection{How (drafting approach)}
+Re-scope the secondary's recited function to what it actually produces: a binary
+safe-versus-threat classification of the cropped region \emph{plus} a depth-variance
+(anti-spoof) measure, with the alert gated on that combined output. Delete the language that
+implies re-verification of the primary's own class label.
+
+\subsubsection{What (replacement language)}
+\begin{whatbox}
+``\ldots at least one secondary verification neural network 109 configured to receive a
+cropped image region corresponding to the detected region of interest and to generate a
+verification output, the verification output comprising (i) a binary safe-versus-threat
+classification of the cropped image region and (ii) a depth-variance measure indicative of
+whether the cropped image region corresponds to a three-dimensional physical subject or to a
+substantially planar surface, the host processor 103 being configured to gate the alert
+signal on the said verification output;''
+\end{whatbox}
+
+% ---------------------------------------------------------------
+\subsection{Clause 1B --- The Restriction on Video Egress}
+% ---------------------------------------------------------------
+
+\subsubsection{Why (present wording is not enabled)}
+The closing \emph{wherein} of \clm{1} recites an absolute bar on sending frames off the box:
+
+\begin{quote}\itshape
+``\ldots to restrict transmission of the sequence of video frames captured by the camera
+sensor to \textbf{any device external} to the host processor and the neural processing
+unit, thereby providing the privacy-preserving edge-based threat detection.''
+\end{quote}
+
+The system streams live MJPEG / WebRTC video to remote browsers
+(\code{Garuda_web.py:90, 966--968}); raw frames are obscured only in \emph{privacy} mode. In
+normal operation the frame sequence does leave the host, so an absolute ``any device
+external'' restriction is contradicted by a shipped feature and is not enabled.
+
+\subsubsection{How (drafting approach)}
+Narrow the restriction from ``any external device'' to the boundary that is truly held:
+frames and inference outputs never reach a \emph{third-party} server; they stay within the
+user-owned trust boundary (evidence goes by SSH/SFTP to a user-owned store, no cloud). This
+is the honest and defensible scope. (If instead the applicant prefers the absolute wording,
+it can be kept only by a code change that forces the privacy blur on \emph{all} streamed
+frames in every mode --- the inventor can implement this; note it to the agent.)
+
+\subsubsection{What (replacement language)}
+\begin{whatbox}
+``\ldots and to restrict transmission of the sequence of video frames captured by the camera
+sensor 101, and of any inference output derived therefrom, to any server outside a
+user-owned trust boundary, such that neither the video frames nor the inference outputs are
+transmitted to a third-party server, thereby providing the privacy-preserving edge-based
+threat detection.''
+\end{whatbox}
+
+% =====================================================================
+\section{Claim 5 --- Secondary-Stage Latency (Reconstruct)}\label{sec:c5}
+% =====================================================================
+
+\subsubsection{Why (present wording is not enabled)}
+\clm{5} recites:
+
+\begin{quote}\itshape
+``\ldots executes the at least one secondary verification neural network within a
+\textbf{combined latency of less than 4 milliseconds} per cropped image region \ldots''
+\end{quote}
+
+The two real secondary models measure MobileNetV2 $\approx 36$~ms and MiDaS~Small
+$\approx 29$~ms per crop on the Hailo-8L (\code{garuda_cascade.py:451, 457}). A combined
+secondary latency under 4~ms is not attainable for these models on this accelerator --- it is
+a model-size / hardware limit, not something a code change can reach. The figure is
+unsupported and must be re-drafted, not coded around.
+
+\subsubsection{How (drafting approach)}
+Two truthful options; pick one:
+\begin{itemize}[leftmargin=1.4em,itemsep=3pt,topsep=2pt]
+  \item \textbf{Option~1 --- state the real number.} Replace ``less than 4 milliseconds''
+        with the actual measured combined secondary latency (of order 30--40~ms), re-measured
+        with the live secondary in the loop, and soften the surrounding ``real-time'' wording
+        accordingly.
+  \item \textbf{Option~2 --- claim the fast path.} Recite the lightweight RGB-variance
+        anti-spoof proxy, which genuinely runs in under 1~ms without invoking the NPU
+        (\code{garuda_cascade.py:88--90, 129--143}), as the real-time verification stage, and
+        describe the MobileNet/MiDaS path as a higher-assurance mode. This keeps a truthful
+        sub-millisecond figure.
+\end{itemize}
+
+\subsubsection{What (replacement language)}
+\begin{whatbox}
+\textbf{Option 1 (measured value):} ``\ldots executes the at least one secondary verification
+neural network 109 within a combined latency of not more than \textbf{[MEASURED]}
+milliseconds per cropped image region, the combined latency being measured independently of a
+frame processing rate of the primary detection neural network 107 \ldots''
+\\[6pt]
+\textbf{Option 2 (fast-path proxy):} ``\ldots executes, on the said at least a third one of
+the plurality of processing cores and without invoking the neural processing unit 105, a
+variance-based anti-spoof verification stage within a latency of less than 1 millisecond per
+cropped image region, the said verification stage rejecting a cropped image region whose
+pixel-intensity variance is below a spoof-rejection threshold \ldots''
+\end{whatbox}
+
+\begin{advisory}
+\textbf{Data note affecting Claims 2 and 5.} In the production server the secondary worker is
+presently a placeholder that logs and returns without running a network
+(\code{Garuda_web.py:445--478}). Any headline figure captured on that build --- the
+$\approx 52$~fps ``under full concurrent load'' (\clm{2}) and the secondary-stage latency
+(\clm{5}) --- was recorded with the second network \emph{not executing}. Before either number
+is relied on for prosecution, re-measure with a live secondary in the loop. This is a
+measurement action, not a drafting action; the \clm{2} \emph{wording} can stand if the number
+holds.
+\end{advisory}
+
+% =====================================================================
+\section{Claim 7 --- Method Claim (Reconstruct)}\label{sec:c7}
+% =====================================================================
+
+\clm{7} is the independent method claim and mirrors \clm{1}. It carries the same two defects,
+in step form, and must receive the same two reconstructions.
+
+\subsubsection{Why (present wording is not enabled)}
+Two steps repeat the \clm{1} problems:
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt,topsep=2pt]
+  \item ``\emph{independently re-evaluating \ldots confirming or rejecting a classification
+        assigned by the primary detection neural network}'' --- same issue as Clause~1A.
+  \item ``\emph{restricting \ldots transmission of the sequence of video frames \ldots to any
+        device external to the host processor and the neural processing unit}'' --- same issue
+        as Clause~1B.
+\end{itemize}
+
+\subsubsection{How (drafting approach)}
+Apply the identical re-scoping used for \clm{1}, cast as method steps.
+
+\subsubsection{What (replacement language)}
+\begin{whatbox}
+\textbf{Verification step (replaces the ``re-evaluating\ldots confirming or rejecting''
+step):}\\
+``generating, by the at least one secondary verification neural network 109, a verification
+output from the cropped image region, the verification output comprising (i) a binary
+safe-versus-threat classification of the cropped image region and (ii) a depth-variance
+measure indicative of whether the cropped image region corresponds to a three-dimensional
+physical subject or to a substantially planar surface, and gating the alert signal on the
+said verification output;''
+\\[6pt]
+\textbf{Egress step (replaces the ``restricting\ldots to any device external'' step):}\\
+``restricting, by the host processor 103, transmission of the sequence of video frames
+captured by the camera sensor 101, and of any inference output derived therefrom, to any
+server outside a user-owned trust boundary, such that neither the video frames nor the
+inference outputs are transmitted to a third-party server, thereby providing the
+privacy-preserving edge-based threat detection.''
+\end{whatbox}
+
+% =====================================================================
+\section{Closing}
+% =====================================================================
+
+Our suggestion is to reconstruct \clm{1}, \clm{5}, and \clm{7} using the shaded ``What'' text
+above, and to leave \clm{2}, \clm{3}, \clm{4}, \clm{6}, \clm{8}, \clm{9}, and \clm{10} as
+drafted --- the inventor is correcting the code so those claims remain true. The
+only non-drafting item is the \clm{2}/\clm{5} re-measurement flagged in the advisory above.
+These are proposals from the inventor's side; if any claim should be preserved as originally
+drafted, we would like to discuss it with you first. All file-and-line references are against
+\code{Manikanta25055/Garuda_26}, branch \code{main}
+(\href{https://github.com/Manikanta25055/Garuda_26}{\code{https://github.com/Manikanta25055/Garuda_26}}),
+and can be verified independently.
+
+\vspace{0.8cm}
+\noindent\rule{\textwidth}{0.4pt}
+\vspace{0.2cm}
+
+\noindent{\small Prepared by the inventor from a line-by-line source audit. Suggestions only
+--- open to discussion. Confidential.}
+
+\end{document}

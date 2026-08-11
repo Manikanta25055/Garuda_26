@@ -1,0 +1,100 @@
+IEEE Paper — Figure Result Descriptions
+========================================
+
+Fig. 1 — Training Loss Convergence (Box, Classification, DFL) — v5 Final Model, 150 Epochs
+All three loss components decrease steadily over 150 epochs, with box loss
+dropping from 1.65 to 0.74 and classification loss from 2.80 to 0.49,
+confirming stable convergence without divergence. The close tracking between
+train and validation curves indicates the model generalises well and is not
+overfitting to the training distribution.
+
+Fig. 2 — Validation mAP and Precision/Recall vs Epoch — v5 Final Model
+mAP@0.5 rises sharply in the first 30 epochs, then plateaus around 0.81 by
+epoch 100, with mAP@0.5:0.95 following at approximately 0.62, showing the
+model learns coarse localisation first before refining tighter box boundaries.
+Precision and recall converge near 0.87 and 0.80 respectively,
+indicating a well-balanced detector with no strong bias toward false positives
+or false negatives.
+
+Fig. 3 — Four-Model Performance Comparison (Test Set): Default → v1 → v2 → v5
+The default COCO-pretrained YOLOv8s scores near zero on all metrics because
+its 80-class label scheme does not align with the 4-class task, confirming
+that out-of-the-box weights are completely unusable for this domain. The final
+fine-tuned v5 model (4,982 training images, 150 epochs) achieves mAP@0.5 of
+0.847 — an 82% improvement over fine-tuned v1 and a 12% gain over v2 —
+demonstrating that both dataset scale and diversity are critical for robust
+real-world detection performance.
+
+Fig. 4 — Per-Class mAP@0.5: Fine-tuned v1 vs v2 vs v5
+The largest individual gain from v1 to v5 belongs to Knife (+0.66 mAP@0.5),
+which was severely underperforming in v1 (0.23) due to the Roboflow dataset
+containing very few diverse knife images. Scissors achieves the highest
+absolute mAP@0.5 of 0.967 in v5, while Person remains the most challenging
+class at 0.647, reflecting high intra-class visual variability across poses,
+occlusions, and backgrounds. All four classes improve monotonically from v1
+through v2 to v5.
+
+Fig. 5 — Full Per-Class Metrics for Best Model — Fine-tuned v5 (Final)
+Hammer, Knife, and Scissors achieve strong balanced performance with both
+precision and recall above 0.82, while Person is the weakest class with
+precision 0.701 and recall 0.609, reflecting the high intra-class visual
+variability of persons across poses, occlusions, and backgrounds. Scissors
+achieves exceptional mAP@0.5 of 0.967 and mAP@0.5:0.95 of 0.828, making it
+the best-detected class overall.
+
+Fig. 6 — Normalised Confusion Matrix (Fine-tuned v5, Test Set)
+The diagonal dominates with correct-class recall values of 0.85, 0.82, 0.61,
+and 0.93 for Hammer, Knife, Person, and Scissors respectively, confirming
+strong per-class discrimination. Inter-class confusion is very low (≤0.03
+per cell), indicating that most detection errors are outright misses
+(background false negatives) rather than misclassifications between the four
+target classes.
+
+Fig. 7 — Precision-Recall Curves (Fine-tuned v5, Per Class)
+Scissors achieves the highest area under the PR curve (AP=0.967), maintaining
+high precision well past recall of 0.90, while Person shows the steepest
+precision drop-off at lower recall thresholds, consistent with its high
+intra-class variability. Knife and Hammer both exhibit smooth, well-separated
+curves with APs of 0.886 and 0.889 respectively, demonstrating reliable
+detection across a wide confidence operating range.
+
+Fig. 8 — Dataset Class Distribution (Train / Val / Test) — v5 Dataset
+Person is the most represented class with 2,100 training instances, while
+Hammer is the scarcest with 480, reflecting the natural frequency imbalance
+in the source datasets. This imbalance partially explains Person's lower
+precision (0.701) — abundant training examples introduce more background
+diversity and harder negatives — while the full 4,982-image training set
+allows v5 to substantially outperform earlier checkpoints on all classes.
+
+Fig. 9 — Hardware Inference Performance on Hailo-8L
+Our custom model (best_v5.hef) achieves 52.2 FPS at 18.4 ms NPU latency on
+the Hailo-8L chip, comfortably exceeding real-time requirements (≥25 FPS) for
+security surveillance applications. This compares favourably in latency against
+the standard YOLOv8s reference (13.2 ms / 58.2 FPS), with the modest 5 ms
+increase attributed to the custom NMS post-processing baked into the HEF.
+
+Fig. 10 — F1-Confidence Threshold Curves (Fine-tuned v5, Per Class)
+All four classes reach their peak F1 score in the confidence range 0.25–0.27,
+which aligns with YOLO's default threshold of 0.25 and confirms that no manual
+threshold tuning is required for deployment. Scissors achieves the highest
+peak F1 (0.690), while Person is lowest (0.473), consistent with its lower
+recall; operating below the peak threshold for Person could recover additional
+true positives at a modest false-positive cost.
+
+Fig. 11 — Validation mAP@0.5: Effect of Training Dataset Size (v1 vs v2 vs v5)
+Fine-tuned v1 (359 images) converges quickly to a high validation mAP of
+~0.88 but its held-out test mAP is only 0.465, exposing severe overfitting to
+the Roboflow dataset's visual style. Fine-tuned v2 (1,383 images) narrows the
+gap substantially (val 0.735, test 0.754), while the final v5 (4,982 images,
+150 epochs) achieves both strong validation (0.817) and best test mAP (0.847),
+demonstrating that dataset scale and diversity are the dominant factors for
+real-world generalisation.
+
+Fig. 12 — Val vs Test mAP@0.5 Generalisation Gap (v1, v2, v5)
+Fine-tuned v1 exhibits a 0.414-point gap between its best validation mAP
+(0.879) and held-out test mAP (0.465), a clear sign of distribution overfit
+to the single-source Roboflow dataset. Fine-tuned v2 reverses this gap
+slightly (+0.019, test marginally beats val), and the final v5 model achieves
+positive generalisation (+0.030 gap: test 0.847 > val 0.817), confirming that
+the expanded 4,982-image dataset produces a model that generalises robustly
+to genuinely unseen real-world imagery.

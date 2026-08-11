@@ -1,0 +1,13 @@
+{
+  "hooksConfig": {
+    "disabled": [
+      "/Users/manikantagonugondla/.vibe-island/bin/vibe-island-bridge --source gemini",
+      "echo 'Reminder: prefer codebase-memory-mcp search_graph/trace_call_path/get_code_snippet over grep/file search for code discovery.' >&2",
+      "/Users/manikantagonugondla/.vibe-island/bin/vibe-island-bridge --source gemini",
+      "/Users/manikantagonugondla/.vibe-island/bin/vibe-island-bridge --source gemini",
+      "/Users/manikantagonugondla/.vibe-island/bin/vibe-island-bridge --source gemini",
+      "/Users/manikantagonugondla/.vibe-island/bin/vibe-island-bridge --source gemini",
+      "/Users/manikantagonugondla/.vibe-island/bin/vibe-island-bridge --source gemini"
+    ]
+  }
+}
