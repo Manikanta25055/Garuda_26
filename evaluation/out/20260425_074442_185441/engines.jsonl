@@ -1,0 +1,17 @@
+{"engine": "presence", "ok": false, "t": 1777083282.4997008}
+{"engine": "snapshot", "ok": false, "t": 1777083282.5009868}
+{"engine": "email", "ok": false, "t": 1777083282.5020285}
+{"engine": "chat", "ok": false, "latency_s": 0.001722574234008789, "body": "", "t": 1777083282.5038188}
+{"engine": "presence", "ok": false, "t": 1777085085.8038661}
+{"engine": "presence", "ok": false, "t": 1777086885.907495}
+{"engine": "snapshot", "ok": false, "t": 1777086885.9102306}
+{"engine": "chat", "ok": false, "latency_s": 0.004374265670776367, "body": "", "t": 1777086885.9147947}
+{"engine": "presence", "ok": false, "t": 1777088686.0109363}
+{"engine": "presence", "ok": false, "t": 1777090486.0858603}
+{"engine": "snapshot", "ok": false, "t": 1777090486.0883565}
+{"engine": "chat", "ok": false, "latency_s": 0.002668619155883789, "body": "", "t": 1777090486.0911736}
+{"engine": "presence", "ok": false, "t": 1777092286.1941175}
+{"engine": "presence", "ok": false, "t": 1777094086.287459}
+{"engine": "snapshot", "ok": false, "t": 1777094086.2916536}
+{"engine": "chat", "ok": false, "latency_s": 0.009160995483398438, "body": "", "t": 1777094086.3010263}
+{"engine": "presence", "ok": false, "t": 1777095886.3794699}

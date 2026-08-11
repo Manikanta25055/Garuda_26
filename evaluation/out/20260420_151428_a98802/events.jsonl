@@ -177,3 +177,17 @@
 {"kind": "sys_log", "ts": 1776711092.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776711092.64895}
 {"kind": "sys_log", "ts": 1776711043.0, "msg": "Alert triggered.", "t": 1776711099.6616144}
 {"kind": "sys_log", "ts": 1776711104.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1776711104.6691976}
+{"kind": "eval_inject", "label": "Hammer", "ok": false, "rtt_ms": 4.85, "resp": null, "t": 1776720738.3780394}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa8cd0110>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1776722556.3794904}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa8cd3c90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1776722556.6135788}
+{"kind": "eval_inject", "label": "Knife", "ok": false, "rtt_ms": 5.44, "resp": null, "t": 1776724338.3838823}
+{"kind": "http_error", "path": "/api/state", "err": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))", "t": 1776726929.002205}
+{"kind": "eval_inject", "label": "scissors", "ok": false, "rtt_ms": 3.72, "resp": null, "t": 1776727938.3919063}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 23.28, "resp": {"ok": true, "t_request": 1776731538.3956876, "t_alert": 1776731538.4018793, "latency_ms": 6.19, "label": "Hammer", "confidence": 0.9}, "t": 1776731538.4155114}
+{"kind": "eval_inject", "label": "Knife", "ok": false, "rtt_ms": 7.98, "resp": null, "t": 1776735138.4253514}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 13.3, "resp": {"ok": true, "t_request": 1776738738.4284089, "t_alert": 1776738738.4321203, "latency_ms": 3.71, "label": "scissors", "confidence": 0.9}, "t": 1776738738.4390802}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 16.38, "resp": {"ok": true, "t_request": 1776742338.445287, "t_alert": 1776742338.4512682, "latency_ms": 5.98, "label": "Hammer", "confidence": 0.9}, "t": 1776742338.4560075}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 15.35, "resp": {"ok": true, "t_request": 1776745938.4597087, "t_alert": 1776745938.4647503, "latency_ms": 5.04, "label": "Knife", "confidence": 0.9}, "t": 1776745938.4725156}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))", "t": 1776745978.4806583}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa8cd2f50>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1776745978.4817946}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa8cd0450>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1776745978.482723}

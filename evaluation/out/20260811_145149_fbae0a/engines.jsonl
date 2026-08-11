@@ -1,0 +1,30 @@
+{"engine": "presence", "ok": false, "t": 1786440109.1489785}
+{"engine": "snapshot", "ok": false, "t": 1786440109.151092}
+{"engine": "email", "ok": false, "t": 1786440109.1593893}
+{"engine": "chat", "ok": false, "latency_s": 0.004845857620239258, "body": "", "t": 1786440109.1652038}
+{"engine": "presence", "ok": false, "t": 1786441910.517039}
+{"engine": "presence", "ok": false, "t": 1786443710.608237}
+{"engine": "snapshot", "ok": false, "t": 1786443710.6108897}
+{"engine": "chat", "ok": false, "latency_s": 0.010317802429199219, "body": "", "t": 1786443710.621673}
+{"engine": "presence", "ok": false, "t": 1786445510.7295911}
+{"engine": "presence", "ok": false, "t": 1786447310.8462431}
+{"engine": "snapshot", "ok": false, "t": 1786447310.8491466}
+{"engine": "chat", "ok": false, "latency_s": 0.002117633819580078, "body": "", "t": 1786447310.8514054}
+{"engine": "presence", "ok": false, "t": 1786449110.925174}
+{"engine": "presence", "ok": false, "t": 1786450911.0497212}
+{"engine": "snapshot", "ok": false, "t": 1786450911.0530338}
+{"engine": "chat", "ok": false, "latency_s": 0.0023877620697021484, "body": "", "t": 1786450911.0555882}
+{"engine": "presence", "ok": false, "t": 1786452711.143872}
+{"engine": "presence", "ok": false, "t": 1786454511.2483938}
+{"engine": "snapshot", "ok": false, "t": 1786454511.2504838}
+{"engine": "email", "ok": false, "t": 1786454511.2530775}
+{"engine": "chat", "ok": false, "latency_s": 0.00720667839050293, "body": "", "t": 1786454511.260643}
+{"engine": "presence", "ok": false, "t": 1786456311.3408847}
+{"engine": "presence", "ok": false, "t": 1786458111.4282851}
+{"engine": "snapshot", "ok": false, "t": 1786458111.430384}
+{"engine": "chat", "ok": false, "latency_s": 0.00423884391784668, "body": "", "t": 1786458111.4347992}
+{"engine": "presence", "ok": false, "t": 1786459911.51663}
+{"engine": "presence", "ok": false, "t": 1786461711.5896492}
+{"engine": "snapshot", "ok": false, "t": 1786461711.5958216}
+{"engine": "chat", "ok": false, "latency_s": 0.0029175281524658203, "body": "", "t": 1786461711.598926}
+{"engine": "clip", "ok": false, "start": false, "stop": false, "t": 1786461719.606689}

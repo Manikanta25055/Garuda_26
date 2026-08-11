@@ -1,0 +1,32 @@
+{"kind": "danger", "ts": 1777097664.0, "label": "Knife", "conf": 0.84, "t": 1777097712.5802188}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777097664.0, "label": "Knife", "conf": 0.84, "t": 1777097712.5802188}, "email_ts": 1777097665.0, "latency_s": 1.0, "t": 1777097712.6186306}
+{"kind": "danger", "ts": 1777097724.0, "label": "Knife", "conf": 0.83, "t": 1777097772.6497555}
+{"kind": "danger", "ts": 1777097784.0, "label": "Knife", "conf": 0.83, "t": 1777097832.7058432}
+{"kind": "danger", "ts": 1777098228.0, "label": "Knife", "conf": 0.83, "t": 1777098252.5873356}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777098228.0, "label": "Knife", "conf": 0.83, "t": 1777098252.5873356}, "email_ts": 1777098230.0, "latency_s": 2.0, "t": 1777098252.6260428}
+{"kind": "danger", "ts": 1777102133.0, "label": "Knife", "conf": 0.84, "t": 1777102147.2677999}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777102133.0, "label": "Knife", "conf": 0.84, "t": 1777102147.2677999}, "email_ts": 1777102133.0, "latency_s": 0.0, "t": 1777102147.5604005}
+{"kind": "danger", "ts": 1777102432.0, "label": "Knife", "conf": 0.83, "t": 1777102447.5525224}
+{"kind": "danger", "ts": 1777102499.0, "label": "Knife", "conf": 0.84, "t": 1777102507.6132572}
+{"kind": "danger", "ts": 1777102573.0, "label": "Knife", "conf": 0.87, "t": 1777102627.714493}
+{"kind": "danger", "ts": 1777107656.0, "label": "Knife", "conf": 0.83, "t": 1777107689.5256536}
+{"kind": "danger", "ts": 1777109308.0, "label": "Knife", "conf": 0.85, "t": 1777109324.610162}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777109308.0, "label": "Knife", "conf": 0.85, "t": 1777109324.610162}, "email_ts": 1777109398.0, "latency_s": 90.0, "t": 1777109444.647884}
+{"kind": "danger", "ts": 1777109398.0, "label": "Knife", "conf": 0.82, "t": 1777109444.72554}
+{"kind": "danger", "ts": 1777109496.0, "label": "Knife", "conf": 0.82, "t": 1777109504.7850835}
+{"kind": "danger", "ts": 1777109559.0, "label": "Knife", "conf": 0.82, "t": 1777109564.8460102}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777109496.0, "label": "Knife", "conf": 0.82, "t": 1777109504.7850835}, "email_ts": 1777109594.0, "latency_s": 98.0, "t": 1777109624.8250263}
+{"kind": "danger", "ts": 1777109628.0, "label": "Knife", "conf": 0.84, "t": 1777109684.4327414}
+{"kind": "danger", "ts": 1777109698.0, "label": "Knife", "conf": 0.87, "t": 1777109744.5297744}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777109698.0, "label": "Knife", "conf": 0.87, "t": 1777109744.5297744}, "email_ts": 1777109779.0, "latency_s": 81.0, "t": 1777109804.4898903}
+{"kind": "danger", "ts": 1777109761.0, "label": "Knife", "conf": 0.83, "t": 1777109804.592509}
+{"kind": "danger", "ts": 1777109828.0, "label": "Knife", "conf": 0.82, "t": 1777109864.641677}
+{"kind": "danger", "ts": 1777112181.0, "label": "Knife", "conf": 0.84, "t": 1777112238.3907394}
+{"kind": "danger", "ts": 1777113501.0, "label": "Knife", "conf": 0.83, "t": 1777113558.6325867}
+{"kind": "danger", "ts": 1777114027.0, "label": "Knife", "conf": 0.83, "t": 1777114038.5705206}
+{"kind": "danger", "ts": 1777115745.0, "label": "Knife", "conf": 0.84, "t": 1777115778.6309164}
+{"kind": "danger", "ts": 1777120659.0, "label": "Knife", "conf": 0.87, "t": 1777120698.5731847}
+{"kind": "danger", "ts": 1777120722.0, "label": "Knife", "conf": 0.83, "t": 1777120758.6276803}
+{"kind": "danger", "ts": 1777120784.0, "label": "Knife", "conf": 0.84, "t": 1777120818.679761}
+{"kind": "danger", "ts": 1777120847.0, "label": "Knife", "conf": 0.83, "t": 1777120878.2464993}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1777120784.0, "label": "Knife", "conf": 0.84, "t": 1777120818.679761}, "email_ts": 1777120847.0, "latency_s": 63.0, "t": 1777120878.610156}

@@ -27,7 +27,7 @@
     "dnd": false,
     "email_off": false,
     "idle": false,
-    "night": false,
+    "night": true,
     "emergency": false,
     "privacy": false
   },

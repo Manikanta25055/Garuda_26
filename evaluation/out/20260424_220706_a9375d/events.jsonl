@@ -1,0 +1,955 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa166f290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.4070563}
+{"kind": "login", "ok": false, "t": 1777048626.407312}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa08f4390>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.409914}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa08f5d90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.4112158}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa08f7690>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.4246497}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa08fd610>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.4398918}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa08febd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.4413073}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa0904410>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1777048626.4439971}
+{"kind": "sys_log", "ts": 1777048629.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777048689.9881651}
+{"kind": "sys_log", "ts": 1777048629.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777048689.9885042}
+{"kind": "sys_log", "ts": 1777048629.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777048689.9885762}
+{"kind": "sys_log", "ts": 1777048629.0, "msg": "Pipeline started.", "t": 1777048689.9886441}
+{"kind": "sys_log", "ts": 1777048659.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1777048689.9887207}
+{"kind": "sys_log", "ts": 1777048770.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777048771.048111}
+{"kind": "sys_log", "ts": 1777048959.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777048960.4985795}
+{"kind": "sys_log", "ts": 1777048785.0, "msg": "[NETWORK] Internet restored \u2014 240 queued events ready to sync", "t": 1777048968.5063262}
+{"kind": "sys_log", "ts": 1777048971.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777048972.0103636}
+{"kind": "sys_log", "ts": 1777048983.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777048984.0223293}
+{"kind": "sys_log", "ts": 1777048995.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777048996.0345414}
+{"kind": "sys_log", "ts": 1777049007.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049008.04607}
+{"kind": "sys_log", "ts": 1777049019.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049019.5502696}
+{"kind": "sys_log", "ts": 1777048977.0, "msg": "Alert triggered.", "t": 1777049028.5573611}
+{"kind": "sys_log", "ts": 1777048980.0, "msg": "Email alert sent.", "t": 1777049028.5577056}
+{"kind": "sys_log", "ts": 1777048987.0, "msg": "Alert triggered.", "t": 1777049028.5578377}
+{"kind": "sys_log", "ts": 1777049014.0, "msg": "Alert triggered.", "t": 1777049028.5581448}
+{"kind": "sys_log", "ts": 1777049018.0, "msg": "Alert triggered.", "t": 1777049028.5584834}
+{"kind": "sys_log", "ts": 1777049031.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049031.5623453}
+{"kind": "sys_log", "ts": 1777049060.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049061.0814488}
+{"kind": "sys_log", "ts": 1777049072.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049073.1012948}
+{"kind": "sys_log", "ts": 1777049084.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049085.109851}
+{"kind": "sys_log", "ts": 1777049049.0, "msg": "Alert triggered.", "t": 1777049088.612878}
+{"kind": "sys_log", "ts": 1777049075.0, "msg": "Alert triggered.", "t": 1777049088.6136825}
+{"kind": "sys_log", "ts": 1777049097.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049097.6245866}
+{"kind": "sys_log", "ts": 1777049109.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049109.638708}
+{"kind": "sys_log", "ts": 1777049121.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049121.6464057}
+{"kind": "sys_log", "ts": 1777049132.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049133.1564507}
+{"kind": "sys_log", "ts": 1777049144.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049145.1625001}
+{"kind": "sys_log", "ts": 1777049101.0, "msg": "Alert triggered.", "t": 1777049148.6666298}
+{"kind": "sys_log", "ts": 1777049109.0, "msg": "Alert triggered.", "t": 1777049148.6671798}
+{"kind": "sys_log", "ts": 1777049136.0, "msg": "Alert triggered.", "t": 1777049148.667423}
+{"kind": "sys_log", "ts": 1777049156.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049157.174566}
+{"kind": "sys_log", "ts": 1777049168.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049169.1831524}
+{"kind": "sys_log", "ts": 1777049180.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049181.1940823}
+{"kind": "sys_log", "ts": 1777049192.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049192.6997135}
+{"kind": "sys_log", "ts": 1777049204.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049205.2128236}
+{"kind": "sys_log", "ts": 1777049151.0, "msg": "Alert triggered.", "t": 1777049208.7142649}
+{"kind": "sys_log", "ts": 1777049161.0, "msg": "Email alert sent.", "t": 1777049208.7144501}
+{"kind": "sys_log", "ts": 1777049199.0, "msg": "Alert triggered.", "t": 1777049208.714548}
+{"kind": "sys_log", "ts": 1777049216.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049216.7236345}
+{"kind": "sys_log", "ts": 1777049228.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049229.229101}
+{"kind": "sys_log", "ts": 1777049240.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049241.2399635}
+{"kind": "sys_log", "ts": 1777049252.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049253.2441177}
+{"kind": "sys_log", "ts": 1777049264.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049265.254464}
+{"kind": "sys_log", "ts": 1777049210.0, "msg": "Alert triggered.", "t": 1777049268.7556508}
+{"kind": "sys_log", "ts": 1777049266.0, "msg": "Alert triggered.", "t": 1777049268.7558064}
+{"kind": "sys_log", "ts": 1777049276.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049276.761463}
+{"kind": "sys_log", "ts": 1777049288.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049288.76848}
+{"kind": "sys_log", "ts": 1777049300.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049300.2748446}
+{"kind": "sys_log", "ts": 1777049312.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049312.7860656}
+{"kind": "sys_log", "ts": 1777049324.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049324.7960262}
+{"kind": "sys_log", "ts": 1777049292.0, "msg": "Alert triggered.", "t": 1777049328.7976623}
+{"kind": "sys_log", "ts": 1777049307.0, "msg": "Alert triggered.", "t": 1777049328.7980678}
+{"kind": "sys_log", "ts": 1777049317.0, "msg": "Alert triggered.", "t": 1777049328.7981281}
+{"kind": "sys_log", "ts": 1777049336.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049336.307212}
+{"kind": "sys_log", "ts": 1777049347.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049348.3158598}
+{"kind": "sys_log", "ts": 1777049360.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049360.3229616}
+{"kind": "sys_log", "ts": 1777049371.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049372.3363602}
+{"kind": "sys_log", "ts": 1777049384.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049384.3525758}
+{"kind": "sys_log", "ts": 1777049334.0, "msg": "Alert triggered.", "t": 1777049388.858212}
+{"kind": "sys_log", "ts": 1777049344.0, "msg": "Alert triggered.", "t": 1777049388.8585548}
+{"kind": "sys_log", "ts": 1777049347.0, "msg": "Email alert sent.", "t": 1777049388.8586118}
+{"kind": "sys_log", "ts": 1777049350.0, "msg": "Alert triggered.", "t": 1777049388.8587217}
+{"kind": "sys_log", "ts": 1777049371.0, "msg": "Alert triggered.", "t": 1777049388.8587587}
+{"kind": "sys_log", "ts": 1777049380.0, "msg": "Alert triggered.", "t": 1777049388.8587935}
+{"kind": "sys_log", "ts": 1777049396.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049396.3702962}
+{"kind": "sys_log", "ts": 1777049408.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049408.3907952}
+{"kind": "sys_log", "ts": 1777049420.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049420.4030619}
+{"kind": "sys_log", "ts": 1777049432.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049432.913027}
+{"kind": "sys_log", "ts": 1777049444.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049444.918225}
+{"kind": "sys_log", "ts": 1777049426.0, "msg": "Alert triggered.", "t": 1777049448.9197805}
+{"kind": "sys_log", "ts": 1777049434.0, "msg": "Alert triggered.", "t": 1777049448.9200065}
+{"kind": "sys_log", "ts": 1777049456.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049456.9267373}
+{"kind": "sys_log", "ts": 1777049468.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049468.9341598}
+{"kind": "sys_log", "ts": 1777049480.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049480.4473877}
+{"kind": "sys_log", "ts": 1777049492.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049492.462192}
+{"kind": "sys_log", "ts": 1777049503.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049503.9756954}
+{"kind": "sys_log", "ts": 1777049474.0, "msg": "Alert triggered.", "t": 1777049508.982496}
+{"kind": "sys_log", "ts": 1777049494.0, "msg": "Alert triggered.", "t": 1777049508.9825897}
+{"kind": "sys_log", "ts": 1777049503.0, "msg": "Alert triggered.", "t": 1777049508.9826431}
+{"kind": "sys_log", "ts": 1777049515.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049515.9942942}
+{"kind": "sys_log", "ts": 1777049527.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049528.0140667}
+{"kind": "sys_log", "ts": 1777049539.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049540.0193217}
+{"kind": "sys_log", "ts": 1777049551.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049552.0302975}
+{"kind": "sys_log", "ts": 1777049563.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049564.0504732}
+{"kind": "sys_log", "ts": 1777049512.0, "msg": "Alert triggered.", "t": 1777049568.5524821}
+{"kind": "sys_log", "ts": 1777049524.0, "msg": "Alert triggered.", "t": 1777049568.552668}
+{"kind": "sys_log", "ts": 1777049527.0, "msg": "Email alert sent.", "t": 1777049568.5527143}
+{"kind": "sys_log", "ts": 1777049531.0, "msg": "Alert triggered.", "t": 1777049568.552797}
+{"kind": "sys_log", "ts": 1777049575.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049576.0624146}
+{"kind": "sys_log", "ts": 1777049587.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049587.5701818}
+{"kind": "sys_log", "ts": 1777049599.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049599.5776238}
+{"kind": "sys_log", "ts": 1777049611.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049611.5940335}
+{"kind": "sys_log", "ts": 1777049623.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049623.6105819}
+{"kind": "sys_log", "ts": 1777049583.0, "msg": "Alert triggered.", "t": 1777049628.614555}
+{"kind": "sys_log", "ts": 1777049592.0, "msg": "Alert triggered.", "t": 1777049628.6149333}
+{"kind": "sys_log", "ts": 1777049635.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049635.6273139}
+{"kind": "sys_log", "ts": 1777049647.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049647.6382902}
+{"kind": "sys_log", "ts": 1777049658.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049659.1505086}
+{"kind": "sys_log", "ts": 1777049670.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049671.1575022}
+{"kind": "sys_log", "ts": 1777049682.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049683.1694486}
+{"kind": "sys_log", "ts": 1777049651.0, "msg": "Alert triggered.", "t": 1777049688.6746874}
+{"kind": "sys_log", "ts": 1777049680.0, "msg": "Alert triggered.", "t": 1777049688.6750398}
+{"kind": "sys_log", "ts": 1777049694.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049695.1824813}
+{"kind": "sys_log", "ts": 1777049706.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049707.1942766}
+{"kind": "sys_log", "ts": 1777049718.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049718.7067935}
+{"kind": "sys_log", "ts": 1777049730.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049731.2255235}
+{"kind": "sys_log", "ts": 1777049742.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049742.7365558}
+{"kind": "sys_log", "ts": 1777049689.0, "msg": "Alert triggered.", "t": 1777049748.7392387}
+{"kind": "sys_log", "ts": 1777049703.0, "msg": "Alert triggered.", "t": 1777049748.73957}
+{"kind": "sys_log", "ts": 1777049709.0, "msg": "Email alert sent.", "t": 1777049748.739678}
+{"kind": "sys_log", "ts": 1777049719.0, "msg": "Alert triggered.", "t": 1777049748.7400243}
+{"kind": "sys_log", "ts": 1777049729.0, "msg": "Alert triggered.", "t": 1777049748.7402909}
+{"kind": "sys_log", "ts": 1777049738.0, "msg": "Alert triggered.", "t": 1777049748.740534}
+{"kind": "sys_log", "ts": 1777049754.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049754.7435412}
+{"kind": "sys_log", "ts": 1777049766.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049766.7495353}
+{"kind": "sys_log", "ts": 1777049778.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049779.2627063}
+{"kind": "sys_log", "ts": 1777049790.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049790.7742465}
+{"kind": "sys_log", "ts": 1777049802.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049802.7884324}
+{"kind": "sys_log", "ts": 1777049814.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049814.797548}
+{"kind": "sys_log", "ts": 1777049826.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049826.8088388}
+{"kind": "sys_log", "ts": 1777049838.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049838.8233202}
+{"kind": "sys_log", "ts": 1777049850.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049850.831834}
+{"kind": "sys_log", "ts": 1777049862.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049862.8465958}
+{"kind": "sys_log", "ts": 1777049874.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049874.3551283}
+{"kind": "sys_log", "ts": 1777049886.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049886.3624368}
+{"kind": "sys_log", "ts": 1777049897.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049898.3690338}
+{"kind": "sys_log", "ts": 1777049909.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049910.3806086}
+{"kind": "sys_log", "ts": 1777049921.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049921.891313}
+{"kind": "sys_log", "ts": 1777049891.0, "msg": "Alert triggered.", "t": 1777049928.9022064}
+{"kind": "sys_log", "ts": 1777049894.0, "msg": "Email alert sent.", "t": 1777049928.9025087}
+{"kind": "sys_log", "ts": 1777049917.0, "msg": "Alert triggered.", "t": 1777049928.9026306}
+{"kind": "sys_log", "ts": 1777049933.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049933.9076674}
+{"kind": "sys_log", "ts": 1777049945.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049945.4193518}
+{"kind": "sys_log", "ts": 1777049957.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049957.9307969}
+{"kind": "sys_log", "ts": 1777049969.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049969.9467642}
+{"kind": "sys_log", "ts": 1777049981.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049981.960584}
+{"kind": "sys_log", "ts": 1777049940.0, "msg": "Alert triggered.", "t": 1777049988.9651077}
+{"kind": "sys_log", "ts": 1777049957.0, "msg": "Alert triggered.", "t": 1777049988.9652631}
+{"kind": "sys_log", "ts": 1777049980.0, "msg": "Alert triggered.", "t": 1777049988.9653072}
+{"kind": "sys_log", "ts": 1777049993.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777049993.9713361}
+{"kind": "sys_log", "ts": 1777050005.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050005.489248}
+{"kind": "sys_log", "ts": 1777050017.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050017.996684}
+{"kind": "sys_log", "ts": 1777050029.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050029.5140555}
+{"kind": "sys_log", "ts": 1777050041.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050041.5301006}
+{"kind": "sys_log", "ts": 1777049989.0, "msg": "Alert triggered.", "t": 1777050048.5382278}
+{"kind": "sys_log", "ts": 1777050040.0, "msg": "Alert triggered.", "t": 1777050048.53843}
+{"kind": "sys_log", "ts": 1777050047.0, "msg": "Alert triggered.", "t": 1777050048.538492}
+{"kind": "sys_log", "ts": 1777050053.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050053.543178}
+{"kind": "sys_log", "ts": 1777050065.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050065.5500624}
+{"kind": "sys_log", "ts": 1777050076.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050077.0602279}
+{"kind": "sys_log", "ts": 1777050088.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050089.0752351}
+{"kind": "sys_log", "ts": 1777050100.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050101.0854604}
+{"kind": "sys_log", "ts": 1777050075.0, "msg": "Alert triggered.", "t": 1777050108.5904586}
+{"kind": "sys_log", "ts": 1777050078.0, "msg": "Email alert sent.", "t": 1777050108.5906343}
+{"kind": "sys_log", "ts": 1777050096.0, "msg": "Alert triggered.", "t": 1777050108.5907269}
+{"kind": "sys_log", "ts": 1777050112.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050113.0952156}
+{"kind": "sys_log", "ts": 1777050124.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050124.6018937}
+{"kind": "sys_log", "ts": 1777050136.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050136.6223855}
+{"kind": "sys_log", "ts": 1777050148.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050148.633113}
+{"kind": "sys_log", "ts": 1777050159.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050160.1531336}
+{"kind": "sys_log", "ts": 1777050171.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050172.174843}
+{"kind": "sys_log", "ts": 1777050184.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050184.182679}
+{"kind": "sys_log", "ts": 1777050195.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050196.1941366}
+{"kind": "sys_log", "ts": 1777050207.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050208.2008903}
+{"kind": "sys_log", "ts": 1777050219.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050219.7096434}
+{"kind": "sys_log", "ts": 1777050178.0, "msg": "Alert triggered.", "t": 1777050228.7263622}
+{"kind": "sys_log", "ts": 1777050187.0, "msg": "Alert triggered.", "t": 1777050228.7265291}
+{"kind": "sys_log", "ts": 1777050204.0, "msg": "Alert triggered.", "t": 1777050228.7265775}
+{"kind": "sys_log", "ts": 1777050216.0, "msg": "Alert triggered.", "t": 1777050228.7266161}
+{"kind": "sys_log", "ts": 1777050228.0, "msg": "Alert triggered.", "t": 1777050228.7266521}
+{"kind": "sys_log", "ts": 1777050231.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050231.7282348}
+{"kind": "sys_log", "ts": 1777050243.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050243.7386134}
+{"kind": "sys_log", "ts": 1777050255.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050255.7524166}
+{"kind": "sys_log", "ts": 1777050266.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050267.2646532}
+{"kind": "sys_log", "ts": 1777050278.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050278.7827935}
+{"kind": "sys_log", "ts": 1777050240.0, "msg": "Alert triggered.", "t": 1777050288.7916672}
+{"kind": "sys_log", "ts": 1777050252.0, "msg": "Alert triggered.", "t": 1777050288.792417}
+{"kind": "sys_log", "ts": 1777050258.0, "msg": "Email alert sent.", "t": 1777050288.7926784}
+{"kind": "sys_log", "ts": 1777050270.0, "msg": "Alert triggered.", "t": 1777050288.7928104}
+{"kind": "sys_log", "ts": 1777050290.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050290.7938554}
+{"kind": "sys_log", "ts": 1777050303.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050303.8055923}
+{"kind": "sys_log", "ts": 1777050315.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050315.8147063}
+{"kind": "sys_log", "ts": 1777050327.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050327.830512}
+{"kind": "sys_log", "ts": 1777050339.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050339.8360355}
+{"kind": "sys_log", "ts": 1777050351.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050351.350761}
+{"kind": "sys_log", "ts": 1777050362.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050363.3620856}
+{"kind": "sys_log", "ts": 1777050374.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050375.3739164}
+{"kind": "sys_log", "ts": 1777050386.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050386.890392}
+{"kind": "sys_log", "ts": 1777050398.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050398.8983808}
+{"kind": "sys_log", "ts": 1777050409.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050410.41059}
+{"kind": "sys_log", "ts": 1777050421.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050422.4228537}
+{"kind": "sys_log", "ts": 1777050434.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050434.432035}
+{"kind": "sys_log", "ts": 1777050446.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050446.9435182}
+{"kind": "sys_log", "ts": 1777050458.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050458.4585667}
+{"kind": "sys_log", "ts": 1777050470.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050470.4704363}
+{"kind": "sys_log", "ts": 1777050482.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050482.4863625}
+{"kind": "sys_log", "ts": 1777050494.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050494.4966092}
+{"kind": "sys_log", "ts": 1777050506.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050506.5091774}
+{"kind": "sys_log", "ts": 1777050517.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050518.5210388}
+{"kind": "sys_log", "ts": 1777050530.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050530.5310428}
+{"kind": "sys_log", "ts": 1777050542.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050542.5415695}
+{"kind": "sys_log", "ts": 1777050554.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050554.5557265}
+{"kind": "sys_log", "ts": 1777050566.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050566.5677695}
+{"kind": "sys_log", "ts": 1777050578.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050578.586223}
+{"kind": "sys_log", "ts": 1777050590.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050590.5966315}
+{"kind": "sys_log", "ts": 1777050602.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050602.6102016}
+{"kind": "sys_log", "ts": 1777050614.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050614.1244514}
+{"kind": "sys_log", "ts": 1777050625.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050626.142581}
+{"kind": "sys_log", "ts": 1777050637.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050637.6542985}
+{"kind": "sys_log", "ts": 1777050649.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050649.6606798}
+{"kind": "sys_log", "ts": 1777050661.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050661.675792}
+{"kind": "sys_log", "ts": 1777050673.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050673.684148}
+{"kind": "sys_log", "ts": 1777050685.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050685.198097}
+{"kind": "sys_log", "ts": 1777050696.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050697.2163227}
+{"kind": "sys_log", "ts": 1777050708.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050709.226413}
+{"kind": "sys_log", "ts": 1777050720.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050720.7463217}
+{"kind": "sys_log", "ts": 1777050732.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050732.758225}
+{"kind": "sys_log", "ts": 1777050744.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050744.7644804}
+{"kind": "sys_log", "ts": 1777050756.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050756.282253}
+{"kind": "sys_log", "ts": 1777050767.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050768.2912192}
+{"kind": "sys_log", "ts": 1777050779.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050780.296947}
+{"kind": "sys_log", "ts": 1777050791.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050792.314604}
+{"kind": "sys_log", "ts": 1777050803.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050804.320974}
+{"kind": "sys_log", "ts": 1777050815.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050816.3318717}
+{"kind": "sys_log", "ts": 1777050827.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050827.8387487}
+{"kind": "sys_log", "ts": 1777050839.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050839.8502781}
+{"kind": "sys_log", "ts": 1777050851.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050851.8657029}
+{"kind": "sys_log", "ts": 1777050863.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050863.878713}
+{"kind": "sys_log", "ts": 1777050875.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050875.38664}
+{"kind": "sys_log", "ts": 1777050886.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050887.405027}
+{"kind": "sys_log", "ts": 1777050898.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050898.9223511}
+{"kind": "sys_log", "ts": 1777050910.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050910.9348135}
+{"kind": "sys_log", "ts": 1777050922.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050922.9461203}
+{"kind": "sys_log", "ts": 1777050934.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050934.4727516}
+{"kind": "sys_log", "ts": 1777050945.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050945.9901567}
+{"kind": "sys_log", "ts": 1777050958.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050958.5060585}
+{"kind": "sys_log", "ts": 1777050970.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050970.514355}
+{"kind": "sys_log", "ts": 1777050982.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050982.5323174}
+{"kind": "sys_log", "ts": 1777050994.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777050994.538308}
+{"kind": "sys_log", "ts": 1777051006.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051006.5458295}
+{"kind": "sys_log", "ts": 1777051017.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051018.054211}
+{"kind": "sys_log", "ts": 1777051029.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051030.0694618}
+{"kind": "sys_log", "ts": 1777051041.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051042.0793211}
+{"kind": "sys_log", "ts": 1777051053.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051054.090409}
+{"kind": "sys_log", "ts": 1777051065.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051065.606383}
+{"kind": "sys_log", "ts": 1777051077.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051077.6184225}
+{"kind": "sys_log", "ts": 1777051089.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051089.6347191}
+{"kind": "sys_log", "ts": 1777051100.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051101.146426}
+{"kind": "sys_log", "ts": 1777051112.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051113.1617064}
+{"kind": "sys_log", "ts": 1777051124.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051125.1836946}
+{"kind": "sys_log", "ts": 1777051136.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051137.2022943}
+{"kind": "sys_log", "ts": 1777051148.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051149.2250738}
+{"kind": "sys_log", "ts": 1777051161.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051161.2425635}
+{"kind": "sys_log", "ts": 1777051172.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051172.7509215}
+{"kind": "sys_log", "ts": 1777051184.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051184.7581868}
+{"kind": "sys_log", "ts": 1777051196.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051196.7727733}
+{"kind": "sys_log", "ts": 1777051208.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051208.7896447}
+{"kind": "sys_log", "ts": 1777051220.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051221.3070157}
+{"kind": "sys_log", "ts": 1777051220.0, "msg": "Pipeline started.", "t": 1777051221.3073075}
+{"kind": "sys_log", "ts": 1777051233.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051233.317265}
+{"kind": "sys_log", "ts": 1777051244.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051245.32628}
+{"kind": "sys_log", "ts": 1777051256.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051256.834359}
+{"kind": "sys_log", "ts": 1777051268.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051268.84779}
+{"kind": "sys_log", "ts": 1777051279.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051280.3522089}
+{"kind": "sys_log", "ts": 1777051291.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051291.8579853}
+{"kind": "sys_log", "ts": 1777051303.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051304.3812063}
+{"kind": "sys_log", "ts": 1777051315.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051316.4013171}
+{"kind": "sys_log", "ts": 1777051327.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051327.9106114}
+{"kind": "sys_log", "ts": 1777051339.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051339.9306076}
+{"kind": "sys_log", "ts": 1777051351.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051351.9451714}
+{"kind": "sys_log", "ts": 1777051363.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051363.9538443}
+{"kind": "sys_log", "ts": 1777051375.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051375.4662297}
+{"kind": "sys_log", "ts": 1777051386.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051386.9743721}
+{"kind": "sys_log", "ts": 1777051398.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051398.990262}
+{"kind": "sys_log", "ts": 1777051428.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051429.0119252}
+{"kind": "sys_log", "ts": 1777051440.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051441.5267212}
+{"kind": "sys_log", "ts": 1777051453.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051453.537799}
+{"kind": "sys_log", "ts": 1777051464.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051465.048681}
+{"kind": "sys_log", "ts": 1777051476.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051477.0575926}
+{"kind": "sys_log", "ts": 1777051488.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051489.0701542}
+{"kind": "sys_log", "ts": 1777051500.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051500.5852652}
+{"kind": "sys_log", "ts": 1777051523.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051523.6099787}
+{"kind": "sys_log", "ts": 1777051523.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051523.6102269}
+{"kind": "sys_log", "ts": 1777051523.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051523.6103208}
+{"kind": "sys_log", "ts": 1777051534.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051535.1279724}
+{"kind": "sys_log", "ts": 1777051534.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051535.1282167}
+{"kind": "sys_log", "ts": 1777051534.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051535.1284113}
+{"kind": "sys_log", "ts": 1777051546.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051547.1381989}
+{"kind": "sys_log", "ts": 1777051546.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051547.1384022}
+{"kind": "sys_log", "ts": 1777051546.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051547.1384737}
+{"kind": "sys_log", "ts": 1777051558.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051558.642624}
+{"kind": "sys_log", "ts": 1777051558.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051558.6435223}
+{"kind": "sys_log", "ts": 1777051558.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051558.644026}
+{"kind": "sys_log", "ts": 1777051570.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051570.1588728}
+{"kind": "sys_log", "ts": 1777051570.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051570.1591165}
+{"kind": "sys_log", "ts": 1777051570.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051570.1596777}
+{"kind": "sys_log", "ts": 1777051512.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051572.6626184}
+{"kind": "sys_log", "ts": 1777051512.0, "msg": "Pipeline started.", "t": 1777051572.662976}
+{"kind": "sys_log", "ts": 1777051581.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051582.1665075}
+{"kind": "sys_log", "ts": 1777051581.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051582.1666815}
+{"kind": "sys_log", "ts": 1777051581.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051582.1667304}
+{"kind": "sys_log", "ts": 1777051593.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051593.1738605}
+{"kind": "sys_log", "ts": 1777051593.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051593.1740766}
+{"kind": "sys_log", "ts": 1777051593.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051593.1741292}
+{"kind": "sys_log", "ts": 1777051604.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051604.6890666}
+{"kind": "sys_log", "ts": 1777051604.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051604.689276}
+{"kind": "sys_log", "ts": 1777051604.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051604.6893244}
+{"kind": "sys_log", "ts": 1777051615.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051616.1991181}
+{"kind": "sys_log", "ts": 1777051615.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051616.1998203}
+{"kind": "sys_log", "ts": 1777051615.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051616.2001963}
+{"kind": "sys_log", "ts": 1777051627.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051628.217507}
+{"kind": "sys_log", "ts": 1777051627.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051628.2178397}
+{"kind": "sys_log", "ts": 1777051627.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051628.2180083}
+{"kind": "sys_log", "ts": 1777051639.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051639.7345629}
+{"kind": "sys_log", "ts": 1777051639.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051639.7349505}
+{"kind": "sys_log", "ts": 1777051639.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051639.73501}
+{"kind": "sys_log", "ts": 1777051651.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051651.7502272}
+{"kind": "sys_log", "ts": 1777051651.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051651.7504685}
+{"kind": "sys_log", "ts": 1777051651.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051651.7505336}
+{"kind": "sys_log", "ts": 1777051662.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051663.257433}
+{"kind": "sys_log", "ts": 1777051662.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051663.2580206}
+{"kind": "sys_log", "ts": 1777051662.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051663.2584388}
+{"kind": "sys_log", "ts": 1777051675.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051675.274431}
+{"kind": "sys_log", "ts": 1777051675.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051675.274674}
+{"kind": "sys_log", "ts": 1777051675.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051675.2747638}
+{"kind": "sys_log", "ts": 1777051686.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051687.284134}
+{"kind": "sys_log", "ts": 1777051686.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051687.2843277}
+{"kind": "sys_log", "ts": 1777051686.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051687.2843757}
+{"kind": "sys_log", "ts": 1777051698.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051698.7918355}
+{"kind": "sys_log", "ts": 1777051698.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051698.792104}
+{"kind": "sys_log", "ts": 1777051698.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051698.7921858}
+{"kind": "sys_log", "ts": 1777051710.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051710.8081536}
+{"kind": "sys_log", "ts": 1777051710.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051710.8083203}
+{"kind": "sys_log", "ts": 1777051710.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051710.8083684}
+{"kind": "sys_log", "ts": 1777051722.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051722.316042}
+{"kind": "sys_log", "ts": 1777051722.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051722.318073}
+{"kind": "sys_log", "ts": 1777051722.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051722.318887}
+{"kind": "sys_log", "ts": 1777051734.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051734.32611}
+{"kind": "sys_log", "ts": 1777051734.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051734.3267019}
+{"kind": "sys_log", "ts": 1777051734.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051734.3269408}
+{"kind": "sys_log", "ts": 1777051745.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051745.842225}
+{"kind": "sys_log", "ts": 1777051745.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051745.8424044}
+{"kind": "sys_log", "ts": 1777051745.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051745.8424551}
+{"kind": "sys_log", "ts": 1777051757.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051757.3530192}
+{"kind": "sys_log", "ts": 1777051757.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051757.3534622}
+{"kind": "sys_log", "ts": 1777051757.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051757.353566}
+{"kind": "sys_log", "ts": 1777051768.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051769.3677843}
+{"kind": "sys_log", "ts": 1777051768.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051769.36801}
+{"kind": "sys_log", "ts": 1777051768.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051769.3680944}
+{"kind": "sys_log", "ts": 1777051780.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051780.8742015}
+{"kind": "sys_log", "ts": 1777051780.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051780.8744326}
+{"kind": "sys_log", "ts": 1777051780.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051780.8744874}
+{"kind": "sys_log", "ts": 1777051792.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051792.8815966}
+{"kind": "sys_log", "ts": 1777051792.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051792.8820994}
+{"kind": "sys_log", "ts": 1777051792.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051792.8821702}
+{"kind": "sys_log", "ts": 1777051803.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051804.3860626}
+{"kind": "sys_log", "ts": 1777051803.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051804.386306}
+{"kind": "sys_log", "ts": 1777051803.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051804.3863704}
+{"kind": "sys_log", "ts": 1777051815.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051815.90331}
+{"kind": "sys_log", "ts": 1777051815.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051815.9042552}
+{"kind": "sys_log", "ts": 1777051815.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051815.9044106}
+{"kind": "sys_log", "ts": 1777051827.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051827.4092147}
+{"kind": "sys_log", "ts": 1777051827.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051827.4097145}
+{"kind": "sys_log", "ts": 1777051827.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051827.4098089}
+{"kind": "sys_log", "ts": 1777051839.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051839.4188247}
+{"kind": "sys_log", "ts": 1777051839.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051839.4196606}
+{"kind": "sys_log", "ts": 1777051839.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051839.4198444}
+{"kind": "sys_log", "ts": 1777051850.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051850.9306147}
+{"kind": "sys_log", "ts": 1777051850.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051850.9310932}
+{"kind": "sys_log", "ts": 1777051850.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051850.931211}
+{"kind": "sys_log", "ts": 1777051862.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051862.9451153}
+{"kind": "sys_log", "ts": 1777051862.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051862.9459362}
+{"kind": "sys_log", "ts": 1777051862.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051862.9494815}
+{"kind": "sys_log", "ts": 1777051873.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051874.4606297}
+{"kind": "sys_log", "ts": 1777051873.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051874.460802}
+{"kind": "sys_log", "ts": 1777051873.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051874.4608521}
+{"kind": "sys_log", "ts": 1777051885.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051885.965387}
+{"kind": "sys_log", "ts": 1777051885.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051885.9655824}
+{"kind": "sys_log", "ts": 1777051885.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051885.9656343}
+{"kind": "sys_log", "ts": 1777051897.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051897.4723768}
+{"kind": "sys_log", "ts": 1777051897.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051897.4725854}
+{"kind": "sys_log", "ts": 1777051897.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051897.4726357}
+{"kind": "sys_log", "ts": 1777051908.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051908.9821668}
+{"kind": "sys_log", "ts": 1777051908.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051908.9823465}
+{"kind": "sys_log", "ts": 1777051908.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051908.9823954}
+{"kind": "sys_log", "ts": 1777051920.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051920.5022838}
+{"kind": "sys_log", "ts": 1777051920.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051920.502621}
+{"kind": "sys_log", "ts": 1777051920.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051920.5027428}
+{"kind": "sys_log", "ts": 1777051932.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051932.5217216}
+{"kind": "sys_log", "ts": 1777051932.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051932.5224187}
+{"kind": "sys_log", "ts": 1777051932.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051932.5228872}
+{"kind": "sys_log", "ts": 1777051944.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051944.530684}
+{"kind": "sys_log", "ts": 1777051944.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051944.5308602}
+{"kind": "sys_log", "ts": 1777051944.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051944.5309095}
+{"kind": "sys_log", "ts": 1777051955.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051955.5468779}
+{"kind": "sys_log", "ts": 1777051955.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051955.5474415}
+{"kind": "sys_log", "ts": 1777051955.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051955.5475314}
+{"kind": "sys_log", "ts": 1777051966.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051967.054639}
+{"kind": "sys_log", "ts": 1777051966.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051967.0548313}
+{"kind": "sys_log", "ts": 1777051966.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051967.0548842}
+{"kind": "sys_log", "ts": 1777051978.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051979.0679395}
+{"kind": "sys_log", "ts": 1777051978.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051979.0682652}
+{"kind": "sys_log", "ts": 1777051978.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051979.0683606}
+{"kind": "sys_log", "ts": 1777051989.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777051990.0782661}
+{"kind": "sys_log", "ts": 1777051989.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777051990.0785909}
+{"kind": "sys_log", "ts": 1777051989.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777051990.078709}
+{"kind": "sys_log", "ts": 1777052001.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052002.0852263}
+{"kind": "sys_log", "ts": 1777052001.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052002.0854447}
+{"kind": "sys_log", "ts": 1777052001.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052002.0855086}
+{"kind": "sys_log", "ts": 1777052013.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052014.0944426}
+{"kind": "sys_log", "ts": 1777052013.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052014.0949395}
+{"kind": "sys_log", "ts": 1777052013.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052014.0950086}
+{"kind": "sys_log", "ts": 1777052025.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052026.1037624}
+{"kind": "sys_log", "ts": 1777052025.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052026.1039386}
+{"kind": "sys_log", "ts": 1777052025.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052026.1039877}
+{"kind": "sys_log", "ts": 1777052037.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052037.6180677}
+{"kind": "sys_log", "ts": 1777052037.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052037.6182952}
+{"kind": "sys_log", "ts": 1777052037.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052037.6183465}
+{"kind": "sys_log", "ts": 1777052049.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052049.6232276}
+{"kind": "sys_log", "ts": 1777052049.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052049.6234684}
+{"kind": "sys_log", "ts": 1777052049.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052049.6235588}
+{"kind": "sys_log", "ts": 1777052060.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052061.1319547}
+{"kind": "sys_log", "ts": 1777052060.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052061.1332483}
+{"kind": "sys_log", "ts": 1777052060.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052061.1338162}
+{"kind": "sys_log", "ts": 1777052073.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052073.144386}
+{"kind": "sys_log", "ts": 1777052073.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052073.1448815}
+{"kind": "sys_log", "ts": 1777052073.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052073.1450243}
+{"kind": "sys_log", "ts": 1777052085.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052085.654027}
+{"kind": "sys_log", "ts": 1777052085.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052085.6542182}
+{"kind": "sys_log", "ts": 1777052085.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052085.6542685}
+{"kind": "sys_log", "ts": 1777052096.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052096.6601086}
+{"kind": "sys_log", "ts": 1777052096.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052096.6604407}
+{"kind": "sys_log", "ts": 1777052096.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052096.660498}
+{"kind": "sys_log", "ts": 1777052108.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052108.6701646}
+{"kind": "sys_log", "ts": 1777052108.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052108.671019}
+{"kind": "sys_log", "ts": 1777052108.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052108.6712403}
+{"kind": "sys_log", "ts": 1777052120.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052120.6909049}
+{"kind": "sys_log", "ts": 1777052120.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052120.6911178}
+{"kind": "sys_log", "ts": 1777052120.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052120.6911871}
+{"kind": "sys_log", "ts": 1777052131.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052132.1963418}
+{"kind": "sys_log", "ts": 1777052131.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052132.1965837}
+{"kind": "sys_log", "ts": 1777052131.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052132.196647}
+{"kind": "sys_log", "ts": 1777052143.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052143.706707}
+{"kind": "sys_log", "ts": 1777052143.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052143.7072067}
+{"kind": "sys_log", "ts": 1777052143.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052143.7072937}
+{"kind": "sys_log", "ts": 1777052155.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052155.2115595}
+{"kind": "sys_log", "ts": 1777052155.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052155.2117999}
+{"kind": "sys_log", "ts": 1777052155.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052155.2118676}
+{"kind": "sys_log", "ts": 1777052166.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052167.2187848}
+{"kind": "sys_log", "ts": 1777052166.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052167.2192183}
+{"kind": "sys_log", "ts": 1777052166.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052167.219281}
+{"kind": "sys_log", "ts": 1777052178.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052179.2343652}
+{"kind": "sys_log", "ts": 1777052178.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052179.234996}
+{"kind": "sys_log", "ts": 1777052178.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052179.235221}
+{"kind": "sys_log", "ts": 1777052190.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052190.746996}
+{"kind": "sys_log", "ts": 1777052190.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052190.7472165}
+{"kind": "sys_log", "ts": 1777052190.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052190.747287}
+{"kind": "sys_log", "ts": 1777052201.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052202.2594347}
+{"kind": "sys_log", "ts": 1777052201.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052202.2600775}
+{"kind": "sys_log", "ts": 1777052201.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052202.260702}
+{"kind": "sys_log", "ts": 1777052213.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052214.278353}
+{"kind": "sys_log", "ts": 1777052213.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052214.278536}
+{"kind": "sys_log", "ts": 1777052213.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052214.2785861}
+{"kind": "sys_log", "ts": 1777052225.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052225.7947664}
+{"kind": "sys_log", "ts": 1777052225.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052225.795131}
+{"kind": "sys_log", "ts": 1777052225.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052225.7952216}
+{"kind": "sys_log", "ts": 1777052237.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052237.804819}
+{"kind": "sys_log", "ts": 1777052237.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052237.8050282}
+{"kind": "sys_log", "ts": 1777052237.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052237.8050783}
+{"kind": "sys_log", "ts": 1777052248.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052248.8117888}
+{"kind": "sys_log", "ts": 1777052248.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052248.8123615}
+{"kind": "sys_log", "ts": 1777052248.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052248.8125348}
+{"kind": "sys_log", "ts": 1777052260.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052260.822493}
+{"kind": "sys_log", "ts": 1777052260.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052260.822804}
+{"kind": "sys_log", "ts": 1777052260.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052260.8229008}
+{"kind": "sys_log", "ts": 1777052272.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052272.3456752}
+{"kind": "sys_log", "ts": 1777052272.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052272.3459918}
+{"kind": "sys_log", "ts": 1777052272.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052272.3461967}
+{"kind": "sys_log", "ts": 1777052284.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052284.3574731}
+{"kind": "sys_log", "ts": 1777052284.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052284.3576455}
+{"kind": "sys_log", "ts": 1777052284.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052284.3576937}
+{"kind": "sys_log", "ts": 1777052295.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052295.8661592}
+{"kind": "sys_log", "ts": 1777052295.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052295.8664238}
+{"kind": "sys_log", "ts": 1777052295.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052295.8665032}
+{"kind": "sys_log", "ts": 1777052307.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052307.8821552}
+{"kind": "sys_log", "ts": 1777052307.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052307.8823686}
+{"kind": "sys_log", "ts": 1777052307.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052307.8824208}
+{"kind": "sys_log", "ts": 1777052318.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052319.3932788}
+{"kind": "sys_log", "ts": 1777052318.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052319.3935275}
+{"kind": "sys_log", "ts": 1777052318.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052319.393617}
+{"kind": "sys_log", "ts": 1777052330.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052330.912205}
+{"kind": "sys_log", "ts": 1777052330.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052330.9126074}
+{"kind": "sys_log", "ts": 1777052330.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052330.9126968}
+{"kind": "sys_log", "ts": 1777052342.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052342.930755}
+{"kind": "sys_log", "ts": 1777052342.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052342.931035}
+{"kind": "sys_log", "ts": 1777052342.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052342.9311287}
+{"kind": "sys_log", "ts": 1777052354.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052354.943412}
+{"kind": "sys_log", "ts": 1777052354.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052354.9436839}
+{"kind": "sys_log", "ts": 1777052354.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052354.9437625}
+{"kind": "sys_log", "ts": 1777052365.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052366.4561064}
+{"kind": "sys_log", "ts": 1777052365.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052366.4563222}
+{"kind": "sys_log", "ts": 1777052365.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052366.4563804}
+{"kind": "sys_log", "ts": 1777052377.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052377.969242}
+{"kind": "sys_log", "ts": 1777052377.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052377.9695063}
+{"kind": "sys_log", "ts": 1777052377.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052377.9696069}
+{"kind": "eval_inject", "label": "Knife", "ok": false, "rtt_ms": 8.92, "resp": null, "t": 1777052385.353052}
+{"kind": "sys_log", "ts": 1777052389.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052389.986755}
+{"kind": "sys_log", "ts": 1777052389.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052389.987148}
+{"kind": "sys_log", "ts": 1777052389.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052389.9875066}
+{"kind": "sys_log", "ts": 1777052401.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052401.4953132}
+{"kind": "sys_log", "ts": 1777052401.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052401.4981227}
+{"kind": "sys_log", "ts": 1777052401.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052401.49825}
+{"kind": "sys_log", "ts": 1777052412.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052413.504849}
+{"kind": "sys_log", "ts": 1777052412.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052413.5053651}
+{"kind": "sys_log", "ts": 1777052412.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052413.5055342}
+{"kind": "sys_log", "ts": 1777052424.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052425.519308}
+{"kind": "sys_log", "ts": 1777052424.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052425.5195026}
+{"kind": "sys_log", "ts": 1777052424.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052425.5195525}
+{"kind": "sys_log", "ts": 1777052436.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052437.028397}
+{"kind": "sys_log", "ts": 1777052436.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052437.0287092}
+{"kind": "sys_log", "ts": 1777052436.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052437.0290625}
+{"kind": "sys_log", "ts": 1777052448.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052449.0395372}
+{"kind": "sys_log", "ts": 1777052448.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052449.0403678}
+{"kind": "sys_log", "ts": 1777052448.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052449.040702}
+{"kind": "sys_log", "ts": 1777052460.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052460.5502746}
+{"kind": "sys_log", "ts": 1777052460.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052460.551337}
+{"kind": "sys_log", "ts": 1777052460.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052460.5517788}
+{"kind": "sys_log", "ts": 1777052472.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052472.561119}
+{"kind": "sys_log", "ts": 1777052472.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052472.5615845}
+{"kind": "sys_log", "ts": 1777052472.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052472.5616682}
+{"kind": "sys_log", "ts": 1777052484.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052484.5773942}
+{"kind": "sys_log", "ts": 1777052484.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052484.5775864}
+{"kind": "sys_log", "ts": 1777052484.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052484.5776358}
+{"kind": "sys_log", "ts": 1777052495.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052496.0907648}
+{"kind": "sys_log", "ts": 1777052495.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052496.091283}
+{"kind": "sys_log", "ts": 1777052495.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052496.091448}
+{"kind": "sys_log", "ts": 1777052507.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052508.0981205}
+{"kind": "sys_log", "ts": 1777052507.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052508.0982907}
+{"kind": "sys_log", "ts": 1777052507.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052508.0983462}
+{"kind": "sys_log", "ts": 1777052518.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052519.114321}
+{"kind": "sys_log", "ts": 1777052518.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052519.114611}
+{"kind": "sys_log", "ts": 1777052518.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052519.114694}
+{"kind": "sys_log", "ts": 1777052530.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052530.6198337}
+{"kind": "sys_log", "ts": 1777052530.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052530.6209273}
+{"kind": "sys_log", "ts": 1777052530.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052530.6212192}
+{"kind": "sys_log", "ts": 1777052541.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052542.1288033}
+{"kind": "sys_log", "ts": 1777052541.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052542.129652}
+{"kind": "sys_log", "ts": 1777052541.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052542.129809}
+{"kind": "sys_log", "ts": 1777052553.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052554.1397243}
+{"kind": "sys_log", "ts": 1777052553.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052554.1400914}
+{"kind": "sys_log", "ts": 1777052553.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052554.140192}
+{"kind": "sys_log", "ts": 1777052565.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052565.647331}
+{"kind": "sys_log", "ts": 1777052565.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052565.6475577}
+{"kind": "sys_log", "ts": 1777052565.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052565.6476111}
+{"kind": "sys_log", "ts": 1777052577.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052577.654546}
+{"kind": "sys_log", "ts": 1777052577.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052577.6547205}
+{"kind": "sys_log", "ts": 1777052577.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052577.6547704}
+{"kind": "sys_log", "ts": 1777052588.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052589.159151}
+{"kind": "sys_log", "ts": 1777052588.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052589.1596496}
+{"kind": "sys_log", "ts": 1777052588.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052589.1597197}
+{"kind": "sys_log", "ts": 1777052600.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052600.6642163}
+{"kind": "sys_log", "ts": 1777052600.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052600.664521}
+{"kind": "sys_log", "ts": 1777052600.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052600.6646142}
+{"kind": "sys_log", "ts": 1777052612.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052612.6749804}
+{"kind": "sys_log", "ts": 1777052612.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052612.675182}
+{"kind": "sys_log", "ts": 1777052612.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052612.6752338}
+{"kind": "sys_log", "ts": 1777052623.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052624.1803656}
+{"kind": "sys_log", "ts": 1777052623.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052624.18054}
+{"kind": "sys_log", "ts": 1777052623.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052624.1805885}
+{"kind": "sys_log", "ts": 1777052635.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052635.688159}
+{"kind": "sys_log", "ts": 1777052635.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052635.6885374}
+{"kind": "sys_log", "ts": 1777052635.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052635.6887207}
+{"kind": "sys_log", "ts": 1777052646.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052647.1930537}
+{"kind": "sys_log", "ts": 1777052646.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052647.1934226}
+{"kind": "sys_log", "ts": 1777052646.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052647.1934857}
+{"kind": "sys_log", "ts": 1777052658.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052658.7088625}
+{"kind": "sys_log", "ts": 1777052658.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052658.7090707}
+{"kind": "sys_log", "ts": 1777052658.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052658.709139}
+{"kind": "sys_log", "ts": 1777052669.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052670.2207463}
+{"kind": "sys_log", "ts": 1777052669.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052670.2209554}
+{"kind": "sys_log", "ts": 1777052669.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052670.2210062}
+{"kind": "sys_log", "ts": 1777052681.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052681.7246385}
+{"kind": "sys_log", "ts": 1777052681.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052681.724846}
+{"kind": "sys_log", "ts": 1777052681.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052681.7249181}
+{"kind": "sys_log", "ts": 1777052693.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052693.2333653}
+{"kind": "sys_log", "ts": 1777052693.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052693.2337005}
+{"kind": "sys_log", "ts": 1777052693.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052693.2342906}
+{"kind": "sys_log", "ts": 1777052704.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052705.2415032}
+{"kind": "sys_log", "ts": 1777052704.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052705.2417397}
+{"kind": "sys_log", "ts": 1777052704.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052705.2418256}
+{"kind": "sys_log", "ts": 1777052716.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052717.251364}
+{"kind": "sys_log", "ts": 1777052716.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052717.2515478}
+{"kind": "sys_log", "ts": 1777052716.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052717.2516}
+{"kind": "sys_log", "ts": 1777052728.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052728.756785}
+{"kind": "sys_log", "ts": 1777052728.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052728.7569566}
+{"kind": "sys_log", "ts": 1777052728.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052728.757005}
+{"kind": "sys_log", "ts": 1777052740.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052740.2743442}
+{"kind": "sys_log", "ts": 1777052740.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052740.2746894}
+{"kind": "sys_log", "ts": 1777052740.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052740.2748199}
+{"kind": "sys_log", "ts": 1777052751.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052752.2866144}
+{"kind": "sys_log", "ts": 1777052751.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052752.2867956}
+{"kind": "sys_log", "ts": 1777052751.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052752.2868454}
+{"kind": "sys_log", "ts": 1777052763.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052763.7906873}
+{"kind": "sys_log", "ts": 1777052763.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052763.7910635}
+{"kind": "sys_log", "ts": 1777052763.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052763.7911267}
+{"kind": "sys_log", "ts": 1777052775.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052775.296194}
+{"kind": "sys_log", "ts": 1777052775.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052775.296517}
+{"kind": "sys_log", "ts": 1777052775.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052775.2966003}
+{"kind": "sys_log", "ts": 1777052786.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052787.3064911}
+{"kind": "sys_log", "ts": 1777052786.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052787.306664}
+{"kind": "sys_log", "ts": 1777052786.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052787.306713}
+{"kind": "sys_log", "ts": 1777052798.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052798.81795}
+{"kind": "sys_log", "ts": 1777052798.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052798.8187783}
+{"kind": "sys_log", "ts": 1777052798.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052798.8191605}
+{"kind": "sys_log", "ts": 1777052809.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052810.3283553}
+{"kind": "sys_log", "ts": 1777052809.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052810.3286285}
+{"kind": "sys_log", "ts": 1777052809.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052810.3287234}
+{"kind": "sys_log", "ts": 1777052821.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052822.3425744}
+{"kind": "sys_log", "ts": 1777052821.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052822.3427458}
+{"kind": "sys_log", "ts": 1777052821.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052822.3427932}
+{"kind": "sys_log", "ts": 1777052833.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052833.8530014}
+{"kind": "sys_log", "ts": 1777052833.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052833.8532298}
+{"kind": "sys_log", "ts": 1777052833.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052833.8532872}
+{"kind": "sys_log", "ts": 1777052845.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052845.3670855}
+{"kind": "sys_log", "ts": 1777052845.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052845.3673303}
+{"kind": "sys_log", "ts": 1777052845.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052845.3674076}
+{"kind": "sys_log", "ts": 1777052857.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052857.3743038}
+{"kind": "sys_log", "ts": 1777052857.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052857.3745003}
+{"kind": "sys_log", "ts": 1777052857.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052857.374562}
+{"kind": "sys_log", "ts": 1777052868.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052869.3845434}
+{"kind": "sys_log", "ts": 1777052868.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052869.3847537}
+{"kind": "sys_log", "ts": 1777052868.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052869.3848083}
+{"kind": "sys_log", "ts": 1777052880.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052880.9017446}
+{"kind": "sys_log", "ts": 1777052880.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052880.9020455}
+{"kind": "sys_log", "ts": 1777052880.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052880.9021049}
+{"kind": "sys_log", "ts": 1777052892.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052892.9102838}
+{"kind": "sys_log", "ts": 1777052892.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052892.9106128}
+{"kind": "sys_log", "ts": 1777052892.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052892.9107215}
+{"kind": "sys_log", "ts": 1777052904.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052904.9261882}
+{"kind": "sys_log", "ts": 1777052904.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052904.926404}
+{"kind": "sys_log", "ts": 1777052904.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052904.9264576}
+{"kind": "sys_log", "ts": 1777052915.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052916.4326112}
+{"kind": "sys_log", "ts": 1777052915.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052916.4335563}
+{"kind": "sys_log", "ts": 1777052915.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052916.4340484}
+{"kind": "sys_log", "ts": 1777052927.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052927.9507551}
+{"kind": "sys_log", "ts": 1777052927.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052927.9514012}
+{"kind": "sys_log", "ts": 1777052927.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052927.9517412}
+{"kind": "sys_log", "ts": 1777052939.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052939.9571998}
+{"kind": "sys_log", "ts": 1777052939.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052939.9573836}
+{"kind": "sys_log", "ts": 1777052939.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052939.9574316}
+{"kind": "sys_log", "ts": 1777052951.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052951.4707565}
+{"kind": "sys_log", "ts": 1777052951.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052951.4715738}
+{"kind": "sys_log", "ts": 1777052951.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052951.4718058}
+{"kind": "sys_log", "ts": 1777052962.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052963.4767992}
+{"kind": "sys_log", "ts": 1777052962.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052963.4770195}
+{"kind": "sys_log", "ts": 1777052962.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052963.4770823}
+{"kind": "sys_log", "ts": 1777052974.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052974.9851842}
+{"kind": "sys_log", "ts": 1777052974.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052974.9858403}
+{"kind": "sys_log", "ts": 1777052974.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052974.9861925}
+{"kind": "sys_log", "ts": 1777052986.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052986.4998782}
+{"kind": "sys_log", "ts": 1777052986.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052986.5002456}
+{"kind": "sys_log", "ts": 1777052986.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052986.500331}
+{"kind": "sys_log", "ts": 1777052997.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777052998.5065668}
+{"kind": "sys_log", "ts": 1777052997.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777052998.5067458}
+{"kind": "sys_log", "ts": 1777052997.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777052998.5067961}
+{"kind": "sys_log", "ts": 1777053009.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053010.0190578}
+{"kind": "sys_log", "ts": 1777053009.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053010.0202823}
+{"kind": "sys_log", "ts": 1777053009.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053010.020565}
+{"kind": "sys_log", "ts": 1777053021.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053022.0248}
+{"kind": "sys_log", "ts": 1777053021.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053022.0249906}
+{"kind": "sys_log", "ts": 1777053021.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053022.0250413}
+{"kind": "sys_log", "ts": 1777053033.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053033.5445929}
+{"kind": "sys_log", "ts": 1777053033.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053033.544872}
+{"kind": "sys_log", "ts": 1777053033.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053033.5449433}
+{"kind": "sys_log", "ts": 1777053044.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053045.5592487}
+{"kind": "sys_log", "ts": 1777053044.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053045.5594592}
+{"kind": "sys_log", "ts": 1777053044.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053045.5595129}
+{"kind": "sys_log", "ts": 1777053056.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053056.564626}
+{"kind": "sys_log", "ts": 1777053056.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053056.5648289}
+{"kind": "sys_log", "ts": 1777053056.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053056.5648751}
+{"kind": "sys_log", "ts": 1777053068.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053068.5722203}
+{"kind": "sys_log", "ts": 1777053068.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053068.572582}
+{"kind": "sys_log", "ts": 1777053068.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053068.572678}
+{"kind": "sys_log", "ts": 1777053079.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053080.093591}
+{"kind": "sys_log", "ts": 1777053079.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053080.0938137}
+{"kind": "sys_log", "ts": 1777053079.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053080.093972}
+{"kind": "sys_log", "ts": 1777053091.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053091.6026149}
+{"kind": "sys_log", "ts": 1777053091.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053091.6029115}
+{"kind": "sys_log", "ts": 1777053091.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053091.603032}
+{"kind": "sys_log", "ts": 1777053102.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053103.115017}
+{"kind": "sys_log", "ts": 1777053102.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053103.115393}
+{"kind": "sys_log", "ts": 1777053102.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053103.11545}
+{"kind": "sys_log", "ts": 1777053114.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053114.6230981}
+{"kind": "sys_log", "ts": 1777053114.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053114.623282}
+{"kind": "sys_log", "ts": 1777053114.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053114.6233304}
+{"kind": "sys_log", "ts": 1777053126.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053126.1359253}
+{"kind": "sys_log", "ts": 1777053126.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053126.1361418}
+{"kind": "sys_log", "ts": 1777053126.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053126.1362114}
+{"kind": "sys_log", "ts": 1777053137.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053137.645776}
+{"kind": "sys_log", "ts": 1777053137.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053137.646411}
+{"kind": "sys_log", "ts": 1777053137.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053137.646526}
+{"kind": "sys_log", "ts": 1777053149.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053149.654709}
+{"kind": "sys_log", "ts": 1777053149.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053149.654904}
+{"kind": "sys_log", "ts": 1777053149.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053149.6549551}
+{"kind": "sys_log", "ts": 1777053161.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053161.1657467}
+{"kind": "sys_log", "ts": 1777053161.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053161.16622}
+{"kind": "sys_log", "ts": 1777053161.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053161.1663446}
+{"kind": "sys_log", "ts": 1777053172.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053172.6752973}
+{"kind": "sys_log", "ts": 1777053172.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053172.6754868}
+{"kind": "sys_log", "ts": 1777053172.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053172.6755447}
+{"kind": "sys_log", "ts": 1777053183.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053184.1903782}
+{"kind": "sys_log", "ts": 1777053183.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053184.1907191}
+{"kind": "sys_log", "ts": 1777053183.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053184.1908016}
+{"kind": "sys_log", "ts": 1777053195.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053196.2067215}
+{"kind": "sys_log", "ts": 1777053195.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053196.2068973}
+{"kind": "sys_log", "ts": 1777053195.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053196.2069464}
+{"kind": "sys_log", "ts": 1777053207.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053207.720425}
+{"kind": "sys_log", "ts": 1777053207.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053207.72062}
+{"kind": "sys_log", "ts": 1777053207.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053207.720666}
+{"kind": "sys_log", "ts": 1777053218.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053219.2348678}
+{"kind": "sys_log", "ts": 1777053218.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053219.2352605}
+{"kind": "sys_log", "ts": 1777053218.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053219.2353268}
+{"kind": "sys_log", "ts": 1777053230.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053230.7423544}
+{"kind": "sys_log", "ts": 1777053230.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053230.7425387}
+{"kind": "sys_log", "ts": 1777053230.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053230.742588}
+{"kind": "sys_log", "ts": 1777053241.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053242.2517161}
+{"kind": "sys_log", "ts": 1777053241.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053242.2518964}
+{"kind": "sys_log", "ts": 1777053241.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053242.251948}
+{"kind": "sys_log", "ts": 1777053253.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053253.7578003}
+{"kind": "sys_log", "ts": 1777053253.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053253.758207}
+{"kind": "sys_log", "ts": 1777053253.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053253.7582796}
+{"kind": "sys_log", "ts": 1777053265.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053265.2663257}
+{"kind": "sys_log", "ts": 1777053265.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053265.266501}
+{"kind": "sys_log", "ts": 1777053265.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053265.2665477}
+{"kind": "sys_log", "ts": 1777053277.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053277.2795875}
+{"kind": "sys_log", "ts": 1777053277.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053277.2797673}
+{"kind": "sys_log", "ts": 1777053277.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053277.279827}
+{"kind": "sys_log", "ts": 1777053288.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053288.7871618}
+{"kind": "sys_log", "ts": 1777053288.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053288.7873733}
+{"kind": "sys_log", "ts": 1777053288.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053288.7874215}
+{"kind": "sys_log", "ts": 1777053300.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053300.31049}
+{"kind": "sys_log", "ts": 1777053300.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053300.3109634}
+{"kind": "sys_log", "ts": 1777053300.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053300.3110988}
+{"kind": "sys_log", "ts": 1777053311.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053312.3158815}
+{"kind": "sys_log", "ts": 1777053311.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053312.316076}
+{"kind": "sys_log", "ts": 1777053311.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053312.3161259}
+{"kind": "sys_log", "ts": 1777053323.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053323.8382108}
+{"kind": "sys_log", "ts": 1777053323.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053323.8384259}
+{"kind": "sys_log", "ts": 1777053323.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053323.8384876}
+{"kind": "sys_log", "ts": 1777053335.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053335.849345}
+{"kind": "sys_log", "ts": 1777053335.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053335.8497205}
+{"kind": "sys_log", "ts": 1777053335.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053335.849782}
+{"kind": "sys_log", "ts": 1777053346.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053347.3613625}
+{"kind": "sys_log", "ts": 1777053346.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053347.3618443}
+{"kind": "sys_log", "ts": 1777053346.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053347.3621604}
+{"kind": "sys_log", "ts": 1777053358.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053358.8733861}
+{"kind": "sys_log", "ts": 1777053358.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053358.8736014}
+{"kind": "sys_log", "ts": 1777053358.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053358.8736525}
+{"kind": "sys_log", "ts": 1777053369.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053370.3826098}
+{"kind": "sys_log", "ts": 1777053369.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053370.3827949}
+{"kind": "sys_log", "ts": 1777053369.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053370.382846}
+{"kind": "sys_log", "ts": 1777053381.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053381.8914857}
+{"kind": "sys_log", "ts": 1777053381.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053381.891739}
+{"kind": "sys_log", "ts": 1777053381.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053381.8918}
+{"kind": "sys_log", "ts": 1777053393.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053393.8983033}
+{"kind": "sys_log", "ts": 1777053393.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053393.8985527}
+{"kind": "sys_log", "ts": 1777053393.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053393.8986166}
+{"kind": "sys_log", "ts": 1777053405.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053405.91269}
+{"kind": "sys_log", "ts": 1777053405.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053405.9128754}
+{"kind": "sys_log", "ts": 1777053405.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053405.9129245}
+{"kind": "sys_log", "ts": 1777053416.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053417.4230537}
+{"kind": "sys_log", "ts": 1777053416.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053417.423268}
+{"kind": "sys_log", "ts": 1777053416.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053417.4233224}
+{"kind": "sys_log", "ts": 1777053428.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053428.93474}
+{"kind": "sys_log", "ts": 1777053428.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053428.934971}
+{"kind": "sys_log", "ts": 1777053428.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053428.935026}
+{"kind": "sys_log", "ts": 1777053440.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053440.439807}
+{"kind": "sys_log", "ts": 1777053440.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053440.4399884}
+{"kind": "sys_log", "ts": 1777053440.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053440.4400415}
+{"kind": "sys_log", "ts": 1777053452.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053452.4496255}
+{"kind": "sys_log", "ts": 1777053452.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053452.4499483}
+{"kind": "sys_log", "ts": 1777053452.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053452.450049}
+{"kind": "sys_log", "ts": 1777053464.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053464.4606764}
+{"kind": "sys_log", "ts": 1777053464.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053464.4608622}
+{"kind": "sys_log", "ts": 1777053464.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053464.4609132}
+{"kind": "sys_log", "ts": 1777053475.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053475.9707031}
+{"kind": "sys_log", "ts": 1777053475.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053475.9710047}
+{"kind": "sys_log", "ts": 1777053475.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053475.9711282}
+{"kind": "sys_log", "ts": 1777053487.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053487.984281}
+{"kind": "sys_log", "ts": 1777053487.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053487.9851406}
+{"kind": "sys_log", "ts": 1777053487.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053487.9856238}
+{"kind": "sys_log", "ts": 1777053499.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053499.5051563}
+{"kind": "sys_log", "ts": 1777053499.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053499.505346}
+{"kind": "sys_log", "ts": 1777053499.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053499.505401}
+{"kind": "sys_log", "ts": 1777053511.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053511.5177941}
+{"kind": "sys_log", "ts": 1777053511.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053511.5181475}
+{"kind": "sys_log", "ts": 1777053511.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053511.5182376}
+{"kind": "sys_log", "ts": 1777053523.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053523.5281935}
+{"kind": "sys_log", "ts": 1777053523.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053523.5285647}
+{"kind": "sys_log", "ts": 1777053523.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053523.528625}
+{"kind": "sys_log", "ts": 1777053534.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053534.5553303}
+{"kind": "sys_log", "ts": 1777053534.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053534.5566144}
+{"kind": "sys_log", "ts": 1777053534.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053534.5568197}
+{"kind": "sys_log", "ts": 1777053546.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053546.570767}
+{"kind": "sys_log", "ts": 1777053546.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053546.5715556}
+{"kind": "sys_log", "ts": 1777053546.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053546.5718942}
+{"kind": "sys_log", "ts": 1777053557.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053558.0868762}
+{"kind": "sys_log", "ts": 1777053557.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053558.0871491}
+{"kind": "sys_log", "ts": 1777053557.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053558.0872433}
+{"kind": "sys_log", "ts": 1777053569.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053570.102404}
+{"kind": "sys_log", "ts": 1777053569.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053570.104029}
+{"kind": "sys_log", "ts": 1777053569.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053570.1041996}
+{"kind": "sys_log", "ts": 1777053581.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053582.1134033}
+{"kind": "sys_log", "ts": 1777053581.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053582.1141732}
+{"kind": "sys_log", "ts": 1777053581.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053582.1143816}
+{"kind": "sys_log", "ts": 1777053593.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053594.1213322}
+{"kind": "sys_log", "ts": 1777053593.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053594.121692}
+{"kind": "sys_log", "ts": 1777053593.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053594.1217892}
+{"kind": "sys_log", "ts": 1777053605.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053605.6292858}
+{"kind": "sys_log", "ts": 1777053605.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053605.6297126}
+{"kind": "sys_log", "ts": 1777053605.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053605.629791}
+{"kind": "sys_log", "ts": 1777053617.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053617.642938}
+{"kind": "sys_log", "ts": 1777053617.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053617.6437438}
+{"kind": "sys_log", "ts": 1777053617.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053617.6439595}
+{"kind": "sys_log", "ts": 1777053629.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053629.6546807}
+{"kind": "sys_log", "ts": 1777053629.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053629.6550593}
+{"kind": "sys_log", "ts": 1777053629.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053629.6551225}
+{"kind": "sys_log", "ts": 1777053640.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053641.166673}
+{"kind": "sys_log", "ts": 1777053640.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053641.1671226}
+{"kind": "sys_log", "ts": 1777053640.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053641.1672153}
+{"kind": "sys_log", "ts": 1777053652.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053652.6778111}
+{"kind": "sys_log", "ts": 1777053652.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053652.6780815}
+{"kind": "sys_log", "ts": 1777053652.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053652.678151}
+{"kind": "sys_log", "ts": 1777053664.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053664.694304}
+{"kind": "sys_log", "ts": 1777053664.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053664.6945026}
+{"kind": "sys_log", "ts": 1777053664.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053664.694555}
+{"kind": "sys_log", "ts": 1777053676.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053676.2026584}
+{"kind": "sys_log", "ts": 1777053676.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053676.203023}
+{"kind": "sys_log", "ts": 1777053676.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053676.2031126}
+{"kind": "sys_log", "ts": 1777053687.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053688.222672}
+{"kind": "sys_log", "ts": 1777053687.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053688.2231858}
+{"kind": "sys_log", "ts": 1777053687.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053688.2232995}
+{"kind": "sys_log", "ts": 1777053699.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053700.2301862}
+{"kind": "sys_log", "ts": 1777053699.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053700.230367}
+{"kind": "sys_log", "ts": 1777053699.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053700.230431}
+{"kind": "sys_log", "ts": 1777053711.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053711.7457068}
+{"kind": "sys_log", "ts": 1777053711.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053711.745928}
+{"kind": "sys_log", "ts": 1777053711.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053711.7459953}
+{"kind": "sys_log", "ts": 1777053722.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053723.2544408}
+{"kind": "sys_log", "ts": 1777053722.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053723.2548232}
+{"kind": "sys_log", "ts": 1777053722.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053723.2552345}
+{"kind": "sys_log", "ts": 1777053734.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053734.766598}
+{"kind": "sys_log", "ts": 1777053734.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053734.7669683}
+{"kind": "sys_log", "ts": 1777053734.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053734.7670271}
+{"kind": "sys_log", "ts": 1777053745.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053746.274211}
+{"kind": "sys_log", "ts": 1777053745.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053746.2746923}
+{"kind": "sys_log", "ts": 1777053745.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053746.274782}
+{"kind": "sys_log", "ts": 1777053757.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053758.289772}
+{"kind": "sys_log", "ts": 1777053757.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053758.289998}
+{"kind": "sys_log", "ts": 1777053757.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053758.2900476}
+{"kind": "sys_log", "ts": 1777053769.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053769.7972713}
+{"kind": "sys_log", "ts": 1777053769.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053769.7974539}
+{"kind": "sys_log", "ts": 1777053769.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053769.7975073}
+{"kind": "sys_log", "ts": 1777053781.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053781.3180976}
+{"kind": "sys_log", "ts": 1777053781.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053781.3183584}
+{"kind": "sys_log", "ts": 1777053781.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053781.3184564}
+{"kind": "sys_log", "ts": 1777053792.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053793.3384845}
+{"kind": "sys_log", "ts": 1777053792.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053793.3387172}
+{"kind": "sys_log", "ts": 1777053792.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053793.3387792}
+{"kind": "sys_log", "ts": 1777053804.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053804.8480806}
+{"kind": "sys_log", "ts": 1777053804.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053804.8482869}
+{"kind": "sys_log", "ts": 1777053804.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053804.8483353}
+{"kind": "sys_log", "ts": 1777053816.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053816.3582892}
+{"kind": "sys_log", "ts": 1777053816.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053816.3588986}
+{"kind": "sys_log", "ts": 1777053816.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053816.3592873}
+{"kind": "sys_log", "ts": 1777053828.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053828.3714764}
+{"kind": "sys_log", "ts": 1777053828.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053828.37164}
+{"kind": "sys_log", "ts": 1777053828.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053828.3716877}
+{"kind": "sys_log", "ts": 1777053839.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053839.8817422}
+{"kind": "sys_log", "ts": 1777053839.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053839.8822038}
+{"kind": "sys_log", "ts": 1777053839.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053839.8823264}
+{"kind": "sys_log", "ts": 1777053851.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053851.8897207}
+{"kind": "sys_log", "ts": 1777053851.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053851.8900323}
+{"kind": "sys_log", "ts": 1777053851.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053851.8901076}
+{"kind": "sys_log", "ts": 1777053863.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053863.898192}
+{"kind": "sys_log", "ts": 1777053863.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053863.8983924}
+{"kind": "sys_log", "ts": 1777053863.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053863.8984454}
+{"kind": "sys_log", "ts": 1777053875.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053875.4047375}
+{"kind": "sys_log", "ts": 1777053875.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053875.4050112}
+{"kind": "sys_log", "ts": 1777053875.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053875.4050932}
+{"kind": "sys_log", "ts": 1777053886.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053887.415537}
+{"kind": "sys_log", "ts": 1777053886.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053887.4158132}
+{"kind": "sys_log", "ts": 1777053886.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053887.4158623}
+{"kind": "sys_log", "ts": 1777053898.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053898.9294791}
+{"kind": "sys_log", "ts": 1777053898.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053898.9298334}
+{"kind": "sys_log", "ts": 1777053898.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053898.930045}
+{"kind": "sys_log", "ts": 1777053910.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053910.9340858}
+{"kind": "sys_log", "ts": 1777053910.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053910.9344106}
+{"kind": "sys_log", "ts": 1777053910.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053910.934511}
+{"kind": "sys_log", "ts": 1777053922.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053922.4494925}
+{"kind": "sys_log", "ts": 1777053922.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053922.4497058}
+{"kind": "sys_log", "ts": 1777053922.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053922.449759}
+{"kind": "sys_log", "ts": 1777053933.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053933.9556289}
+{"kind": "sys_log", "ts": 1777053933.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053933.95585}
+{"kind": "sys_log", "ts": 1777053933.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053933.9558983}
+{"kind": "sys_log", "ts": 1777053945.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053945.9633393}
+{"kind": "sys_log", "ts": 1777053945.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053945.9636848}
+{"kind": "sys_log", "ts": 1777053945.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053945.9638066}
+{"kind": "sys_log", "ts": 1777053957.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053957.9780166}
+{"kind": "sys_log", "ts": 1777053957.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053957.9782236}
+{"kind": "sys_log", "ts": 1777053957.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053957.9782734}
+{"kind": "sys_log", "ts": 1777053969.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053969.4902704}
+{"kind": "sys_log", "ts": 1777053969.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053969.4905064}
+{"kind": "sys_log", "ts": 1777053969.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053969.4905648}
+{"kind": "sys_log", "ts": 1777053981.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053981.5015378}
+{"kind": "sys_log", "ts": 1777053981.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053981.5019739}
+{"kind": "sys_log", "ts": 1777053981.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053981.5020514}
+{"kind": "sys_log", "ts": 1777053992.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777053993.0263207}
+{"kind": "sys_log", "ts": 1777053992.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777053993.026581}
+{"kind": "sys_log", "ts": 1777053992.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777053993.0266595}
+{"kind": "sys_log", "ts": 1777054004.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054005.031384}
+{"kind": "sys_log", "ts": 1777054004.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054005.0315602}
+{"kind": "sys_log", "ts": 1777054004.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054005.0316103}
+{"kind": "sys_log", "ts": 1777054016.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054016.5416465}
+{"kind": "sys_log", "ts": 1777054016.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054016.5430892}
+{"kind": "sys_log", "ts": 1777054016.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054016.5435548}
+{"kind": "sys_log", "ts": 1777054028.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054028.5649045}
+{"kind": "sys_log", "ts": 1777054028.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054028.5654907}
+{"kind": "sys_log", "ts": 1777054028.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054028.5656219}
+{"kind": "sys_log", "ts": 1777054039.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054040.0745127}
+{"kind": "sys_log", "ts": 1777054039.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054040.0748947}
+{"kind": "sys_log", "ts": 1777054039.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054040.074991}
+{"kind": "sys_log", "ts": 1777054051.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054052.0821373}
+{"kind": "sys_log", "ts": 1777054051.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054052.0825174}
+{"kind": "sys_log", "ts": 1777054051.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054052.0826192}
+{"kind": "sys_log", "ts": 1777054063.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054064.094167}
+{"kind": "sys_log", "ts": 1777054063.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054064.094344}
+{"kind": "sys_log", "ts": 1777054063.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054064.0943928}
+{"kind": "sys_log", "ts": 1777054075.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054075.1100996}
+{"kind": "sys_log", "ts": 1777054075.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054075.1103313}
+{"kind": "sys_log", "ts": 1777054075.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054075.1104147}
+{"kind": "sys_log", "ts": 1777054086.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1777054086.6184182}
+{"kind": "sys_log", "ts": 1777054086.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1777054086.6186252}
+{"kind": "sys_log", "ts": 1777054086.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1777054086.6186726}
+                                                                                                                                                                                                                                                                                                                                                                                         

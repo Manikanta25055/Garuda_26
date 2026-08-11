@@ -1,0 +1,51 @@
+{
+  "run_id": "20260426_002526_56d3fc",
+  "duration_s": 8709439.803268194,
+  "alerts": {
+    "danger_total": 0,
+    "watch_total": 0,
+    "emails_sent": 0,
+    "matched_pairs": 0,
+    "alert_to_email_latency_s": {
+      "n": 0,
+      "mean": null,
+      "min": null,
+      "max": null
+    },
+    "false_alarms": "requires_manual_label (inspect alerts.jsonl)"
+  },
+  "deadman": {
+    "tamper_events_total": 0,
+    "tamper_during_test": 0,
+    "tamper_outside_test": 0,
+    "false_trigger_rate_per_hour": 0.0
+  },
+  "engines_probed": {
+    "email": 1,
+    "chat": 1,
+    "presence": 1,
+    "snapshot": 1,
+    "clip": 0,
+    "heartbeat": 3
+  },
+  "engines_failed": {
+    "email": 1,
+    "chat": 1,
+    "presence": 1,
+    "snapshot": 1,
+    "clip": 0,
+    "heartbeat": 1
+  },
+  "chat_latency_s": {
+    "n": 1,
+    "mean": 0.0012996196746826172
+  },
+  "voice": {
+    "ground_truth": true,
+    "samples": 10,
+    "matched": 0,
+    "mean_wer": 0.0,
+    "intent_accuracy": 0.0
+  },
+  "out_dir": "/home/manikanta/Projects/Garuda_26/evaluation/out/20260426_002526_56d3fc"
+}
