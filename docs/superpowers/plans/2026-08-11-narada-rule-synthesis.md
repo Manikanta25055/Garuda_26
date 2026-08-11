@@ -2492,15 +2492,23 @@ git commit -m "feat(auto): wire rule synthesis and reflex loop into Garuda_web"
 
 **Interfaces:**
 - Consumes: everything above.
-- Produces: `CORPUS: list[dict]` with keys `id`, `utterance`, `paraphrases` (3 each), `expected_devices`, `expected_fields`; and `run_eval.py` writing `evaluation/out/narada_rs_<timestamp>/summary.json`.
+- Produces: `CORPUS: list[dict]` with keys `id`, `utterance`, `paraphrases` (3 each), `expected_devices`, `expected_fields`; `NEAR_NEIGHBOUR_PAIRS: list[tuple[str, str]]`; and `run_eval.py` writing `evaluation/out/narada_rs_<timestamp>/summary.json`.
 
-Write all 120 utterances before running anything. Writing paraphrases after seeing results is how a suppression number stops meaning anything.
+**`evaluation/narada_rs/corpus.py` is already written and committed** — all 30 entries, 120 utterances, every schema field exercised. Step 3 below is a verification step, not authoring work. Do not rewrite the paraphrases: they were fixed before any result was seen, and revising them after seeing scores destroys the number they produce.
+
+**The metric has two halves.** Suppression rate alone can be gamed by a matcher that matches everything, and several corpus entries are deliberately near neighbours (c01 vs c30 differ only in duration, c09 vs c26 only in comparison direction), so that failure is likely rather than hypothetical. Every paraphrase therefore scores three ways:
+
+- `matched_correct` — matched the rule learned from its own entry. This is suppression, the headline.
+- `matched_wrong` — matched a rule learned from a *different* entry. This is a false suppression: the user's instruction would have been silently swallowed by an unrelated rule. It is the worst outcome of the three, worse than escalating.
+- `escalated` — no local match, so the cloud is called.
+
+Report all three. A backend with 95 percent suppression and 20 percent false suppression is worse than one with 70 percent and zero.
 
 - [ ] **Step 1: Write the corpus test**
 
 ```python
 # tests/garuda_auto/test_corpus.py
-from evaluation.narada_rs.corpus import CORPUS
+from evaluation.narada_rs.corpus import CORPUS, NEAR_NEIGHBOUR_PAIRS
 from basic_pipelines.garuda_auto.rule_schema import FIELDS, DEVICES
 
 
@@ -2538,6 +2546,28 @@ def test_every_schema_field_is_exercised_somewhere():
 def test_no_paraphrase_is_identical_to_its_source():
     for entry in CORPUS:
         assert entry["utterance"] not in entry["paraphrases"], entry["id"]
+
+
+def test_paraphrases_within_an_entry_are_distinct():
+    for entry in CORPUS:
+        assert len(set(entry["paraphrases"])) == 3, entry["id"]
+
+
+def test_near_neighbour_pairs_reference_real_entries():
+    ids = {e["id"] for e in CORPUS}
+    for left, right in NEAR_NEIGHBOUR_PAIRS:
+        assert left in ids and right in ids, f"{left},{right}"
+        assert left != right
+
+
+def test_near_neighbours_are_genuinely_different_intents():
+    by_id = {e["id"]: e for e in CORPUS}
+    for left, right in NEAR_NEIGHBOUR_PAIRS:
+        a, b = by_id[left], by_id[right]
+        differs = (set(a["expected_devices"]) != set(b["expected_devices"])
+                   or set(a["expected_fields"]) != set(b["expected_fields"])
+                   or a["utterance"] != b["utterance"])
+        assert differs, f"{left} and {right} are not actually distinct"
 ```
 
 - [ ] **Step 2: Run the test to verify it fails**
@@ -2545,9 +2575,11 @@ def test_no_paraphrase_is_identical_to_its_source():
 Run: `python -m pytest tests/garuda_auto/test_corpus.py -v`
 Expected: `ModuleNotFoundError: evaluation.narada_rs.corpus`.
 
-- [ ] **Step 3: Write the corpus**
+- [ ] **Step 3: Verify the committed corpus**
 
-Thirty entries in this shape. The first three are written out; write the remaining 27 covering every field in `FIELDS` — the `test_every_schema_field_is_exercised_somewhere` test fails until they do.
+`evaluation/narada_rs/corpus.py` is already written and on this branch — 30 entries, 120 utterances, 8 near-neighbour pairs, every schema field exercised. Read it, confirm the intents match how you actually speak to the system, and change nothing else. If a phrasing genuinely does not sound like something you would say, fix it **now**, before the first evaluation run, and never after.
+
+The shape, for reference:
 
 ```python
 # evaluation/narada_rs/corpus.py
@@ -2592,8 +2624,16 @@ CORPUS = [
         "expected_devices": ["fan"],
         "expected_fields": ["occupancy", "temperature_c"],
     },
-    # 27 more. Between them they must reference every field in FIELDS:
-    # person_count, ambient_luma, humidity_pct, hour, lamp_state, fan_state.
+    # ... c04 through c30 follow the same shape. See the committed file.
+]
+
+# Pairs that describe genuinely different intents but read similarly. A matcher
+# that suppresses across any of these is over-matching.
+NEAR_NEIGHBOUR_PAIRS = [
+    ("c01", "c30"),   # same device, same predicate shape, 5 minutes vs 1 hour
+    ("c01", "c19"),   # same predicate shape, fan vs lamp
+    ("c09", "c26"),   # humidity rising vs falling
+    # ... 5 more in the committed file.
 ]
 ```
 
@@ -2611,9 +2651,12 @@ Expected: 7 passed.
 Metric 1 -- synthesis success: of 30 requests, how many produce a rule that is
 valid and references the expected devices and fields.
 
-Metric 2 -- paraphrase suppression: after learning from the source phrasing,
-how many of the 3 paraphrases match locally instead of escalating. This is the
-headline number, so it is reported per matcher backend.
+Metric 2 -- paraphrase suppression, scored three ways. A paraphrase either
+matches the rule learned from its own entry (correct suppression, the headline),
+matches a rule learned from a different entry (false suppression -- the user's
+instruction silently swallowed by an unrelated rule, the worst of the three),
+or finds nothing and escalates. Suppression rate on its own can be gamed by a
+matcher that matches everything, so both halves are always reported together.
 
 Run with GARUDA_EVAL_OFFLINE=1 to exercise the harness without spending
 credits; that mode reports synthesis as skipped, never as passing.
@@ -2639,7 +2682,8 @@ def run_backend(backend, outdir, offline):
     matcher = LocalMatcher(store, backend=backend)
     nim = NimClient(os.getenv("NIM_API_KEY", ""), os.getenv("NIM_MODEL", "meta/llama-3.3-70b-instruct"))
 
-    rows, synth_ok, suppressed, total_paraphrases = [], 0, 0, 0
+    rows, synth_ok = [], 0
+    correct = wrong = escalated = 0
     for entry in CORPUS:
         row = {"id": entry["id"], "utterance": entry["utterance"]}
 
@@ -2658,29 +2702,46 @@ def run_backend(backend, outdir, offline):
                 devices = {a["device"] for a in rule["then"]}
                 correct = (devices == set(entry["expected_devices"])
                            and fields >= set(entry["expected_fields"]))
-                row["synthesis"] = "correct" if correct else "valid_but_wrong"
+                is_correct = (devices == set(entry["expected_devices"])
+                              and fields >= set(entry["expected_fields"]))
+                row["synthesis"] = "correct" if is_correct else "valid_but_wrong"
                 row["fields"] = sorted(fields)
                 row["devices"] = sorted(devices)
-                synth_ok += int(correct)
+                synth_ok += int(is_correct)
+                # Tag the stored rule so a paraphrase match can be attributed
+                # to the entry it actually came from.
+                rule["_corpus_id"] = entry["id"]
                 store.add(rule)
 
         hits = []
         for paraphrase in entry["paraphrases"]:
-            total_paraphrases += 1
-            hit = matcher.match(paraphrase) is not None
-            suppressed += int(hit)
-            hits.append({"text": paraphrase, "matched_locally": hit})
+            hit = matcher.match(paraphrase)
+            if hit is None:
+                outcome = "escalated"
+                escalated += 1
+            elif hit.get("_corpus_id") == entry["id"]:
+                outcome = "matched_correct"
+                correct += 1
+            else:
+                outcome = "matched_wrong"
+                wrong += 1
+            hits.append({"text": paraphrase, "outcome": outcome,
+                         "matched_entry": (hit or {}).get("_corpus_id")})
         row["paraphrases"] = hits
         rows.append(row)
 
+    total = correct + wrong + escalated
     return {
         "backend": matcher.backend_name,
         "offline": offline,
         "synthesis_correct": synth_ok,
         "synthesis_total": len(CORPUS),
-        "paraphrases_suppressed": suppressed,
-        "paraphrases_total": total_paraphrases,
-        "suppression_rate": round(suppressed / total_paraphrases, 4) if total_paraphrases else 0.0,
+        "paraphrases_total": total,
+        "matched_correct": correct,
+        "matched_wrong": wrong,
+        "escalated": escalated,
+        "suppression_rate": round(correct / total, 4) if total else 0.0,
+        "false_suppression_rate": round(wrong / total, 4) if total else 0.0,
         "tokens_used": nim.tokens_used,
         "rows": rows,
     }
@@ -2696,7 +2757,9 @@ def main():
         result = run_backend(backend, outdir, offline)
         summary["backends"].append(result)
         print(f"{result['backend']}: synthesis {result['synthesis_correct']}/{result['synthesis_total']}, "
-              f"suppression {result['suppression_rate']:.1%}, tokens {result['tokens_used']}")
+              f"suppression {result['suppression_rate']:.1%}, "
+              f"false suppression {result['false_suppression_rate']:.1%}, "
+              f"tokens {result['tokens_used']}")
 
     with open(os.path.join(outdir, "summary.json"), "w", encoding="utf-8") as fh:
         json.dump(summary, fh, indent=2)
