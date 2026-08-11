@@ -7,8 +7,10 @@ Developed for and described in the IEEE Access submission:
 
 Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processing)
 
-**Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)
-NOTE: backend is served through api.veeramanikanta.in
+**Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)  
+NOTE: backend is served through api.veeramanikanta.in  
+Credentails - user, user  
+
 
 ---
 
@@ -303,15 +305,15 @@ All training was done on a RunPod cloud instance (RTX 4090, 24 GB VRAM). Trainin
 aws configure
 ```
 
-> Credentails to access the S3 server:
-> Access key - user_3CCqL5IC5SyiZKCYMAuUzHtWOTS
-> Secret access key - rps_0OS1AFV1HVS9HDV2S7449IKHRW9G4LTVJSJ9H1NR1mkvk1
-> region - us-il-1
-> format - json
+> Credentails to access the S3 server:  
+> Access key - user_3CCqL5IC5SyiZKCYMAuUzHtWOTS  
+> Secret access key - rps_0OS1AFV1HVS9HDV2S7449IKHRW9G4LTVJSJ9H1NR1mkvk1  
+> region - us-il-1  
+> format - json  
+  
+(Please use this only for the evaluation purposes)  
 
-(Please use this only for the evaluation purposes)
-
-**NO MISUSES ARE ENTERTAINED**
+**NO MISUSES ARE ENTERTAINED**  
 
 ### Dataset sources (publicly citable)
 
