@@ -53728,3 +53728,8 @@
 [2026-08-11 20:53:30] Alert triggered.
 [2026-08-11 20:53:31] [WATCH] Person (0.87)
 [2026-08-11 20:55:30] [WATCH] Person (0.89)
+[2026-08-11 21:01:01] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-08-11 21:01:01] [CAMERA] Input resolved to: rpi
+[2026-08-11 21:01:01] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-08-11 21:01:01] [TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).
+[2026-08-11 21:01:01] Pipeline started.
