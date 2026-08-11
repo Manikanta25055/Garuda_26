@@ -1,2 +1,8 @@
 setproctitle
 opencv-python
+requests
+rapidfuzz
+
+# Optional (graceful fallback if absent)
+# sentence-transformers  # embedding backend for utterance matcher
+# gpiozero               # relay bank; no-op stub used when unavailable
