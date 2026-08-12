@@ -2,7 +2,9 @@ setproctitle
 opencv-python
 requests
 rapidfuzz
+anyio
 
 # Optional (graceful fallback if absent)
 # sentence-transformers  # embedding backend for utterance matcher
 # gpiozero               # relay bank; no-op stub used when unavailable
+# paho-mqtt              # MQTT transport; devices unreachable when absent

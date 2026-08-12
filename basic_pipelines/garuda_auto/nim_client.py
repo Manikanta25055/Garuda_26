@@ -5,14 +5,17 @@ transcribed words, the descriptor SCHEMA, the device list, and the utterances
 of existing rules. What never leaves: frames, crops, keypoints, audio, and any
 current reading of any descriptor field. A compiler does not need to know what
 the room looks like right now, so it is not told.
+
+The schema is passed in rather than imported, because the vocabulary now
+depends on which devices the user has added.
 """
 import json
 import logging
 import re
 
+import anyio.to_thread
 import requests
 
-from .rule_schema import schema_for_prompt
 from .validator import validate_rule
 
 log = logging.getLogger(__name__)
@@ -47,11 +50,11 @@ class NimClient:
         self.timeout = timeout
         self.tokens_used = 0
 
-    def build_request(self, utterance, existing_rules):
+    def build_request(self, utterance, existing_rules, schema):
         """Assemble the request body. Schema only -- never live values."""
         known = [r.get("source_utterance", "") for r in existing_rules][:32]
         user_content = json.dumps({
-            "schema": schema_for_prompt(),
+            "schema": schema.schema_for_prompt(),
             "already_known": known,
             "instruction": utterance,
         })
@@ -81,8 +84,13 @@ class NimClient:
         except ValueError:
             return None
 
-    def synthesize(self, utterance, existing_rules):
-        """Return (rule, "") on success or (None, reason) on any failure."""
+    def synthesize(self, utterance, existing_rules, schema):
+        """Return (rule, "") on success or (None, reason) on any failure.
+
+        Blocking. Call synthesize_async from async code -- a 20 second timeout
+        on the event loop stalls the MJPEG stream, the websocket broadcaster
+        and every concurrent request for its duration.
+        """
         if not self.api_key:
             return None, "no NIM API key configured"
         try:
@@ -90,7 +98,7 @@ class NimClient:
                 f"{self.base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {self.api_key}",
                          "Content-Type": "application/json"},
-                json=self.build_request(utterance, existing_rules),
+                json=self.build_request(utterance, existing_rules, schema),
                 timeout=self.timeout,
             )
             response.raise_for_status()
@@ -114,7 +122,12 @@ class NimClient:
         # The model does not get to decide what the user said.
         parsed["source_utterance"] = utterance
 
-        ok, reason = validate_rule(parsed)
+        ok, reason = validate_rule(parsed, schema)
         if not ok:
             return None, reason
         return parsed, ""
+
+    async def synthesize_async(self, utterance, existing_rules, schema):
+        """Run the blocking call on a worker thread, off the event loop."""
+        return await anyio.to_thread.run_sync(
+            self.synthesize, utterance, existing_rules, schema)
