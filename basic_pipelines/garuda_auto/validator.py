@@ -3,20 +3,23 @@
 Model output is untrusted input. Nothing here coerces or repairs a rule --
 a rule is either legal as written or it is refused with a reason the user
 can hear.
+
+The vocabulary is not fixed: it is the schema built from the current device
+registry, passed in by the caller.
 """
-from .rule_schema import FIELDS, OPS, DEVICES, COOLDOWN_MIN_S, COOLDOWN_MAX_S
+from .rule_schema import OPS, COOLDOWN_MIN_S, COOLDOWN_MAX_S
 
 _REQUIRED = ("source_utterance", "when", "then")
 
 
-def _check_condition(cond):
+def _check_condition(cond, schema):
     if not isinstance(cond, dict):
         return f"condition is not an object: {cond!r}"
     extra = set(cond) - {"field", "op", "value"}
     if extra:
         return f"condition has unsupported keys: {sorted(extra)}"
     field, op, value = cond.get("field"), cond.get("op"), cond.get("value")
-    spec = FIELDS.get(field)
+    spec = schema.fields.get(field)
     if spec is None:
         return f"unknown field: {field!r}"
     if op not in OPS:
@@ -34,7 +37,7 @@ def _check_condition(cond):
     return None
 
 
-def validate_rule(rule):
+def validate_rule(rule, schema):
     """Return (True, "") when the rule is safe to store, else (False, reason)."""
     if not isinstance(rule, dict):
         return False, "rule is not an object"
@@ -56,7 +59,7 @@ def validate_rule(rule):
     if len(conditions) > 8:
         return False, "at most 8 conditions per rule"
     for cond in conditions:
-        problem = _check_condition(cond)
+        problem = _check_condition(cond, schema)
         if problem:
             return False, problem
 
@@ -69,7 +72,7 @@ def validate_rule(rule):
         if not isinstance(act, dict):
             return False, f"action is not an object: {act!r}"
         device, action = act.get("device"), act.get("action")
-        legal = DEVICES.get(device)
+        legal = schema.devices.get(device)
         if legal is None:
             return False, f"unknown device: {device!r}"
         if action not in legal:
