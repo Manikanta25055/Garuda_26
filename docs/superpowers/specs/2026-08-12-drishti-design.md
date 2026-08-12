@@ -39,6 +39,7 @@ Seven sub-projects. This spec covers 1–5; each of the rest gets its own spec.
 | IoT scope | GPIO relay channels and MQTT devices (ESP32-C6, ESP32-S3, Uno R4 WiFi) | Covers real add-a-device flows with hardware already owned |
 | Device onboarding | Guided, from a fixed device-type catalogue | Derived capabilities cannot contradict what the actuator layer can do |
 | Carried from Garuda | Live camera and detections; alerts and modes; users, auth and admin; logs, events and presence | Selected explicitly |
+| Authentication | Drishti has its own login and its own session cookie, host-scoped | Widening the cookie domain to `.veeramanikanta.in` would hand every Drishti session to `garuda.` and `api.` as well |
 
 ## 4. Architecture
 
@@ -254,4 +255,3 @@ Existing `tests/garuda_auto/` covers the seven engine modules and continues to. 
 - Relay channel to BCM pin mapping for the Pi's 8-channel board — 7 channels functional, 3 currently allocated
 - MQTT broker choice and whether it runs on the Pi
 - Whether ESP32 firmware announces itself, which would enable auto-discovery in a later revision
-- Session and auth reuse: Drishti uses Garuda's existing session cookies, so both subdomains must share a cookie domain or Drishti needs its own login
