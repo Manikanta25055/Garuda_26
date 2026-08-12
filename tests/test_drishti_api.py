@@ -1,0 +1,229 @@
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from basic_pipelines import drishti_api, drishti_auth
+
+pytestmark = pytest.mark.integration
+
+LAMP = {"id": "lamp_desk", "name": "Desk lamp", "type": "light", "room": "study",
+        "transport": {"kind": "relay", "channel": 1}}
+
+RULE = {
+    "source_utterance": "turn the desk lamp off when the room is empty",
+    "when": {"all": [{"field": "occupancy", "op": "==", "value": "empty"}]},
+    "then": [{"device": "lamp_desk", "action": "off"}],
+}
+
+
+def _app(tmp_path):
+    ctx = drishti_api.build_context(
+        data_dir=str(tmp_path), relay_channels=(1, 2, 3),
+        channel_to_pin={1: 17, 2: 27, 3: 22})
+    app = FastAPI()
+    app.include_router(drishti_api.build_router(ctx))
+    return ctx, app
+
+
+@pytest.fixture
+def context(tmp_path):
+    """A context, released afterwards.
+
+    RelayBank reserves its pins with gpiozero, and the pin factory is
+    process-wide. A context left open leaks those reservations into the next
+    test, which then fails with GPIOPinInUse on the same pin.
+    """
+    ctx, app = _app(tmp_path)
+    try:
+        yield ctx, app
+    finally:
+        ctx.relay_bank.close()
+
+
+@pytest.fixture
+def client(context):
+    ctx, app = context
+    test_client = TestClient(app)
+    test_client.cookies.set(drishti_auth.COOKIE_NAME,
+                            drishti_auth.create_session("mani", "admin"))
+    return test_client, ctx
+
+
+@pytest.fixture
+def anonymous(context):
+    _, app = context
+    return TestClient(app)
+
+
+def test_device_types_are_listed(client):
+    test_client, _ = client
+    body = test_client.get("/api/drishti/device-types").json()
+    assert "light" in body["types"]
+    assert body["types"]["light"]["actions"] == ["off", "on"]
+
+
+def test_adding_a_device_widens_the_vocabulary(client):
+    test_client, ctx = client
+    assert test_client.post("/api/drishti/devices", json=LAMP).status_code == 200
+    assert "lamp_desk_state" in ctx.schema.fields
+    assert "lamp_desk" in ctx.schema.devices
+
+
+def test_adding_a_device_with_a_bad_channel_is_refused(client):
+    test_client, _ = client
+    response = test_client.post("/api/drishti/devices",
+                                json={**LAMP, "transport": {"kind": "relay", "channel": 99}})
+    assert response.status_code == 400
+    assert "channel" in response.json()["detail"]
+
+
+def test_devices_are_listed_with_state_and_availability(client):
+    test_client, _ = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    device = test_client.get("/api/drishti/devices").json()["devices"][0]
+    assert device["id"] == "lamp_desk"
+    assert device["state"] == "off"
+    assert device["available"] is True
+
+
+def test_deleting_a_device_reports_orphaned_rules(client):
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ok, reason = ctx.store.add(dict(RULE))
+    assert ok, reason
+
+    body = test_client.delete("/api/drishti/devices/lamp_desk").json()
+
+    assert body["orphaned"] == 1
+    assert ctx.store.rules == []
+    assert len(ctx.store.orphaned) == 1
+
+
+def test_deleting_an_unknown_device_is_a_404(client):
+    test_client, _ = client
+    assert test_client.delete("/api/drishti/devices/ghost").status_code == 404
+
+
+def test_instruct_answers_a_state_question_locally(client):
+    test_client, ctx = client
+    ctx.descriptor = {"occupancy": "occupied", "person_count": 1,
+                      "temperature_c": 24.5, "humidity_pct": 48.0}
+    body = test_client.post("/api/drishti/instruct",
+                            json={"text": "is anyone home?"}).json()
+    assert body["lane"] == "local"
+    assert body["resolved"] == "on-device"
+
+
+def test_instruct_reports_an_already_known_rule(client):
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    body = test_client.post(
+        "/api/drishti/instruct",
+        json={"text": "when the room is empty turn the desk lamp off"}).json()
+    assert body["lane"] == "known"
+    assert body["rule"]["source_utterance"].startswith("turn the desk lamp off")
+
+
+def test_a_known_hit_is_logged_with_score_and_backend(client):
+    """Paraphrase suppression is the headline metric. If it is not recorded
+    here, the number does not exist."""
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    test_client.post("/api/drishti/instruct",
+                     json={"text": "when the room is empty turn the desk lamp off"})
+    assert ctx.suppression_log
+    entry = ctx.suppression_log[-1]
+    assert entry["backend"] in ("fuzzy", "embed")
+    assert 0.0 <= entry["score"] <= 1.0
+
+
+def test_compile_failure_says_existing_rules_still_fire(client):
+    test_client, _ = client
+    body = test_client.post("/api/drishti/instruct",
+                            json={"text": "dim the hallway when it rains"}).json()
+    assert body["lane"] == "compile"
+    assert body["ok"] is False
+    assert body["still_working"] is True
+    assert "occupancy" in body["vocabulary"]
+
+
+def test_confirming_a_proposal_stores_the_rule(client):
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    pid = ctx.pending.add(dict(RULE))
+    assert test_client.post(f"/api/drishti/proposals/{pid}/confirm").status_code == 200
+    assert len(ctx.store.rules) == 1
+    assert ctx.pending.get(pid) is None
+
+
+def test_confirming_an_unknown_proposal_is_a_404(client):
+    test_client, _ = client
+    assert test_client.post("/api/drishti/proposals/nope/confirm").status_code == 404
+
+
+def test_discarding_a_proposal_stores_nothing(client):
+    test_client, ctx = client
+    pid = ctx.pending.add(dict(RULE))
+    assert test_client.delete(f"/api/drishti/proposals/{pid}").status_code == 200
+    assert ctx.store.rules == []
+
+
+def test_rules_are_listed_with_a_plain_language_rendering(client):
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    rule = test_client.get("/api/drishti/rules").json()["rules"][0]
+    assert rule["rendered"]["when"] == "occupancy == empty"
+    assert rule["rendered"]["then"] == "lamp_desk → off"
+
+
+def test_toggling_a_rule_flips_enabled(client):
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    rule_id = ctx.store.rules[0]["id"]
+    assert test_client.post(f"/api/drishti/rules/{rule_id}/toggle").json()["enabled"] is False
+    assert test_client.post(f"/api/drishti/rules/{rule_id}/toggle").json()["enabled"] is True
+
+
+def test_deleting_a_rule_removes_it(client):
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    rule_id = ctx.store.rules[0]["id"]
+    assert test_client.delete(f"/api/drishti/rules/{rule_id}").status_code == 200
+    assert ctx.store.rules == []
+
+
+def test_activity_returns_recorded_actuations(client):
+    from basic_pipelines.garuda_auto import actuation_log
+    test_client, ctx = client
+    actuation_log.record(ctx.log_path, device="lamp_desk", action="on",
+                         rule_id="r_1", matched=[], ok=True)
+    entries = test_client.get("/api/drishti/activity").json()["entries"]
+    assert entries[0]["device"] == "lamp_desk"
+
+
+def test_every_endpoint_requires_a_session(anonymous):
+    for path in ("/api/drishti/devices", "/api/drishti/device-types",
+                 "/api/drishti/rules", "/api/drishti/proposals",
+                 "/api/drishti/activity"):
+        assert anonymous.get(path).status_code == 401, path
+    assert anonymous.post("/api/drishti/instruct",
+                          json={"text": "hi"}).status_code == 401
+
+
+def test_adding_a_device_requires_admin(context):
+    _, app = context
+    test_client = TestClient(app)
+    test_client.cookies.set(drishti_auth.COOKIE_NAME,
+                            drishti_auth.create_session("guest", "user"))
+    assert test_client.post("/api/drishti/devices", json=LAMP).status_code == 403
+
+
+def test_instruct_rejects_an_overlong_instruction(client):
+    test_client, _ = client
+    response = test_client.post("/api/drishti/instruct", json={"text": "x" * 501})
+    assert response.status_code == 422
