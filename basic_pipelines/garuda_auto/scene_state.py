@@ -2,28 +2,62 @@
 
 Everything downstream -- rule evaluation, and the schema shown to the cloud
 model -- speaks this vocabulary and nothing else.
+
+Camera-derived fields are fixed. Device state fields come from the registry,
+so adding a device widens the descriptor without a code change.
 """
 import time
 
-from .rule_schema import FIELDS
+from .rule_schema import BASE_FIELDS, build_schema, state_field
 
 
-def _clamp(value, field):
-    spec = FIELDS[field]
+def _clamp(value, spec):
     return max(spec["lo"], min(spec["hi"], value))
 
 
 class SceneBuilder:
-    def __init__(self, zones, clock=time.time):
+    def __init__(self, zones, registry, clock=time.time):
         self.zones = zones
+        self.registry = registry
         self._clock = clock
         self._state_since = None
         self._last_occupancy = None
-        self._device_state = {"lamp": "off", "fan": "off"}
+        self._device_state = {}
+        self._schema = None
+        self.rebind()
 
-    def set_device_state(self, device, state):
-        if device in self._device_state and state in ("on", "off"):
-            self._device_state[device] = state
+    def rebind(self):
+        """Rebuild device-state slots after the registry changed.
+
+        Known states are preserved; new devices start at their type's safe
+        default -- off for a load, closed for a contact, the lower bound for
+        a numeric sensor.
+        """
+        schema = build_schema(self.registry)
+        fresh = {}
+        for device in self.registry.devices:
+            if not device.get("enabled", True):
+                continue
+            field = state_field(device["id"])
+            spec = schema.fields.get(field)
+            if spec is None:
+                continue
+            default = spec["values"][-1] if spec["kind"] == "enum" else spec["lo"]
+            fresh[device["id"]] = self._device_state.get(device["id"], default)
+        self._device_state = fresh
+        self._schema = schema
+
+    def set_device_state(self, device_id, state):
+        spec = self._schema.fields.get(state_field(device_id))
+        if spec is None:
+            return
+        if spec["kind"] == "enum":
+            if state in spec["values"]:
+                self._device_state[device_id] = state
+        else:
+            if isinstance(state, bool) or not isinstance(state, (int, float)):
+                return
+            self._device_state[device_id] = _clamp(state, spec)
 
     def _zone_for(self, bbox):
         cx = (bbox[0] + bbox[2]) / 2.0
@@ -49,21 +83,22 @@ class SceneBuilder:
             primary = max(people, key=lambda d: (d["bbox"][2] - d["bbox"][0]) * (d["bbox"][3] - d["bbox"][1]))
             zone = self._zone_for(primary["bbox"])
             posture = primary.get("posture") or "none"
-            if posture not in FIELDS["posture"]["values"]:
+            if posture not in BASE_FIELDS["posture"]["values"]:
                 posture = "none"
         else:
             zone, posture = "none", "none"
 
-        return {
+        descriptor = {
             "occupancy": occupancy,
-            "person_count": int(_clamp(len(people), "person_count")),
-            "occupancy_duration_s": int(_clamp(duration, "occupancy_duration_s")),
+            "person_count": int(_clamp(len(people), BASE_FIELDS["person_count"])),
+            "occupancy_duration_s": int(_clamp(duration, BASE_FIELDS["occupancy_duration_s"])),
             "zone": zone,
             "posture": posture,
-            "ambient_luma": int(_clamp(int(luma), "ambient_luma")),
-            "temperature_c": _clamp(float(temperature_c), "temperature_c"),
-            "humidity_pct": _clamp(float(humidity_pct), "humidity_pct"),
-            "hour": int(_clamp(int(hour), "hour")),
-            "lamp_state": self._device_state["lamp"],
-            "fan_state": self._device_state["fan"],
+            "ambient_luma": int(_clamp(int(luma), BASE_FIELDS["ambient_luma"])),
+            "temperature_c": _clamp(float(temperature_c), BASE_FIELDS["temperature_c"]),
+            "humidity_pct": _clamp(float(humidity_pct), BASE_FIELDS["humidity_pct"]),
+            "hour": int(_clamp(int(hour), BASE_FIELDS["hour"])),
         }
+        for device_id, value in self._device_state.items():
+            descriptor[state_field(device_id)] = value
+        return descriptor
