@@ -54,7 +54,9 @@
 
 <StatusCard state={house.state} />
 
-<LiveView privacy={!!house.state.modes?.privacy} onprivacy={setPrivacy} />
+<div class="live">
+  <LiveView privacy={!!house.state.modes?.privacy} onprivacy={setPrivacy} />
+</div>
 
 <h2 class="section-title">Devices</h2>
 
@@ -90,6 +92,10 @@
 />
 
 <style>
+  /* The status line and the camera are two separate answers, not one
+     block. Without this they read as a caption on the video. */
+  .live { margin-top: var(--space-4); }
+
 
   .tiles {
     display: grid;

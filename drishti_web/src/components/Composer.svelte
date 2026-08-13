@@ -8,6 +8,14 @@
   let answer = $state(null);   // a local or already-known result
   let failure = $state(null);  // a compile refusal
 
+  // A refusal that outlives the sentence that caused it becomes furniture:
+  // it sat on the screen through every later visit with no way to dismiss it.
+  // Typing again is the user saying they have moved on.
+  function clearResult() {
+    answer = null;
+    failure = null;
+  }
+
   async function send(event) {
     event?.preventDefault();
     const instruction = text.trim();
@@ -58,6 +66,7 @@
     <input
       type="text"
       bind:value={text}
+      oninput={clearResult}
       placeholder="Tell the house what to do"
       aria-label="Tell the house what to do"
       enterkeyhint="send"

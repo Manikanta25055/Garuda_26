@@ -138,3 +138,24 @@ describe("composer", () => {
     expect(screen.queryByText(/what's the temperature/i)).toBeNull();
   });
 });
+
+describe("a refusal does not become furniture", () => {
+  it("clears the last refusal as soon as the user types again", async () => {
+    vi.stubGlobal("fetch", () => Promise.resolve({
+      ok: true, status: 200,
+      json: () => Promise.resolve({ lane: "compile", ok: false,
+                                    reason: "no condition specified" }),
+    }));
+    render(Composer, { onresult: () => {} });
+    const field = screen.getByLabelText(/tell the house what to do/i);
+
+    await fireEvent.input(field, { target: { value: "turn the lamp" } });
+    await fireEvent.click(screen.getByRole("button", { name: /send/i }));
+    expect(await screen.findByText(/no condition specified/i)).toBeInTheDocument();
+
+    // Without this the refusal sat on the screen through every later visit,
+    // with nothing anywhere to dismiss it.
+    await fireEvent.input(field, { target: { value: "t" } });
+    expect(screen.queryByText(/no condition specified/i)).toBeNull();
+  });
+});
