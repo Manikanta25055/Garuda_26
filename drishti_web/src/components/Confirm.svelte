@@ -38,13 +38,13 @@
     padding-bottom: max(var(--space-5), env(safe-area-inset-bottom));
     display: grid; gap: var(--space-2);
   }
-  h2 { margin: 0; font-size: var(--text-title-3); font-weight: 600; }
+  h2 { margin: 0; font-size: var(--text-title-3); font-weight: var(--weight-semibold); }
   p { margin: 0; color: var(--label-secondary); }
   .actions { display: flex; gap: var(--space-2); margin-top: var(--space-3); }
   .actions button {
     flex: 1; min-height: 44px;
     border-radius: calc(var(--radius-sheet) - var(--space-5));
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
   .cancel { background: var(--bg-secondary); }
   .go { background: var(--danger); color: #fff; }

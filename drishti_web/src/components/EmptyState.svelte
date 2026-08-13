@@ -17,6 +17,6 @@
     gap: var(--space-1);
     text-align: center;
   }
-  h3 { margin: 0; font-size: var(--text-headline); font-weight: 600; }
+  h3 { margin: 0; font-size: var(--text-headline); font-weight: var(--weight-semibold); }
   p { margin: 0; color: var(--label-secondary); font-size: var(--text-subhead); }
 </style>

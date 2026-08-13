@@ -103,7 +103,7 @@
 
 <style>
   form { display: grid; gap: var(--space-1); }
-  h2 { font-size: var(--text-title-3); font-weight: 600; margin: 0 0 var(--space-2); }
+  h2 { font-size: var(--text-title-3); font-weight: var(--weight-semibold); margin: 0 0 var(--space-2); }
   label { font-size: var(--text-subhead); color: var(--label-secondary); margin-top: var(--space-2); }
   input, select {
     min-height: 44px;
@@ -114,7 +114,7 @@
   }
   .err { color: var(--danger); font-size: var(--text-footnote); margin: var(--space-2) 0 0; }
   .actions { display: flex; gap: var(--space-2); margin-top: var(--space-5); }
-  .actions button { flex: 1; min-height: 44px; border-radius: var(--radius-control); font-weight: 600; }
+  .actions button { flex: 1; min-height: 44px; border-radius: var(--radius-control); font-weight: var(--weight-semibold); }
   .cancel { background: var(--bg-secondary); }
   .go { background: var(--accent); color: #fff; }
 </style>

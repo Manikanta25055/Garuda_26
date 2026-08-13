@@ -35,7 +35,7 @@
     gap: var(--space-2);
   }
   .lede { margin: 0; font-size: var(--text-footnote); color: var(--label-secondary); }
-  h3 { margin: 0; font-size: var(--text-headline); line-height: var(--lh-headline); font-weight: 600; }
+  h3 { margin: 0; font-size: var(--text-headline); line-height: var(--lh-headline); font-weight: var(--weight-semibold); }
   .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .chip {
     border-radius: calc(var(--radius-card) - var(--space-3));
@@ -52,7 +52,7 @@
   .conflict p { margin: var(--space-1) 0 0; font-size: var(--text-footnote); }
   .hint { color: var(--label-secondary); }
   .actions { display: flex; gap: var(--space-2); }
-  .actions button { min-height: 44px; flex: 1; border-radius: var(--radius-control); font-weight: 600; }
+  .actions button { min-height: 44px; flex: 1; border-radius: var(--radius-control); font-weight: var(--weight-semibold); }
   .save { background: var(--accent); color: #fff; }
   .discard { background: var(--bg-secondary); color: var(--label); }
 </style>

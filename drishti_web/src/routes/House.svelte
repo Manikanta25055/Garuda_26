@@ -115,7 +115,7 @@
     border-radius: var(--radius-control);
     border: 1px solid var(--danger);
     color: var(--danger);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     transition: background var(--dur-fast) var(--ease-standard);
   }
   .stop:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }

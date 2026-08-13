@@ -45,7 +45,7 @@
     margin: 0;
     font-size: var(--text-headline);
     line-height: var(--lh-headline);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
   }
   .chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .chip {

@@ -41,7 +41,7 @@
   button.on { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
   button[aria-disabled="true"] { opacity: 0.55; cursor: default; }
   button.busy { opacity: 0.75; }
-  .name { font-size: var(--text-callout); font-weight: 600; }
+  .name { font-size: var(--text-callout); font-weight: var(--weight-semibold); }
   .room, .state { font-size: var(--text-caption-1); color: var(--label-secondary); text-transform: capitalize; }
   .warn { color: var(--warning); }
 </style>

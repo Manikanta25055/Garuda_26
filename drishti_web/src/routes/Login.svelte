@@ -47,7 +47,7 @@
   form { width: 100%; max-width: 22rem; display: grid; gap: var(--space-2); }
   h1 {
     font-size: var(--text-large-title); line-height: var(--lh-large-title);
-    margin: 0; font-weight: 700; letter-spacing: -0.02em;
+    margin: 0; font-weight: var(--weight-bold); letter-spacing: -0.02em;
   }
   .sub { color: var(--label-secondary); margin: 0 0 var(--space-4); }
   label { font-size: var(--text-subhead); color: var(--label-secondary); margin-top: var(--space-2); }
@@ -67,7 +67,7 @@
     border-radius: var(--radius-control);
     background: var(--accent);
     color: #fff;
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     transition: opacity var(--dur-fast) var(--ease-standard);
   }
   button:hover:not(:disabled) { opacity: 0.9; }

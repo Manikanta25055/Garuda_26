@@ -66,7 +66,7 @@
   h2 {
     font-size: var(--text-title-3);
     line-height: var(--lh-title-3);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     letter-spacing: -0.01em;
     margin: var(--space-6) 0 var(--space-2);
   }
