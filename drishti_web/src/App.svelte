@@ -1,23 +1,37 @@
 <script>
   import { session } from "./lib/session.svelte.js";
+  import { house } from "./lib/app.svelte.js";
   import Login from "./routes/Login.svelte";
+  import Home from "./routes/Home.svelte";
+  import Rules from "./routes/Rules.svelte";
+  import Activity from "./routes/Activity.svelte";
+  import Settings from "./routes/Settings.svelte";
   import TabBar from "./components/TabBar.svelte";
+  import Composer from "./components/Composer.svelte";
   import OfflineBanner from "./components/OfflineBanner.svelte";
 
   let tab = $state("home");
-  let offline = $state(false);
+
+  async function handleResult(result) {
+    // A compiled proposal is a card, so send the user where cards live.
+    if (result.proposal_id) {
+      tab = "rules";
+      await house.loadProposals();
+    }
+  }
 </script>
 
 {#if !session.signedIn}
   <Login />
 {:else}
-  <OfflineBanner {offline} />
+  <OfflineBanner offline={house.offline} />
   <main>
-    {#if tab === "home"}<h1>Home</h1>
-    {:else if tab === "rules"}<h1>Rules</h1>
-    {:else if tab === "activity"}<h1>Activity</h1>
-    {:else}<h1>Settings</h1>{/if}
+    {#if tab === "home"}<Home />
+    {:else if tab === "rules"}<Rules />
+    {:else if tab === "activity"}<Activity />
+    {:else}<Settings />{/if}
   </main>
+  <Composer onresult={handleResult} />
   <TabBar current={tab} onchange={(next) => (tab = next)} />
 {/if}
 
@@ -29,5 +43,10 @@
     padding-top: max(var(--space-4), env(safe-area-inset-top));
     padding-bottom: calc(140px + env(safe-area-inset-bottom));
   }
-  h1 { font-size: var(--text-large-title); line-height: var(--lh-large-title); font-weight: 700; margin: 0 0 var(--space-4); }
+  main :global(h1) {
+    font-size: var(--text-large-title);
+    line-height: var(--lh-large-title);
+    font-weight: 700;
+    margin: 0 0 var(--space-4);
+  }
 </style>
