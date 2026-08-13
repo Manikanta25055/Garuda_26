@@ -1,4 +1,5 @@
 import json
+import time
 
 import pytest
 
@@ -271,3 +272,50 @@ def test_stop_is_safe_to_call_twice(rt):
     runtime.start(interval=0.01)
     runtime.stop()
     runtime.stop()
+
+
+# ── observability ─────────────────────────────────────────────────────────────
+
+def test_health_reports_a_stopped_loop_before_start(rt):
+    runtime, _, _ = rt
+    health = runtime.health()
+    assert health["running"] is False
+    assert health["ticks"] == 0
+    assert health["last_tick_age_s"] is None
+
+
+def test_health_counts_ticks_and_fires(rt):
+    runtime, ctx, _ = rt
+    ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
+    runtime.observe([], luma=0)
+    runtime.tick()
+    runtime.tick()
+
+    health = runtime.health()
+    assert health["ticks"] == 2
+    assert health["fires"] == 2
+    assert health["rules"] == 1
+    assert health["devices"] == 2
+    assert health["last_tick_age_s"] == 0.0
+
+
+def test_health_surfaces_the_error_the_loop_swallowed(rt):
+    runtime, ctx, _ = rt
+    ctx.store.rules.append({"id": "bad", "when": {}, "then": [], "enabled": True})
+    runtime.observe([], luma=0)
+    runtime.start(interval=0.01)
+    deadline = time.time() + 3
+    while not runtime.last_error and time.time() < deadline:
+        time.sleep(0.02)
+    runtime.stop()
+    # Swallowing it silently would make a broken rule base look like an idle
+    # house — the one failure mode nobody would think to look for.
+    assert runtime.health()["last_error"]
+
+
+def test_health_says_the_loop_is_running_while_it_is(rt):
+    runtime, _, _ = rt
+    runtime.start(interval=0.05)
+    assert runtime.health()["running"] is True
+    runtime.stop()
+    assert runtime.health()["running"] is False

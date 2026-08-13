@@ -44,6 +44,13 @@ class DrishtiRuntime:
         self.engine = RuleEngine(ctx.store, clock=clock)
         self._stop = threading.Event()
         self._thread = None
+        # Observability. A loop nobody can see is a loop nobody can tell has
+        # stopped, and this one is the difference between a house that
+        # automates and a user interface over a registry.
+        self.ticks = 0
+        self.fires = 0
+        self.last_tick = 0.0
+        self.last_error = ""
         # Seed the descriptor so a question asked before the first frame gets
         # "nobody is home" rather than "I have no reading".
         self.observe([], luma=0)
@@ -92,6 +99,8 @@ class DrishtiRuntime:
         """Evaluate the rule base once and perform what it asks for."""
         with self._lock:
             descriptor = dict(self.ctx.descriptor)
+        self.ticks += 1
+        self.last_tick = self._clock()
         actions = self.engine.evaluate(descriptor)
         if not actions:
             return []
@@ -118,6 +127,7 @@ class DrishtiRuntime:
                 touched.add(action["rule_id"])
             performed.append({**action, "ok": ok, "reason": reason})
 
+        self.fires += len(performed)
         if touched:
             # Fires are rate-limited by each rule's cooldown, so this is not a
             # per-tick write.
@@ -143,10 +153,12 @@ class DrishtiRuntime:
             while not self._stop.wait(interval):
                 try:
                     self.tick()
-                except Exception:
+                except Exception as exc:
                     # A rule base that throws must not take the loop with it,
                     # or one bad rule silently stops every other rule too.
-                    pass
+                    # It is recorded rather than swallowed, so the failure is
+                    # visible instead of looking like an idle house.
+                    self.last_error = f"{type(exc).__name__}: {exc}"
 
         self._thread = threading.Thread(target=loop, daemon=True, name="drishti-rules")
         self._thread.start()
@@ -156,3 +168,17 @@ class DrishtiRuntime:
         thread, self._thread = self._thread, None
         if thread is not None:
             thread.join(timeout=2.0)
+
+    def health(self):
+        """What the System screen shows about the loop."""
+        now = self._clock()
+        return {
+            "running": self._thread is not None and self._thread.is_alive(),
+            "ticks": self.ticks,
+            "fires": self.fires,
+            "last_tick_age_s": round(now - self.last_tick, 1) if self.last_tick else None,
+            "rules": len(self.ctx.store.rules),
+            "orphaned_rules": len(self.ctx.store.orphaned),
+            "devices": len(self.ctx.registry.devices),
+            "last_error": self.last_error,
+        }

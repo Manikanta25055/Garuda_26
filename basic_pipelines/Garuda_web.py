@@ -2330,6 +2330,9 @@ async def _lifespan(app):
     DRISHTI_CTX.pending.purge()
     _drishti_auth.prune_expired()
     DRISHTI_RUNTIME.start()
+    log_system_update(
+        f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
+        f"{len(DRISHTI_CTX.registry.devices)} devices")
     _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     threading.Thread(target=_deadman_monitor, daemon=True).start()
@@ -2462,6 +2465,7 @@ def _drishti_system_state():
         # pipeline produces anything. Frame freshness is the honest signal:
         # what the screen wants to know is whether the camera is delivering.
         "pipeline": "running" if (time.time() - _frame_ts) < 5.0 else "stopped",
+        "rule_loop": DRISHTI_RUNTIME.health(),
     }
 
 
