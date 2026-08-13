@@ -227,3 +227,103 @@ def test_instruct_rejects_an_overlong_instruction(client):
     test_client, _ = client
     response = test_client.post("/api/drishti/instruct", json={"text": "x" * 501})
     assert response.status_code == 422
+
+
+# ── State and stream (frontend Task 1) ────────────────────────────────────────
+
+def test_state_is_served_to_a_drishti_session(client):
+    test_client, ctx = client
+    ctx.descriptor = {"occupancy": "occupied", "person_count": 2,
+                      "temperature_c": 24.0, "humidity_pct": 50.0}
+    body = test_client.get("/api/drishti/state").json()
+    assert body["occupancy"] == "occupied"
+    assert body["person_count"] == 2
+    assert body["temperature_c"] == 24.0
+    assert "uptime_s" in body
+    assert isinstance(body["modes"], dict)
+
+
+def test_state_reports_an_empty_house_when_nothing_is_known(client):
+    test_client, ctx = client
+    ctx.descriptor = {}
+    body = test_client.get("/api/drishti/state").json()
+    assert body["occupancy"] == "empty"
+    assert body["person_count"] == 0
+    assert body["temperature_c"] is None
+
+
+def test_state_merges_whatever_the_host_application_supplies(client):
+    test_client, ctx = client
+    ctx.system_state = lambda: {"modes": {"night": True}, "uptime_s": 99,
+                                "pipeline": "running"}
+    body = test_client.get("/api/drishti/state").json()
+    assert body["modes"] == {"night": True}
+    assert body["uptime_s"] == 99
+    assert body["pipeline"] == "running"
+
+
+def test_state_requires_a_drishti_session(anonymous):
+    assert anonymous.get("/api/drishti/state").status_code == 401
+
+
+def test_stream_requires_a_drishti_session(anonymous):
+    assert anonymous.get("/api/drishti/stream").status_code == 401
+
+
+def test_a_garuda_cookie_does_not_reach_the_drishti_stream(client):
+    test_client, _ = client
+    test_client.cookies.clear()
+    test_client.cookies.set("garuda_session", "whatever")
+    assert test_client.get("/api/drishti/stream").status_code == 401
+
+
+def test_stream_is_503_when_the_host_has_no_camera(client):
+    test_client, ctx = client
+    assert ctx.frame_source is None
+    assert test_client.get("/api/drishti/stream").status_code == 503
+
+
+def test_stream_serves_the_injected_frame_source(client):
+    test_client, ctx = client
+
+    async def frames(request):
+        yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\nJPEG\r\n"
+
+    ctx.frame_source = frames
+    response = test_client.get("/api/drishti/stream")
+    assert response.status_code == 200
+    assert "multipart/x-mixed-replace" in response.headers["content-type"]
+    assert b"JPEG" in response.content
+
+
+# ── Login goes through the injected authenticator ─────────────────────────────
+
+def test_login_rejects_when_no_authenticator_is_wired(anonymous):
+    # A context built without a host application must not let anyone in.
+    body = {"username": "mani", "password": "whatever"}
+    assert anonymous.post("/api/drishti/login", json=body).status_code == 401
+
+
+def test_login_uses_the_injected_authenticator(context):
+    from fastapi.testclient import TestClient
+    ctx, app = context
+    ctx.authenticate = lambda u, p: "admin" if (u, p) == ("mani", "pw") else None
+    test_client = TestClient(app)
+    assert test_client.post("/api/drishti/login",
+                            json={"username": "mani", "password": "no"}).status_code == 401
+    response = test_client.post("/api/drishti/login",
+                                json={"username": "mani", "password": "pw"})
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "username": "mani", "role": "admin"}
+    assert drishti_auth.COOKIE_NAME in response.cookies
+
+
+def test_a_logged_in_session_reaches_a_protected_route(context):
+    from fastapi.testclient import TestClient
+    ctx, app = context
+    ctx.authenticate = lambda u, p: "user"
+    # The cookie is Secure, so the client has to speak https or it is never
+    # stored — which is exactly what a browser on http would do too.
+    test_client = TestClient(app, base_url="https://testserver")
+    test_client.post("/api/drishti/login", json={"username": "mani", "password": "pw"})
+    assert test_client.get("/api/drishti/state").status_code == 200

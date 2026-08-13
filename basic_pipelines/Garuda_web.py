@@ -420,6 +420,7 @@ _frame_buffer = None
 _frame_raw    = None       # raw numpy BGR for WebRTC track
 _frame_lock   = threading.Lock()
 _frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
+_frame_ts     = 0.0        # wall clock of the last frame; the only liveness signal we have
 
 # ── Async secondary cascade (MobileNet + MiDaS) ─────────────────────────────
 # Non-blocking queue bridges primary YOLO callback to secondary daemon thread.
@@ -1486,10 +1487,11 @@ def app_callback(pad, info, user_data):
         frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         _, jpeg = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 75])
         with _frame_lock:
-            global _frame_seq, _frame_raw
+            global _frame_seq, _frame_raw, _frame_ts
             _frame_buffer = jpeg.tobytes()
             _frame_raw    = frame_bgr
             _frame_seq += 1
+            _frame_ts     = time.time()
         user_data.set_frame(frame_bgr)
 
         # Clip recording — write current frame if active
@@ -2388,6 +2390,40 @@ DRISHTI_CTX = _build_drishti_context(
     nim_model=os.environ.get("NIM_MODEL", ""),
     matcher_backend=os.environ.get("DRISHTI_MATCHER", "fuzzy"),
 )
+
+
+def _drishti_authenticate(username, password):
+    """Drishti login against Garuda's own user table. Returns a role or None.
+
+    drishti_api cannot import this module to reach USERS: Garuda_web runs as a
+    script, so the live globals are __main__'s, and an import would produce a
+    second copy whose USERS is still the empty dict it starts as. Passing the
+    function in keeps the one live table.
+    """
+    user = USERS.get(username)
+    if user is None or not _verify_password(password, user["password"]):
+        return None
+    return user.get("role", "user")
+
+
+def _drishti_system_state():
+    """Mode flags, uptime and camera liveness for the Drishti Home screen."""
+    return {
+        "modes": {
+            "dnd": MODE_DND, "night": MODE_NIGHT, "idle": MODE_IDLE,
+            "emergency": MODE_EMERGENCY, "privacy": MODE_PRIVACY,
+            "email_off": MODE_EMAIL_OFF,
+        },
+        "uptime_s": int(time.time() - _app_start_time),
+        # There is no pipeline liveness flag, and app_gst is set before the
+        # pipeline produces anything. Frame freshness is the honest signal:
+        # what the screen wants to know is whether the camera is delivering.
+        "pipeline": "running" if (time.time() - _frame_ts) < 5.0 else "stopped",
+    }
+
+
+DRISHTI_CTX.authenticate = _drishti_authenticate
+DRISHTI_CTX.system_state = _drishti_system_state
 fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
@@ -3484,39 +3520,49 @@ async def get_feedback(session=Depends(require_admin)):
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
 # Uses _frame_seq to detect new frames only — avoids re-sending duplicate
 # frames and keeps per-client CPU near zero when the pipeline is idle.
+async def mjpeg_frames(request: Request):
+    """The MJPEG body, shared by Garuda's /stream and Drishti's.
+
+    Authentication is the caller's job — the two endpoints check different
+    cookies. This only produces frames.
+    """
+    last_seq = -1
+    last_sent = 0.0
+    while True:
+        if await request.is_disconnected():
+            break
+        now = time.time()
+        with _frame_lock:
+            seq = _frame_seq
+            raw = _frame_raw if seq != last_seq else None
+        if raw is not None and (now - last_sent) >= 0.033:
+            # Adaptive quality: reduce JPEG quality under CPU pressure
+            _q = 75
+            if psutil:
+                _cpu = psutil.cpu_percent(interval=None)
+                if _cpu > 80:
+                    _q = 45
+                elif _cpu > 65:
+                    _q = 60
+            _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, _q])
+            last_seq = seq
+            last_sent = now
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
+        else:
+            await asyncio.sleep(0.005)
+
+
+DRISHTI_CTX.frame_source = mjpeg_frames
+
+
 @fastapi_app.get("/stream")
 async def mjpeg_stream(request: Request, token: Optional[str] = None):
     # Authenticate via cookie or ?token= query param
     session_token = request.cookies.get("garuda_session") or token
     if not get_session(session_token):
         raise HTTPException(401, "Not authenticated")
-    async def generate():
-        last_seq = -1
-        last_sent = 0.0
-        while True:
-            if await request.is_disconnected():
-                break
-            now = time.time()
-            with _frame_lock:
-                seq = _frame_seq
-                raw = _frame_raw if seq != last_seq else None
-            if raw is not None and (now - last_sent) >= 0.033:
-                # Adaptive quality: reduce JPEG quality under CPU pressure
-                _q = 75
-                if psutil:
-                    _cpu = psutil.cpu_percent(interval=None)
-                    if _cpu > 80:
-                        _q = 45
-                    elif _cpu > 65:
-                        _q = 60
-                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, _q])
-                last_seq = seq
-                last_sent = now
-                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
-            else:
-                await asyncio.sleep(0.005)
     return StreamingResponse(
-        generate(),
+        mjpeg_frames(request),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
 

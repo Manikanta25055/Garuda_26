@@ -9,6 +9,7 @@ import os
 from dataclasses import dataclass, field
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from .drishti_auth import (COOKIE_NAME, create_session, destroy_session,
@@ -42,6 +43,15 @@ class DrishtiContext:
     descriptor: dict = field(default_factory=dict)
     synthesis_cache: dict = field(default_factory=dict)
     suppression_log: list = field(default_factory=list)
+
+    # Injected by whoever wires the router into an application. This module
+    # must not import Garuda_web: that module is run as a script, so its live
+    # globals sit under __main__, and `from .Garuda_web import USERS` would
+    # import a *second* copy whose USERS is still empty — a login that can
+    # never succeed. Injection also lets the tests supply fakes.
+    authenticate: object = None    # (username, password) -> role str or None
+    system_state: object = None    # () -> dict merged into GET /state
+    frame_source: object = None    # (request) -> async byte generator
 
     def rebuild(self):
         """Re-derive everything that depends on the device registry."""
@@ -112,14 +122,42 @@ def build_router(ctx):
 
     @router.post("/login")
     async def login(data: LoginRequest, response: Response):
-        from .Garuda_web import USERS, _verify_password
-        user = USERS.get(data.username)
-        if user is None or not _verify_password(data.password, user["password"]):
+        role = None
+        if ctx.authenticate is not None:
+            role = ctx.authenticate(data.username, data.password)
+        if not role:
             raise HTTPException(status_code=401, detail="invalid credentials")
-        token = create_session(data.username, user.get("role", "user"))
+        token = create_session(data.username, role)
         response.set_cookie(COOKIE_NAME, token, httponly=True,
                             samesite="lax", secure=True, path="/")
-        return {"ok": True, "username": data.username, "role": user.get("role", "user")}
+        return {"ok": True, "username": data.username, "role": role}
+
+    @router.get("/state")
+    async def state(session=Depends(require_drishti_session)):
+        descriptor = dict(ctx.descriptor)
+        body = {
+            "occupancy": descriptor.get("occupancy", "empty"),
+            "person_count": descriptor.get("person_count", 0),
+            "temperature_c": descriptor.get("temperature_c"),
+            "humidity_pct": descriptor.get("humidity_pct"),
+            "modes": {},
+            "uptime_s": 0,
+            "pipeline": "unknown",
+            "online": bool(ctx.nim.api_key),
+        }
+        if ctx.system_state is not None:
+            body.update(ctx.system_state())
+        return body
+
+    @router.get("/stream")
+    async def stream(request: Request, session=Depends(require_drishti_session)):
+        # Authenticated first, so an anonymous caller gets 401 rather than 503
+        # and cannot use this to probe whether a camera exists.
+        if ctx.frame_source is None:
+            raise HTTPException(status_code=503, detail="no camera on this host")
+        return StreamingResponse(
+            ctx.frame_source(request),
+            media_type="multipart/x-mixed-replace; boundary=frame")
 
     @router.post("/logout")
     async def logout(request: Request, response: Response,
