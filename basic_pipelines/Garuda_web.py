@@ -188,6 +188,10 @@ except ImportError:
 # Both hostnames reach this one app through the one Cloudflare tunnel, so the
 # Host header is what decides which bundle / serves. Without it,
 # drishti.veeramanikanta.in shows the Garuda dashboard.
+# Named so a test harness can point it somewhere else before the lifespan
+# runs. It writes live session tokens; it must never be the real file
+# during a test run.
+DRISHTI_SESSIONS_PATH = os.path.join(DRISHTI_DATA_DIR, "sessions.json")
 DRISHTI_HOST = os.environ.get("DRISHTI_HOST", "drishti.veeramanikanta.in")
 DRISHTI_DIST = _BASE / "drishti_dist"
 
@@ -2338,7 +2342,7 @@ async def _lifespan(app):
     # Proposals and sessions from the previous run are stale by definition.
     DRISHTI_CTX.pending.purge()
     # Backed by a file, so deploying a change does not sign the house out.
-    _drishti_auth.configure(os.path.join(DRISHTI_DATA_DIR, "sessions.json"))
+    _drishti_auth.configure(DRISHTI_SESSIONS_PATH)
     _drishti_auth.prune_expired()
     DRISHTI_RUNTIME.start()
     log_system_update(
