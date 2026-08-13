@@ -169,6 +169,19 @@ PERM_DETECTION_LOG   = str(_BASE / "system_logs" / "perm_detection_log.txt")
 FEEDBACK_FILE        = str(_BASE / "system_logs" / "feedback.json")
 FEEDBACK_BACKUP_FILE = str(_BASE / "system_logs" / "feedback.backup.json")
 
+# ── Drishti ──────────────────────────────────────────────────────────────────
+DRISHTI_DATA_DIR = str(_BASE / "system_logs")
+
+# The 8-channel opto-isolated relay board. Only these channels may be assigned
+# to a device, and a user never enters a BCM pin: a wrong one could drive a pin
+# the Hailo HAT, the camera or the I2C bus is using.
+#
+# Channels 1 and 2 are the lamp and fan from the Narada-RS design. The stepper
+# motor deliberately does NOT sit on 17/18/27/22 as the gesture prototype had
+# it, because that collides with these relays; it moves to 5/6/13/19.
+RELAY_CHANNELS = (1, 2, 3, 4, 5, 6, 7)
+CHANNEL_TO_PIN = {1: 17, 2: 27, 3: 22, 4: 23, 5: 24, 6: 25, 7: 26}
+
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
@@ -2274,6 +2287,9 @@ async def _lifespan(app):
     _load_alert_history()
     _load_presence_log()
     load_master_keys()
+    # Proposals and sessions from the previous run are stale by definition.
+    DRISHTI_CTX.pending.purge()
+    _drishti_auth.prune_expired()
     _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     threading.Thread(target=_deadman_monitor, daemon=True).start()
@@ -2347,6 +2363,31 @@ async def security_headers(request: Request, call_next):
 _static_dir = Path(__file__).parent / "garuda_web"
 if _static_dir.exists():
     fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+# ── Drishti router ───────────────────────────────────────────────────────────
+# This file is imported two ways: as basic_pipelines.Garuda_web by the tests,
+# and as a plain script by scripts/run_garuda_web.sh. Relative imports only
+# work in the first case, so fall back to absolute for the second.
+try:
+    from .drishti_api import build_context as _build_drishti_context
+    from .drishti_api import build_router as _build_drishti_router
+    from . import drishti_auth as _drishti_auth
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from basic_pipelines.drishti_api import build_context as _build_drishti_context
+    from basic_pipelines.drishti_api import build_router as _build_drishti_router
+    from basic_pipelines import drishti_auth as _drishti_auth
+
+DRISHTI_CTX = _build_drishti_context(
+    data_dir=DRISHTI_DATA_DIR,
+    relay_channels=RELAY_CHANNELS,
+    channel_to_pin=CHANNEL_TO_PIN,
+    mqtt_host=os.environ.get("DRISHTI_MQTT_HOST", "localhost"),
+    nim_key=os.environ.get("NIM_API_KEY", ""),
+    nim_model=os.environ.get("NIM_MODEL", ""),
+    matcher_backend=os.environ.get("DRISHTI_MATCHER", "fuzzy"),
+)
+fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
 class LoginRequest(BaseModel):
