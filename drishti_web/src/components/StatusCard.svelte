@@ -19,13 +19,14 @@
 
 <style>
   section { display: grid; gap: var(--space-1); }
+  /* Title-2, not large-title. The screen already has one large title above
+     this, and two stacked compete rather than establish a hierarchy. */
   h2 {
     margin: 0;
-    font-size: var(--text-large-title);
-    line-height: var(--lh-large-title);
-    font-weight: var(--weight-bold);
-    /* Negative tracking as the size grows, or the letters read too far apart. */
-    letter-spacing: -0.02em;
+    font-size: var(--text-title-2);
+    line-height: var(--lh-title-2);
+    font-weight: var(--weight-semibold);
+    letter-spacing: -0.01em;
   }
   p { margin: 0; color: var(--label-secondary); font-size: var(--text-body); }
 </style>

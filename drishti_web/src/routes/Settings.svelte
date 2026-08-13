@@ -11,10 +11,6 @@
   let pendingDelete = $state(null);
   let notice = $state("");
 
-  const admin = $derived(session.role === "admin");
-
-  const loop = (house.state.rule_loop);
-
   onMount(() => {
     house.loadDevices();
     house.loadState();
@@ -41,9 +37,14 @@
 
 <h1>Settings</h1>
 
-<div class="sections">
-<section class="wide">
-  <h2>Devices and rooms</h2>
+<!-- Two things a person living here can actually change: what is in the house,
+     and whether they are signed in. The rest of what used to be on this screen
+     was either a heading with nothing behind it or a readout of how many times
+     the rule loop had evaluated — written for whoever built this, not for
+     whoever lives here. -->
+
+<section>
+  <h2>Devices</h2>
 
   {#if adding}
     <AddDevice onadded={deviceAdded} oncancel={() => (adding = false)} />
@@ -71,57 +72,20 @@
   {#if notice}<p class="notice" role="status">{notice}</p>{/if}
 </section>
 
-{#if admin}
-  <section>
-    <h2>People</h2>
-    <p class="muted">Who can sign in to Drishti. Managed in Garuda for now.</p>
-  </section>
+<section>
+  <h2>Privacy</h2>
+  <p class="muted">
+    Teaching a new rule sends your sentence and the names of your devices to the
+    rule service. It never sends a camera frame, and never sends what any sensor
+    is reading right now.
+  </p>
+</section>
 
-  <section>
-    <h2>Alerts</h2>
-    <p class="muted">Where Garuda sends danger and tamper alerts.</p>
-  </section>
-
-  <section>
-    <h2>Automation</h2>
-    <p class="muted">
-      Rules run on this device. Teaching a new one sends the sentence and the
-      names of your devices to the rule service — never a camera frame, and
-      never any current reading.
-    </p>
-  </section>
-
-  <section>
-    <h2>System</h2>
-    <p class="muted">Signed in as {session.username} ({session.role}).</p>
-    {#if loop}
-      <dl>
-        <dt>Rule loop</dt>
-        <dd>{loop.running ? "running" : "stopped"}</dd>
-        <dt>Evaluated</dt>
-        <dd>{loop.ticks} times</dd>
-        <dt>Actions taken</dt>
-        <dd>{loop.fires}</dd>
-        <dt>Rules</dt>
-        <dd>{loop.rules}{loop.orphaned_rules ? " (+" + loop.orphaned_rules + " needing repair)" : ""}</dd>
-        <dt>Camera</dt>
-        <dd>{house.state.pipeline ?? "unknown"}</dd>
-      </dl>
-      {#if loop.last_error}
-        <p class="muted" role="alert">Last error: {loop.last_error}</p>
-      {/if}
-    {/if}
-  </section>
-{:else}
-  <section>
-    <h2>Account</h2>
-    <p class="muted">Signed in as {session.username}. Ask an admin for anything else.</p>
-  </section>
-{/if}
-
-</div>
-
-<button class="signout" onclick={() => session.signOut()}>Sign out</button>
+<section>
+  <h2>Account</h2>
+  <p class="muted">Signed in as {session.username}.</p>
+  <button class="signout" onclick={() => session.signOut()}>Sign out</button>
+</section>
 
 <Confirm
   open={pendingDelete !== null}
@@ -133,23 +97,17 @@
 />
 
 <style>
-  /* On a laptop the sections sit side by side; a single 15rem-indented column
-     of short paragraphs down a 1440px window is mostly empty space. */
-  .sections { display: grid; gap: var(--space-4); }
-  @media (min-width: 900px) {
-    .sections { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); align-items: start; }
-    .sections > .wide { grid-column: 1 / -1; }
-  }
   section {
     background: var(--surface);
     border: 0.5px solid var(--separator);
     border-radius: var(--radius-card);
     padding: var(--space-4);
+    margin-bottom: var(--space-4);
   }
   h2 {
     font-size: var(--text-title-3);
     line-height: var(--lh-title-3);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     letter-spacing: -0.01em;
     margin: 0 0 var(--space-2);
   }
@@ -164,22 +122,29 @@
     border-radius: calc(var(--radius-card) - var(--space-4));
     padding: var(--space-3);
   }
-  .name { font-weight: 600; }
+  .name { font-weight: var(--weight-semibold); }
   .meta { grid-column: 1; font-size: var(--text-caption-1); color: var(--label-secondary); }
-  .del { grid-column: 2; grid-row: 1 / span 2; min-height: 44px; color: var(--danger); font-size: var(--text-footnote); }
+  .del {
+    grid-column: 2; grid-row: 1 / span 2;
+    min-height: 44px;
+    color: var(--danger);
+    font-size: var(--text-footnote);
+  }
   .add, .signout {
     margin-top: var(--space-3);
-    width: 100%; min-height: 44px;
+    width: 100%;
+    min-height: 44px;
     border-radius: var(--radius-control);
     background: var(--bg-secondary);
-    font-weight: 600;
+    font-weight: var(--weight-semibold);
     transition: background var(--dur-fast) var(--ease-standard);
   }
   .add:hover { background: color-mix(in srgb, var(--accent) 12%, var(--bg-secondary)); }
-  .signout { margin-top: var(--space-6); color: var(--danger); max-width: 22rem; }
+  .signout { color: var(--danger); }
   .signout:hover { background: color-mix(in srgb, var(--danger) 10%, var(--bg-secondary)); }
   .notice { margin: var(--space-3) 0 0; font-size: var(--text-footnote); color: var(--label-secondary); }
-  dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); }
-  dt { color: var(--label-secondary); font-size: var(--text-footnote); }
-  dd { margin: 0; font-size: var(--text-footnote); font-variant-numeric: tabular-nums; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .add, .signout { transition: none; }
+  }
 </style>

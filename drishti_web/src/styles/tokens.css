@@ -60,6 +60,14 @@
   /* Stated once. The rail width, the offset the content sits at and the
      composer's left edge are the same number by definition; keeping three
      copies is how content ends up overlapping the rail. */
+  /* The phone tab bar is a floating capsule, so the room it occupies is its
+     own height plus the gap it floats above the edge. Derived rather than
+     measured, because the composer has to clear exactly this and a second
+     hand-written number is how the two overlap. */
+  --bar-capsule-h: calc(var(--hit-min) + 2 * var(--space-1));   /* 44 + 8 */
+  --bar-inset-b: var(--space-3);
+  --dock-clear: calc(var(--bar-inset-b) + var(--bar-capsule-h) + var(--space-2));
+
   --rail: 15rem;
   --measure: 56rem;         /* content column cap, about 75 characters at body size */
 }

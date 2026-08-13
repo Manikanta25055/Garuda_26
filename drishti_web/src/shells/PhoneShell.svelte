@@ -72,7 +72,8 @@
   main {
     padding: max(var(--space-4), env(safe-area-inset-top)) var(--margin-content) 0;
     /* Clears the composer and the floating bar beneath it. */
-    padding-bottom: calc(170px + env(safe-area-inset-bottom));
+    /* Clears the composer, which itself clears the capsule. */
+    padding-bottom: calc(var(--dock-clear) + 76px + env(safe-area-inset-bottom));
   }
   main:focus { outline: none; }
 
@@ -81,7 +82,7 @@
   .bar {
     position: fixed;
     z-index: 20;
-    inset: auto var(--space-3) calc(var(--space-3) + env(safe-area-inset-bottom)) var(--space-3);
+    inset: auto var(--space-3) calc(var(--bar-inset-b) + env(safe-area-inset-bottom)) var(--space-3);
     padding: var(--space-1);
     border-radius: 9999px;
     background: color-mix(in srgb, var(--surface) 72%, transparent);

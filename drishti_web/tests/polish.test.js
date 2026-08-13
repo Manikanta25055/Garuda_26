@@ -1,11 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/svelte";
+import { render, screen, fireEvent } from "@testing-library/svelte";
 import DeviceTile from "../src/components/DeviceTile.svelte";
-import Settings from "../src/routes/Settings.svelte";
-import { session } from "../src/lib/session.svelte.js";
-import { house } from "../src/lib/app.svelte.js";
 
 const read = (p) => readFileSync(resolve(p), "utf8");
 
@@ -58,11 +55,17 @@ describe("loading", () => {
 });
 
 describe("desktop layout", () => {
-  it("Rules, Activity and Settings column up rather than running one long strip", () => {
-    for (const file of ["src/routes/Rules.svelte", "src/routes/Activity.svelte",
-                        "src/routes/Settings.svelte"]) {
+  it("Rules and Activity column up rather than running one long strip", () => {
+    for (const file of ["src/routes/Rules.svelte", "src/routes/Activity.svelte"]) {
       expect(read(file)).toMatch(/min-width: 900px[\s\S]*repeat\(auto-fill, minmax\(/);
     }
+  });
+
+  it("Settings stays a single column, because its sections are read in order", () => {
+    // Cards side by side would say these are alternatives to choose between.
+    // They are not: they are a list of things about the house, and the desktop
+    // shell already caps the column so it cannot stretch.
+    expect(read("src/routes/Settings.svelte")).not.toMatch(/repeat\(auto-fill/);
   });
 
   it("sizes columns by the card's comfortable width, not by a fixed count", () => {
@@ -72,55 +75,5 @@ describe("desktop layout", () => {
 
   it("Login becomes a centred card on a laptop", () => {
     expect(read("src/routes/Login.svelte")).toMatch(/min-width: 768px[\s\S]*box-shadow/);
-  });
-});
-
-describe("settings shows what the rule loop is doing", () => {
-  it("reports the loop, its counts and the camera", async () => {
-    session.username = "mani";
-    session.role = "admin";
-    house.state = {
-      pipeline: "running",
-      rule_loop: { running: true, ticks: 42, fires: 3, rules: 2,
-                   orphaned_rules: 0, last_error: "" },
-    };
-    vi.stubGlobal("fetch", () => Promise.resolve({
-      ok: true, status: 200,
-      json: () => Promise.resolve({ devices: [], rule_loop: house.state.rule_loop,
-                                    pipeline: "running" }),
-    }));
-
-    const { container } = render(Settings);
-
-    // Read each term's own definition. Both the loop and the camera say
-    // "running", so a bare text query matches two nodes and throws.
-    const definitionFor = (term) => {
-      const dt = [...container.querySelectorAll("dt")]
-        .find((el) => el.textContent.trim() === term);
-      return dt?.nextElementSibling?.textContent.trim();
-    };
-
-    await waitFor(() => expect(definitionFor("Rule loop")).toBe("running"));
-    expect(definitionFor("Evaluated")).toBe("42 times");
-    expect(definitionFor("Actions taken")).toBe("3");
-    expect(definitionFor("Rules")).toBe("2");
-    expect(definitionFor("Camera")).toBe("running");
-  });
-
-  it("surfaces the error the loop swallowed instead of looking idle", async () => {
-    session.username = "mani";
-    session.role = "admin";
-    house.state = {
-      pipeline: "stopped",
-      rule_loop: { running: true, ticks: 9, fires: 0, rules: 1,
-                   orphaned_rules: 0, last_error: "KeyError: 'occupancy'" },
-    };
-    vi.stubGlobal("fetch", () => Promise.resolve({
-      ok: true, status: 200, json: () => Promise.resolve({ devices: [] }),
-    }));
-
-    render(Settings);
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(/KeyError/);
   });
 });

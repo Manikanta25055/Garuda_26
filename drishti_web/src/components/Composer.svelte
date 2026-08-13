@@ -77,7 +77,7 @@
      is an action, not a place — it is never a tab, and never a transcript. */
   .dock {
     position: fixed;
-    inset: auto 0 calc(60px + env(safe-area-inset-bottom)) 0;
+    inset: auto 0 calc(var(--dock-clear) + env(safe-area-inset-bottom)) 0;
     z-index: 21;
     padding: 0 var(--margin-content) var(--space-2);
     display: grid;
