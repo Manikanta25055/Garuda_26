@@ -628,6 +628,51 @@ describe("phone shell", () => {
     const src = readFileSync(resolve("src/shells/PhoneShell.svelte"), "utf8");
     expect(src).toMatch(/prefers-reduced-transparency/);
   });
+
+  // ── absorbed from the deleted nav.test.js, which tested the single tab bar ──
+
+  it("wraps around at both ends", async () => {
+    const onchange = vi.fn();
+    render(PhoneShell, props({ current: "house", onchange }));
+    await fireEvent.keyDown(screen.getByRole("tablist"), { key: "ArrowLeft" });
+    expect(onchange).toHaveBeenCalledWith("settings");
+  });
+
+  it("ignores keys that are not navigation", async () => {
+    const onchange = vi.fn();
+    render(PhoneShell, props({ onchange }));
+    await fireEvent.keyDown(screen.getByRole("tablist"), { key: "a" });
+    expect(onchange).not.toHaveBeenCalled();
+  });
+
+  it("points every tab at the panel it controls", () => {
+    render(PhoneShell, props());
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab).toHaveAttribute("aria-controls", "panel");
+    }
+  });
+
+  it("tracks the selection by index rather than four separate states", () => {
+    const { container } = render(PhoneShell, props({ current: "activity" }));
+    expect(container.querySelector(".bar").style.getPropertyValue("--active")).toBe("2");
+  });
+
+  it("falls back to the first position for an unknown tab", () => {
+    const { container } = render(PhoneShell, props({ current: "nonsense" }));
+    expect(container.querySelector(".bar").style.getPropertyValue("--active")).toBe("0");
+  });
+
+  it("has one lens, hidden from assistive technology", () => {
+    const { container } = render(PhoneShell, props());
+    expect(container.querySelectorAll(".lens")).toHaveLength(1);
+    expect(container.querySelector(".lens")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("moves the lens with a spring, and only on transform", () => {
+    // Animating width or left would relayout the bar on every tab change.
+    const src = readFileSync(resolve("src/shells/PhoneShell.svelte"), "utf8");
+    expect(src).toMatch(/transition: transform var\(--dur-base\) var\(--ease-spring\)/);
+  });
 });
 ```
 
@@ -854,6 +899,45 @@ describe("desk shell", () => {
     const src = readFileSync(resolve("src/shells/DeskShell.svelte"), "utf8");
     expect(src).toMatch(/prefers-reduced-transparency/);
   });
+
+  // ── absorbed from the deleted nav.test.js ──
+
+  it("keeps one tab stop on the selected tab", () => {
+    render(DeskShell, props({ current: "rules" }));
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.filter((t) => t.getAttribute("tabindex") === "0")).toHaveLength(1);
+    expect(screen.getByRole("tab", { name: "Rules" })).toHaveAttribute("tabindex", "0");
+  });
+
+  it("jumps to the ends with Home and End", async () => {
+    const onchange = vi.fn();
+    render(DeskShell, props({ current: "rules", onchange }));
+    await fireEvent.keyDown(screen.getByRole("tablist"), { key: "End" });
+    expect(onchange).toHaveBeenCalledWith("settings");
+    await fireEvent.keyDown(screen.getByRole("tablist"), { key: "Home" });
+    expect(onchange).toHaveBeenCalledWith("house");
+  });
+
+  it("points every tab at the panel it controls", () => {
+    render(DeskShell, props());
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab).toHaveAttribute("aria-controls", "panel");
+    }
+  });
+
+  it("slides the lens vertically, since the tabs stack", () => {
+    const src = readFileSync(resolve("src/shells/DeskShell.svelte"), "utf8");
+    expect(src).toMatch(/translateY\(calc\(var\(--active\)/);
+    expect(src).not.toMatch(/translateX\(/);
+  });
+
+  it("keeps the rail width and the content offset the same number", () => {
+    // Two independent values here is how the content ends up overlapping or
+    // floating away from the rail.
+    const src = readFileSync(resolve("src/shells/DeskShell.svelte"), "utf8");
+    expect(src).toMatch(/width: var\(--rail\)/);
+    expect(src).toMatch(/margin-left: var\(--rail\)/);
+  });
 });
 ```
 
@@ -1004,16 +1088,34 @@ git commit -m "feat(web): desktop shell with a glass sidebar"
 
 **Files:**
 - Modify: `drishti_web/src/App.svelte`
+- Rename: `drishti_web/src/routes/Home.svelte` → `House.svelte`
 - Delete: `drishti_web/src/components/TabBar.svelte`
-- Modify: `drishti_web/tests/shell.test.js` — remove the `describe("tab bar")` block entirely, keep `describe("offline banner")`
-- Test: `drishti_web/tests/app.test.js` (append)
+- Delete: `drishti_web/tests/nav.test.js` (all 20 tests)
+- Modify: `drishti_web/tests/shell.test.js` — drop `describe("tab bar")` (7 tests), keep `describe("offline banner")` (2)
+- Modify: `drishti_web/tests/app.test.js` — 2 tests name the tab `"Home"`; append 2 new
+- Modify: `drishti_web/tests/polish.test.js` — 2 tests read `src/routes/Home.svelte` by path
+- Modify: `drishti_web/src/components/Composer.svelte` — hardcodes `left: 15rem` and `max-width: 56rem`
 
 **Interfaces:**
 - Consumes: `viewport` (Task 5), `PhoneShell` (Task 6), `DeskShell` (Task 7).
 - Produces: nothing consumed later.
 
-`TabBar.svelte` is superseded by the two shells and is deleted, not left
-orphaned. Its 7 tests move to the shell tests written in Tasks 6 and 7.
+**Every file that TabBar's deletion reaches, and why.** This is larger than a
+component swap because four test files and the composer are coupled to the
+single-tree design.
+
+`nav.test.js` is **deleted in full, not ported.** Its `describe("responsiveness")`
+block asserts precisely what this task removes — `max-width: 767.98px` and
+`min-width: 768px` inside one stylesheet, a wordmark hidden and then shown, and
+the rail width read out of `TabBar.svelte` and matched against `App.svelte` and
+`Composer.svelte`. Those are assertions *about the single tree*. Its still-valid
+claims — lens identity, spring-on-transform, single tab stop, wrap-around,
+non-navigation keys ignored, `aria-controls` — were absorbed into the shell
+tests in Tasks 6 and 7, which is where they now belong.
+
+`Composer.svelte` hardcodes the rail offset. It moves to the `--rail` token
+added in Task 7 so one number governs the rail, the content offset and the
+composer.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1102,10 +1204,10 @@ git mv drishti_web/src/routes/Home.svelte drishti_web/src/routes/House.svelte
 Change its heading from `<h1>Home</h1>` to `<h1>House</h1>`. Task 9 rewrites the
 rest of this file; this step only keeps the app building.
 
-- [ ] **Step 5: Delete the superseded tab bar**
+- [ ] **Step 5: Delete the superseded tab bar and its tests**
 
 ```bash
-git rm drishti_web/src/components/TabBar.svelte
+git rm drishti_web/src/components/TabBar.svelte drishti_web/tests/nav.test.js
 ```
 
 Then remove the whole `describe("tab bar", ...)` block from
@@ -1113,12 +1215,41 @@ Then remove the whole `describe("tab bar", ...)` block from
 `readFileSync`, `resolve`, `fireEvent` and `vi` imports. Keep
 `describe("offline banner", ...)` and the imports it needs.
 
-- [ ] **Step 6: Run the whole frontend suite**
+- [ ] **Step 6: Repoint the tests that name Home**
+
+In `drishti_web/tests/app.test.js`, two tests use the old tab name:
+
+- the `"shows the composer on every tab"` loop iterates
+  `["Home", "Rules", "Activity", "Settings"]` — change `"Home"` to `"House"`
+- `"stays put when the answer came from the device"` asserts
+  `getByRole("tab", { name: "Home" })` — change to `"House"`
+
+In `drishti_web/tests/polish.test.js`, two tests read the route by path:
+`read("src/routes/Home.svelte")` in `"Home holds card-shaped space instead of
+spinning"` and in `"announces the load to a screen reader"`. Change both paths to
+`src/routes/House.svelte`. Rename the first test's description to
+`"House holds card-shaped space instead of spinning"`.
+
+- [ ] **Step 7: Move the composer onto the rail token**
+
+In `drishti_web/src/components/Composer.svelte`, replace the hardcoded
+`left: 15rem` with `left: var(--rail)` and `max-width: 56rem` with
+`max-width: var(--measure)`, so the rail width is stated once.
+
+- [ ] **Step 8: Run the whole frontend suite**
 
 Run: `cd drishti_web && npm test`
-Expected: PASS. Count is 149 baseline − 7 removed tab-bar tests + 5 viewport + 8 phone shell + 7 desk shell + 2 app = **164 passed**, zero failures.
 
-- [ ] **Step 7: Commit**
+Expected count: 149 baseline − 20 (`nav.test.js`) − 7 (tab-bar block)
++ 5 viewport + 13 phone shell + 12 desk shell + 2 app = **154 passed**, zero
+failures. Task 10 later removes one more from `polish.test.js` and adds 13, for
+a pass-one total of **174**.
+
+If the real number differs, do not adjust the expectation to match the run —
+find out which test vanished. A silently dropped test is the failure this
+arithmetic exists to catch.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add -A drishti_web
@@ -1315,6 +1446,7 @@ git commit -m "feat(web): live view in a fixed box with a privacy switch"
 **Files:**
 - Modify: `drishti_web/src/routes/House.svelte`
 - Modify: `drishti_web/src/components/StatusCard.svelte`
+- Modify: `drishti_web/tests/polish.test.js` — delete one obsolete test
 - Test: `drishti_web/tests/house.test.js`
 
 **Interfaces:**
@@ -1428,12 +1560,33 @@ Replace the `.top` block with:
 and delete the `.top` grid rule from its `<style>` — the live view is now the
 hero at full column width on both shells rather than a column beside a card.
 
-- [ ] **Step 5: Run the whole frontend suite**
+- [ ] **Step 5: Delete the test that asserted the old layout**
+
+`drishti_web/tests/polish.test.js` contains:
+
+```js
+  it("Home puts status and camera side by side when there is room", () => {
+    expect(read("src/routes/Home.svelte"))
+      .toMatch(/min-width: 900px[\s\S]*\.top \{ grid-template-columns/);
+  });
+```
+
+Delete it. The `.top` grid it asserts is removed by Step 4, and side-by-side is
+no longer the intent — the camera is the hero at full column width. The new
+layout is covered by `house.test.js`, so this is a deletion rather than a
+rewrite.
+
+- [ ] **Step 6: Run the whole frontend suite**
 
 Run: `cd drishti_web && npm test`
-Expected: **177 passed** (164 from Task 8 + 8 live view + 5 house), zero failures.
 
-- [ ] **Step 6: Build and deploy**
+Expected: **166 passed** — 154 after Task 8, plus 8 live view, plus 5 house,
+minus the 1 deleted in Step 5. Zero failures.
+
+Any other number means a test was lost. Find which one before continuing rather
+than adjusting this figure to match the run.
+
+- [ ] **Step 7: Build and deploy**
 
 ```bash
 cd drishti_web && npm run build
@@ -1444,7 +1597,7 @@ systemctl is-active garuda-web.service; cat /proc/loadavg; vcgencmd measure_temp
 
 Expected: `active`, and load/temperature no worse than the Task 2 measurement.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add -A drishti_web
@@ -1463,9 +1616,19 @@ Section 1 addition (privacy): Tasks 3, 4, 9, 10. Section 2 (two shells): Tasks
 Section 4: type in Task 10, material and motion in Tasks 6–7, the three
 accessibility media features asserted in Tasks 6, 7 and 9.
 
-**Deliberately deferred, and where.** The `polish.test.js` telemetry assertions
-are only touched when the telemetry is removed, which is pass two — this plan
-does not modify that file, so its 5 assertions keep passing untouched.
+**Deliberately deferred, and where.** `polish.test.js`'s two rule-loop telemetry
+tests survive pass one untouched; they are removed in pass two along with the
+telemetry itself. This plan does modify that file for other reasons — two path
+references in Task 8 and one obsolete layout assertion deleted in Task 10.
+
+**Correction made during pre-execution review.** An earlier draft of this plan
+claimed `polish.test.js` was untouched and counted only 7 tests lost to the
+`TabBar` deletion. Both were wrong. `nav.test.js` imports `TabBar.svelte`
+directly and its 20 tests all die with it; `app.test.js` names the tab `"Home"`
+in 2 tests; `polish.test.js` reads `src/routes/Home.svelte` by path in 2 tests
+and asserts the deleted `.top` grid in a third; and `Composer.svelte` hardcodes
+the rail width that `nav.test.js` cross-checked. The counts below are the
+corrected ones.
 
 **Type consistency.** `FramePublisher.due()`/`.encode()` as produced in Task 1
 are used under those names in Task 2. `ctx.set_privacy` is declared in Task 3
@@ -1475,5 +1638,14 @@ lets Task 8's `$derived` component swap work without prop branching. `LiveView`
 takes `privacy`/`onprivacy` in Task 9 and is given exactly those in Task 10.
 Tab ids are `house`/`rules`/`activity`/`settings` in Tasks 6, 7 and 8 alike.
 
-**Test counts.** 594 → 601 (Task 1) → 605 (Task 3) Python. 149 → 164 (Task 8,
-net of 7 deleted tab-bar tests) → 177 (Task 10) frontend.
+**Test counts.**
+
+Python: 594 → 601 (Task 1, +7) → 605 (Task 3, +4).
+
+Frontend: 149 baseline.
+
+| After | Change | Total |
+| --- | --- | --- |
+| Task 8 | −20 `nav.test.js`, −7 tab-bar block, +5 viewport, +13 phone shell, +12 desk shell, +2 app | **154** |
+| Task 9 | +8 live view | **162** |
+| Task 10 | +5 house, −1 obsolete layout assertion | **166** |
