@@ -129,6 +129,25 @@ def test_empty_input_declines(parts):
     assert call("   ", parts) is None
 
 
+def test_an_empty_descriptor_says_so_instead_of_raising(parts):
+    """Before the detection pipeline has produced a descriptor, the dict is
+    empty. Asking about state must not 500."""
+    registry, router, log_path = parts
+    for question in ("is anyone home?", "what's the temperature?", "what's the humidity?"):
+        result = local_lane.answer(question, registry=registry, descriptor={},
+                                   router=router, log_path=log_path, store=FakeStore())
+        assert result is not None, question
+        assert "don't have" in result["text"], question
+
+
+def test_an_empty_descriptor_still_allows_direct_control(parts):
+    registry, router, log_path = parts
+    result = local_lane.answer("turn the desk lamp on", registry=registry, descriptor={},
+                               router=router, log_path=log_path, store=FakeStore())
+    assert result["kind"] == "control"
+    assert router.calls == [("lamp_desk", "on")]
+
+
 def test_a_refused_actuation_is_reported(tmp_path):
     registry = DeviceRegistry(str(tmp_path / "devices.json"), relay_channels=(1, 2, 3))
     registry.add(LAMP)

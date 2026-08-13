@@ -44,8 +44,15 @@ def _wanted_action(text):
     return None
 
 
+def _unknown(what):
+    return {"kind": "state", "resolved": _RESOLVED,
+            "text": f"I don't have a {what} reading yet."}
+
+
 def _presence(descriptor):
-    count = descriptor.get("person_count", 0)
+    if "person_count" not in descriptor:
+        return None
+    count = descriptor["person_count"]
     if not count:
         return "Nobody is in the room."
     person = "person" if count == 1 else "people"
@@ -91,16 +98,22 @@ def answer(text, *, registry, descriptor, router, log_path, store):
 
     lowered = text.lower()
 
+    # The descriptor is empty until the detection pipeline has produced one.
+    # Say so rather than raising, and never invent a reading.
     if _PRESENCE.search(lowered):
-        return {"kind": "state", "resolved": _RESOLVED, "text": _presence(descriptor)}
+        text = _presence(descriptor)
+        return _unknown("presence") if text is None else {
+            "kind": "state", "resolved": _RESOLVED, "text": text}
 
     if "temperature" in lowered or "how warm" in lowered or "how cold" in lowered:
-        return {"kind": "state", "resolved": _RESOLVED,
-                "text": f"It is {descriptor['temperature_c']}°C."}
+        value = descriptor.get("temperature_c")
+        return _unknown("temperature") if value is None else {
+            "kind": "state", "resolved": _RESOLVED, "text": f"It is {value}°C."}
 
     if "humidity" in lowered or "how humid" in lowered:
-        return {"kind": "state", "resolved": _RESOLVED,
-                "text": f"Humidity is {descriptor['humidity_pct']}%."}
+        value = descriptor.get("humidity_pct")
+        return _unknown("humidity") if value is None else {
+            "kind": "state", "resolved": _RESOLVED, "text": f"Humidity is {value}%."}
 
     device = _find_device(text, registry)
     if device is None:
