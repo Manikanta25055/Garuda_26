@@ -34,15 +34,19 @@
 
 <!-- Proposals sit above saved rules: they are the only thing here waiting on
      the person, and an unanswered one is why a rule they asked for is missing. -->
-{#each house.proposals as proposal (proposal.id)}
-  <ProposalCard {proposal} onconfirm={confirm} ondiscard={discard} />
-{/each}
+<div class="deck">
+  {#each house.proposals as proposal (proposal.id)}
+    <ProposalCard {proposal} onconfirm={confirm} ondiscard={discard} />
+  {/each}
+</div>
 
 {#if house.orphaned.length > 0}
   <h2>Needs attention</h2>
-  {#each house.orphaned as rule (rule.id)}
-    <RuleCard {rule} devices={house.devices} ontoggle={toggle} ondelete={remove} />
-  {/each}
+  <div class="deck">
+    {#each house.orphaned as rule (rule.id)}
+      <RuleCard {rule} devices={house.devices} ontoggle={toggle} ondelete={remove} />
+    {/each}
+  </div>
 {/if}
 
 {#if house.rules.length === 0 && house.proposals.length === 0 && house.orphaned.length === 0}
@@ -51,12 +55,29 @@
     body="Tell the house what to do using the box below — for example, “turn the lamp on when I sit at the desk”."
   />
 {:else}
-  {#each house.rules as rule (rule.id)}
-    <RuleCard {rule} devices={house.devices} ontoggle={toggle} ondelete={remove} />
-  {/each}
+  <div class="deck">
+    {#each house.rules as rule (rule.id)}
+      <RuleCard {rule} devices={house.devices} ontoggle={toggle} ondelete={remove} />
+    {/each}
+  </div>
 {/if}
 
 <style>
-  h2 { font-size: var(--text-title-3); font-weight: 600; margin: var(--space-6) 0 var(--space-2); }
-  :global(article + article) { margin-top: var(--space-2); }
+  h2 {
+    font-size: var(--text-title-3);
+    line-height: var(--lh-title-3);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: var(--space-6) 0 var(--space-2);
+  }
+  /* One column on a phone; on a laptop the card's own comfortable width
+     decides how many fit, rather than a column count that leaves a gap at
+     every width it was not chosen for. */
+  .deck {
+    display: grid;
+    gap: var(--space-3);
+  }
+  @media (min-width: 900px) {
+    .deck { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); align-items: start; }
+  }
 </style>

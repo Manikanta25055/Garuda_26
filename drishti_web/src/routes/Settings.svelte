@@ -13,7 +13,12 @@
 
   const admin = $derived(session.role === "admin");
 
-  onMount(() => house.loadDevices());
+  const loop = (house.state.rule_loop);
+
+  onMount(() => {
+    house.loadDevices();
+    house.loadState();
+  });
 
   async function removeDevice() {
     const device = pendingDelete;
@@ -36,7 +41,8 @@
 
 <h1>Settings</h1>
 
-<section>
+<div class="sections">
+<section class="wide">
   <h2>Devices and rooms</h2>
 
   {#if adding}
@@ -88,6 +94,23 @@
   <section>
     <h2>System</h2>
     <p class="muted">Signed in as {session.username} ({session.role}).</p>
+    {#if loop}
+      <dl>
+        <dt>Rule loop</dt>
+        <dd>{loop.running ? "running" : "stopped"}</dd>
+        <dt>Evaluated</dt>
+        <dd>{loop.ticks} times</dd>
+        <dt>Actions taken</dt>
+        <dd>{loop.fires}</dd>
+        <dt>Rules</dt>
+        <dd>{loop.rules}{loop.orphaned_rules ? " (+" + loop.orphaned_rules + " needing repair)" : ""}</dd>
+        <dt>Camera</dt>
+        <dd>{house.state.pipeline ?? "unknown"}</dd>
+      </dl>
+      {#if loop.last_error}
+        <p class="muted" role="alert">Last error: {loop.last_error}</p>
+      {/if}
+    {/if}
   </section>
 {:else}
   <section>
@@ -95,6 +118,8 @@
     <p class="muted">Signed in as {session.username}. Ask an admin for anything else.</p>
   </section>
 {/if}
+
+</div>
 
 <button class="signout" onclick={() => session.signOut()}>Sign out</button>
 
@@ -108,17 +133,35 @@
 />
 
 <style>
-  section { margin-top: var(--space-6); }
-  h2 { font-size: var(--text-title-3); font-weight: 600; margin: 0 0 var(--space-2); }
+  /* On a laptop the sections sit side by side; a single 15rem-indented column
+     of short paragraphs down a 1440px window is mostly empty space. */
+  .sections { display: grid; gap: var(--space-4); }
+  @media (min-width: 900px) {
+    .sections { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); align-items: start; }
+    .sections > .wide { grid-column: 1 / -1; }
+  }
+  section {
+    background: var(--surface);
+    border: 0.5px solid var(--separator);
+    border-radius: var(--radius-card);
+    padding: var(--space-4);
+  }
+  h2 {
+    font-size: var(--text-title-3);
+    line-height: var(--lh-title-3);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 var(--space-2);
+  }
   .muted { color: var(--label-secondary); font-size: var(--text-subhead); margin: 0; }
   ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
   li {
     display: grid;
     grid-template-columns: 1fr auto;
     align-items: center;
-    background: var(--surface);
-    border: 0.5px solid var(--separator);
-    border-radius: var(--radius-card);
+    background: var(--bg-secondary);
+    /* Concentric: parent radius 20 minus 16 padding. */
+    border-radius: calc(var(--radius-card) - var(--space-4));
     padding: var(--space-3);
   }
   .name { font-weight: 600; }
@@ -130,7 +173,13 @@
     border-radius: var(--radius-control);
     background: var(--bg-secondary);
     font-weight: 600;
+    transition: background var(--dur-fast) var(--ease-standard);
   }
-  .signout { margin-top: var(--space-8); color: var(--danger); }
+  .add:hover { background: color-mix(in srgb, var(--accent) 12%, var(--bg-secondary)); }
+  .signout { margin-top: var(--space-6); color: var(--danger); max-width: 22rem; }
+  .signout:hover { background: color-mix(in srgb, var(--danger) 10%, var(--bg-secondary)); }
   .notice { margin: var(--space-3) 0 0; font-size: var(--text-footnote); color: var(--label-secondary); }
+  dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); }
+  dt { color: var(--label-secondary); font-size: var(--text-footnote); }
+  dd { margin: 0; font-size: var(--text-footnote); font-variant-numeric: tabular-nums; }
 </style>

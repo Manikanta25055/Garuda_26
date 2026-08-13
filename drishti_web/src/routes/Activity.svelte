@@ -43,6 +43,9 @@
 
 <style>
   ol { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+  @media (min-width: 900px) {
+    ol { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); align-items: start; }
+  }
   li {
     background: var(--surface);
     border: 0.5px solid var(--separator);

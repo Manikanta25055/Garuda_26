@@ -45,7 +45,10 @@
     padding: max(var(--space-6), env(safe-area-inset-top)) var(--space-4);
   }
   form { width: 100%; max-width: 22rem; display: grid; gap: var(--space-2); }
-  h1 { font-size: var(--text-large-title); line-height: var(--lh-large-title); margin: 0; font-weight: 600; }
+  h1 {
+    font-size: var(--text-large-title); line-height: var(--lh-large-title);
+    margin: 0; font-weight: 700; letter-spacing: -0.02em;
+  }
   .sub { color: var(--label-secondary); margin: 0 0 var(--space-4); }
   label { font-size: var(--text-subhead); color: var(--label-secondary); margin-top: var(--space-2); }
   input {
@@ -54,7 +57,9 @@
     border-radius: var(--radius-control);
     border: 1px solid var(--separator);
     background: var(--bg-secondary);
+    transition: border-color var(--dur-fast) var(--ease-standard);
   }
+  input:focus { border-color: var(--accent); }
   .err { color: var(--danger); font-size: var(--text-footnote); margin: var(--space-2) 0 0; }
   button {
     margin-top: var(--space-5);
@@ -63,6 +68,21 @@
     background: var(--accent);
     color: #fff;
     font-weight: 600;
+    transition: opacity var(--dur-fast) var(--ease-standard);
   }
-  button:disabled { opacity: 0.5; }
+  button:hover:not(:disabled) { opacity: 0.9; }
+  button:disabled { opacity: 0.5; cursor: default; }
+
+  /* On a laptop a card centred in the viewport reads as a dialog rather than
+     a page that failed to fill its window. */
+  @media (min-width: 768px) {
+    form {
+      max-width: 24rem;
+      padding: var(--space-8);
+      background: var(--surface);
+      border: 0.5px solid var(--separator);
+      border-radius: var(--radius-sheet);
+      box-shadow: 0 20px 60px rgb(0 0 0 / 0.12);
+    }
+  }
 </style>

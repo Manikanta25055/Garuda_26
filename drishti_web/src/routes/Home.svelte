@@ -10,17 +10,27 @@
 
   let confirmAllOff = $state(false);
   let notice = $state("");
+  let loaded = $state(false);
+  let busy = $state(new Set());
 
   onMount(() => {
-    house.loadState();
-    house.loadDevices();
+    Promise.all([house.loadState(), house.loadDevices()]).finally(() => (loaded = true));
     const timer = setInterval(() => house.loadState(), 5000);
     return () => clearInterval(timer);
   });
 
   async function toggle(id, action) {
-    await setDevice(id, action);
-    await house.loadDevices();
+    // The tile shows it is working. Without this the only feedback is the tile
+    // changing several hundred milliseconds later, which reads as a dead tap.
+    busy = new Set(busy).add(id);
+    try {
+      await setDevice(id, action);
+      await house.loadDevices();
+    } finally {
+      const next = new Set(busy);
+      next.delete(id);
+      busy = next;
+    }
   }
 
   async function turnEverythingOff() {
@@ -35,19 +45,27 @@
 
 <h1>Home</h1>
 
-<StatusCard state={house.state} />
-<LiveView active={!house.state.modes?.privacy} />
+<div class="top">
+  <StatusCard state={house.state} />
+  <LiveView active={!house.state.modes?.privacy} />
+</div>
 
-<h2>Devices</h2>
-{#if house.devices.length === 0}
+<h2 class="section-title">Devices</h2>
+
+{#if !loaded}
+  <div class="tiles" aria-hidden="true">
+    {#each [1, 2, 3, 4] as n (n)}<div class="skeleton tile-skeleton"></div>{/each}
+  </div>
+  <p class="sr">Loading your devices.</p>
+{:else if house.devices.length === 0}
   <EmptyState
     title="No devices yet"
     body="Add your first device in Settings, then tell the house what to do with it."
   />
 {:else}
-  <div class="grid">
+  <div class="tiles">
     {#each house.devices as device (device.id)}
-      <DeviceTile {device} ontoggle={toggle} />
+      <DeviceTile {device} ontoggle={toggle} busy={busy.has(device.id)} />
     {/each}
   </div>
 {/if}
@@ -66,16 +84,38 @@
 />
 
 <style>
-  h2 { font-size: var(--text-title-3); font-weight: 600; margin: var(--space-6) 0 var(--space-2); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+  /* On a phone the status reads first and the camera follows. On a laptop
+     there is room for both at once, and the camera earns the wider half. */
+  .top { display: grid; gap: var(--space-3); }
+  @media (min-width: 900px) {
+    .top { grid-template-columns: minmax(18rem, 2fr) 3fr; align-items: start; }
+  }
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: var(--space-2);
+  }
+  .tile-skeleton { height: 5.5rem; }
+
   .notice { margin: var(--space-3) 0 0; font-size: var(--text-footnote); color: var(--label-secondary); }
+
   /* Deliberate, separated, and confirmed — not adjacent to navigation. */
   .stop {
     margin-top: var(--space-8);
-    width: 100%; min-height: 44px;
+    width: 100%;
+    max-width: 22rem;
+    min-height: 44px;
     border-radius: var(--radius-control);
     border: 1px solid var(--danger);
     color: var(--danger);
     font-weight: 600;
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+  .stop:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+
+  .sr {
+    position: absolute; width: 1px; height: 1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
   }
 </style>
