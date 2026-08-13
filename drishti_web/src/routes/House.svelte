@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import { api } from "../lib/api.js";
   import { house } from "../lib/app.svelte.js";
   import { setDevice, allOff } from "../lib/control.js";
   import StatusCard from "../components/StatusCard.svelte";
@@ -33,6 +34,12 @@
     }
   }
 
+  // The camera needs an off switch the person living here can press.
+  async function setPrivacy(on) {
+    await api.post("/api/drishti/privacy", { on });
+    await house.loadState();
+  }
+
   async function turnEverythingOff() {
     confirmAllOff = false;
     const stopped = await allOff(house.devices);
@@ -45,10 +52,9 @@
 
 <h1>House</h1>
 
-<div class="top">
-  <StatusCard state={house.state} />
-  <LiveView active={!house.state.modes?.privacy} />
-</div>
+<StatusCard state={house.state} />
+
+<LiveView privacy={!!house.state.modes?.privacy} onprivacy={setPrivacy} />
 
 <h2 class="section-title">Devices</h2>
 
@@ -84,12 +90,6 @@
 />
 
 <style>
-  /* On a phone the status reads first and the camera follows. On a laptop
-     there is room for both at once, and the camera earns the wider half. */
-  .top { display: grid; gap: var(--space-3); }
-  @media (min-width: 900px) {
-    .top { grid-template-columns: minmax(18rem, 2fr) 3fr; align-items: start; }
-  }
 
   .tiles {
     display: grid;

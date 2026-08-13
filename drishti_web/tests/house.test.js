@@ -60,21 +60,32 @@ describe("device tile", () => {
 });
 
 describe("status card", () => {
-  it("says the room is occupied and by how many", () => {
-    render(StatusCard, { state: { occupancy: "occupied", person_count: 2, uptime_s: 7200 } });
-    expect(screen.getByText(/occupied|someone/i)).toBeInTheDocument();
-    expect(screen.getByText(/2 in the room/)).toBeInTheDocument();
+  it("answers the question in one line when someone is home", () => {
+    render(StatusCard, { state: { occupancy: "occupied", person_count: 2 } });
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(/someone.s home/i);
+    expect(screen.getByText(/2 people in the room/)).toBeInTheDocument();
   });
 
-  it("renders uptime in hours", () => {
+  it("says one person without a plural", () => {
+    render(StatusCard, { state: { occupancy: "occupied", person_count: 1 } });
+    expect(screen.getByText(/1 person in the room/)).toBeInTheDocument();
+  });
+
+  it("answers it when nobody is home", () => {
+    render(StatusCard, { state: { occupancy: "empty", person_count: 0 } });
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(/nobody.s home/i);
+  });
+
+  it("shows no uptime readout", () => {
+    // How long the server process has been up is a fact about the server, not
+    // about the house. It went with the rest of the developer surface.
     render(StatusCard, { state: { occupancy: "empty", person_count: 0, uptime_s: 7200 } });
-    expect(screen.getByText(/2 h/)).toBeInTheDocument();
+    expect(screen.queryByText(/running|uptime|[0-9]+\s*h\b/i)).toBeNull();
   });
 
   it("survives a state the server has not filled in yet", () => {
     render(StatusCard, { state: {} });
-    expect(screen.getByText(/nobody/i)).toBeInTheDocument();
-    expect(screen.getByText(/0 h/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(/nobody.s home/i);
   });
 });
 

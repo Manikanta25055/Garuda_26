@@ -58,11 +58,6 @@ describe("loading", () => {
 });
 
 describe("desktop layout", () => {
-  it("House puts status and camera side by side when there is room", () => {
-    expect(read("src/routes/House.svelte"))
-      .toMatch(/min-width: 900px[\s\S]*\.top \{ grid-template-columns/);
-  });
-
   it("Rules, Activity and Settings column up rather than running one long strip", () => {
     for (const file of ["src/routes/Rules.svelte", "src/routes/Activity.svelte",
                         "src/routes/Settings.svelte"]) {

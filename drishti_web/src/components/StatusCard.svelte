@@ -1,30 +1,31 @@
 <script>
   let { state } = $props();
-  const hours = $derived(Math.floor((state.uptime_s ?? 0) / 3600));
+
+  const occupied = $derived(state.occupancy === "occupied");
+  const count = $derived(state.person_count ?? 0);
+  const detail = $derived(
+    occupied
+      ? `${count} ${count === 1 ? "person" : "people"} in the room`
+      : "The room is empty");
 </script>
 
+<!-- One line that answers the question, at a size you can read from across the
+     room. The three stacked strings this replaced made you assemble the answer
+     yourself, and one of them was how long the server process had been up. -->
 <section>
-  <p class="headline">
-    {state.occupancy === "occupied" ? "Someone's home" : "Nobody's home"}
-  </p>
-  <p class="detail">
-    {state.occupancy === "occupied"
-      ? `${state.person_count} in the room`
-      : "The room is empty"}
-  </p>
-  <p class="meta">Running {hours} h</p>
+  <h2>{occupied ? "Someone's home" : "Nobody's home"}</h2>
+  <p>{detail}</p>
 </section>
 
 <style>
-  section {
-    background: var(--surface);
-    border: 0.5px solid var(--separator);
-    border-radius: var(--radius-card);
-    padding: var(--space-4);
-    display: grid;
-    gap: var(--space-1);
+  section { display: grid; gap: var(--space-1); }
+  h2 {
+    margin: 0;
+    font-size: var(--text-large-title);
+    line-height: var(--lh-large-title);
+    font-weight: var(--weight-bold);
+    /* Negative tracking as the size grows, or the letters read too far apart. */
+    letter-spacing: -0.02em;
   }
-  .headline { margin: 0; font-size: var(--text-title-2); line-height: var(--lh-title-2); font-weight: 600; }
-  .detail { margin: 0; color: var(--label-secondary); }
-  .meta { margin: 0; font-size: var(--text-caption-1); color: var(--label-tertiary); }
+  p { margin: 0; color: var(--label-secondary); font-size: var(--text-body); }
 </style>
