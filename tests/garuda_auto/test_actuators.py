@@ -43,7 +43,37 @@ def test_set_on_drives_the_pin_and_updates_state(monkeypatch):
 
 def test_opto_boards_are_configured_active_low(monkeypatch):
     bank = _bank(monkeypatch)
+    bank.set("lamp", "on")
     assert FakeOutput.instances[0].active_high is False
+
+
+def test_no_pin_is_claimed_until_first_actuation(monkeypatch):
+    # A gpiozero reservation is exclusive and process-wide. Claiming pins in
+    # __init__ meant importing Garuda_web took GPIO 17 away from whatever else
+    # held it, the running service included.
+    _bank(monkeypatch)
+    assert FakeOutput.instances == []
+
+
+def test_actuating_one_device_does_not_claim_the_others(monkeypatch):
+    bank = _bank(monkeypatch)
+    bank.set("lamp", "on")
+    assert [o.pin for o in FakeOutput.instances] == [17]
+
+
+def test_all_off_does_not_claim_unused_pins(monkeypatch):
+    bank = _bank(monkeypatch)
+    bank.all_off()
+    assert FakeOutput.instances == []
+    assert bank.state("lamp") == "off"
+
+
+def test_the_pin_is_reused_across_actuations(monkeypatch):
+    bank = _bank(monkeypatch)
+    bank.set("lamp", "on")
+    bank.set("lamp", "off")
+    bank.set("lamp", "on")
+    assert len(FakeOutput.instances) == 1
 
 
 def test_unknown_device_is_refused(monkeypatch):
