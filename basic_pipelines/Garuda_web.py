@@ -2476,8 +2476,20 @@ def _drishti_system_state():
     }
 
 
+def _drishti_set_privacy(on):
+    """Turn the camera off from the app.
+
+    MODE_PRIVACY was reachable only through the voice assistant, so the web app
+    could read the flag and never change it.
+    """
+    global MODE_PRIVACY
+    MODE_PRIVACY = bool(on)
+    log_system_update(f"[DRISHTI] privacy {'on' if MODE_PRIVACY else 'off'}")
+
+
 DRISHTI_CTX.authenticate = _drishti_authenticate
 DRISHTI_CTX.system_state = _drishti_system_state
+DRISHTI_CTX.set_privacy = _drishti_set_privacy
 
 # The loop that makes rules actually run. Narada-RS built SceneBuilder and
 # RuleEngine, tested them, and connected them to nothing: until now the
