@@ -421,9 +421,18 @@ def _clear_login_failure(ip: str):
 
 USERS: dict = {}  # populated from users.json at startup; no hardcoded defaults
 
+try:
+    from .garuda_auto.frame_publisher import FramePublisher
+except ImportError:
+    from basic_pipelines.garuda_auto.frame_publisher import FramePublisher
+
 # MJPEG / WebRTC frame buffer
 _frame_buffer = None
 _frame_raw    = None       # raw numpy BGR for WebRTC track
+# Pipeline rate in, browser rate out. The clip writer shares this gate, because
+# its VideoWriter is built at a fixed 15fps and writing faster is what made
+# saved clips play back in slow motion.
+_frame_publisher = FramePublisher()
 _frame_lock   = threading.Lock()
 _frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
 _frame_ts     = 0.0        # wall clock of the last frame; the only liveness signal we have
@@ -1512,17 +1521,15 @@ def app_callback(pad, info, user_data):
                 except _queue_mod.Full:
                     _cascade_metrics.record_secondary_drop()
 
-    if frame is not None:
-        cv2.putText(frame, f"Thr: {threshold:.2f}", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 255), 2)
-        if privacy:
-            cv2.putText(frame, "PRIVACY ON", (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 80, 80), 2)
-        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        _, jpeg = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 75])
+    # Gated: the encode is the most expensive thing in this callback and no
+    # browser can use 60fps MJPEG. Nothing is drawn on the frame -- the debug
+    # readout that used to be here also reached the WebRTC track and every saved
+    # evidence clip, because all three read _frame_raw.
+    if frame is not None and _frame_publisher.due():
+        frame_bgr, jpeg = FramePublisher.encode(frame)
         with _frame_lock:
             global _frame_seq, _frame_raw, _frame_ts
-            _frame_buffer = jpeg.tobytes()
+            _frame_buffer = jpeg
             _frame_raw    = frame_bgr
             _frame_seq += 1
             _frame_ts     = time.time()
