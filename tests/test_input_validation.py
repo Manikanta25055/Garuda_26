@@ -268,7 +268,7 @@ class TestLabelValidation:
         app_client.post('/api/config', json={'danger_label': 'knife'}, headers=ah)
         app_client.post('/api/config', json={'danger_label': ''}, headers=ah)
         cfg = app_client.get('/api/config', headers=ah).json()
-        assert cfg['danger_label'] == 'knife'
+        assert cfg['danger_labels'] == ['knife']
 
     def test_watch_labels_strips_whitespace(self, app_client, ah):
         r = app_client.post('/api/config',
@@ -291,6 +291,12 @@ class TestLabelValidation:
 # ── Chat message validation ───────────────────────────────────────────────────
 
 class TestChatValidation:
+
+    @pytest.fixture(autouse=True)
+    def _no_groq_key(self, monkeypatch):
+        """Validation is what is under test here, not the LLM. With a key set,
+        /api/chat makes a live Groq call and the request times out."""
+        monkeypatch.setattr(gw, 'GROQ_API_KEY', '')
 
     def test_empty_message_rejected(self, app_client, user_token):
         headers = {'X-Garuda-Token': user_token}

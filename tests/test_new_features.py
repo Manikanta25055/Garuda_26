@@ -437,6 +437,12 @@ class TestLogBuffer:
 
 class TestCameraTamper:
 
+    @pytest.fixture(autouse=True)
+    def _clear_tamper_cooldown(self, monkeypatch):
+        """_send_tamper_email is rate-limited to one mail per hour via module
+        state. Reset it per test so cases do not suppress each other."""
+        monkeypatch.setattr(gw, '_last_tamper_email', 0.0)
+
     def test_send_tamper_email_calls_smtp(self, monkeypatch):
         """_send_tamper_email must call SMTP_SSL and send a message."""
         monkeypatch.setattr(gw, 'EMAIL_SENDER', 'test@example.com')
@@ -491,6 +497,23 @@ class TestCameraTamper:
 
         gw._send_tamper_email()
         assert smtp_mock.send_message.called   # sent despite all modes being active
+
+    def test_send_tamper_email_is_rate_limited(self, monkeypatch):
+        """A flickering camera must not produce a mail per frame."""
+        monkeypatch.setattr(gw, 'EMAIL_SENDER', 'test@example.com')
+        monkeypatch.setattr(gw, 'EMAIL_SENDER_PASS', 'pass')
+        monkeypatch.setattr(gw, 'EMAIL_RECIPIENTS', ['dest@example.com'])
+
+        smtp_mock = MagicMock()
+        smtp_mock.__enter__ = MagicMock(return_value=smtp_mock)
+        smtp_mock.__exit__ = MagicMock(return_value=False)
+        monkeypatch.setattr(gw.smtplib, 'SMTP_SSL', MagicMock(return_value=smtp_mock))
+
+        gw._send_tamper_email()
+        gw._send_tamper_email()
+        gw._send_tamper_email()
+        assert smtp_mock.send_message.call_count == 1, \
+            f"expected one mail per {gw._TAMPER_EMAIL_COOLDOWN}s window"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
