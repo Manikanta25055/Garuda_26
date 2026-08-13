@@ -150,6 +150,34 @@ def test_unparseable_response_is_reported_not_raised(monkeypatch, schema):
     assert "parse" in reason.lower()
 
 
+def test_the_budget_leaves_room_for_a_model_that_reasons_first(schema):
+    """A reasoning model spends the completion budget before it emits the rule.
+
+    At 512 the deliberation for an ordinary two-condition rule ran the JSON off
+    the end mid-string, so the caller saw a parse failure for a rule the model
+    had in fact worked out correctly. Pinned as a floor rather than an equality
+    so the budget can grow without editing the test.
+    """
+    body = NimClient("key", "m").build_request("turn the lamp on at dusk", [], schema)
+    assert body["max_tokens"] >= 2048
+
+
+def test_a_truncated_completion_is_not_reported_as_a_parse_failure(monkeypatch, schema):
+    """Being cut off and talking nonsense are different failures.
+
+    Only one of them is worth retrying unchanged, so the user is told which.
+    """
+    import basic_pipelines.garuda_auto.nim_client as mod
+    cut_off = '{"source_utterance": "x", "when": {"all": [{"field": "occupancy", "op": "=='
+    payload = _completion(cut_off)
+    payload["choices"][0]["finish_reason"] = "length"
+    monkeypatch.setattr(mod.requests, "post", lambda *a, **k: FakeResponse(payload))
+    rule, reason = NimClient("key", "m").synthesize("x", [], schema)
+    assert rule is None
+    assert "parse" not in reason.lower()
+    assert "room" in reason.lower()
+
+
 def test_invalid_rule_is_rejected_by_the_validator(monkeypatch, schema):
     import basic_pipelines.garuda_auto.nim_client as mod
     bad = json.dumps({

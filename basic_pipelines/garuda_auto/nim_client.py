@@ -22,6 +22,15 @@ log = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
+# A reasoning model spends this budget on its chain of thought *before* it
+# emits a single character of the rule, and the two share one allowance. At 512
+# a long deliberation left the JSON truncated mid-string -- the rule was fully
+# worked out in the reasoning and then cut off on the way out, which surfaced to
+# the user as "could not parse a rule" on roughly one attempt in three. The
+# ceiling only caps a runaway; a completed rule costs about 110 tokens, so
+# raising it does not raise the bill for a request that was going to succeed.
+MAX_COMPLETION_TOKENS = 2048
+
 _SYSTEM_PROMPT = """You compile spoken home-automation instructions into JSON rules.
 
 Return exactly one JSON object and nothing else. No prose, no code fence.
@@ -65,7 +74,7 @@ class NimClient:
                 {"role": "user", "content": user_content},
             ],
             "temperature": 0.1,
-            "max_tokens": 512,
+            "max_tokens": MAX_COMPLETION_TOKENS,
         }
 
     @staticmethod
@@ -109,9 +118,16 @@ class NimClient:
 
         self.tokens_used += int(payload.get("usage", {}).get("total_tokens", 0) or 0)
         try:
-            content = payload["choices"][0]["message"]["content"]
+            choice = payload["choices"][0]
+            content = choice["message"]["content"]
         except (KeyError, IndexError, TypeError):
             return None, "malformed response from the rule service"
+
+        # Truncation and gibberish both fail to parse, but only one of them is
+        # worth retrying. Saying which is which is the difference between a user
+        # rewording a sentence that was never the problem and one that was.
+        if choice.get("finish_reason") == "length":
+            return None, "the rule service ran out of room before it finished"
 
         parsed = self._extract_json(content)
         if parsed is None:

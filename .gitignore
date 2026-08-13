@@ -28,7 +28,11 @@ xcuserdata/
 Garuda.xcodeproj/xcuserdata/
 
 # Secrets
+# Bare `.env` did not cover .env.bak, .env.local or .env.prod, any of
+# which would carry the same keys into a commit.
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
