@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/svelte";
 import App from "../src/App.svelte";
 import { session } from "../src/lib/session.svelte.js";
+import { viewport } from "../src/lib/viewport.svelte.js";
 
 beforeEach(() => {
   session.clear();
@@ -39,7 +40,7 @@ describe("app", () => {
     signIn();
     await waitFor(() => expect(screen.getByRole("tablist")).toBeInTheDocument());
 
-    for (const tab of ["Home", "Rules", "Activity", "Settings"]) {
+    for (const tab of ["House", "Rules", "Activity", "Settings"]) {
       await fireEvent.click(screen.getByRole("tab", { name: tab }));
       expect(screen.getByLabelText(/tell the house what to do/i)).toBeInTheDocument();
     }
@@ -99,7 +100,7 @@ describe("app", () => {
     await fireEvent.click(screen.getByRole("button", { name: /send/i }));
 
     await screen.findByText(/nobody is home/i);
-    expect(screen.getByRole("tab", { name: "Home" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tab", { name: "House" })).toHaveAttribute("aria-selected", "true");
   });
 
   it("never renders a message transcript", async () => {
@@ -118,5 +119,26 @@ describe("app", () => {
     await fireEvent.click(screen.getByRole("tab", { name: "Settings" }));
     expect(await screen.findByRole("heading", { name: /account/i })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: /^people$/i })).toBeNull();
+  });
+});
+
+describe("shell selection", () => {
+  it("mounts one shell and never both", async () => {
+    // Both shells expose role="tablist". Two would mean the phone design and
+    // the laptop design were on screen at the same time.
+    viewport.isDesktop = false;
+    signIn();
+    const { container } = render(App);
+    await waitFor(() =>
+      expect(container.querySelectorAll('[role="tablist"]')).toHaveLength(1));
+    expect(screen.queryByText("Drishti")).toBeNull();
+  });
+
+  it("shows the wordmark only on the desktop shell", async () => {
+    viewport.isDesktop = true;
+    signIn();
+    render(App);
+    await waitFor(() => expect(screen.getByText("Drishti")).toBeInTheDocument());
+    viewport.isDesktop = false;
   });
 });

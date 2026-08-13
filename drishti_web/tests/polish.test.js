@@ -39,16 +39,16 @@ describe("device tile feedback", () => {
 });
 
 describe("loading", () => {
-  it("Home holds card-shaped space instead of spinning", () => {
+  it("House holds card-shaped space instead of spinning", () => {
     // A spinner reflows the page when the real content lands; a skeleton the
     // size of the thing it replaces does not.
-    const home = read("src/routes/Home.svelte");
-    expect(home).toMatch(/class="skeleton tile-skeleton"/);
-    expect(home).toMatch(/\.tile-skeleton \{ height/);
+    const house = read("src/routes/House.svelte");
+    expect(house).toMatch(/class="skeleton tile-skeleton"/);
+    expect(house).toMatch(/\.tile-skeleton \{ height/);
   });
 
   it("announces the load to a screen reader rather than only drawing it", () => {
-    expect(read("src/routes/Home.svelte")).toMatch(/Loading your devices/);
+    expect(read("src/routes/House.svelte")).toMatch(/Loading your devices/);
   });
 
   it("stops the skeleton shimmer under reduced motion", () => {
@@ -58,8 +58,8 @@ describe("loading", () => {
 });
 
 describe("desktop layout", () => {
-  it("Home puts status and camera side by side when there is room", () => {
-    expect(read("src/routes/Home.svelte"))
+  it("House puts status and camera side by side when there is room", () => {
+    expect(read("src/routes/House.svelte"))
       .toMatch(/min-width: 900px[\s\S]*\.top \{ grid-template-columns/);
   });
 

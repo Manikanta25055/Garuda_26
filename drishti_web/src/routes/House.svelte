@@ -43,7 +43,7 @@
   }
 </script>
 
-<h1>Home</h1>
+<h1>House</h1>
 
 <div class="top">
   <StatusCard state={house.state} />

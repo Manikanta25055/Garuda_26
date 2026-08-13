@@ -84,13 +84,13 @@
     gap: var(--space-2);
     /* Matches the content column so the field does not float over the rail or
        stretch the width of a 27-inch display. */
-    max-width: 56rem;
+    max-width: var(--measure);
     margin: 0 auto;
   }
 
   @media (min-width: 768px) {
     .dock {
-      left: 15rem;
+      left: var(--rail);
       bottom: var(--space-5);
       padding-bottom: 0;
     }
