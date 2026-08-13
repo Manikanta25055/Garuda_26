@@ -76,3 +76,7 @@ clip_*.mp4
 datasets/dataset_v5/train/images/
 datasets/dataset_v5/val/images/
 datasets/dataset_v5/test/images/
+
+# Drishti frontend
+node_modules/
+basic_pipelines/drishti_dist/
