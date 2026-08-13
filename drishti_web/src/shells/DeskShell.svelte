@@ -140,6 +140,11 @@
   /* One number governs the rail, the content offset and the composer. Two
      independent values is how content ends up overlapping the rail. */
   main {
+    /* The panel is what the decks inside it measure against. The window is
+       the wrong ruler: this column is the window minus the rail and the
+       padding, and capped at the measure besides. */
+    container-type: inline-size;
+    container-name: panel;
     margin-left: var(--rail);
     max-width: var(--measure);
     padding: var(--space-8) var(--space-8) calc(140px + var(--space-4));

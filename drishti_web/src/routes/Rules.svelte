@@ -77,7 +77,10 @@
     display: grid;
     gap: var(--space-3);
   }
-  @media (min-width: 900px) {
+  /* Two columns once the column itself is wide enough for two cards -- not
+     once the window is. auto-fill rather than a fixed count, so there is no
+     width at which a gap is left over. */
+  @container panel (min-width: 44rem) {
     .deck { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); align-items: start; }
   }
 </style>

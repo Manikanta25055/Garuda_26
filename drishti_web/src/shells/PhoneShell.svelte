@@ -69,6 +69,13 @@
 </nav>
 
 <style>
+  /* The panel is what the decks inside it measure against. The window is the
+     wrong ruler here: on the desktop shell the column is the window minus the
+     rail and the padding, and capped at the measure besides. */
+  main {
+    container-type: inline-size;
+    container-name: panel;
+  }
   main {
     padding: max(var(--space-4), env(safe-area-inset-top)) var(--margin-content) 0;
     /* Clears the composer and the floating bar beneath it. */

@@ -43,7 +43,10 @@
 
 <style>
   ol { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
-  @media (min-width: 900px) {
+  /* Two columns once the column itself is wide enough for two cards -- not
+     once the window is. auto-fill rather than a fixed count, so there is no
+     width at which a gap is left over. */
+  @container panel (min-width: 44rem) {
     ol { grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr)); align-items: start; }
   }
   li {

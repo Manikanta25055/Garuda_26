@@ -55,9 +55,20 @@ describe("loading", () => {
 });
 
 describe("desktop layout", () => {
-  it("Rules and Activity column up rather than running one long strip", () => {
+  it("Rules and Activity column up against their own column, not the window", () => {
+    // On the desktop shell the content column is the window minus a 15rem rail
+    // and its padding, capped at the measure -- so a 1000px window is a 700px
+    // column, and a window-width query gets the answer wrong.
     for (const file of ["src/routes/Rules.svelte", "src/routes/Activity.svelte"]) {
-      expect(read(file)).toMatch(/min-width: 900px[\s\S]*repeat\(auto-fill, minmax\(/);
+      const src = read(file);
+      expect(src).toMatch(/@container panel \(min-width: 44rem\)[\s\S]*repeat\(auto-fill, minmax\(/);
+      expect(src).not.toMatch(/@media \(min-width: 900px\)/);
+    }
+  });
+
+  it("both shells declare the panel as the container those decks query", () => {
+    for (const shell of ["src/shells/PhoneShell.svelte", "src/shells/DeskShell.svelte"]) {
+      expect(read(shell)).toMatch(/container-name: panel/);
     }
   });
 
