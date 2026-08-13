@@ -1702,10 +1702,12 @@ class GStreamerDetectionApp(GStreamerApp):
             + QUEUE("queue_hailo_python")
             + QUEUE("queue_user_callback")
             + "identity name=identity_callback ! "
-            + QUEUE("queue_hailooverlay")
-            + "hailooverlay ! "
-            + QUEUE("queue_videoconvert")
-            + "videoconvert n-threads=3 qos=false ! "
+            # Nothing downstream of the probe. hailooverlay drew detection
+            # boxes and a three-threaded videoconvert converted them, both
+            # into a fakesink that discards the result -- the frames the app
+            # serves are taken at identity_callback, upstream of all of it.
+            # On a board that had already tripped its soft temperature limit
+            # that was worth reclaiming.
             + QUEUE("queue_hailo_display")
             + "fakesink name=hailo_display sync=false "
         )
