@@ -82,7 +82,24 @@
     padding: 0 var(--margin-content) var(--space-2);
     display: grid;
     gap: var(--space-2);
+    /* Matches the content column so the field does not float over the rail or
+       stretch the width of a 27-inch display. */
+    max-width: 56rem;
+    margin: 0 auto;
   }
+
+  @media (min-width: 768px) {
+    .dock {
+      left: 15rem;
+      bottom: var(--space-5);
+      padding-bottom: 0;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .dock { max-width: 64rem; }
+  }
+
   form {
     display: grid;
     grid-template-columns: 1fr auto;

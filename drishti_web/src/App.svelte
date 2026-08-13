@@ -25,28 +25,57 @@
   <Login />
 {:else}
   <OfflineBanner offline={house.offline} />
-  <main>
-    {#if tab === "home"}<Home />
-    {:else if tab === "rules"}<Rules />
-    {:else if tab === "activity"}<Activity />
-    {:else}<Settings />{/if}
-  </main>
-  <Composer onresult={handleResult} />
   <TabBar current={tab} onchange={(next) => (tab = next)} />
+
+  <div class="frame">
+    <main id="panel" role="tabpanel" aria-labelledby="tab-{tab}" tabindex="-1">
+      {#if tab === "home"}<Home />
+      {:else if tab === "rules"}<Rules />
+      {:else if tab === "activity"}<Activity />
+      {:else}<Settings />{/if}
+    </main>
+    <Composer onresult={handleResult} />
+  </div>
 {/if}
 
 <style>
-  /* Content runs to every edge and scrolls under the control layer. */
+  /* The frame is what the rail pushes over, and what the composer measures
+     itself against. Keeping both inside one element means the composer stays
+     centred on the content rather than on the window. */
+  .frame {
+    --rail: 0px;
+    padding-left: var(--rail);
+  }
+
   main {
-    min-height: 100dvh;
+    max-width: 56rem;
+    margin: 0 auto;
     padding: var(--space-4) var(--margin-content);
     padding-top: max(var(--space-4), env(safe-area-inset-top));
-    padding-bottom: calc(140px + env(safe-area-inset-bottom));
+    /* Clears the composer and the bar beneath it. */
+    padding-bottom: calc(150px + env(safe-area-inset-bottom));
   }
+  main:focus { outline: none; }
+
   main :global(h1) {
     font-size: var(--text-large-title);
     line-height: var(--lh-large-title);
     font-weight: 700;
+    letter-spacing: -0.02em;
     margin: 0 0 var(--space-4);
+  }
+
+  @media (min-width: 768px) {
+    .frame { --rail: 15rem; }
+    main {
+      padding-top: var(--space-8);
+      padding-bottom: calc(140px + env(safe-area-inset-bottom));
+    }
+    /* A large title that works on a 390px phone is undersized on a laptop. */
+    main :global(h1) { font-size: var(--text-title-1); line-height: var(--lh-title-1); }
+  }
+
+  @media (min-width: 1200px) {
+    main { max-width: 64rem; }
   }
 </style>

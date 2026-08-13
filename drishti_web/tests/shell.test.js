@@ -33,11 +33,16 @@ describe("tab bar", () => {
     expect(screen.queryByRole("tab", { name: /stop|emergency/i })).toBeNull();
   });
 
-  it("gives every tab a 44px hit area", () => {
-    render(TabBar, { current: "home", onchange: () => {} });
-    for (const tab of screen.getAllByRole("tab")) {
-      expect(tab).toHaveStyle({ minHeight: "44px" });
-    }
+  it("gives every tab a 44px hit area at both breakpoints", () => {
+    // Asserted against the source: jsdom does not evaluate media queries, so
+    // a computed-style check would only ever see one of the two branches, and
+    // the branch it sees depends on its default window width.
+    const src = readFileSync(resolve("src/components/TabBar.svelte"), "utf8");
+    const phone = src.slice(src.indexOf("max-width: 767.98px"), src.indexOf("min-width: 768px"));
+    const laptop = src.slice(src.indexOf("min-width: 768px"));
+    expect(phone).toMatch(/min-height: 44px/);
+    expect(laptop).toMatch(/--tab-h: 44px/);
+    expect(laptop).toMatch(/height: var\(--tab-h\)/);
   });
 
   it("hides the glyphs from the accessibility tree", () => {
