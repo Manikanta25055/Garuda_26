@@ -185,6 +185,12 @@ except ImportError:
     from basic_pipelines.drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
     from basic_pipelines.drishti_config import DATA_DIR as DRISHTI_DATA_DIR
 
+# Both hostnames reach this one app through the one Cloudflare tunnel, so the
+# Host header is what decides which bundle / serves. Without it,
+# drishti.veeramanikanta.in shows the Garuda dashboard.
+DRISHTI_HOST = os.environ.get("DRISHTI_HOST", "drishti.veeramanikanta.in")
+DRISHTI_DIST = _BASE / "drishti_dist"
+
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
@@ -2332,7 +2338,7 @@ fastapi_app.add_middleware(
 # Global rate-limit middleware — applied to all API endpoints
 # Endpoints that do their own per-action rate limiting (login, OTP) keep their
 # individual checks; this catches everything else.
-_RATE_EXEMPT_PREFIXES = ("/static/", "/ws", "/stream", "/api/eval/")
+_RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/")
 
 @fastapi_app.middleware("http")
 async def global_rate_limit(request: Request, call_next):
@@ -2368,6 +2374,11 @@ async def security_headers(request: Request, call_next):
 _static_dir = Path(__file__).parent / "garuda_web"
 if _static_dir.exists():
     fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+# Vite builds with base=/drishti/, so the SPA's own asset URLs are absolute and
+# index.html can be served from / without rewriting anything.
+if DRISHTI_DIST.is_dir():
+    fastapi_app.mount("/drishti", StaticFiles(directory=str(DRISHTI_DIST)), name="drishti")
 
 # ── Drishti router ───────────────────────────────────────────────────────────
 # Same two import paths as the constants above; sys.path is already fixed by
@@ -2514,7 +2525,12 @@ class ChatRequest(BaseModel):
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @fastapi_app.get("/", response_class=HTMLResponse)
-async def index():
+async def index(request: Request):
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if host == DRISHTI_HOST:
+        drishti_index = DRISHTI_DIST / "index.html"
+        if drishti_index.is_file():
+            return HTMLResponse(drishti_index.read_text())
     html_path = _static_dir / "index.html"
     if html_path.exists():
         return HTMLResponse(html_path.read_text())
