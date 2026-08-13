@@ -168,9 +168,14 @@ def build_router(ctx):
 
     @router.get("/device-types")
     async def device_types(session=Depends(require_drishti_session)):
+        # The channel list travels with the catalogue so the client never has
+        # to know one. A client that hardcoded 1-7 would offer a channel this
+        # deployment does not have, and the whole reason a user picks a channel
+        # instead of a BCM pin is that the server owns that mapping.
         return {"types": {name: {"actions": sorted(actions_for(name)),
                                  "state": spec["state"]}
-                          for name, spec in TYPES.items()}}
+                          for name, spec in TYPES.items()},
+                "channels": sorted(ctx.channel_to_pin)}
 
     @router.get("/devices")
     async def list_devices(session=Depends(require_drishti_session)):

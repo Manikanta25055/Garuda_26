@@ -327,3 +327,16 @@ def test_a_logged_in_session_reaches_a_protected_route(context):
     test_client = TestClient(app, base_url="https://testserver")
     test_client.post("/api/drishti/login", json={"username": "mani", "password": "pw"})
     assert test_client.get("/api/drishti/state").status_code == 200
+
+
+def test_device_types_carries_the_relay_channels(client):
+    test_client, _ = client
+    body = test_client.get("/api/drishti/device-types").json()
+    assert body["channels"] == [1, 2, 3]
+
+
+def test_device_types_never_exposes_a_bcm_pin(client):
+    test_client, _ = client
+    # A client that could see the pin map could offer a pin, and a wrong one
+    # drives whatever the Hailo HAT, camera or I2C bus is using.
+    assert "17" not in test_client.get("/api/drishti/device-types").text
