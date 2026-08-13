@@ -56,6 +56,7 @@ class DrishtiContext:
     authenticate: object = None    # (username, password) -> role str or None
     system_state: object = None    # () -> dict merged into GET /state
     frame_source: object = None    # (request) -> async byte generator
+    set_privacy: object = None     # (bool) -> None, turns the camera off
 
     def rebuild(self):
         """Re-derive everything that depends on the device registry."""
@@ -104,6 +105,10 @@ class LoginRequest(BaseModel):
 
 class InstructRequest(BaseModel):
     text: str = Field(min_length=1, max_length=500)
+
+
+class PrivacyRequest(BaseModel):
+    on: bool
 
 
 class DeviceRequest(BaseModel):
@@ -164,6 +169,21 @@ def build_router(ctx):
         return StreamingResponse(
             ctx.frame_source(request),
             media_type="multipart/x-mixed-replace; boundary=frame")
+
+    @router.post("/privacy")
+    async def privacy(body: PrivacyRequest, session=Depends(require_drishti_session)):
+        """Turn the camera off, or back on.
+
+        MODE_PRIVACY was reachable only through the voice assistant, so the app
+        could read the flag and never change it -- a camera in a house with no
+        off switch you can press.
+        """
+        # Authenticated first, so an anonymous caller gets 401 rather than 503
+        # and cannot use this to probe whether a camera exists.
+        if ctx.set_privacy is None:
+            raise HTTPException(status_code=503, detail="no camera on this host")
+        ctx.set_privacy(body.on)
+        return {"privacy": body.on}
 
     @router.post("/logout")
     async def logout(request: Request, response: Response,

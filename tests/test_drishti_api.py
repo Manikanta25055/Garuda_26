@@ -340,3 +340,34 @@ def test_device_types_never_exposes_a_bcm_pin(client):
     # A client that could see the pin map could offer a pin, and a wrong one
     # drives whatever the Hailo HAT, camera or I2C bus is using.
     assert "17" not in test_client.get("/api/drishti/device-types").text
+
+
+# ── privacy: the camera needs an off switch the app can reach ────────────────
+
+def test_privacy_can_be_turned_on(client):
+    test_client, ctx = client
+    seen = []
+    ctx.set_privacy = lambda on: seen.append(on)
+    response = test_client.post("/api/drishti/privacy", json={"on": True})
+    assert response.status_code == 200
+    assert response.json() == {"privacy": True}
+    assert seen == [True]
+
+
+def test_privacy_can_be_turned_off(client):
+    test_client, ctx = client
+    seen = []
+    ctx.set_privacy = lambda on: seen.append(on)
+    assert test_client.post("/api/drishti/privacy", json={"on": False}).json() == {"privacy": False}
+    assert seen == [False]
+
+
+def test_privacy_needs_a_session(anonymous):
+    """A camera switch an anonymous caller can throw is not a privacy control."""
+    assert anonymous.post("/api/drishti/privacy", json={"on": True}).status_code == 401
+
+
+def test_privacy_reports_when_no_camera_is_wired(client):
+    test_client, ctx = client
+    ctx.set_privacy = None
+    assert test_client.post("/api/drishti/privacy", json={"on": True}).status_code == 503
