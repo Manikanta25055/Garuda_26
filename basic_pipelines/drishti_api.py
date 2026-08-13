@@ -49,6 +49,10 @@ class DrishtiContext:
     # globals sit under __main__, and `from .Garuda_web import USERS` would
     # import a *second* copy whose USERS is still empty — a login that can
     # never succeed. Injection also lets the tests supply fakes.
+    # Called after the device registry changes, so anything holding derived
+    # state (the scene builder's device slots) can rebuild. Without it a device
+    # added through the API never appears in the descriptor until a restart.
+    on_registry_change: object = None
     authenticate: object = None    # (username, password) -> role str or None
     system_state: object = None    # () -> dict merged into GET /state
     frame_source: object = None    # (request) -> async byte generator
@@ -65,6 +69,8 @@ class DrishtiContext:
         })
         self.mqtt_bank.bind(self.registry)
         self.device_router = DeviceRouter(self.registry, self.relay_bank, self.mqtt_bank)
+        if self.on_registry_change is not None:
+            self.on_registry_change()
 
 
 def build_context(*, data_dir, relay_channels, channel_to_pin,

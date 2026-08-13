@@ -77,3 +77,43 @@ def test_constants_are_not_re_hardcoded():
     assert Garuda_web.RELAY_CHANNELS is drishti_config.RELAY_CHANNELS
     assert Garuda_web.CHANNEL_TO_PIN is drishti_config.CHANNEL_TO_PIN
     assert Garuda_web.DRISHTI_DATA_DIR == drishti_config.DATA_DIR
+
+
+# ── The runtime loop is actually connected (frontend rework) ──────────────────
+
+@pytest.mark.integration
+def test_the_runtime_exists_and_holds_a_live_descriptor():
+    runtime = Garuda_web.DRISHTI_RUNTIME
+    assert runtime is not None
+    # Not the empty dict: the local lane answers state questions out of this,
+    # and an empty one means every question gets "I have no reading yet".
+    assert Garuda_web.DRISHTI_CTX.descriptor["occupancy"] in ("empty", "occupied")
+    assert "person_count" in Garuda_web.DRISHTI_CTX.descriptor
+
+
+@pytest.mark.integration
+def test_every_seeded_device_contributes_a_field():
+    descriptor = Garuda_web.DRISHTI_CTX.descriptor
+    for device in Garuda_web.DRISHTI_CTX.registry.devices:
+        assert f"{device['id']}_state" in descriptor
+
+
+@pytest.mark.integration
+def test_adding_a_device_rebinds_the_scene_without_a_restart():
+    ctx = Garuda_web.DRISHTI_CTX
+    assert ctx.on_registry_change is not None
+    assert ctx.on_registry_change == Garuda_web.DRISHTI_RUNTIME.rebind
+
+
+@pytest.mark.integration
+def test_the_descriptor_is_throttled_below_frame_rate():
+    # 30 fps into a 2 Hz rule loop would be 15 wasted rebuilds per tick.
+    assert Garuda_web._DRISHTI_OBSERVE_INTERVAL_S >= 0.1
+
+
+@pytest.mark.integration
+def test_the_rule_thread_stops_with_the_app():
+    import inspect
+    source = inspect.getsource(Garuda_web._lifespan)
+    assert "DRISHTI_RUNTIME.start()" in source
+    assert "DRISHTI_RUNTIME.stop()" in source

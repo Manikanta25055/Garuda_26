@@ -428,6 +428,10 @@ _frame_lock   = threading.Lock()
 _frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
 _frame_ts     = 0.0        # wall clock of the last frame; the only liveness signal we have
 
+# Drishti rebuilds its descriptor at this rate, not at frame rate.
+_DRISHTI_OBSERVE_INTERVAL_S = 0.2
+_drishti_last_observe = 0.0
+
 # ── Async secondary cascade (MobileNet + MiDaS) ─────────────────────────────
 # Non-blocking queue bridges primary YOLO callback to secondary daemon thread.
 # maxsize=2: if secondary falls behind, new frames are intentionally dropped.
@@ -1462,6 +1466,30 @@ def app_callback(pad, info, user_data):
         # Avoids false reset during the 2-frame ramp-up period.
         _danger_active = False
 
+    # ── Drishti: one descriptor per observation ──────────────────────────────
+    # observe() is pure arithmetic. Every piece of I/O a rule causes happens on
+    # the rule thread instead, so a slow relay or a dead broker can never back
+    # up into the video path. Throttled because the rule loop ticks at 2 Hz and
+    # nothing is gained by rebuilding the descriptor thirty times a second.
+    global _drishti_last_observe
+    _now = time.time()
+    if _now - _drishti_last_observe >= _DRISHTI_OBSERVE_INTERVAL_S:
+        _drishti_last_observe = _now
+        try:
+            _dets = []
+            for d in detections:
+                if d.get_confidence() < threshold:
+                    continue
+                b = d.get_bbox()
+                _dets.append({"label": d.get_label().lower(),
+                              "bbox": (b.xmin(), b.ymin(), b.xmax(), b.ymax())})
+            # Subsampled: a full mean on every frame is not worth the cycles,
+            # and ambient light does not change between adjacent pixels.
+            _luma = float(frame[::8, ::8].mean()) if frame is not None else 0.0
+            DRISHTI_RUNTIME.observe(_dets, _luma)
+        except Exception as exc:
+            log_system_update(f"[DRISHTI] observe failed: {exc}")
+
     user_data.person_detected = any(d.get_label().lower() == "person" for d in detections)
     if user_data.person_detected:
         threading.Thread(target=_check_night_presence, daemon=True).start()
@@ -2301,6 +2329,7 @@ async def _lifespan(app):
     # Proposals and sessions from the previous run are stale by definition.
     DRISHTI_CTX.pending.purge()
     _drishti_auth.prune_expired()
+    DRISHTI_RUNTIME.start()
     _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
     threading.Thread(target=_presence_poller, daemon=True).start()
     threading.Thread(target=_deadman_monitor, daemon=True).start()
@@ -2308,6 +2337,7 @@ async def _lifespan(app):
     threading.Thread(target=_schedule_monitor, daemon=True).start()
     threading.Thread(target=_flush_log_thread, daemon=True).start()
     yield
+    DRISHTI_RUNTIME.stop()
     # Flush any remaining buffered log lines before exit
     _do_flush_logs()
     if _ws_broadcaster_task is not None:
@@ -2387,10 +2417,12 @@ try:
     from .drishti_api import build_context as _build_drishti_context
     from .drishti_api import build_router as _build_drishti_router
     from . import drishti_auth as _drishti_auth
+    from .garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
 except ImportError:
     from basic_pipelines.drishti_api import build_context as _build_drishti_context
     from basic_pipelines.drishti_api import build_router as _build_drishti_router
     from basic_pipelines import drishti_auth as _drishti_auth
+    from basic_pipelines.garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
 
 DRISHTI_CTX = _build_drishti_context(
     data_dir=DRISHTI_DATA_DIR,
@@ -2435,6 +2467,13 @@ def _drishti_system_state():
 
 DRISHTI_CTX.authenticate = _drishti_authenticate
 DRISHTI_CTX.system_state = _drishti_system_state
+
+# The loop that makes rules actually run. Narada-RS built SceneBuilder and
+# RuleEngine, tested them, and connected them to nothing: until now the
+# descriptor was always empty and no rule had ever fired.
+DRISHTI_RUNTIME = _DrishtiRuntime(DRISHTI_CTX)
+DRISHTI_CTX.on_registry_change = DRISHTI_RUNTIME.rebind
+
 fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
