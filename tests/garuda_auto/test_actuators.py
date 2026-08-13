@@ -100,3 +100,25 @@ def test_works_without_gpio_present(monkeypatch):
     bank = actuators.RelayBank({"lamp": 17})
     assert bank.set("lamp", "on") is True
     assert bank.state("lamp") == "on"
+
+
+def test_polarity_defaults_to_active_low(monkeypatch):
+    """The common opto-isolated board energises on a low input."""
+    import importlib
+    monkeypatch.delenv("RELAY_ACTIVE_HIGH", raising=False)
+    from basic_pipelines.garuda_auto import actuators
+    importlib.reload(actuators)
+    assert actuators.ACTIVE_HIGH is False
+    assert actuators.RelayBank({"lamp": 17}).active_high is False
+
+
+def test_polarity_can_be_flipped_without_editing_code(monkeypatch):
+    """On an active-high board the default drives the relay the wrong way round,
+    and finding that out should not need a code change and a redeploy."""
+    import importlib
+    monkeypatch.setenv("RELAY_ACTIVE_HIGH", "1")
+    from basic_pipelines.garuda_auto import actuators
+    importlib.reload(actuators)
+    assert actuators.ACTIVE_HIGH is True
+    monkeypatch.delenv("RELAY_ACTIVE_HIGH")
+    importlib.reload(actuators)

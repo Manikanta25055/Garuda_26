@@ -2337,6 +2337,8 @@ async def _lifespan(app):
     load_master_keys()
     # Proposals and sessions from the previous run are stale by definition.
     DRISHTI_CTX.pending.purge()
+    # Backed by a file, so deploying a change does not sign the house out.
+    _drishti_auth.configure(os.path.join(DRISHTI_DATA_DIR, "sessions.json"))
     _drishti_auth.prune_expired()
     DRISHTI_RUNTIME.start()
     log_system_update(

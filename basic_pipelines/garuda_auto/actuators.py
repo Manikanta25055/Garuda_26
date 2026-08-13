@@ -12,6 +12,7 @@ for the same module collide during test collection. Nothing here touches
 hardware until something asks it to.
 """
 import logging
+import os
 
 log = logging.getLogger(__name__)
 
@@ -22,8 +23,20 @@ except Exception:
     OutputDevice = None
     GPIO_AVAILABLE = False
 
-# Most opto-isolated relay boards pull the input low to energise the coil.
-ACTIVE_HIGH = False
+# Most opto-isolated relay boards pull the input low to energise the coil, so
+# active-low is the default. Set RELAY_ACTIVE_HIGH=1 for a board that does the
+# opposite -- on one of those this default drives the relay ON while the app
+# believes it is off, and the wrong way round on every command after that.
+#
+# Polarity is not the only thing that produces "switches on but will not switch
+# off". If the LED on the board stays lit after an off, the coil is not
+# releasing, and on a Pi that is usually electrical rather than logical: a 5V
+# board fed from the Pi with its JD-VCC jumper in place sees only 3.3V as "high",
+# which can leave the opto-isolator partly conducting. Removing the jumper and
+# powering the relay side from its own 5V supply is the fix; no setting here
+# reaches it.
+ACTIVE_HIGH = os.environ.get("RELAY_ACTIVE_HIGH", "").strip().lower() in (
+    "1", "true", "yes", "on")
 
 
 class RelayBank:
