@@ -170,17 +170,20 @@ FEEDBACK_FILE        = str(_BASE / "system_logs" / "feedback.json")
 FEEDBACK_BACKUP_FILE = str(_BASE / "system_logs" / "feedback.backup.json")
 
 # ── Drishti ──────────────────────────────────────────────────────────────────
-DRISHTI_DATA_DIR = str(_BASE / "system_logs")
-
-# The 8-channel opto-isolated relay board. Only these channels may be assigned
-# to a device, and a user never enters a BCM pin: a wrong one could drive a pin
-# the Hailo HAT, the camera or the I2C bus is using.
+# The relay channel map and data directory live in drishti_config so a seeding
+# or migration script can read them without importing this module, which starts
+# GStreamer and claims GPIO pins.
 #
-# Channels 1 and 2 are the lamp and fan from the Narada-RS design. The stepper
-# motor deliberately does NOT sit on 17/18/27/22 as the gesture prototype had
-# it, because that collides with these relays; it moves to 5/6/13/19.
-RELAY_CHANNELS = (1, 2, 3, 4, 5, 6, 7)
-CHANNEL_TO_PIN = {1: 17, 2: 27, 3: 22, 4: 23, 5: 24, 6: 25, 7: 26}
+# This file is imported two ways: as basic_pipelines.Garuda_web by the tests,
+# and as a plain script by scripts/run_garuda_web.sh. Relative imports only work
+# in the first case, so fall back to absolute for the second.
+try:
+    from .drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
+    from .drishti_config import DATA_DIR as DRISHTI_DATA_DIR
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from basic_pipelines.drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
+    from basic_pipelines.drishti_config import DATA_DIR as DRISHTI_DATA_DIR
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -2365,15 +2368,13 @@ if _static_dir.exists():
     fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 # ── Drishti router ───────────────────────────────────────────────────────────
-# This file is imported two ways: as basic_pipelines.Garuda_web by the tests,
-# and as a plain script by scripts/run_garuda_web.sh. Relative imports only
-# work in the first case, so fall back to absolute for the second.
+# Same two import paths as the constants above; sys.path is already fixed by
+# the time this runs in script mode.
 try:
     from .drishti_api import build_context as _build_drishti_context
     from .drishti_api import build_router as _build_drishti_router
     from . import drishti_auth as _drishti_auth
 except ImportError:
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     from basic_pipelines.drishti_api import build_context as _build_drishti_context
     from basic_pipelines.drishti_api import build_router as _build_drishti_router
     from basic_pipelines import drishti_auth as _drishti_auth

@@ -67,3 +67,13 @@ def test_garuda_routes_still_exist():
     paths = _paths()
     assert "/api/login" in paths
     assert "/static" in paths
+
+
+@pytest.mark.integration
+def test_constants_are_not_re_hardcoded():
+    # A seeding script reads these from drishti_config precisely so it does not
+    # have to import this module. They must stay the same object.
+    from basic_pipelines import drishti_config
+    assert Garuda_web.RELAY_CHANNELS is drishti_config.RELAY_CHANNELS
+    assert Garuda_web.CHANNEL_TO_PIN is drishti_config.CHANNEL_TO_PIN
+    assert Garuda_web.DRISHTI_DATA_DIR == drishti_config.DATA_DIR
