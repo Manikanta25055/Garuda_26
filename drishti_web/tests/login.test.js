@@ -93,3 +93,24 @@ describe("session", () => {
     expect(session.username).toBe("");
   });
 });
+
+describe("a failed sign-in points at the fields", () => {
+  it("marks both fields invalid and names the message that explains why", async () => {
+    // role="alert" announces once and is then gone. Someone arriving at the
+    // field afterwards -- which is what happens next, because they have to
+    // retype -- would otherwise be told nothing.
+    vi.stubGlobal("fetch", () => Promise.resolve({
+      ok: false, status: 401,
+      json: () => Promise.resolve({ detail: "Wrong username or password." }),
+    }));
+    render(Login);
+    await fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
+
+    const message = await screen.findByRole("alert");
+    for (const label of [/username/i, /password/i]) {
+      const field = screen.getByLabelText(label);
+      expect(field).toHaveAttribute("aria-invalid", "true");
+      expect(field).toHaveAttribute("aria-describedby", message.id);
+    }
+  });
+});

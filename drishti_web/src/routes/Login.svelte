@@ -26,12 +26,16 @@
     <p class="sub">Sign in to your house.</p>
 
     <label for="u">Username</label>
-    <input id="u" bind:value={username} autocomplete="username" autocapitalize="none" />
+    <input id="u" bind:value={username} autocomplete="username" autocapitalize="none"
+           aria-invalid={error ? "true" : undefined}
+           aria-describedby={error ? "signin-error" : undefined} />
 
     <label for="p">Password</label>
-    <input id="p" type="password" bind:value={password} autocomplete="current-password" />
+    <input id="p" type="password" bind:value={password} autocomplete="current-password"
+           aria-invalid={error ? "true" : undefined}
+           aria-describedby={error ? "signin-error" : undefined} />
 
-    {#if error}<p class="err" role="alert">{error}</p>{/if}
+    {#if error}<p id="signin-error" class="err" role="alert">{error}</p>{/if}
 
     <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
   </form>
@@ -60,6 +64,7 @@
     transition: border-color var(--dur-fast) var(--ease-standard);
   }
   input:focus { border-color: var(--accent); }
+  input[aria-invalid="true"] { border-color: var(--danger); }
   .err { color: var(--danger); font-size: var(--text-footnote); margin: var(--space-2) 0 0; }
   button {
     margin-top: var(--space-5);
