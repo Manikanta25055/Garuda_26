@@ -56,6 +56,12 @@
   --radius-sheet: 28px;
 
   --hit-min: 44px;          /* never shrink a hit area to match its glyph */
+
+  /* Stated once. The rail width, the offset the content sits at and the
+     composer's left edge are the same number by definition; keeping three
+     copies is how content ends up overlapping the rail. */
+  --rail: 15rem;
+  --measure: 56rem;         /* content column cap, about 75 characters at body size */
 }
 @media (min-width: 768px) { :root { --margin-content: 20px; } }
 
