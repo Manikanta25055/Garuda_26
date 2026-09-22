@@ -42,6 +42,7 @@ import hashlib
 import hmac
 import tempfile
 import re
+import anyio.to_thread
 from pathlib import Path
 from collections import defaultdict
 
@@ -194,6 +195,10 @@ except ImportError:
 DRISHTI_SESSIONS_PATH = os.path.join(DRISHTI_DATA_DIR, "sessions.json")
 DRISHTI_HOST = os.environ.get("DRISHTI_HOST", "drishti.veeramanikanta.in")
 DRISHTI_DIST = _BASE / "drishti_dist"
+# The standalone Drishti app is halted: its features now live in this app's
+# own Home / Automations / Insights pages, behind Garuda's sign-in. Set
+# DRISHTI_APP_ENABLED=1 to serve the Svelte bundle and /api/drishti again.
+DRISHTI_APP_ENABLED = os.environ.get("DRISHTI_APP_ENABLED", "0").lower() in ("1", "true", "yes")
 
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
@@ -1967,13 +1972,7 @@ def voice_assistant_loop(stop_event, current_user=None):
             append_voice_log(f"Speech recognition error: {e}", user_name=current_user)
             continue
 
-        user_input_lower = user_input.lower()
-        llm_result = query_local_llm(user_input)
-
-        if llm_result is not None:
-            response = _apply_llm_result(llm_result)
-        else:
-            response = apply_rule_based_command(user_input_lower)
+        response = _assistant_reply(user_input, current_user or "voice", "user")["reply"]
 
         append_voice_response(response, user_name=current_user)
         time.sleep(0.5)
@@ -2083,6 +2082,14 @@ def require_logs(request: Request):
 ##############################################################################
 # STATE HELPER
 ##############################################################################
+def _home_state_summary():
+    """Devices on, notices and presence for the dashboard; never raises."""
+    try:
+        return HOME.summary()
+    except Exception as exc:
+        return {"error": type(exc).__name__}
+
+
 def get_state_dict():
     global _alert_active, _danger_trigger_info, _alert_end_time
     # Expire alert once the wall-clock timer runs out
@@ -2214,6 +2221,7 @@ def get_state_dict():
         "cpu_temp": cpu_temp,
         "inference_fps": inference_fps,
         "owner_present": _owner_present,
+        "home": _home_state_summary(),
         "owner_name": next(
             (d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), None
         ),
@@ -2345,6 +2353,7 @@ async def _lifespan(app):
     _drishti_auth.configure(DRISHTI_SESSIONS_PATH)
     _drishti_auth.prune_expired()
     DRISHTI_RUNTIME.start()
+    HOME.start()
     log_system_update(
         f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
         f"{len(DRISHTI_CTX.registry.devices)} devices")
@@ -2355,6 +2364,7 @@ async def _lifespan(app):
     threading.Thread(target=_schedule_monitor, daemon=True).start()
     threading.Thread(target=_flush_log_thread, daemon=True).start()
     yield
+    HOME.stop()
     DRISHTI_RUNTIME.stop()
     # Flush any remaining buffered log lines before exit
     _do_flush_logs()
@@ -2425,7 +2435,7 @@ if _static_dir.exists():
 
 # Vite builds with base=/drishti/, so the SPA's own asset URLs are absolute and
 # index.html can be served from / without rewriting anything.
-if DRISHTI_DIST.is_dir():
+if DRISHTI_APP_ENABLED and DRISHTI_DIST.is_dir():
     fastapi_app.mount("/drishti", StaticFiles(directory=str(DRISHTI_DIST)), name="drishti")
 
 # ── Drishti router ───────────────────────────────────────────────────────────
@@ -2505,7 +2515,164 @@ DRISHTI_CTX.set_privacy = _drishti_set_privacy
 DRISHTI_RUNTIME = _DrishtiRuntime(DRISHTI_CTX)
 DRISHTI_CTX.on_registry_change = DRISHTI_RUNTIME.rebind
 
-fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
+if DRISHTI_APP_ENABLED:
+    fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
+
+# ── Home automation (Drishti, merged into Garuda) ────────────────────────────
+# One NIM client for everything that needs a model: the rule compiler, the
+# Narada agent and the daily digest. Models are tried in order, so a model NIM
+# retires (as nemotron-3-nano was on 2026-09-01) falls through to the next.
+try:
+    from .garuda_auto.llm import NimChat, NimUnavailable, parse_models
+    from .garuda_auto.home import HomeServices
+    from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from .garuda_auto.agent import HomeAgent
+    from .garuda_auto.digest import Digest
+    from .garuda_auto.envfile import set_vars as _set_env_vars
+    from .home_api import build_home_router
+except ImportError:
+    from basic_pipelines.garuda_auto.llm import NimChat, NimUnavailable, parse_models
+    from basic_pipelines.garuda_auto.home import HomeServices
+    from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from basic_pipelines.garuda_auto.agent import HomeAgent
+    from basic_pipelines.garuda_auto.digest import Digest
+    from basic_pipelines.garuda_auto.envfile import set_vars as _set_env_vars
+    from basic_pipelines.home_api import build_home_router
+
+# Where admin-entered AI keys are persisted. A module global so the tests can
+# point it at a temp file: the suite must never rewrite the real .env.
+HOME_ENV_PATH = str(Path(__file__).resolve().parent.parent / ".env")
+
+NIM_CHAT = NimChat(
+    os.environ.get("NIM_API_KEY", ""),
+    parse_models(os.environ.get("NIM_MODEL", ""), os.environ.get("NIM_FALLBACK_MODELS", "")),
+)
+DRISHTI_CTX.nim.chat = NIM_CHAT
+
+HOME = HomeServices(DRISHTI_CTX, DRISHTI_RUNTIME, DRISHTI_DATA_DIR)
+DRISHTI_RUNTIME.context_provider = HOME.context
+
+
+def _home_presence():
+    """True home / False away / None when no phone is registered to watch."""
+    return _owner_present if KNOWN_DEVICES else None
+
+
+def _home_security():
+    if _alert_active:
+        return "danger"
+    if _night_presence_alert_active:
+        return "night_presence"
+    return "clear"
+
+
+def _home_email(subject, body):
+    """Home notices go to the alert recipients, unless email alerts are off."""
+    if MODE_EMAIL_OFF or not (EMAIL_SENDER and EMAIL_SENDER_PASS and EMAIL_RECIPIENTS):
+        return
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = EMAIL_SENDER
+    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
+        server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
+        server.send_message(msg)
+
+
+def _home_modes():
+    return {"dnd": MODE_DND, "night": MODE_NIGHT, "idle": MODE_IDLE,
+            "emergency": MODE_EMERGENCY, "privacy": MODE_PRIVACY, "email_off": MODE_EMAIL_OFF}
+
+
+def _home_set_mode(mode, value, actor):
+    """The assistant's way into the same switch as POST /api/modes."""
+    global MODE_DND
+    names = {"dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF", "idle": "MODE_IDLE",
+             "night": "MODE_NIGHT", "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY"}
+    with _mode_lock:
+        globals()[names[mode]] = bool(value)
+        if mode == "emergency" and value:
+            MODE_DND = False
+    save_config()
+    log_system_update(f"Mode {mode} set to {bool(value)} by {actor or 'assistant'} (Narada)")
+    push_urgent_ws()
+    return f"{mode} {'on' if value else 'off'}"
+
+
+def _home_security_summary():
+    return {"alert_active": _alert_active, "night_presence_alert": _night_presence_alert_active,
+            "alerts_today": _alert_history.get(datetime.date.today().isoformat(), 0),
+            "camera_live": (time.time() - _frame_ts) < 5.0}
+
+
+HOME.presence_fn = _home_presence
+HOME.security_fn = _home_security
+HOME.notify_fn = _home_email
+HOME.on_change = lambda: push_urgent_ws()
+
+DECISION = DecisionEngine(
+    LocalBackend(lambda: [d for d in DRISHTI_CTX.registry.devices if d.get("enabled", True)],
+                 lambda: HOME.scenes.scenes),
+    JevBackend(os.environ.get("JEV_API_KEY", ""),
+               os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai")),
+    threshold=float(os.environ.get("DECISION_THRESHOLD", "0.85")),
+)
+AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
+                  set_mode_fn=_home_set_mode, security_fn=_home_security_summary)
+DIGEST = Digest(HOME, NIM_CHAT,
+                alerts_fn=lambda: _alert_history.get(datetime.date.today().isoformat(), 0))
+HOME.digest_fn = DIGEST.text
+
+
+def _ai_configure(fields, actor):
+    """Apply AI settings now and persist them to .env for the next start."""
+    persist = {}
+    if fields.get("nim_api_key"):
+        NIM_CHAT.configure(api_key=fields["nim_api_key"])
+        persist["NIM_API_KEY"] = NIM_CHAT.api_key
+    if fields.get("nim_model") is not None or fields.get("nim_fallback_models") is not None:
+        primary = fields.get("nim_model") or os.environ.get("NIM_MODEL", "")
+        fallbacks = fields.get("nim_fallback_models")
+        if fallbacks is None:
+            fallbacks = os.environ.get("NIM_FALLBACK_MODELS", "")
+        NIM_CHAT.configure(models=parse_models(primary, fallbacks))
+        persist["NIM_MODEL"] = primary
+        persist["NIM_FALLBACK_MODELS"] = fallbacks
+    if fields.get("jev_api_key") is not None:
+        DECISION.jev.api_key = fields["jev_api_key"].strip()
+        persist["JEV_API_KEY"] = DECISION.jev.api_key
+    if fields.get("jev_base_url"):
+        DECISION.jev.base_url = fields["jev_base_url"].strip().rstrip("/")
+        persist["JEV_BASE_URL"] = DECISION.jev.base_url
+    if fields.get("decision_threshold") is not None:
+        DECISION.threshold = float(fields["decision_threshold"])
+        persist["DECISION_THRESHOLD"] = str(DECISION.threshold)
+    for name, value in persist.items():
+        os.environ[name] = value
+    if persist:
+        try:
+            _set_env_vars(HOME_ENV_PATH, persist)
+        except OSError as exc:
+            log_system_update(f"[HOME] AI settings applied but not saved: {exc}")
+    log_system_update(f"[HOME] AI settings changed by {actor}: {', '.join(sorted(persist)) or 'none'}")
+
+
+def _ai_test():
+    """One tiny request, so the settings page can say whether the key works."""
+    started = time.time()
+    try:
+        message = NIM_CHAT.chat([{"role": "user", "content": "Reply with the single word: ready"}],
+                                max_tokens=200, temperature=0, timeout=30)
+    except NimUnavailable as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "model": NIM_CHAT.last_model,
+            "latency_s": round(time.time() - started, 2),
+            "reply": (message.get("content") or "").strip()[:80]}
+
+
+fastapi_app.include_router(build_home_router(
+    DRISHTI_CTX, HOME, AGENT, DIGEST, session_dep=require_session, admin_dep=require_admin,
+    ai_configure=_ai_configure, ai_test=_ai_test))
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
 class LoginRequest(BaseModel):
@@ -2597,7 +2764,7 @@ class ChatRequest(BaseModel):
 @fastapi_app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     host = (request.headers.get("host") or "").split(":")[0].lower()
-    if host == DRISHTI_HOST:
+    if DRISHTI_APP_ENABLED and host == DRISHTI_HOST:
         drishti_index = DRISHTI_DIST / "index.html"
         if drishti_index.is_file():
             return HTMLResponse(drishti_index.read_text())
@@ -2922,17 +3089,37 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
-    if not GROQ_API_KEY:
-        reply = ("Narada is not configured yet. "
-                 "Please go to Admin → Settings → Narada and enter your Groq API key, then click Save Settings.")
-        return {"response": reply}
-    loop = asyncio.get_event_loop()
-    llm_result = await loop.run_in_executor(None, query_local_llm, msg, GROQ_MODEL)
-    if llm_result is not None:
-        reply = _apply_llm_result(llm_result)
-    else:
-        reply = apply_rule_based_command(msg.lower())
-    return {"response": reply}
+    result = await anyio.to_thread.run_sync(
+        lambda: _assistant_reply(msg, session["username"], session["role"]))
+    return {"response": result["reply"], "lane": result.get("lane"),
+            "actions": result.get("actions", []), "proposal": result.get("proposal")}
+
+
+def _assistant_reply(msg, user="", role="user"):
+    """Narada's one brain for chat and voice.
+
+    Phrases the owner taught on the Commands page win outright. Then the home
+    agent: its fast lane acts on confident short commands locally, and with a
+    NIM key everything else goes to the tool-using model. Without NIM, Groq and
+    then the keyword commands are the fallbacks, as before.
+    """
+    lower = msg.lower()
+    for phrase, resp in CUSTOM_VOICE_COMMANDS.items():
+        if phrase in lower:
+            return {"reply": resp, "lane": "custom", "actions": []}
+    result = AGENT.handle(msg, user=user, role=role)
+    if result.get("handled", True):
+        return result
+    if GROQ_API_KEY:
+        llm_result = query_local_llm(msg, GROQ_MODEL)
+        if llm_result is not None:
+            return {"reply": _apply_llm_result(llm_result), "lane": "groq", "actions": []}
+    reply = apply_rule_based_command(lower)
+    if not GROQ_API_KEY and reply.startswith("I heard you"):
+        reply = ("Narada is not configured yet. I can still switch devices and run scenes, "
+                 "but for anything else an admin needs to add an NVIDIA NIM API key under "
+                 "System → AI.")
+    return {"reply": reply, "lane": "keywords", "actions": []}
 
 def _groq_stream_text(user_input):
     """Sync generator: yields text tokens from Groq streaming API."""
@@ -2995,6 +3182,20 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
 
     loop  = asyncio.get_event_loop()
     queue: asyncio.Queue = asyncio.Queue()
+    user, role = session["username"], session["role"]
+
+    def _agent_worker():
+        # The agent answers in one piece after its tool calls, so the reply is
+        # replayed word by word to keep the chat's typing feel.
+        try:
+            result = _assistant_reply(msg, user, role)
+        except Exception as exc:
+            result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
+        meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "model")}
+        loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
+        for word in re.findall(r"\S+\s*", result["reply"]):
+            loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
+        loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
     def _worker():
         full_tokens = []
@@ -3008,18 +3209,22 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
         apply_rule_based_command(full_text.lower())
         loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
-    threading.Thread(target=_worker, daemon=True).start()
+    use_agent = NIM_CHAT.configured or not GROQ_API_KEY
+    threading.Thread(target=_agent_worker if use_agent else _worker, daemon=True).start()
 
     async def generate():
         yield f"data: {json.dumps({'type': 'start'})}\n\n"
         while True:
             try:
-                kind, payload_val = await asyncio.wait_for(queue.get(), timeout=35)
+                kind, payload_val = await asyncio.wait_for(queue.get(), timeout=90)
             except asyncio.TimeoutError:
                 break
             if kind == "done":
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 break
+            if kind == "meta":
+                yield f"data: {json.dumps({'type': 'meta', **payload_val})}\n\n"
+                continue
             yield f"data: {json.dumps({'type': 'token', 'text': payload_val})}\n\n"
 
     return StreamingResponse(

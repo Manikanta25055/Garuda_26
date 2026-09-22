@@ -13,7 +13,8 @@ import time
 MAX_LINES = 20_000
 
 
-def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.time):
+def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.time,
+           source="", actor=""):
     entry = {
         "ts": clock(),
         "device": device,
@@ -23,6 +24,13 @@ def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.
         "ok": ok,
         "reason": reason,
     }
+    # Who asked: "rule", "manual", "scene:<id>", "schedule:<id>", "away",
+    # "assistant". Usage stats and habit suggestions need to tell a person's
+    # own switching apart from the house acting on its own.
+    if source:
+        entry["source"] = source
+    if actor:
+        entry["actor"] = actor
     directory = os.path.dirname(path) or "."
     os.makedirs(directory, exist_ok=True)
     with open(path, "a", encoding="utf-8") as fh:

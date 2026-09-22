@@ -14,6 +14,10 @@ import threading
 from .device_types import TYPES, TRANSPORTS, is_actuator
 
 MAX_DEVICES = 32
+MAX_WATTS = 5000
+# What may change on a device after it exists. Type and transport are
+# deliberately absent: changing either is a different device.
+EDITABLE = ("name", "room", "watts", "enabled")
 _ID_RE = re.compile(r"^[a-z][a-z0-9_]{1,31}$")
 _REQUIRED = ("id", "name", "type", "room", "transport")
 
@@ -58,6 +62,11 @@ def validate_device(entry, existing_ids, relay_channels):
             return False, "mqtt transport needs a topic_base"
         if len(topic) > 128 or any(c in topic for c in "+#"):
             return False, "topic_base must be a literal topic under 128 characters"
+
+    watts = entry.get("watts")
+    if watts is not None and (isinstance(watts, bool) or not isinstance(watts, (int, float))
+                              or not 0 <= watts <= MAX_WATTS):
+        return False, f"watts must be a number between 0 and {MAX_WATTS}"
 
     return True, ""
 
@@ -130,6 +139,32 @@ class DeviceRegistry:
                 return False
             self.save()
         return True
+
+    def update(self, device_id, fields):
+        """Change the editable fields of one device. Returns (ok, reason)."""
+        with self._lock:
+            device = self.get(device_id)
+            if device is None:
+                return False, f"unknown device: {device_id}"
+            candidate = dict(device)
+            for key, value in fields.items():
+                if key not in EDITABLE:
+                    return False, f"{key} cannot be changed"
+                if value is None:
+                    if key == "watts":
+                        candidate.pop(key, None)
+                    continue
+                candidate[key] = value
+            if not isinstance(candidate.get("enabled", True), bool):
+                return False, "enabled must be true or false"
+            others = {d["id"] for d in self.devices if d["id"] != device_id}
+            ok, reason = validate_device(candidate, others, self.relay_channels)
+            if not ok:
+                return False, reason
+            device.clear()
+            device.update(candidate)
+            self.save()
+        return True, ""
 
     def get(self, device_id):
         for device in self.devices:

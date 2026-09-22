@@ -18,17 +18,24 @@ def _paths():
 
 @pytest.mark.integration
 @pytest.mark.parametrize("path", [
-    "/api/drishti/login",
-    "/api/drishti/logout",
-    "/api/drishti/instruct",
-    "/api/drishti/devices",
-    "/api/drishti/device-types",
-    "/api/drishti/proposals",
-    "/api/drishti/rules",
-    "/api/drishti/activity",
+    "/api/home/overview",
+    "/api/home/instruct",
+    "/api/home/devices",
+    "/api/home/device-types",
+    "/api/home/rules",
+    "/api/home/scenes",
+    "/api/home/schedules",
+    "/api/home/activity",
+    "/api/home/usage",
+    "/api/home/digest",
 ])
-def test_drishti_route_is_mounted(path):
+def test_home_route_is_mounted(path):
     assert path in _paths()
+
+
+@pytest.mark.integration
+def test_the_standalone_drishti_api_is_not_mounted():
+    assert not any(p.startswith("/api/drishti/") for p in _paths())
 
 
 @pytest.mark.integration

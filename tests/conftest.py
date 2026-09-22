@@ -60,6 +60,11 @@ sys.modules.setdefault('aiortc', _aiortc)
 sys.modules.setdefault('aiortc.mediastreams', MagicMock())
 sys.modules.setdefault('av', MagicMock())
 
+# The suite must never call a paid model. load_dotenv() does not override a
+# variable that is already set, so blanking these keeps the real .env keys out.
+for _key in ("NIM_API_KEY", "JEV_API_KEY", "GROQ_API_KEY"):
+    os.environ[_key] = ""
+
 # ── Import the app module ─────────────────────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines'))
 import Garuda_web as gw

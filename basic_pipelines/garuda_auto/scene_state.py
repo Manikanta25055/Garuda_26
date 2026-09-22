@@ -11,6 +11,9 @@ import time
 from .rule_schema import BASE_FIELDS, build_schema, state_field
 
 
+CONTEXT_DEFAULTS = {"owner_presence": "home", "owner_event": "none", "security": "clear"}
+
+
 def _clamp(value, spec):
     return max(spec["lo"], min(spec["hi"], value))
 
@@ -98,6 +101,10 @@ class SceneBuilder:
             "temperature_c": _clamp(float(temperature_c), BASE_FIELDS["temperature_c"]),
             "humidity_pct": _clamp(float(humidity_pct), BASE_FIELDS["humidity_pct"]),
             "hour": int(_clamp(int(hour), BASE_FIELDS["hour"])),
+            # House context arrives from Garuda through the runtime, which
+            # overwrites these. The defaults are the ones that make nothing
+            # happen: nobody left, nothing is wrong.
+            **CONTEXT_DEFAULTS,
         }
         for device_id, value in self._device_state.items():
             descriptor[state_field(device_id)] = value

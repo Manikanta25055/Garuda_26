@@ -22,7 +22,7 @@ from .garuda_auto.local_lane import answer as local_answer
 from .garuda_auto.matcher import LocalMatcher
 from .garuda_auto.nim_client import NimClient
 from .garuda_auto.pending_store import PendingStore
-from .garuda_auto.rule_schema import build_schema
+from .garuda_auto.rule_schema import build_schema, render_rule
 from .garuda_auto.rule_store import RuleStore
 from .garuda_auto.transports import DeviceRouter, MqttBank
 
@@ -119,13 +119,7 @@ class DeviceRequest(BaseModel):
     transport: dict
 
 
-def _render(rule):
-    """Plain-language rendering of a rule, for the card."""
-    combinator, conditions = next(iter(rule["when"].items()))
-    joiner = " and " if combinator == "all" else " or "
-    when = joiner.join(f"{c['field']} {c['op']} {c['value']}" for c in conditions)
-    then = ", ".join(f"{a['device']} → {a['action']}" for a in rule["then"])
-    return {"when": when, "then": then}
+_render = render_rule
 
 
 def build_router(ctx):

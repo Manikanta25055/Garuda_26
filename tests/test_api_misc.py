@@ -18,9 +18,10 @@ def test_users_public_lists_only_non_admin_profiles(app_client):
     assert all(user['username'] != 'admin' for user in data)
 
 
-def test_chat_without_groq_key_returns_configuration_message(app_client, user_headers, monkeypatch):
+def test_chat_without_any_ai_key_returns_configuration_message(app_client, user_headers, monkeypatch):
     monkeypatch.setattr(gw, 'GROQ_API_KEY', '')
-    r = app_client.post('/api/chat', json={'message': 'hello'}, headers=user_headers)
+    monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
+    r = app_client.post('/api/chat', json={'message': 'plan my evening'}, headers=user_headers)
     assert r.status_code == 200
     assert 'Narada is not configured yet' in r.json()['response']
 

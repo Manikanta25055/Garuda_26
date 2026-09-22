@@ -30,6 +30,12 @@ BASE_FIELDS = {
     "temperature_c":        {"kind": "num", "lo": -10, "hi": 60, "ops": _NUM_OPS},
     "humidity_pct":         {"kind": "num", "lo": 0, "hi": 100, "ops": _NUM_OPS},
     "hour":                 {"kind": "num", "lo": 0, "hi": 23, "ops": _NUM_OPS},
+    # House context, supplied by Garuda rather than the camera. owner_event is
+    # "arrived" or "left" for a short window after the phone appears or
+    # disappears, so a rule on it fires once per trip rather than all day.
+    "owner_presence":       {"kind": "enum", "values": ("home", "away"), "ops": _ENUM_OPS},
+    "owner_event":          {"kind": "enum", "values": ("none", "arrived", "left"), "ops": _ENUM_OPS},
+    "security":             {"kind": "enum", "values": ("clear", "danger", "night_presence"), "ops": _ENUM_OPS},
 }
 
 
@@ -58,6 +64,15 @@ class Schema:
         return {"fields": out,
                 "devices": {d: sorted(a) for d, a in self.devices.items()},
                 "operators": sorted(OPS)}
+
+
+def render_rule(rule):
+    """Plain-language rendering of a rule, for cards and for the assistant."""
+    combinator, conditions = next(iter(rule["when"].items()))
+    joiner = " and " if combinator == "all" else " or "
+    when = joiner.join(f"{c['field']} {c['op']} {c['value']}" for c in conditions)
+    then = ", ".join(f"{a['device']} → {a['action']}" for a in rule["then"])
+    return {"when": when, "then": then}
 
 
 def build_schema(registry):

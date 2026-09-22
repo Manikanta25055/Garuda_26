@@ -51,6 +51,12 @@ class DrishtiRuntime:
         self.fires = 0
         self.last_tick = 0.0
         self.last_error = ""
+        # () -> dict of house-context fields (owner_presence, owner_event,
+        # security). Supplied by Garuda, which owns presence and alerts. Read
+        # on every tick rather than per frame, so rules on it still run while
+        # the camera is off.
+        self.context_provider = None
+        self._context = {}
         # Seed the descriptor so a question asked before the first frame gets
         # "nobody is home" rather than "I have no reading".
         self.observe([], luma=0)
@@ -75,6 +81,7 @@ class DrishtiRuntime:
                 self._sensor_value("sensor.humidity", NEUTRAL_HUMIDITY_PCT),
                 time.localtime(self._clock()).tm_hour if hour is None else hour,
             )
+            descriptor.update(self._context)
             self.ctx.descriptor = descriptor
         return descriptor
 
@@ -95,8 +102,33 @@ class DrishtiRuntime:
                 return True
         return False
 
+    def _refresh_context(self):
+        if self.context_provider is None:
+            return
+        try:
+            context = dict(self.context_provider() or {})
+        except Exception as exc:
+            self.last_error = f"context: {type(exc).__name__}: {exc}"
+            return
+        context["hour"] = time.localtime(self._clock()).tm_hour
+        with self._lock:
+            self._context = {k: v for k, v in context.items() if k != "hour"}
+            self.ctx.descriptor = {**self.ctx.descriptor, **context}
+
+    def note_state(self, device_id, state):
+        """Tell the rule base a device changed for a reason other than a rule,
+        so a rule reading lamp_state sees the lamp a person just switched."""
+        with self._lock:
+            self.scene.set_device_state(device_id, state)
+            if self.ctx.descriptor:
+                refreshed = self.scene._device_state.get(device_id)
+                if refreshed is not None:
+                    self.ctx.descriptor = {**self.ctx.descriptor,
+                                           f"{device_id}_state": refreshed}
+
     def tick(self):
         """Evaluate the rule base once and perform what it asks for."""
+        self._refresh_context()
         with self._lock:
             descriptor = dict(self.ctx.descriptor)
         self.ticks += 1
@@ -122,6 +154,7 @@ class DrishtiRuntime:
                 ok=ok,
                 reason=reason,
                 clock=self._clock,
+                source="rule",
             )
             if self._record_fire(action["rule_id"]):
                 touched.add(action["rule_id"])
