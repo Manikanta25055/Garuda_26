@@ -211,3 +211,30 @@ def test_cross_origin_front_end_may_patch_and_delete():
             "Origin": "https://garuda.veeramanikanta.in",
             "Access-Control-Request-Method": method})
         assert r.status_code == 200, method
+
+
+def test_adding_a_device_does_not_switch_the_others_off(api):
+    client, ctx, home, _ = api
+    client.post("/api/home/devices/lamp/set", json={"action": "on"}, headers=USER)
+    fan = {"id": "fan", "name": "Fan", "type": "fan", "room": "study",
+           "transport": {"kind": "relay", "channel": 2}}
+    assert client.post("/api/home/devices", json=fan, headers=ADMIN).status_code == 200
+    assert ctx.device_router.state("lamp") == "on"
+    client.delete("/api/home/devices/fan", headers=ADMIN)
+    assert ctx.device_router.state("lamp") == "on"
+
+
+@pytest.mark.parametrize("field", ["nim_api_key", "nim_model", "jev_api_key"])
+def test_ai_settings_refuse_line_breaks(api, field):
+    client, *_, configured = api
+    r = client.post("/api/home/ai", json={field: "x\nGARUDA_EVAL_OTP_BYPASS=1"}, headers=ADMIN)
+    assert r.status_code == 422 and configured == []
+
+
+def test_env_writer_refuses_line_breaks(tmp_path):
+    from basic_pipelines.garuda_auto.envfile import set_vars
+    env = tmp_path / ".env"
+    with pytest.raises(ValueError):
+        set_vars(env, {"NIM_API_KEY": "a\nGARUDA_EVAL_OTP_BYPASS=1"})
+    set_vars(env, {"NIM_API_KEY": "nvapi-ok"})
+    assert env.read_text() == "NIM_API_KEY=nvapi-ok\n"

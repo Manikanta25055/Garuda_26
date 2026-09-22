@@ -12,6 +12,7 @@ for the same module collide during test collection. Nothing here touches
 hardware until something asks it to.
 """
 import logging
+import threading
 import os
 
 log = logging.getLogger(__name__)
@@ -45,6 +46,9 @@ class RelayBank:
         self.active_high = active_high
         self._state = {device: "off" for device in self.pin_map}
         self._outputs = {}
+        # The API, the rule loop, the home loop and the assistant all switch
+        # relays. Two first uses at once would each open the same pin.
+        self._lock = threading.RLock()
         if not GPIO_AVAILABLE:
             log.warning("gpiozero unavailable -- relay bank running in no-op mode")
 
@@ -65,6 +69,10 @@ class RelayBank:
         return self._state.get(device, "off")
 
     def set(self, device, action):
+        with self._lock:
+            return self._set(device, action)
+
+    def _set(self, device, action):
         if device not in self.pin_map:
             log.warning("refusing unknown device: %s", device)
             return False
@@ -86,6 +94,29 @@ class RelayBank:
             if output is not None:
                 output.off()
             self._state[device] = "off"
+
+    def rebind(self, pin_map):
+        """Adopt a new device -> pin map without touching unchanged devices.
+
+        Rebuilding the whole bank on every registry change switched every
+        relay off: adding a heater turned the lamp off. Only devices that
+        were removed, or whose pin changed, are switched off and released.
+        """
+        with self._lock:
+            pin_map = dict(pin_map)
+            for device, pin in list(self.pin_map.items()):
+                if pin_map.get(device) != pin:
+                    output = self._outputs.pop(device, None)
+                    if output is not None:
+                        try:
+                            output.off()
+                            output.close()
+                        except Exception:
+                            pass
+                    self._state.pop(device, None)
+            self.pin_map = pin_map
+            for device in pin_map:
+                self._state.setdefault(device, "off")
 
     def close(self):
         self.all_off()

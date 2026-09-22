@@ -74,12 +74,17 @@ class SettingsRequest(BaseModel):
     settings: dict
 
 
+# Printable, no whitespace: these end up in .env and in HTTP headers.
+_TOKEN = r"^[A-Za-z0-9._~+/=:-]*$"
+_MODELS = r"^[A-Za-z0-9._/:, -]*$"
+
+
 class AIConfigRequest(BaseModel):
-    nim_api_key: str | None = Field(default=None, max_length=200)
-    nim_model: str | None = Field(default=None, max_length=120)
-    nim_fallback_models: str | None = Field(default=None, max_length=400)
-    jev_api_key: str | None = Field(default=None, max_length=200)
-    jev_base_url: str | None = Field(default=None, max_length=200)
+    nim_api_key: str | None = Field(default=None, max_length=200, pattern=_TOKEN)
+    nim_model: str | None = Field(default=None, max_length=120, pattern=_TOKEN)
+    nim_fallback_models: str | None = Field(default=None, max_length=400, pattern=_MODELS)
+    jev_api_key: str | None = Field(default=None, max_length=200, pattern=r"^\s*[A-Za-z0-9._~+/=:-]*\s*$")
+    jev_base_url: str | None = Field(default=None, max_length=200, pattern=r"^https://[A-Za-z0-9.-]+(:\d+)?(/[A-Za-z0-9._/-]*)?$")
     decision_threshold: float | None = Field(default=None, ge=0.5, le=0.99)
 
 

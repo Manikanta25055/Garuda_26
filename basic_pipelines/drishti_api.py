@@ -62,11 +62,11 @@ class DrishtiContext:
         """Re-derive everything that depends on the device registry."""
         self.schema = build_schema(self.registry)
         self.store.rebind(self.schema)
-        self.relay_bank.close()
-        self.relay_bank = RelayBank({
+        # Rebind rather than replace: a new bank starts with every relay off.
+        self.relay_bank.rebind({
             d["id"]: self.channel_to_pin[d["transport"]["channel"]]
             for d in self.registry.actuators()
-            if d["transport"]["kind"] == "relay"
+            if d["transport"]["kind"] == "relay" and d.get("enabled", True)
         })
         self.mqtt_bank.bind(self.registry)
         self.device_router = DeviceRouter(self.registry, self.relay_bank, self.mqtt_bank)

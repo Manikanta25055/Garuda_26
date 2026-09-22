@@ -1938,15 +1938,23 @@ def _apply_llm_result(llm_result):
     return llm_result.get("response") or "Done."
 
 
+# None until the voice thread has tried the microphone; then True or False.
+# The web app shows one clear notice instead of a pile of repeated errors.
+_voice_mic_ok = None
+_voice_mic_detail = ""
+
+
 def voice_assistant_loop(stop_event, current_user=None):
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    global DETECTION_THRESHOLD
+    global DETECTION_THRESHOLD, _voice_mic_ok, _voice_mic_detail
 
     recognizer = sr.Recognizer()
     try:
         mic = sr.Microphone()
+        _voice_mic_ok, _voice_mic_detail = True, ""
         append_voice_log("Microphone connected.", user_name=current_user)
     except Exception as e:
+        _voice_mic_ok, _voice_mic_detail = False, str(e)
         append_voice_log(f"Error accessing microphone: {e}", user_name=current_user)
         return
 
@@ -2211,6 +2219,7 @@ def get_state_dict():
         "uptime_seconds": uptime,
         "system_log": system_updates_log[-50:],
         "voice_log": voice_assistant_log[-30:],
+        "voice_mic": {"ok": _voice_mic_ok, "detail": _voice_mic_detail},
         "voice_responses": voice_responses[-30:],
         "detection_threshold": DETECTION_THRESHOLD,
         "cpu_percent": cpu_pct,
@@ -2776,6 +2785,11 @@ async def index(request: Request):
         return HTMLResponse(html_path.read_text())
     return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
 
+@fastapi_app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    p = _static_dir / "favicon.ico"
+    return FileResponse(str(p), media_type="image/x-icon") if p.exists() else Response(status_code=204)
+
 @fastapi_app.get("/manifest.json")
 async def pwa_manifest():
     p = _static_dir / "manifest.json"
@@ -3095,7 +3109,8 @@ async def chat(data: ChatRequest, session=Depends(require_session)):
     result = await anyio.to_thread.run_sync(
         lambda: _assistant_reply(msg, session["username"], session["role"]))
     return {"response": result["reply"], "lane": result.get("lane"),
-            "actions": result.get("actions", []), "proposal": result.get("proposal")}
+            "actions": result.get("actions", []), "proposal": result.get("proposal"),
+            "route": result.get("route"), "model": result.get("model")}
 
 
 def _assistant_reply(msg, user="", role="user"):
