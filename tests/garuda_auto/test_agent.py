@@ -283,3 +283,23 @@ def test_history_is_kept_per_user(house):
     a.handle("what did I say", user="mani")
     contents = [m["content"] for m in chat.requests[1]["messages"]]
     assert "remember that I like it cool" in contents and "one" in contents
+
+
+def test_security_scope_never_touches_devices(house):
+    ctx, home = house
+    chat = ScriptedChat([
+        completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})]),
+        completion("Home automation lives in the Drishti app."),
+    ])
+    out = agent(ctx, home, chat).handle("lamp on", user="mani", scope="security")
+    assert out["lane"] == "agent"                       # no fast lane on Garuda
+    assert home.on_devices() == []
+    offered = {t["function"]["name"] for t in chat.requests[0]["tools"]}
+    assert offered == {"get_security_state", "set_security_mode"}
+    assert "not available in Garuda" in chat.requests[1]["messages"][-1]["content"]
+
+
+def test_security_scope_without_nim_defers_to_keyword_commands(house):
+    ctx, home = house
+    out = agent(ctx, home, None).handle("activate dnd", user="mani", scope="security")
+    assert out["handled"] is False and home.on_devices() == []

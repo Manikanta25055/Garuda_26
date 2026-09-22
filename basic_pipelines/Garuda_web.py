@@ -200,6 +200,19 @@ DRISHTI_DIST = _BASE / "drishti_dist"
 # DRISHTI_APP_ENABLED=1 to serve the Svelte bundle and /api/drishti again.
 DRISHTI_APP_ENABLED = os.environ.get("DRISHTI_APP_ENABLED", "0").lower() in ("1", "true", "yes")
 
+# Two products from one service. Garuda (home security) and Drishti (home
+# automation, built on Garuda) share the camera, the Hailo and this process;
+# the address decides which one a visitor gets. Hosts listed here get the
+# security-only product: no home-automation pages, and /api/home is closed.
+SECURITY_ONLY_HOSTS = frozenset(
+    h.strip().lower() for h in
+    os.environ.get("GARUDA_SECURITY_HOSTS", "garuda.veeramanikanta.in").split(",") if h.strip())
+
+
+def _product_for_host(host):
+    host = (host or "").split(":")[0].lower()
+    return "security" if host in SECURITY_ONLY_HOSTS else "home"
+
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
@@ -2422,6 +2435,15 @@ async def global_rate_limit(request: Request, call_next):
             return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
     return await call_next(request)
 
+@fastapi_app.middleware("http")
+async def product_scope(request: Request, call_next):
+    """The security-only product has no home automation, on the server too."""
+    if (request.url.path.startswith("/api/home")
+            and _product_for_host(request.headers.get("host")) == "security"):
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "Not Found"}, status_code=404)
+    return await call_next(request)
+
 # Security headers middleware
 @fastapi_app.middleware("http")
 async def security_headers(request: Request, call_next):
@@ -2782,7 +2804,13 @@ async def index(request: Request):
             return HTMLResponse(drishti_index.read_text())
     html_path = _static_dir / "index.html"
     if html_path.exists():
-        return HTMLResponse(html_path.read_text())
+        product = _product_for_host(host)
+        html = html_path.read_text().replace(
+            '<html lang="en" data-theme="light">',
+            f'<html lang="en" data-theme="light" data-product="{product}">', 1)
+        if product == "home":
+            html = html.replace("<title>Garuda</title>", "<title>Drishti</title>", 1)
+        return HTMLResponse(html)
     return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
 
 @fastapi_app.get("/favicon.ico", include_in_schema=False)
@@ -3102,18 +3130,19 @@ async def eval_fps_probe(request: Request):
     }
 
 @fastapi_app.post("/api/chat")
-async def chat(data: ChatRequest, session=Depends(require_session)):
+async def chat(data: ChatRequest, request: Request, session=Depends(require_session)):
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
+    scope = _product_for_host(request.headers.get("host"))
     result = await anyio.to_thread.run_sync(
-        lambda: _assistant_reply(msg, session["username"], session["role"]))
+        lambda: _assistant_reply(msg, session["username"], session["role"], scope))
     return {"response": result["reply"], "lane": result.get("lane"),
             "actions": result.get("actions", []), "proposal": result.get("proposal"),
             "route": result.get("route"), "model": result.get("model")}
 
 
-def _assistant_reply(msg, user="", role="user"):
+def _assistant_reply(msg, user="", role="user", scope="home"):
     """Narada's one brain for chat and voice.
 
     Phrases the owner taught on the Commands page win outright. Then the home
@@ -3125,7 +3154,7 @@ def _assistant_reply(msg, user="", role="user"):
     for phrase, resp in CUSTOM_VOICE_COMMANDS.items():
         if phrase in lower:
             return {"reply": resp, "lane": "custom", "actions": []}
-    result = AGENT.handle(msg, user=user, role=role)
+    result = AGENT.handle(msg, user=user, role=role, scope=scope)
     if result.get("handled", True):
         return result
     if GROQ_API_KEY:
@@ -3192,7 +3221,7 @@ def _groq_stream_text(user_input):
         yield apply_rule_based_command(user_input.lower())
 
 @fastapi_app.post("/api/chat/stream")
-async def chat_stream(data: ChatRequest, session=Depends(require_session)):
+async def chat_stream(data: ChatRequest, request: Request, session=Depends(require_session)):
     """SSE streaming chat — tokens arrive in real-time; commands applied after full response."""
     msg = data.message.strip()
     if not msg:
@@ -3201,12 +3230,13 @@ async def chat_stream(data: ChatRequest, session=Depends(require_session)):
     loop  = asyncio.get_event_loop()
     queue: asyncio.Queue = asyncio.Queue()
     user, role = session["username"], session["role"]
+    scope = _product_for_host(request.headers.get("host"))
 
     def _agent_worker():
         # The agent answers in one piece after its tool calls, so the reply is
         # replayed word by word to keep the chat's typing feel.
         try:
-            result = _assistant_reply(msg, user, role)
+            result = _assistant_reply(msg, user, role, scope)
         except Exception as exc:
             result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
         meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "model")}

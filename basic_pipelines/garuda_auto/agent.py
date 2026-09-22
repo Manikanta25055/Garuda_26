@@ -33,6 +33,9 @@ log = logging.getLogger(__name__)
 MAX_ROUNDS = 5
 HISTORY_TURNS = 6
 MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
+# What Narada may do on the security-only product (Garuda). Home automation
+# is Drishti's; on Garuda's address the model is not even offered it.
+SECURITY_TOOLS = ("get_security_state", "set_security_mode")
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -81,10 +84,12 @@ class HomeAgent:
 
     # ── entry point ───────────────────────────────────────────────────────────
 
-    def handle(self, text, *, user="", role="user"):
+    def handle(self, text, *, user="", role="user", scope="home"):
         text = (text or "").strip()[:500]
         if not text:
             return {"reply": "Say something for me to do.", "lane": "local", "actions": []}
+        if scope == "security":
+            return self._handle_security(text, user, role)
         devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
                    for d in self.ctx.registry.devices if d.get("enabled", True)]
         scenes = [{"id": s["id"], "name": s["name"]} for s in self.home.scenes.scenes]
@@ -104,6 +109,23 @@ class HomeAgent:
         result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
         self._remember(user, text, result["reply"])
+        return result
+
+    def _handle_security(self, text, user, role):
+        """Garuda: security questions and modes only. No fast lane -- it only
+        knows devices and scenes -- and without NIM the caller's keyword
+        commands handle modes, as they always have."""
+        result = None
+        if self.chat is not None and self.chat.configured:
+            try:
+                result = self._agent(text, user, role, scope="security")
+            except NimUnavailable:
+                result = None
+        if result is None:
+            result = {"reply": "", "lane": "local", "actions": [], "handled": False}
+        self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
+        if result.get("handled", True):
+            self._remember(f"security:{user}", text, result["reply"])
         return result
 
     # ── fast lane ─────────────────────────────────────────────────────────────
@@ -174,6 +196,7 @@ class HomeAgent:
 
     def _tools(self):
         return [
+            _fn("get_security_state", "Security modes, alerts, camera, occupancy and presence."),
             _fn("get_house_state", "Devices with state, scenes, occupancy, presence, security, modes."),
             _fn("set_device", "Switch one device on or off.",
                 {"device": {"type": "string", "description": "device id"},
@@ -207,13 +230,32 @@ class HomeAgent:
                 {"days": {"type": "integer"}}),
         ]
 
-    def _agent(self, text, user, role):
-        messages = [{"role": "system", "content": self._system_prompt(user, role)}]
-        messages += list(self._history.get(user, ()))
+    def _security_prompt(self, user, role):
+        now = time.localtime(self._clock())
+        return (
+            "You are Narada, the assistant of Garuda, an AI home security system on a "
+            "Raspberry Pi 5 with a Hailo accelerator and a camera that detects people and "
+            "dangerous objects (knife, scissors, hammer) and emails alerts. "
+            f"It is {time.strftime('%A %d %B %Y, %H:%M', now)} local time. "
+            f"You are talking to {user or 'a resident'} (role: {role}).\n"
+            "Use get_security_state for anything about the current situation and "
+            "set_security_mode to change a mode (dnd, night, idle, emergency, privacy, "
+            "email_off). You do not control lights or appliances here; if asked, say that "
+            "home automation lives in the Drishti app. Be concise. No emojis.")
+
+    def _agent(self, text, user, role, scope="home"):
+        system = self._security_prompt(user, role) if scope == "security" else self._system_prompt(user, role)
+        tools = self._tools()
+        if scope == "security":
+            tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]
+        messages = [{"role": "system", "content": system}]
+        # Separate memories, so a Drishti conversation never leaks into Garuda's.
+        history_key = f"security:{user}" if scope == "security" else user
+        messages += list(self._history.get(history_key, ()))
         messages.append({"role": "user", "content": text})
         actions, proposal = [], None
         for _ in range(MAX_ROUNDS):
-            message = self.chat.chat(messages, tools=self._tools(), max_tokens=1200,
+            message = self.chat.chat(messages, tools=tools, max_tokens=1200,
                                      temperature=0.2)
             calls = message.get("tool_calls") or []
             if not calls:
@@ -228,8 +270,11 @@ class HomeAgent:
                     args = json.loads(fn.get("arguments") or "{}")
                 except ValueError:
                     args = {}
-                out = self._run_tool(fn.get("name", ""), args if isinstance(args, dict) else {},
-                                     user, role)
+                name = fn.get("name", "")
+                if scope == "security" and name not in SECURITY_TOOLS:
+                    out = {"error": f"{name} is not available in Garuda"}
+                else:
+                    out = self._run_tool(name, args if isinstance(args, dict) else {}, user, role)
                 if out.pop("_action", None):
                     actions.append(out.get("result", ""))
                 if out.get("proposal"):
@@ -271,6 +316,13 @@ class HomeAgent:
             snapshot[f"{sensor['id']}_reading"] = d.get(f"{sensor['id']}_state")
         snapshot.update(self.security_fn() or {})
         return snapshot
+
+    def _tool_get_security_state(self, args, user, role):
+        d = self.ctx.descriptor
+        return {"modes": self.modes_fn(), "occupancy": d.get("occupancy"),
+                "person_count": d.get("person_count"),
+                "owner_presence": self.home.context()["owner_presence"],
+                **(self.security_fn() or {})}
 
     def _tool_get_house_state(self, args, user, role):
         return self.state_snapshot()

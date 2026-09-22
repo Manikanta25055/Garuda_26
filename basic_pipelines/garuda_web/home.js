@@ -64,7 +64,8 @@ const H = (() => {
 
   // Called with state.home on every websocket push.
   function onState(home) {
-    if (!home || home.error) return;
+    // Garuda (security-only) shows none of the home automation.
+    if (!home || home.error || G.product === 'security') return;
     (home.notices || []).forEach(n => {
       if (_seenNotices.has(n.id)) return;
       _seenNotices.add(n.id);

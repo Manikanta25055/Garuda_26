@@ -21,6 +21,12 @@ const G = (() => {
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
   let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
+  // Garuda (home security) and Drishti (home automation) are one app; the
+  // server tags the page with the product for the address it was opened on.
+  const _PRODUCT = document.documentElement.dataset.product === 'security' ? 'security' : 'home';
+  const _BRAND = _PRODUCT === 'security' ? 'GARUDA' : 'DRISHTI';
+  const _HOME_PAGES = ['devices', 'auto', 'insights'];
+  const _forProduct = items => _PRODUCT === 'security' ? items.filter(i => !_HOME_PAGES.includes(i.page)) : items;
   let _currentPage = 'dashboard';
   let _voiceMicOk = null;
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
@@ -217,7 +223,20 @@ const G = (() => {
   }
 
   // ── Boot ─────────────────────────────────────────────────
+  function _applyBrand() {
+    const name = _BRAND.charAt(0) + _BRAND.slice(1).toLowerCase();
+    document.title = name;
+    document.querySelectorAll('.wv-name, .header-brand, #hud-brand').forEach(el => { el.textContent = _BRAND; });
+    const tag = document.querySelector('.wv-tagline');
+    if (tag) tag.textContent = _PRODUCT === 'security' ? 'AI Security Intelligence Platform' : 'Home automation, built on Garuda';
+    const hello = document.querySelector('#chat-messages .chat-msg.assistant .chat-msg-body');
+    if (hello && _PRODUCT === 'security') {
+      hello.innerHTML = 'Hi, I\'m <strong>Narada</strong>, Garuda\'s security assistant. Ask what the camera has seen, check alerts, or change a mode — “arm night mode”, “any alerts today?”.';
+    }
+  }
+
   async function init() {
+    _applyBrand();
     // Theme: apply saved preference before rendering (light is HTML default)
     const savedTheme = localStorage.getItem('garuda_theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -363,7 +382,7 @@ const G = (() => {
     $('hdr-user').textContent = _session.display_name || _session.username;
     buildNav(_session.role);
     $('main')?.classList.add('dash-active');
-    _setDILabel('GARUDA');
+    _setDILabel(_BRAND);
     nav('dashboard');
     _initChatInput();
     // Live uptime ticker — save ID so it can be cleared on logout
@@ -376,7 +395,7 @@ const G = (() => {
       if (_session.role === 'admin') cw.classList.remove('hidden');
     }
     // Non-admin profiles get the house at a glance where the console would be.
-    $('dash-home-glance')?.classList.toggle('hidden', _session.role === 'admin');
+    $('dash-home-glance')?.classList.toggle('hidden', _session.role === 'admin' || _PRODUCT === 'security');
     if (window.H) H.onLogin(_session);
     // Set logs unlock state from session (master key login sets this true)
     _logsUnlocked = !!_session.logs_unlocked;
@@ -1148,7 +1167,9 @@ const G = (() => {
   // Phone mode: five tabs, the rest in an iOS-style "More" sheet. Eleven
   // items squeezed into a scrolling strip were unreadable at 390 px.
   const _PHONE_MQ = window.matchMedia('(max-width: 768px)');
-  const _PHONE_PRIMARY = ['dashboard', 'devices', 'auto', 'chat'];
+  const _PHONE_PRIMARY = _PRODUCT === 'security'
+    ? ['dashboard', 'chat', 'narada']
+    : ['dashboard', 'devices', 'auto', 'chat'];
   let _navRole = null;
 
   function _isPhone() { return _PHONE_MQ.matches; }
@@ -1164,7 +1185,7 @@ const G = (() => {
 
   function buildNav(role) {
     _navRole = role;
-    const items = role === 'admin' ? _ADMIN_NAV : _USER_NAV;
+    const items = _forProduct(role === 'admin' ? _ADMIN_NAV : _USER_NAV);
     const navEl = $('ios-nav');
     if (!navEl) return;
     navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
@@ -1277,7 +1298,7 @@ const G = (() => {
 
   // ── Dynamic Island helpers ────────────────────────────────
   const _DI_LABELS = {
-    'dashboard':   'GARUDA',
+    'dashboard':   _BRAND,
     'narada':      'Narada',
     'chat':        'Chat',
     'devices':     'Devices',
@@ -1407,7 +1428,7 @@ const G = (() => {
       }
     }
     // Dynamic Island: update label per page
-    _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
+    _setDILabel(_DI_LABELS[pageId] || _BRAND);
     _syncDIContext();
     _syncFeedbackVisibility();
     if (pageId === 'a-email')    loadEmailCfg();
@@ -2494,6 +2515,7 @@ const G = (() => {
     switchLogTab,
     switchDocsTab,
     showToast,
+    product: _PRODUCT,
     // Exposed for the feedback widget (separate IIFE, needs access to session + api)
     getSession: () => _session,
     _apiFn: api,
