@@ -372,6 +372,9 @@ const G = (() => {
       cw.classList.add('hidden');
       if (_session.role === 'admin') cw.classList.remove('hidden');
     }
+    // Non-admin profiles get the house at a glance where the console would be.
+    $('dash-home-glance')?.classList.toggle('hidden', _session.role === 'admin');
+    if (window.H) H.onLogin(_session);
     // Set logs unlock state from session (master key login sets this true)
     _logsUnlocked = !!_session.logs_unlocked;
     $('logs-gate')?.classList.add('hidden');
@@ -875,6 +878,7 @@ const G = (() => {
       _hideThinking();
       _setDIState('');
       const bodyEl = _chatAddAssistant();
+      if (window.H) H.decorateChatReply(bodyEl, res);
       // Typewriter: reveal chars at ~18ms each, then snap remaining on done
       let i = 0;
       function tick() {
@@ -1082,17 +1086,26 @@ const G = (() => {
     logs:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h12M3 9h12M3 13.5h7.5"/></svg>`,
     commands:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 1.5 9 4.5 12"/><polyline points="13.5 6 16.5 9 13.5 12"/><line x1="7.5" y1="3" x2="10.5" y2="15"/></svg>`,
     emergency: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5 16.5 16.5H1.5Z"/><line x1="9" y1="7" x2="9" y2="11"/><circle cx="9" cy="13.5" r="0.75" fill="currentColor" stroke="none"/></svg>`,
+    devices:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.75 13.5h4.5"/><path d="M7.5 16.5h3"/><path d="M9 1.5a5.25 5.25 0 0 0-3 9.56c.47.34.75.88.75 1.46v.98h4.5v-.98c0-.58.28-1.12.75-1.46A5.25 5.25 0 0 0 9 1.5z"/></svg>`,
+    auto:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.75 1.5 3 10.5h5.25l-.75 6 6.75-9H9z"/></svg>`,
+    insights:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="15.75" x2="3" y2="9"/><line x1="7.5" y1="15.75" x2="7.5" y2="3"/><line x1="12" y1="15.75" x2="12" y2="7.5"/><line x1="16.5" y1="15.75" x2="16.5" y2="11.25"/></svg>`,
     chat:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 9.75a6.75 6.75 0 0 1-9.45 6.19L2.25 16.5l.56-4.05A6.75 6.75 0 1 1 15.75 9.75z"/></svg>`,
   };
 
   const _USER_NAV = [
     { page: 'dashboard', label: 'Home',   icon: 'dashboard' },
+    { page: 'devices',   label: 'Devices', icon: 'devices'  },
+    { page: 'auto',      label: 'Automate', icon: 'auto'    },
+    { page: 'insights',  label: 'Insights', icon: 'insights' },
     { page: 'chat',      label: 'Chat',   icon: 'chat'      },
     { page: 'narada',    label: 'Narada', icon: 'narada'    },
   ];
 
   const _ADMIN_NAV = [
     { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
+    { page: 'devices',    label: 'Devices',  icon: 'devices'   },
+    { page: 'auto',       label: 'Automate', icon: 'auto'      },
+    { page: 'insights',   label: 'Insights', icon: 'insights'  },
     { page: 'chat',       label: 'Chat',     icon: 'chat'      },
     { page: 'narada',     label: 'Narada',   icon: 'narada'    },
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
@@ -1133,6 +1146,7 @@ const G = (() => {
     items.forEach(item => {
       const btn = document.createElement('button');
       btn.className = 'ios-item' + (item.danger ? ' ios-danger' : '');
+      if (item.page) btn.dataset.page = item.page;
       btn.innerHTML = `<span class="ios-icon">${_NAV_ICONS[item.icon]}</span><span class="ios-label">${item.label}</span>`;
       if (item.danger) {
         btn.onclick = () => emergencyStop();
@@ -1154,6 +1168,9 @@ const G = (() => {
     'dashboard':   'GARUDA',
     'narada':      'Narada',
     'chat':        'Chat',
+    'devices':     'Devices',
+    'auto':        'Automations',
+    'insights':    'Insights',
     'a-email':     'Email',
     'a-settings':  'Settings',
     'a-logs':      'Logs',
@@ -1279,7 +1296,7 @@ const G = (() => {
     _syncDIContext();
     _syncFeedbackVisibility();
     if (pageId === 'a-email')    loadEmailCfg();
-    if (pageId === 'a-settings') loadSysCfg();
+    if (pageId === 'a-settings') { loadSysCfg(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
       if (_logsUnlocked) {
         fetchAndRenderLogs();
@@ -1289,6 +1306,7 @@ const G = (() => {
       }
     }
     if (pageId === 'a-cmds')     loadCmds();
+    if (window.H) H.onNav(pageId);
   }
 
   // ── Mobile sidebar (no-ops — replaced by iOS nav) ─────────
@@ -1504,6 +1522,8 @@ const G = (() => {
         if (atBot) con.scrollTop = con.scrollHeight;
       }
     }
+
+    if (window.H && s.home) H.onState(s.home);
 
     // Activity feed (legacy hidden element) + new timeline
     _updateActivityFeed(s);

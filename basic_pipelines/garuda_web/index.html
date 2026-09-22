@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#6e6af0"/>
   <link rel="manifest" href="/manifest.json"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=55"/>
+  <link rel="stylesheet" href="/static/style.css?v=57"/>
 </head>
 <body>
 <div id="app">
@@ -404,8 +404,10 @@
               </div>
             </div>
 
-            <!-- Alert Activity heatmap -->
-            <div class="card">
+            <!-- Alert Activity heatmap, with the system console (admin) or the
+                 house at a glance (user) filling the rest of the row -->
+            <div class="dash-split-row">
+            <div class="card hm-card">
               <div class="dash-card-hdr">
                 <div>
                   <div class="dash-card-title">Alert Activity</div>
@@ -426,9 +428,22 @@
 
             <!-- System Console — admin only -->
             <div id="dash-console-wrap" class="card dash-console-card hidden">
-              <div class="console-header">System Console</div>
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">System Console</div>
+                <div class="dash-card-meta">live</div>
+              </div>
               <div id="sys-console" class="console"></div>
             </div>
+
+            <!-- House at a glance — non-admin profiles -->
+            <div id="dash-home-glance" class="card ha-glance hidden">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Home</div>
+                <button class="btn btn-ghost btn-sm" onclick="G.nav('devices', document.querySelector('.ios-item[data-page=devices]'))">Open</button>
+              </div>
+              <div id="ha-glance-body" class="ha-glance-body"></div>
+            </div>
+            </div><!-- /dash-split-row -->
 
           </div><!-- /center-stage -->
 
@@ -554,7 +569,7 @@
           <div class="chat-messages" id="chat-messages">
             <div class="chat-msg assistant">
               <div class="chat-msg-content">
-                <div class="chat-msg-body">Hi, I'm <strong>Narada</strong> — your AI security assistant. I have full context on your detection pipeline, system modes, alert history, and hardware. Ask me anything or give me a command.</div>
+                <div class="chat-msg-body">Hi, I'm <strong>Narada</strong>. I look after the house and its security: switch devices, run scenes, set timers (“fan off in 30 minutes”), draft automations (“when I leave, turn everything off”), change security modes, or tell you what happened today.</div>
               </div>
             </div>
           </div>
@@ -570,6 +585,170 @@
             <div class="chat-hint">Enter to send · Shift+Enter for newline</div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- ── HOME: DEVICES ── -->
+      <div id="page-devices" class="page">
+        <div class="admin-page ha-page">
+          <div class="admin-page-header">
+            <h2>Devices</h2>
+            <div id="ha-presence" class="ha-presence"></div>
+          </div>
+
+          <div id="ha-notices" class="ha-notices"></div>
+
+          <form class="ha-composer" onsubmit="event.preventDefault(); H.instruct();">
+            <input id="ha-cmd" class="input" maxlength="500" autocomplete="off"
+                   placeholder="Tell Garuda — “fan off in 30 minutes”, “when I leave, turn everything off”"/>
+            <button class="btn btn-primary" id="ha-cmd-btn" type="submit">Send</button>
+          </form>
+          <div id="ha-cmd-result" class="ha-result hidden"></div>
+
+          <div class="ha-section-hdr">
+            <div class="ha-section-title">Scenes</div>
+            <button class="btn btn-ghost btn-sm ha-admin-only" onclick="H.openSceneEditor()">New scene</button>
+          </div>
+          <div id="ha-scenes" class="ha-scenes"></div>
+          <div id="ha-scene-editor" class="settings-card ha-scene-editor hidden"></div>
+
+          <div class="ha-section-hdr">
+            <div class="ha-section-title">Devices</div>
+            <button class="btn btn-ghost btn-sm ha-danger-btn" onclick="H.allOff()">All off</button>
+          </div>
+          <div id="ha-rooms" class="ha-rooms"></div>
+
+          <div class="settings-card ha-admin-only" id="ha-manage">
+            <div class="settings-section-title">Manage devices</div>
+            <div id="ha-manage-list" class="ha-manage-list"></div>
+            <div class="ha-add-grid">
+              <input id="ha-add-name" class="input" placeholder="Name (e.g. Desk lamp)" maxlength="64"/>
+              <input id="ha-add-room" class="input" placeholder="Room (e.g. Study)" maxlength="64"/>
+              <select id="ha-add-type" class="input" aria-label="Device type"></select>
+              <select id="ha-add-kind" class="input" aria-label="Connection" onchange="H.onKindChange()">
+                <option value="relay">Relay channel</option>
+                <option value="mqtt">Wi-Fi (MQTT)</option>
+              </select>
+              <select id="ha-add-channel" class="input" aria-label="Relay channel"></select>
+              <input id="ha-add-topic" class="input hidden" placeholder="MQTT topic (e.g. home/heater)" maxlength="128"/>
+              <input id="ha-add-watts" class="input" type="number" min="0" max="5000" placeholder="Watts (optional)"/>
+              <button class="btn btn-primary" onclick="H.addDevice()">Add device</button>
+            </div>
+            <div id="ha-manage-msg" class="msg hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HOME: AUTOMATIONS ── -->
+      <div id="page-auto" class="page">
+        <div class="admin-page ha-page">
+          <div class="admin-page-header"><h2>Automations</h2></div>
+
+          <div id="ha-proposals-wrap" class="hidden">
+            <div class="ha-section-title">Waiting for confirmation</div>
+            <div id="ha-proposals" class="ha-list"></div>
+          </div>
+
+          <div id="ha-suggest-wrap" class="hidden">
+            <div class="ha-section-title">Suggested from your routine</div>
+            <div id="ha-suggestions" class="ha-list"></div>
+          </div>
+
+          <div class="ha-section-title">Rules</div>
+          <div class="ha-hint">Say or type a condition — “when the room is empty for 10 minutes, turn the lamp off”. NVIDIA NIM drafts it; it only runs after it is confirmed.</div>
+          <div id="ha-rules" class="ha-list"></div>
+
+          <div class="ha-section-hdr">
+            <div class="ha-section-title">Schedules &amp; timers</div>
+          </div>
+          <div id="ha-schedules" class="ha-list"></div>
+          <div class="settings-card ha-sched-form">
+            <div class="ha-sched-grid">
+              <select id="ha-s-target" class="input" aria-label="What" onchange="H.onSchedMode()"></select>
+              <select id="ha-s-action" class="input" aria-label="Action">
+                <option value="on">on</option><option value="off">off</option>
+              </select>
+              <select id="ha-s-mode" class="input" aria-label="When" onchange="H.onSchedMode()">
+                <option value="timer">In … minutes</option>
+                <option value="daily" class="ha-admin-opt">Every day at</option>
+              </select>
+              <input id="ha-s-minutes" class="input" type="number" min="1" max="10080" value="30" aria-label="Minutes"/>
+              <input id="ha-s-time" class="input hidden" type="time" value="19:00" aria-label="Time"/>
+              <button class="btn btn-primary" onclick="H.addSchedule()">Add</button>
+            </div>
+            <div id="ha-s-days" class="ha-days hidden"></div>
+            <div id="ha-s-msg" class="msg hidden"></div>
+          </div>
+
+          <div class="ha-section-title">Away &amp; vacation</div>
+          <div class="settings-card" id="ha-away-card">
+            <div class="toggle-row">
+              <div class="toggle-info"><div><span>Turn everything off when I leave</span></div>
+                <div><span class="ha-sub">Uses the phones registered under System → Known Devices. Off: you get a notice with a one-tap button instead.</span></div></div>
+              <div class="toggle" data-setting="away_auto_off" onclick="H.toggleSetting(this)"></div>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info"><div><span>Email me about the house while I'm away</span></div></div>
+              <div class="toggle" data-setting="away_notify" onclick="H.toggleSetting(this)"></div>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info"><div><span>Vacation lighting</span></div>
+                <div><span class="ha-sub">While nobody is home, lights switch at irregular times in the evening window.</span></div></div>
+              <div class="toggle" data-setting="vacation_mode" onclick="H.toggleSetting(this)"></div>
+            </div>
+            <div class="sched-grid">
+              <div class="sched-row">
+                <span class="sched-label">Evening</span>
+                <input id="ha-vac-start" class="input input-sm" type="time" aria-label="Vacation start"/>
+                <span class="sched-sep">to</span>
+                <input id="ha-vac-end" class="input input-sm" type="time" aria-label="Vacation end"/>
+              </div>
+              <div class="sched-row">
+                <span class="sched-label">Left on</span>
+                <input id="ha-lefton" class="input input-sm" type="number" min="0" max="1440" aria-label="Left-on minutes"/>
+                <span class="sched-sep">min, nobody home → notify (0 = off)</span>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm ha-admin-only" style="margin-top:12px" onclick="H.saveAway()">Save</button>
+            <div id="ha-away-msg" class="msg hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HOME: INSIGHTS ── -->
+      <div id="page-insights" class="page">
+        <div class="admin-page ha-page">
+          <div class="admin-page-header"><h2>Insights</h2></div>
+
+          <div class="settings-card ha-digest">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">Today</div>
+              <button class="btn btn-ghost btn-sm" onclick="H.loadDigest(true)">Refresh</button>
+            </div>
+            <div id="ha-digest-text" class="ha-digest-text">—</div>
+            <div id="ha-digest-meta" class="ha-sub"></div>
+          </div>
+
+          <div class="settings-card">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">Energy · last 7 days</div>
+              <div id="ha-usage-total" class="dash-card-meta"></div>
+            </div>
+            <div id="ha-usage" class="ha-usage"></div>
+            <div class="ha-tariff ha-admin-only">
+              <span class="ha-sub">Tariff per kWh</span>
+              <input id="ha-tariff" class="input input-sm" type="number" min="0" max="1000" step="0.1"/>
+              <button class="btn btn-ghost btn-sm" onclick="H.saveTariff()">Save</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <div class="dash-card-hdr">
+              <div class="dash-card-title">Device activity</div>
+              <div class="dash-card-meta">who or what switched each device</div>
+            </div>
+            <div id="ha-activity" class="ha-activity"></div>
+          </div>
         </div>
       </div>
 
@@ -718,11 +897,47 @@
             <div id="dev-msg" class="msg hidden"></div>
           </div>
 
-          <!-- Card 4: Narada -->
-          <div class="settings-card">
-            <div class="settings-section-title">Narada — Groq API Key</div>
-            <input id="groq-api-key" class="input" type="password" placeholder="gsk_…  (paste your Groq API key)"/>
-            <div style="font-size:11px;color:var(--t3);margin-top:4px">Required for Narada voice assistant. Get a free key at <b>console.groq.com</b>.</div>
+          <!-- Card 4: AI -->
+          <div class="settings-card" id="ai-card">
+            <div class="settings-section-title" style="display:flex;align-items:center;justify-content:space-between">
+              AI — NVIDIA NIM
+              <span id="ai-status-pill" class="ha-pill">—</span>
+            </div>
+            <div class="ha-sub" style="margin-bottom:10px">Powers Narada chat and voice, automation drafting and the daily digest. Keys are saved to the server's .env and never shown again.</div>
+            <div class="input-group">
+              <span class="input-label">NIM API key</span>
+              <input id="ai-nim-key" class="input" type="password" autocomplete="off" placeholder="nvapi-…  (leave blank to keep the current key)"/>
+            </div>
+            <div class="input-group">
+              <span class="input-label">Model, then fallbacks (tried in order when a model is retired or down)</span>
+              <input id="ai-nim-model" class="input" type="text" placeholder="openai/gpt-oss-20b"/>
+              <input id="ai-nim-fallbacks" class="input" type="text" style="margin-top:6px" placeholder="deepseek-ai/deepseek-v4.1-flash"/>
+            </div>
+            <div id="ai-nim-meta" class="ha-sub"></div>
+
+            <div class="settings-section-title" style="margin-top:16px">Decision engine — Jev (System-1)</div>
+            <div class="ha-sub" style="margin-bottom:10px">Short commands are labelled with a confidence score and run instantly on the Pi; unsure ones go to NIM. With a TypeSafe Jev key the labelling runs on Jev (cloud only, early access) and falls back to the local engine on any error.</div>
+            <div class="input-group">
+              <span class="input-label">Jev API key (optional)</span>
+              <input id="ai-jev-key" class="input" type="password" autocomplete="off" placeholder="leave blank to keep; type a space to clear"/>
+            </div>
+            <div class="input-group">
+              <span class="input-label">Act-without-asking threshold — <strong id="ai-thr-val">0.85</strong></span>
+              <input id="ai-thr" type="range" min="50" max="99" step="1" value="85"
+                     oninput="document.getElementById('ai-thr-val').textContent=(this.value/100).toFixed(2)"/>
+            </div>
+            <div id="ai-decision-meta" class="ha-sub"></div>
+
+            <details style="margin-top:12px">
+              <summary class="ha-sub" style="cursor:pointer">Groq fallback (used only when no NIM key is set)</summary>
+              <input id="groq-api-key" class="input" type="password" style="margin-top:8px" placeholder="gsk_…  (saved with Save Settings below, not persisted)"/>
+            </details>
+
+            <div class="form-row" style="margin-top:12px">
+              <button class="btn btn-ghost btn-sm" onclick="H.testAI()">Test NIM</button>
+              <button class="btn btn-primary btn-sm" onclick="H.saveAI()">Save AI settings</button>
+            </div>
+            <div id="ai-msg" class="msg hidden"></div>
           </div>
 
           <!-- Card 5: Watch Labels -->
@@ -1142,6 +1357,7 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=52"></script>
+<script src="/static/app.js?v=53"></script>
+<script src="/static/home.js?v=1"></script>
 </body>
 </html>
