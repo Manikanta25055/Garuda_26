@@ -52,12 +52,23 @@ _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
 
 class NimClient:
-    def __init__(self, api_key, model, base_url=DEFAULT_BASE_URL, timeout=20):
-        self.api_key = api_key
+    def __init__(self, api_key, model, base_url=DEFAULT_BASE_URL, timeout=30, chat=None):
+        self._api_key = api_key
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.tokens_used = 0
+        # When a shared NimChat is supplied it owns the key and the model
+        # list, so a retired model falls through to the next one here too.
+        self.chat = chat
+
+    @property
+    def api_key(self):
+        return self.chat.api_key if self.chat is not None else self._api_key
+
+    @api_key.setter
+    def api_key(self, value):
+        self._api_key = value
 
     def build_request(self, utterance, existing_rules, schema):
         """Assemble the request body. Schema only -- never live values."""
@@ -102,6 +113,8 @@ class NimClient:
         """
         if not self.api_key:
             return None, "no NIM API key configured"
+        if self.chat is not None:
+            return self._synthesize_via_chat(utterance, existing_rules, schema)
         try:
             response = requests.post(
                 f"{self.base_url}/chat/completions",
@@ -129,7 +142,9 @@ class NimClient:
         if choice.get("finish_reason") == "length":
             return None, "the rule service ran out of room before it finished"
 
-        parsed = self._extract_json(content)
+        return self._finish(self._extract_json(content), utterance, schema)
+
+    def _finish(self, parsed, utterance, schema):
         if parsed is None:
             return None, "could not parse a rule from the response"
         if "error" in parsed:
@@ -142,6 +157,18 @@ class NimClient:
         if not ok:
             return None, reason
         return parsed, ""
+
+    def _synthesize_via_chat(self, utterance, existing_rules, schema):
+        from .llm import NimUnavailable
+        body = self.build_request(utterance, existing_rules, schema)
+        try:
+            message = self.chat.chat(body["messages"], max_tokens=body["max_tokens"],
+                                     temperature=body["temperature"], timeout=self.timeout)
+        except NimUnavailable as exc:
+            return None, str(exc)
+        if message.get("_finish_reason") == "length":
+            return None, "the rule service ran out of room before it finished"
+        return self._finish(self._extract_json(message.get("content") or ""), utterance, schema)
 
     async def synthesize_async(self, utterance, existing_rules, schema):
         """Run the blocking call on a worker thread, off the event loop."""
