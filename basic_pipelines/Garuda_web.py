@@ -2389,7 +2389,10 @@ fastapi_app.add_middleware(
     ],
     allow_origin_regex=r"^https://([a-z0-9-]+\.)*veeramanikanta\.in$|^https://[a-z0-9-]+\.vercel\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    # PATCH and DELETE are used by /api/home (devices, scenes, schedules,
+    # rules). The Vercel front end is cross-origin, so without them the
+    # browser's preflight fails and those buttons silently do nothing.
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Content-Type", "X-Garuda-Token"],
 )
 

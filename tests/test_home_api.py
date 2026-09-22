@@ -201,3 +201,13 @@ def test_usage_and_digest(api):
     assert len(use["days"]) == 3 and use["devices"][0]["id"] == "lamp"
     digest = client.get("/api/home/digest", headers=USER).json()
     assert digest["source"] == "local" and "1 device actions" in digest["text"]
+
+
+def test_cross_origin_front_end_may_patch_and_delete():
+    Garuda_web = pytest.importorskip("basic_pipelines.Garuda_web")
+    client = TestClient(Garuda_web.fastapi_app)
+    for method in ("PATCH", "DELETE"):
+        r = client.options("/api/home/scenes/x", headers={
+            "Origin": "https://garuda.veeramanikanta.in",
+            "Access-Control-Request-Method": method})
+        assert r.status_code == 200, method
