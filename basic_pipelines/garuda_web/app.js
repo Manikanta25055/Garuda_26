@@ -169,7 +169,9 @@ const G = (() => {
                  || h.startsWith('192.168.') || h.startsWith('10.')
                  || h.startsWith('172.');
     if (isLocal) return '';
-    if (h === 'garuda.veeramanikanta.in') return 'https://api.veeramanikanta.in';
+    // garuda., drishti. and api. are all served by the Pi through the one
+    // Cloudflare tunnel, so the page's own origin is the backend.
+    if (/(^|\.)veeramanikanta\.in$/.test(h)) return '';
     return localStorage.getItem('garuda_backend') || '';
   }
 
