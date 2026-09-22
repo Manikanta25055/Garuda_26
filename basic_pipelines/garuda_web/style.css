@@ -4450,3 +4450,169 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
   background: rgba(233,235,239,0.92);
   border-color: rgba(0,0,0,0.12);
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Toasts — text wraps inside the card, long paths included
+   ════════════════════════════════════════════════════════════════ */
+.toast { max-width: min(420px, calc(100vw - 32px)); box-sizing: border-box; align-items: flex-start; line-height: 1.4; }
+.toast > span { min-width: 0; flex: 1; overflow-wrap: anywhere; word-break: break-word; }
+.toast-dismiss { flex-shrink: 0; line-height: 1; padding: 0 0 0 4px; }
+:root:not([data-theme="dark"]) .toast {
+  box-shadow: 0 10px 30px rgba(15,23,42,0.12), 0 2px 6px rgba(15,23,42,0.06);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+}
+:root:not([data-theme="dark"]) .toast.success { background: rgba(236,253,243,0.94); color: #15803d; border-color: rgba(34,197,94,0.30); }
+:root:not([data-theme="dark"]) .toast.error   { background: rgba(254,242,242,0.94); color: #b91c1c; border-color: rgba(239,68,68,0.30); }
+:root:not([data-theme="dark"]) .toast.info    { background: rgba(239,246,255,0.94); color: #1d4ed8; border-color: rgba(59,130,246,0.30); }
+:root:not([data-theme="dark"]) .toast.warning { background: rgba(255,251,235,0.95); color: #b45309; border-color: rgba(245,158,11,0.35); }
+@keyframes toastIn  { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+.toast { animation: toastIn 0.34s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+
+/* ════════════════════════════════════════════════════════════════
+   Narada chat input — placeholder and send button on one centre line
+   ════════════════════════════════════════════════════════════════ */
+.chat-input-wrap, .chat-input-box { align-items: center; }
+.chat-textarea, #page-chat .chat-textarea {
+  box-sizing: border-box;
+  line-height: 20px;
+  min-height: 32px;
+  padding: 6px 0;
+  margin: 0;
+  display: block;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   More sheet (phone)
+   ════════════════════════════════════════════════════════════════ */
+.more-sheet { position: fixed; inset: 0; z-index: 1200; pointer-events: none; }
+.more-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.32);
+  opacity: 0; transition: opacity 0.32s ease;
+}
+.more-panel {
+  position: absolute; left: 8px; right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  background: var(--glass-h);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 0.5px solid var(--border);
+  border-radius: 28px;
+  padding: 8px 12px 12px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.18);
+  transform: translateY(calc(100% + 24px));
+  transition: transform 0.44s cubic-bezier(0.32, 0.72, 0, 1);
+  max-height: 80vh; overflow-y: auto;
+}
+.more-sheet.open { pointer-events: auto; }
+.more-sheet.open .more-backdrop { opacity: 1; }
+.more-sheet.open .more-panel { transform: translateY(0); }
+.more-grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--t4); margin: 2px auto 12px; }
+.more-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.more-grid:empty { display: none; }
+.more-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px 6px; border-radius: 18px; border: none; cursor: pointer;
+  background: var(--surface); color: var(--t1);
+  font-family: var(--font); font-size: 12.5px; font-weight: 500;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease, background 0.2s ease;
+}
+.more-tile:active, .more-row:active { transform: scale(0.96); }
+.more-tile.active { background: var(--accent-d); color: var(--accent); }
+.more-tile-icon svg, .more-row-icon svg { width: 22px; height: 22px; display: block; }
+.more-list {
+  margin-top: 10px; background: var(--surface); border-radius: 18px; overflow: hidden;
+}
+.more-row {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 14px 16px; border: none; background: none; cursor: pointer;
+  color: var(--t1); font-family: var(--font); font-size: 15px; text-align: left;
+  border-bottom: 0.5px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+}
+.more-row:last-child { border-bottom: none; }
+.more-row.danger { color: var(--danger); }
+.more-row-icon svg { width: 20px; height: 20px; }
+
+/* ════════════════════════════════════════════════════════════════
+   Phone mode (≤ 768px): a real tab bar, not a scrolling strip
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  #ios-nav.ios-nav-phone {
+    left: 10px; right: 10px; transform: none;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    max-width: none; width: auto;
+    padding: 6px;
+    justify-content: space-between;
+    overflow: visible;
+    border-radius: 26px;
+  }
+  #ios-nav.ios-nav-phone .ios-item {
+    flex: 1 1 0; min-width: 0; padding: 7px 2px 6px; gap: 4px; border-radius: 20px;
+  }
+  #ios-nav.ios-nav-phone .ios-icon svg { width: 22px; height: 22px; }
+  #ios-nav.ios-nav-phone .ios-label { font-size: 10.5px; font-weight: 600; letter-spacing: 0; }
+  #ios-nav.ios-nav-phone #ios-pill { border-radius: 20px; }
+
+  /* Feedback lives in the More sheet; the floating bubble covered content. */
+  .fb-bubble { display: none !important; }
+  .fb-wrap { bottom: calc(96px + env(safe-area-inset-bottom)); right: 12px; left: 12px; align-items: stretch; }
+  .fb-panel { width: auto; }
+
+  /* Toasts drop from under the island, full width, above everything. */
+  .toast-container {
+    top: calc(64px + env(safe-area-inset-top)); bottom: auto;
+    left: 12px; right: 12px; transform: none;
+    flex-direction: column; align-items: stretch;
+  }
+  .toast { max-width: none; }
+  @keyframes toastInTop { from { opacity: 0; transform: translateY(-12px) scale(0.98); } to { opacity: 1; transform: none; } }
+  .toast { animation-name: toastInTop; }
+
+  /* Chat: input sits just above the tab bar; messages clear both. */
+  #page-chat .chat-input-wrap { bottom: calc(86px + env(safe-area-inset-bottom)); left: 10px; right: 10px; }
+  #page-chat .chat-messages { padding-bottom: 150px; }
+  #page-chat .chat-textarea { padding: 5px 0; min-height: 30px; }
+
+  /* Pages clear the tab bar. */
+  .admin-page { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+}
+
+/* Commands table: fit the phone instead of running off the right edge. */
+#page-a-cmds .t-wrap { overflow-x: auto; }
+#page-a-cmds table { width: 100%; min-width: 0 !important; table-layout: fixed; }
+#page-a-cmds td, #page-a-cmds th { overflow-wrap: anywhere; }
+@media (max-width: 768px) {
+  #page-a-cmds .cmd-add-mobile { display: block; width: 100%; margin-top: 14px; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Motion — one curve, short durations, and respect for Reduce Motion
+   ════════════════════════════════════════════════════════════════ */
+:root { --ease-apple: cubic-bezier(0.32, 0.72, 0, 1); }
+.page { transition: opacity 0.28s var(--ease-apple), transform 0.28s var(--ease-apple); }
+.page:not(.active) { transform: translateY(6px); }
+.page.active { transform: none; }
+.btn, .ha-tile, .ha-scene-run, .ha-day, .more-tile, .more-row, .toggle {
+  transition: transform 0.18s var(--ease-apple), background-color 0.2s ease,
+              color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.ha-tile:active, .ha-scene-run:active { transform: scale(0.96); }
+.ha-tile .ha-dot { transition: background 0.25s ease, box-shadow 0.35s var(--ease-apple); }
+.ha-result, .ha-notice, .ha-proposal, .narada-mic-notice { animation: haRise 0.36s var(--ease-apple) both; }
+@keyframes haRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.narada-mic-notice {
+  margin: 12px 16px; padding: 12px 14px; border-radius: 14px;
+  background: var(--warn-d); border: 1px solid rgba(245,158,11,0.28);
+  font-size: 13px; line-height: 1.5; color: var(--t1);
+}
+.narada-mic-notice a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+  }
+}

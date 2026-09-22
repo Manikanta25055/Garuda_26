@@ -261,7 +261,8 @@ const H = (() => {
   }
 
   function laneLabel(r) {
-    if (r.lane === 'fast') return `on-device · ${Math.round(((r.route || {}).intent || {}).confidence * 100)}% sure`;
+    const conf = ((r.route || {}).intent || {}).confidence;
+    if (r.lane === 'fast') return conf != null ? `on-device · ${Math.round(conf * 100)}% sure` : 'on-device';
     if (r.lane === 'agent') return `NVIDIA NIM${r.model ? ' · ' + r.model : ''}`;
     if (r.lane === 'local') return 'on-device';
     return r.lane || '';
@@ -270,7 +271,7 @@ const H = (() => {
   function resultHtml(r) {
     return `
       <div class="ha-result-text">${esc(r.reply || r.response || '')}</div>
-      ${(r.actions || []).length ? `<div class="ha-chips">${r.actions.map(a => `<span class="ha-chip">${esc(a)}</span>`).join('')}</div>` : ''}
+      ${(r.actions || []).filter(a => a !== r.reply).length ? `<div class="ha-chips">${r.actions.filter(a => a !== r.reply).map(a => `<span class="ha-chip">${esc(a)}</span>`).join('')}</div>` : ''}
       ${r.proposal ? proposalCard(r.proposal, true) : ''}
       <div class="ha-sub ha-lane">${esc(laneLabel(r))}</div>`;
   }
@@ -295,7 +296,8 @@ const H = (() => {
   function decorateChatReply(bodyEl, res) {
     if (!bodyEl || !res) return;
     const extra = [];
-    if ((res.actions || []).length) extra.push(`<div class="ha-chips">${res.actions.map(a => `<span class="ha-chip">${esc(a)}</span>`).join('')}</div>`);
+    const acts = (res.actions || []).filter(a => a !== (res.response || res.reply));
+    if (acts.length) extra.push(`<div class="ha-chips">${acts.map(a => `<span class="ha-chip">${esc(a)}</span>`).join('')}</div>`);
     if (res.proposal) extra.push(proposalCard(res.proposal, true));
     if (res.lane && res.lane !== 'custom' && res.lane !== 'keywords') extra.push(`<div class="ha-sub ha-lane">${esc(laneLabel(res))}</div>`);
     if (!extra.length) return;
@@ -585,7 +587,7 @@ const H = (() => {
   }
 
   function renderUsage(u) {
-    const max = Math.max(0.01, ...u.devices.flatMap(d => d.hours_by_day));
+    const max = Math.max(1, ...u.devices.flatMap(d => d.hours_by_day));
     $('ha-usage-total').textContent = u.total_kwh
       ? `${u.total_kwh.toFixed(2)} kWh est.${u.cost != null ? ' · ' + u.cost.toFixed(2) : ''}` : 'add watts to devices for kWh';
     $('ha-usage').innerHTML = u.devices.length ? `

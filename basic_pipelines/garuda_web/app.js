@@ -22,6 +22,7 @@ const G = (() => {
   let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
   let _currentPage = 'dashboard';
+  let _voiceMicOk = null;
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
   let _alarmInterval  = null; // setInterval ID for repeating alarm beep
   let _audioCtx       = null; // shared AudioContext — unlocked once during login user gesture
@@ -689,7 +690,7 @@ const G = (() => {
         const r = await api('POST', '/api/clip/stop');
         _clipRecording = false;
         if (btn) { btn.textContent = '\u23FA'; btn.classList.remove('recording'); }
-        showToast('Clip saved: ' + (r.path || ''), 'success');
+        showToast('Clip saved: ' + ((r.path || '').split('/').pop() || 'done'), 'success');
       }
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
   }
@@ -1089,6 +1090,10 @@ const G = (() => {
     devices:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.75 13.5h4.5"/><path d="M7.5 16.5h3"/><path d="M9 1.5a5.25 5.25 0 0 0-3 9.56c.47.34.75.88.75 1.46v.98h4.5v-.98c0-.58.28-1.12.75-1.46A5.25 5.25 0 0 0 9 1.5z"/></svg>`,
     auto:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.75 1.5 3 10.5h5.25l-.75 6 6.75-9H9z"/></svg>`,
     insights:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="15.75" x2="3" y2="9"/><line x1="7.5" y1="15.75" x2="7.5" y2="3"/><line x1="12" y1="15.75" x2="12" y2="7.5"/><line x1="16.5" y1="15.75" x2="16.5" y2="11.25"/></svg>`,
+    more:      `<svg viewBox="0 0 18 18" fill="currentColor" stroke="none"><circle cx="3.75" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="14.25" cy="9" r="1.5"/></svg>`,
+    feedback:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.9l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.7l-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z"/></svg>`,
+    theme:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><path d="M9 2v14a7 7 0 0 0 0-14z" fill="currentColor"/></svg>`,
+    signout:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.25v6"/><path d="M5.3 4.1a6 6 0 1 0 7.4 0"/></svg>`,
     chat:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 9.75a6.75 6.75 0 0 1-9.45 6.19L2.25 16.5l.56-4.05A6.75 6.75 0 1 1 15.75 9.75z"/></svg>`,
   };
 
@@ -1138,30 +1143,135 @@ const G = (() => {
     }
   }
 
+  // Phone mode: five tabs, the rest in an iOS-style "More" sheet. Eleven
+  // items squeezed into a scrolling strip were unreadable at 390 px.
+  const _PHONE_MQ = window.matchMedia('(max-width: 768px)');
+  const _PHONE_PRIMARY = ['dashboard', 'devices', 'auto', 'chat'];
+  let _navRole = null;
+
+  function _isPhone() { return _PHONE_MQ.matches; }
+
+  function _navButton(item) {
+    const btn = document.createElement('button');
+    btn.className = 'ios-item' + (item.danger ? ' ios-danger' : '');
+    btn.innerHTML = `<span class="ios-icon">${_NAV_ICONS[item.icon]}</span><span class="ios-label">${item.label}</span>`;
+    if (item.page) btn.dataset.page = item.page;
+    btn.setAttribute('aria-label', item.label);
+    return btn;
+  }
+
   function buildNav(role) {
+    _navRole = role;
     const items = role === 'admin' ? _ADMIN_NAV : _USER_NAV;
     const navEl = $('ios-nav');
     if (!navEl) return;
     navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
-    items.forEach(item => {
-      const btn = document.createElement('button');
-      btn.className = 'ios-item' + (item.danger ? ' ios-danger' : '');
-      if (item.page) btn.dataset.page = item.page;
-      btn.innerHTML = `<span class="ios-icon">${_NAV_ICONS[item.icon]}</span><span class="ios-label">${item.label}</span>`;
-      if (item.danger) {
-        btn.onclick = () => emergencyStop();
-      } else {
-        btn.onclick = () => nav(item.page, btn);
-      }
+    const phone = _isPhone();
+    navEl.classList.toggle('ios-nav-phone', phone);
+    const shown = phone
+      ? [...items.filter(i => _PHONE_PRIMARY.includes(i.page)),
+         { page: 'more', label: 'More', icon: 'more' }]
+      : items;
+    shown.forEach(item => {
+      const btn = _navButton(item);
+      if (item.danger) btn.onclick = () => emergencyStop();
+      else if (item.page === 'more') btn.onclick = () => openMoreSheet();
+      else btn.onclick = () => nav(item.page, btn);
       navEl.appendChild(btn);
     });
-    // Instantly place pill on first non-danger item
-    const first = navEl.querySelector('.ios-item:not(.ios-danger)');
-    if (first) {
-      first.classList.add('active');
-      requestAnimationFrame(() => movePill(first, true));
+    _buildMoreSheet(phone ? items.filter(i => !_PHONE_PRIMARY.includes(i.page)) : []);
+    const current = _navItemFor(_currentPage) || navEl.querySelector('.ios-item:not(.ios-danger)');
+    if (current) {
+      current.classList.add('active');
+      requestAnimationFrame(() => movePill(current, true));
     }
   }
+
+  // The tab that represents a page: its own, or "More" on a phone.
+  function _navItemFor(pageId) {
+    if (!pageId) return null;
+    return document.querySelector(`#ios-nav .ios-item[data-page="${pageId}"]`)
+      || (_isPhone() ? document.querySelector('#ios-nav .ios-item[data-page="more"]') : null);
+  }
+
+  function _buildMoreSheet(items) {
+    let sheet = $('more-sheet');
+    if (!sheet) {
+      sheet = document.createElement('div');
+      sheet.id = 'more-sheet';
+      sheet.className = 'more-sheet';
+      sheet.setAttribute('aria-hidden', 'true');
+      sheet.innerHTML = `<div class="more-backdrop"></div>
+        <div class="more-panel" role="dialog" aria-label="More">
+          <div class="more-grabber"></div>
+          <div class="more-grid"></div>
+          <div class="more-list"></div>
+        </div>`;
+      document.body.appendChild(sheet);
+      sheet.querySelector('.more-backdrop').onclick = closeMoreSheet;
+      _bindSheetDrag(sheet.querySelector('.more-panel'));
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMoreSheet(); });
+    }
+    const grid = sheet.querySelector('.more-grid');
+    grid.innerHTML = '';
+    items.filter(i => !i.danger).forEach(item => {
+      const b = document.createElement('button');
+      b.className = 'more-tile';
+      b.dataset.page = item.page;
+      b.innerHTML = `<span class="more-tile-icon">${_NAV_ICONS[item.icon]}</span><span>${item.label}</span>`;
+      b.onclick = () => { closeMoreSheet(); nav(item.page); };
+      grid.appendChild(b);
+    });
+    const list = sheet.querySelector('.more-list');
+    list.innerHTML = '';
+    const rows = [
+      { icon: 'feedback', label: 'Send feedback', run: () => G.toggleFeedback && G.toggleFeedback() },
+      { icon: 'theme', label: 'Switch appearance', run: toggleTheme },
+      ...items.filter(i => i.danger).map(i => ({ icon: i.icon, label: 'Emergency stop', run: emergencyStop, danger: true })),
+      { icon: 'signout', label: 'Sign out', run: logout, danger: true },
+    ];
+    rows.forEach(r => {
+      const b = document.createElement('button');
+      b.className = 'more-row' + (r.danger ? ' danger' : '');
+      b.innerHTML = `<span class="more-row-icon">${_NAV_ICONS[r.icon]}</span><span>${r.label}</span>`;
+      b.onclick = () => { closeMoreSheet(); setTimeout(r.run, 220); };
+      list.appendChild(b);
+    });
+  }
+
+  function openMoreSheet() {
+    const sheet = $('more-sheet'); if (!sheet) return;
+    sheet.querySelectorAll('.more-tile').forEach(t => t.classList.toggle('active', t.dataset.page === _currentPage));
+    sheet.classList.add('open');
+    sheet.setAttribute('aria-hidden', 'false');
+    if (navigator.vibrate) navigator.vibrate(6);
+  }
+
+  function closeMoreSheet() {
+    const sheet = $('more-sheet'); if (!sheet || !sheet.classList.contains('open')) return;
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+    const panel = sheet.querySelector('.more-panel');
+    panel.style.transform = '';
+  }
+
+  // Drag the sheet down to dismiss, like an iOS sheet.
+  function _bindSheetDrag(panel) {
+    let startY = null, dy = 0;
+    panel.addEventListener('touchstart', e => { startY = e.touches[0].clientY; dy = 0; panel.style.transition = 'none'; }, { passive: true });
+    panel.addEventListener('touchmove', e => {
+      if (startY === null) return;
+      dy = Math.max(0, e.touches[0].clientY - startY);
+      panel.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    panel.addEventListener('touchend', () => {
+      panel.style.transition = '';
+      if (dy > 80) closeMoreSheet(); else panel.style.transform = '';
+      startY = null;
+    });
+  }
+
+  _PHONE_MQ.addEventListener('change', () => { if (_navRole) buildNav(_navRole); });
 
   // ── Dynamic Island helpers ────────────────────────────────
   const _DI_LABELS = {
@@ -1190,7 +1300,9 @@ const G = (() => {
     const alerting  = hud.classList.contains('di-alert');
     const allclear  = hud.classList.contains('di-allclear');
     const yellow    = hud.classList.contains('di-yellow');
-    const voice = _currentPage === 'narada' && !thinking && !alerting && !allclear && !yellow;
+    // The listening waveform only when a microphone is actually listening.
+    const voice = _currentPage === 'narada' && _voiceMicOk !== false
+      && !thinking && !alerting && !allclear && !yellow;
     hud.classList.toggle('di-voice', voice);
     hud.classList.toggle('di-idle', !thinking && !alerting && !voice && !allclear && !yellow);
     if (!hudLabel) return;
@@ -1262,6 +1374,7 @@ const G = (() => {
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
     _currentPage = pageId;
+    if (!navEl || !navEl.isConnected) navEl = _navItemFor(pageId);
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
     document.querySelectorAll('.page').forEach(p => {
@@ -1435,7 +1548,7 @@ const G = (() => {
     // Push notification + alarm on new alert
     if (s.alert_active && !_lastAlertState) {
       if (Notification.permission === 'granted') {
-        new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/favicon.ico' });
+        new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/icon-192.png' });
       }
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       _startAlarm();
@@ -1540,7 +1653,8 @@ const G = (() => {
     if (lcVoice) lcVoice.textContent = ((s.voice_log || []).length + (s.voice_responses || []).length) || 0;
 
     // Narada feed (conversation-style)
-    _updateNaradaFeed(s.voice_log || [], s.voice_responses || []);
+    _voiceMicOk = s.voice_mic ? s.voice_mic.ok : null;
+    _updateNaradaFeed(s.voice_log || [], s.voice_responses || [], s.voice_mic);
 
     // Security health panel
     _updateSecHealth(s);
@@ -1659,12 +1773,21 @@ const G = (() => {
 
   // ── Narada conversation feed ──────────────────────────────
   let _lastNaradaKey = '';
-  function _updateNaradaFeed(voiceLog, voiceResponses) {
+  // Microphone errors are a status, not a conversation: one notice at the
+  // top instead of a bubble for every restart that found no microphone.
+  const _MIC_NOISE = /Error accessing microphone|Could not understand audio|^\[[^\]]+\] Listening\.\.\.$/;
+
+  function _updateNaradaFeed(voiceLog, voiceResponses, mic) {
     const feed = document.getElementById('narada-feed');
     if (!feed) return;
-    const key = voiceLog.length + ':' + voiceResponses.length;
+    const micOk = mic ? mic.ok : null;
+    const key = voiceLog.length + ':' + voiceResponses.length + ':' + micOk;
     if (key === _lastNaradaKey) return;
     _lastNaradaKey = key;
+    voiceLog = voiceLog.filter(l => !_MIC_NOISE.test(l));
+    const notice = micOk === false
+      ? `<div class="narada-mic-notice"><b>No microphone on the Pi.</b> Plug in a USB microphone and restart Garuda to talk to Narada here. Until then, use <a href="#" onclick="G.nav('chat');return false">Chat</a> — it does everything voice does.</div>`
+      : '';
 
     // Interleave voice inputs and responses
     const items = [];
@@ -1675,12 +1798,12 @@ const G = (() => {
     }
 
     if (!items.length) {
-      feed.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg></div><span>Speak a command to begin</span></div>';
+      feed.innerHTML = notice + '<div class="empty-state"><div class="empty-state-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg></div><span>' + (micOk === false ? 'Voice commands will appear here' : 'Speak a command to begin') + '</span></div>';
       return;
     }
 
     const atBot = feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 8;
-    feed.innerHTML = items.map(item =>
+    feed.innerHTML = notice + items.map(item =>
       `<div class="narada-msg ${item.type}">${esc(item.text)}</div>`
     ).join('');
     if (atBot) feed.scrollTop = feed.scrollHeight;
