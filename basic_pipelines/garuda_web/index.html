@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=59"/>
+  <link rel="stylesheet" href="/static/style.css?v=61"/>
 </head>
 <body>
 <div id="app">
@@ -59,7 +59,7 @@
         </label>
 
         <button id="lc-signin-btn" class="lc-signin" onclick="G.submitLogin()">
-          <span class="lc-arrow">→</span>
+          <span class="gi gi-sign-in lc-gi" aria-hidden="true"></span>
           <span>Sign In</span>
         </button>
 
@@ -145,27 +145,13 @@
 
   <!-- Theme toggle — top right of login screen -->
   <button class="login-theme-toggle" id="login-theme-toggle" aria-label="Toggle theme" onclick="G.toggleTheme()">
-    <svg class="t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="5"/>
-      <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-      <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-    </svg>
-    <svg class="t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-    </svg>
+    <span class="gi gi-light-mode t-sun" aria-hidden="true"></span>
+    <span class="gi gi-night-mode t-moon" aria-hidden="true"></span>
   </button>
 
   <!-- Documentation bubble — bottom left -->
   <button class="wv-docs-btn" onclick="G.openDocs()" title="Documentation">
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="1.5" y="1" width="8" height="10.5" rx="1.2" stroke="currentColor" stroke-width="0.9"/>
-      <line x1="3.5" y1="4" x2="7.5" y2="4" stroke="currentColor" stroke-width="0.75"/>
-      <line x1="3.5" y1="6" x2="7.5" y2="6" stroke="currentColor" stroke-width="0.75"/>
-      <line x1="3.5" y1="8" x2="6.2" y2="8" stroke="currentColor" stroke-width="0.75"/>
-      <path d="M9.5 3.5 L11.5 5.5 L9.5 7.5" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"/>
-    </svg>
+    <span class="gi gi-documentation" aria-hidden="true"></span>
   </button>
 
 </div><!-- /login-screen -->
@@ -199,68 +185,47 @@
     </div>
   </header>
 
-  <!-- Floating HUD bar — visible when logged in -->
-  <div id="top-hud">
+  <!-- Dynamic Island — visible when logged in -->
+  <div id="top-hud" class="di-idle">
     <div class="hud-brand" id="hud-brand">GARUDA</div>
-
-    <!-- iOS-style Dynamic Island expanded states -->
     <div class="di-live" id="di-live" aria-hidden="true">
-      <!-- Alert: pulsing red pip + label -->
       <div class="di-cnt di-cnt-alert">
-        <span class="di-pip di-r"></span>
-        <span class="di-lbl">Alert</span>
+        <span class="di-pip di-r"></span><span class="di-lbl">Alert</span>
       </div>
-      <!-- Thinking: 3 bouncing dots -->
       <div class="di-cnt di-cnt-think">
-        <span class="di-bdot"></span>
-        <span class="di-bdot"></span>
-        <span class="di-bdot"></span>
+        <span class="di-lbl">Narada</span><span class="di-grow"></span>
+        <span class="di-bdot"></span><span class="di-bdot"></span><span class="di-bdot"></span>
       </div>
-      <!-- All Clear: green pip + label -->
       <div class="di-cnt di-cnt-allclear">
-        <span class="di-pip di-g"></span>
-        <span class="di-lbl">All Clear</span>
+        <span class="di-pip di-g"></span><span class="di-lbl">All Clear</span>
       </div>
-      <!-- Voice: animated waveform bars -->
       <div class="di-cnt di-cnt-voice">
-        <span class="di-vbar"></span>
-        <span class="di-vbar"></span>
-        <span class="di-vbar"></span>
-        <span class="di-vbar"></span>
-        <span class="di-vbar"></span>
+        <span class="di-lbl" id="di-voice-lbl">Listening</span><span class="di-grow"></span>
+        <span class="di-vbars">
+          <span class="di-vbar"></span><span class="di-vbar"></span><span class="di-vbar"></span>
+          <span class="di-vbar"></span><span class="di-vbar"></span>
+        </span>
       </div>
-      <!-- Night Presence: yellow pip + label -->
       <div class="di-cnt di-cnt-night">
-        <span class="di-pip di-y"></span>
-        <span class="di-lbl">Night Presence</span>
+        <span class="di-pip di-y"></span><span class="di-lbl">Night Presence</span>
       </div>
     </div>
+    <div class="hud-status"><div id="hud-dot" class="hdr-dot"></div><span id="hud-label"></span></div>
+  </div>
 
-    <div class="hud-status">
-      <div id="hud-dot" class="hdr-dot"></div>
-      <span id="hud-label">—</span>
-    </div>
-    <div class="hud-right">
-      <span id="hdr-user" class="hud-user-lbl"></span>
-      <button class="theme-toggle-btn" id="theme-toggle-btn" aria-label="Toggle theme" onclick="G.toggleTheme()">
-        <svg class="t-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </svg>
-        <svg class="t-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </button>
-      <button class="hud-signout" aria-label="Power Off" title="Power Off" onclick="G.logout()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 3v8"/>
-          <path d="M7.05 5.05a9 9 0 1 0 9.9 0"/>
-        </svg>
-      </button>
-    </div>
+  <!-- Top-right controls -->
+  <div id="top-actions">
+    <span id="hdr-user" class="hud-user-lbl"></span>
+    <button class="theme-toggle-btn top-act" id="theme-toggle-btn" aria-label="Toggle theme" onclick="G.toggleTheme()">
+      <span class="gi gi-light-mode t-sun" aria-hidden="true"></span>
+      <span class="gi gi-night-mode t-moon" aria-hidden="true"></span>
+    </button>
+    <button class="top-act hud-signout" aria-label="Power Off" title="Power Off" onclick="G.logout()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 3v8"/>
+        <path d="M7.05 5.05a9 9 0 1 0 9.9 0"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Body -->
@@ -391,7 +356,7 @@
                 <video id="cam-video" autoplay playsinline muted style="display:none"></video>
                 <img id="cam-img" alt="Camera Feed" style="display:none"/>
                 <div id="cam-offline" class="cam-offline">
-                  <div class="cam-icon">◯</div>
+                  <div class="cam-icon"><span class="gi gi-camera"></span></div>
                   <span>Camera feed unavailable</span>
                 </div>
                 <div class="cam-hud-overlay">
@@ -499,96 +464,36 @@
 
       </div><!-- /page-dashboard -->
 
-      <!-- ── NARADA ── -->
+      <!-- ── NARADA ── one place to talk or type; narada.js drives it -->
       <div id="page-narada" class="page">
-        <div class="narada-shell">
-
-          <!-- Conversation feed -->
-          <div class="narada-feed" id="narada-feed">
-            <div class="empty-state">
-              <div class="empty-state-icon">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg>
-              </div>
-              <span>Speak a command to begin</span>
-            </div>
+        <canvas class="nx-glyph" id="nx-glyph" aria-hidden="true"></canvas>
+        <div class="nx-stage" id="nx-stage">
+          <div class="nx-captions" id="nx-captions" aria-live="polite">
+            <div class="nx-status" id="nx-status">Tap the core to talk · or type</div>
+            <div class="nx-cap nx-cap-you" id="nx-cap-you"></div>
+            <div class="nx-cap nx-cap-narada" id="nx-cap-narada"></div>
+            <div class="nx-extra" id="nx-extra"></div>
           </div>
-
-          <!-- Quick Commands -->
-          <div class="narada-cmds-section">
-            <div class="narada-cmds-title">Quick Commands</div>
-            <div class="narada-cmd-chips">
-              <button class="narada-chip" onclick="G.toggleMode('dnd',false)">
-                <span class="narada-chip-icon">◯</span>DND On
-              </button>
-              <button class="narada-chip" onclick="G.toggleMode('night',false)">
-                <span class="narada-chip-icon">◑</span>Night Mode
-              </button>
-              <button class="narada-chip" onclick="G.toggleMode('emergency',false)">
-                <span class="narada-chip-icon">△</span>Emergency
-              </button>
-              <button class="narada-chip" onclick="G.toggleMode('idle',false)">
-                <span class="narada-chip-icon">⊟</span>Idle
-              </button>
-              <button class="narada-chip" onclick="G.toggleMode('privacy',true)">
-                <span class="narada-chip-icon">◉</span>Privacy
-              </button>
-            </div>
-          </div>
-
         </div>
-      </div>
 
-      <!-- ── CHAT ── -->
-      <div id="page-chat" class="page">
-        <div class="chat-shell">
-
-          <!-- Rate limit info bubble -->
-          <div class="chat-ratelimit-bubble" id="chat-ratelimit-bubble">
-            <div class="rl-title">Groq Free Plan · Rate Limits</div>
-            <div class="rl-table">
-              <div class="rl-row rl-head">
-                <span>Tier</span><span>Model</span><span>Req/min</span><span>Req/day</span><span>Tok/min</span><span>Tok/day</span>
-              </div>
-              <div class="rl-row" id="rl-low">
-                <span class="rl-tier-badge rl-low">LOW</span>
-                <span class="rl-model">llama-3.1-8b-instant</span>
-                <span>30</span><span>14,400</span><span>6K</span><span>500K</span>
-              </div>
-              <div class="rl-row" id="rl-med">
-                <span class="rl-tier-badge rl-med">MED</span>
-                <span class="rl-model">llama-3.3-70b-versatile</span>
-                <span>30</span><span>1,000</span><span>12K</span><span>100K</span>
-              </div>
-              <div class="rl-row rl-active" id="rl-high">
-                <span class="rl-tier-badge rl-high">HIGH</span>
-                <span class="rl-model">openai/gpt-oss-120b</span>
-                <span>30</span><span>1,000</span><span>8K</span><span>200K</span>
-              </div>
-            </div>
-            <div class="rl-note">Higher tiers are smarter but have smaller daily quotas. Switch to Low for casual use.</div>
-          </div>
-
-          <!-- Messages -->
-          <div class="chat-messages" id="chat-messages">
-            <div class="chat-msg assistant">
-              <div class="chat-msg-content">
-                <div class="chat-msg-body">Hi, I'm <strong>Narada</strong>. I look after the house and its security: switch devices, run scenes, set timers (“fan off in 30 minutes”), draft automations (“when I leave, turn everything off”), change security modes, or tell you what happened today.</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Input -->
-          <div class="chat-input-wrap">
-            <div class="chat-input-box">
-              <textarea id="chat-input" class="chat-textarea" rows="1" placeholder="Ask Narada anything…"></textarea>
-              <button class="chat-send-btn" id="chat-send-btn" onclick="G.sendChat()">
-                <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="14" x2="9" y2="4"/><polyline points="4.5 8.5 9 4 13.5 8.5"/></svg>
-              </button>
-            </div>
-            <div class="chat-hint">Enter to send · Shift+Enter for newline</div>
-          </div>
-
+        <button type="button" class="nx-info-btn" id="nx-info-btn" aria-label="Models and usage" aria-expanded="false" onclick="N.toggleInfo()">i</button>
+        <div class="nx-info" id="nx-info" role="dialog" aria-label="Models and usage">
+          <div class="nx-info-body" id="nx-info-body"></div>
         </div>
+
+        <form class="nx-bar" id="nx-bar" autocomplete="off" onsubmit="N.submit(event)">
+          <button type="button" class="nx-mic" id="nx-mic" aria-label="Talk to Narada" aria-pressed="false" onclick="N.toggleVoice()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/>
+            </svg>
+            <span class="nx-mic-stop" aria-hidden="true"></span>
+          </button>
+          <input class="nx-input" id="nx-input" type="text" maxlength="500" placeholder="Ask Narada anything…" aria-label="Message Narada"/>
+          <button type="submit" class="nx-send" id="nx-send" aria-label="Send">
+            <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="9" y1="14" x2="9" y2="4"/><polyline points="4.5 8.5 9 4 13.5 8.5"/></svg>
+          </button>
+        </form>
+        <label class="nx-haptic" aria-hidden="true"><input type="checkbox" switch id="nx-haptic" tabindex="-1"/></label>
       </div>
 
       <!-- ── HOME: DEVICES ── -->
@@ -913,7 +818,7 @@
             </div>
             <div class="input-group">
               <span class="input-label">Model, then fallbacks (tried in order when a model is retired or down)</span>
-              <input id="ai-nim-model" class="input" type="text" placeholder="openai/gpt-oss-20b"/>
+              <input id="ai-nim-model" class="input" type="text" placeholder="nvidia/nemotron-3-super-120b-a12b"/>
               <input id="ai-nim-fallbacks" class="input" type="text" style="margin-top:6px" placeholder="deepseek-ai/deepseek-v4.1-flash"/>
             </div>
             <div id="ai-nim-meta" class="ha-sub"></div>
@@ -931,10 +836,6 @@
             </div>
             <div id="ai-decision-meta" class="ha-sub"></div>
 
-            <details style="margin-top:12px">
-              <summary class="ha-sub" style="cursor:pointer">Groq fallback (used only when no NIM key is set)</summary>
-              <input id="groq-api-key" class="input" type="password" style="margin-top:8px" placeholder="gsk_…  (saved with Save Settings below, not persisted)"/>
-            </details>
 
             <div class="form-row" style="margin-top:12px">
               <button class="btn btn-ghost btn-sm" onclick="H.testAI()">Test NIM</button>
@@ -1221,12 +1122,10 @@
 
       <div id="docs-narada" class="docs-section">
         <h3>Narada Assistant</h3>
-        <h4>Voice page</h4>
-        <p>The Narada page is optimized for quick spoken control. It presents voice activity output and one-tap quick commands for common mode changes such as DND, Night, Emergency, Idle, and Privacy.</p>
-        <h4>Chat page</h4>
-        <p>The dedicated chat interface supports natural-language requests. Narada can answer questions about the pipeline, settings, hardware, and recent app context, and can also execute supported control commands.</p>
-        <h4>Configuration</h4>
-        <p>Narada uses a Groq API key configured in admin settings. The UI also includes a model/rate-limit explainer so operators understand quota limits for different LLM tiers.</p>
+        <h4>One page, voice or text</h4>
+        <p>Tap the microphone to talk: ElevenLabs listens, turns speech into text and speaks Narada's reply in the browser, hands-free until about 30 seconds of silence or a second tap. Or type into the bar below the glyph. The glyph shows what Narada is doing: breathing when idle, following your voice while listening, orbiting while thinking, and blooming with its own voice while speaking.</p>
+        <h4>One brain</h4>
+        <p>Every request, spoken or typed, goes to NVIDIA NIM (Nemotron 3 Super, with GLM 5.3 Flash as backup), which reads the house and acts through its tools. Nothing changes without the model: if NIM is down, Narada says so and does nothing. Keys live in <code>.env</code> on the Pi (<code>NIM_API_KEY</code>, <code>ELEVENLABS_API_KEY</code>); the browser only ever receives a one-conversation voice token.</p>
         <h4>Custom commands</h4>
         <p>Admins can teach Narada additional phrases and canned responses from the <strong>Custom Commands</strong> page. These become reusable voice/chat shortcuts inside the app.</p>
       </div>
@@ -1236,7 +1135,7 @@
         <h4>Email Settings</h4>
         <p>Configure the sender Gmail account, app password, recipients, and alert cooldown. A built-in <code>Send Test Email</code> action validates delivery from the UI.</p>
         <h4>System Settings</h4>
-        <p>The admin settings page includes security-health checks, detection threshold, danger label, privacy toggle, known-device management, Groq API key storage, watch labels, and master-key administration.</p>
+        <p>The admin settings page includes security-health checks, detection threshold, danger label, privacy toggle, known-device management, NVIDIA NIM key and model, watch labels, and master-key administration.</p>
         <h4>Known Devices</h4>
         <p>Owner presence is tracked using known MAC addresses. The app includes network scanning helpers and mobile-device guidance for private/random MAC settings.</p>
         <h4>Logs and exports</h4>
@@ -1271,7 +1170,8 @@
           <div class="docs-stack-item"><strong>GStreamer</strong><span>Media pipeline for camera capture and processing</span></div>
           <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python web framework with WebSocket support</span></div>
           <div class="docs-stack-item"><strong>WebSockets + SSE</strong><span>Real-time state and streamed chat updates in the UI</span></div>
-          <div class="docs-stack-item"><strong>Groq</strong><span>External LLM provider for Narada voice and chat intelligence</span></div>
+          <div class="docs-stack-item"><strong>NVIDIA NIM</strong><span>Narada's model for every command (Nemotron 3 Super)</span></div>
+          <div class="docs-stack-item"><strong>ElevenLabs</strong><span>Narada's voice: speech-to-text, turn-taking and speech</span></div>
           <div class="docs-stack-item"><strong>Local JSON persistence</strong><span>Server-side storage for users, config, logs, alert history, and feedback</span></div>
           <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Secure remote access without port forwarding</span></div>
         </div>
@@ -1346,11 +1246,7 @@
   <!-- Bubble toggle -->
   <button class="fb-bubble" id="fb-bubble" onclick="G.toggleFeedback()" aria-label="Open feedback" title="Send feedback">
     <!-- Chat bubble + signal arc -->
-    <svg class="fb-icon-open" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H7l-4 3v-5.5A8.5 8.5 0 0 1 11.5 3H13"/>
-      <path d="M17.5 4.5a3 3 0 0 1 3 3"/>
-      <path d="M15.5 6.5a5 5 0 0 1 5 5"/>
-    </svg>
+    <span class="gi gi-feedback fb-icon-open" aria-hidden="true"></span>
     <svg class="fb-icon-close" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
       <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
     </svg>
@@ -1360,7 +1256,8 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/app.js?v=57"></script>
-<script src="/static/home.js?v=4"></script>
+<script src="/static/narada.js?v=2"></script>
+<script src="/static/app.js?v=59"></script>
+<script src="/static/home.js?v=6"></script>
 </body>
 </html>

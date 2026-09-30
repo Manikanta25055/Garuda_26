@@ -158,10 +158,11 @@ def test_proposals_need_an_admin_to_confirm(api):
     assert client.post(f"/api/home/rules/{rid}/toggle", headers=ADMIN).json()["enabled"] is False
 
 
-def test_instruct_uses_the_agent(api):
+def test_instruct_uses_the_agent_and_needs_nim(api):
+    # The fixture's agent has no NIM, so even a clear command changes nothing.
     client, _, home, _ = api
     body = client.post("/api/home/instruct", json={"text": "lamp on"}, headers=USER).json()
-    assert body["lane"] == "fast" and home.on_devices()
+    assert body["lane"] == "unavailable" and not home.on_devices()
     assert body["route"]["intent"]["value"] == "device_control"
 
 

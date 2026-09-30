@@ -99,10 +99,8 @@ def test_legacy_single_danger_label_still_accepted(app_client, admin_headers):
 
 
 def test_update_secret_backed_config_fields(app_client, admin_headers):
-    """App password and Groq key should be accepted and persisted in runtime config."""
-    # These land in module-level globals. Restore them, or every later test that
-    # touches /api/chat tries to reach Groq over the network and hangs.
-    saved_pass, saved_key = gw.EMAIL_SENDER_PASS, gw.GROQ_API_KEY
+    """The app password is accepted; a stale groq_api_key field is ignored."""
+    saved_pass = gw.EMAIL_SENDER_PASS
     try:
         r = app_client.post(
             '/api/config',
@@ -111,8 +109,8 @@ def test_update_secret_backed_config_fields(app_client, admin_headers):
         )
         assert r.status_code == 200
         assert gw.EMAIL_SENDER_PASS == 'app-pass-1234'
-        assert gw.GROQ_API_KEY == 'gsk_test_key'
+        assert not hasattr(gw, 'GROQ_API_KEY')
         cfg = app_client.get('/api/config', headers=admin_headers).json()
-        assert cfg['groq_configured'] is True
+        assert 'groq_configured' not in cfg
     finally:
-        gw.EMAIL_SENDER_PASS, gw.GROQ_API_KEY = saved_pass, saved_key
+        gw.EMAIL_SENDER_PASS = saved_pass

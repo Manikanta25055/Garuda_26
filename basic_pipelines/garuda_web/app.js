@@ -19,7 +19,6 @@ const G = (() => {
   let _uptimeBase = 0;          // seconds from backend
   let _uptimeReceivedAt = 0;    // Date.now() when received
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
-  let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
   // Garuda (home security) and Drishti (home automation) are one app; the
   // server tags the page with the product for the address it was opened on.
@@ -28,7 +27,6 @@ const G = (() => {
   const _HOME_PAGES = ['devices', 'auto', 'insights'];
   const _forProduct = items => _PRODUCT === 'security' ? items.filter(i => !_HOME_PAGES.includes(i.page)) : items;
   let _currentPage = 'dashboard';
-  let _voiceMicOk = null;
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
   let _alarmInterval  = null; // setInterval ID for repeating alarm beep
   let _audioCtx       = null; // shared AudioContext — unlocked once during login user gesture
@@ -49,24 +47,45 @@ const G = (() => {
   function showToast(message, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
+    // The same message again updates the toast already showing ("... x2")
+    // instead of stacking a copy on top of it.
+    const same = [...container.children].find(t =>
+      !t.classList.contains('removing') && t.dataset.msg === message && t.dataset.type === type);
+    if (same) {
+      const n = (+same.dataset.count || 1) + 1;
+      same.dataset.count = n;
+      same.querySelector('.toast-count').textContent = ` \u00d7${n}`;
+      same.classList.remove('bump'); void same.offsetWidth; same.classList.add('bump');
+      clearTimeout(same._timer);
+      same._timer = setTimeout(() => _dismissToast(same), duration);
+      return;
+    }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+    toast.dataset.msg = message;
+    toast.dataset.type = type;
     const span = document.createElement('span');
+    span.className = 'toast-msg';
     span.textContent = message;
+    const count = document.createElement('span');
+    count.className = 'toast-count';
+    span.appendChild(count);
     const btn = document.createElement('button');
     btn.className = 'toast-dismiss';
     btn.innerHTML = '&times;';
-    btn.onclick = () => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 200); };
-    toast.appendChild(span);
-    toast.appendChild(btn);
+    btn.onclick = () => _dismissToast(toast);
+    toast.append(span, btn);
     container.appendChild(toast);
     if (container.children.length > 3) container.firstChild.remove();
-    setTimeout(() => {
-      if (toast.parentElement) {
-        toast.classList.add('removing');
-        setTimeout(() => toast.remove(), 200);
-      }
-    }, duration);
+    toast._timer = setTimeout(() => _dismissToast(toast), duration);
+  }
+
+  function _dismissToast(toast) {
+    if (!toast.parentElement || toast.classList.contains('removing')) return;
+    clearTimeout(toast._timer);
+    toast.classList.remove('bump');
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 200);
   }
 
   // ── Hardware stats ────────────────────────────────────────
@@ -229,10 +248,6 @@ const G = (() => {
     document.querySelectorAll('.wv-name, .header-brand, #hud-brand').forEach(el => { el.textContent = _BRAND; });
     const tag = document.querySelector('.wv-tagline');
     if (tag) tag.textContent = _PRODUCT === 'security' ? 'AI Security Intelligence Platform' : 'Home automation, built on Garuda';
-    const hello = document.querySelector('#chat-messages .chat-msg.assistant .chat-msg-body');
-    if (hello && _PRODUCT === 'security') {
-      hello.innerHTML = 'Hi, I\'m <strong>Narada</strong>, Garuda\'s security assistant. Ask what the camera has seen, check alerts, or change a mode — “arm night mode”, “any alerts today?”.';
-    }
   }
 
   async function init() {
@@ -384,7 +399,6 @@ const G = (() => {
     $('main')?.classList.add('dash-active');
     _setDILabel(_BRAND);
     nav('dashboard');
-    _initChatInput();
     // Live uptime ticker — save ID so it can be cleared on logout
     if (_uptimeInterval) clearInterval(_uptimeInterval);
     _uptimeInterval = setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
@@ -445,9 +459,9 @@ const G = (() => {
 
   async function logout() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
-    // Clear uptime interval and chat listeners before resetting state
+    if (window.N) N.stopVoice();
+    // Clear uptime interval before resetting state
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
-    if (_chatInputController) { _chatInputController.abort(); _chatInputController = null; }
     _wsAllowed = false;   // prevent reconnect after logout
     _stopAlarm();
     if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
@@ -735,248 +749,6 @@ const G = (() => {
   }
 
   // ── Chat ──────────────────────────────────────────────────
-  let _chatBusy    = false;
-  let _thinkTimer  = null;
-  let _measureCanvas = null; // reused offscreen canvas for pretext-style text measurement
-  let _chatRo      = null;   // ResizeObserver for input wrap → messages padding sync
-
-  function toggleRateLimitInfo() {
-    const bubble = $('chat-ratelimit-bubble');
-    const btn    = $('chat-info-btn');
-    if (!bubble) return;
-    const open = bubble.classList.toggle('open');
-    if (btn) btn.classList.toggle('active', open);
-  }
-
-  const _THINKING = [
-    // Processing thoughts
-    "Analyzing Hailo-8L inference pipeline state…",
-    "Reviewing YOLOv6n detection confidence scores…",
-    "Cross-referencing security event log…",
-    "Consulting active mode configuration…",
-    "Scanning perimeter alert thresholds…",
-    "Correlating IMX708 frame metadata…",
-    "Evaluating scissors threat probability matrix…",
-    "Syncing with Garuda event database…",
-    "Checking WebRTC stream health…",
-    "Mapping 1280×720 detection grid…",
-    "Processing 5-frame confirmation buffers…",
-    "Reviewing GPIO sensor state…",
-    "Scanning system_logs for recent patterns…",
-    "Verifying detection threshold calibration…",
-    // Quotes & project philosophy
-    "\"Security is not a product, it's a process.\" — Bruce Schneier",
-    "\"The price of liberty is eternal vigilance.\" — Thomas Jefferson",
-    "60fps. Every frame a question. Every detection an answer.",
-    "Standing watch so you don't have to.",
-    "5 consecutive frames to confirm. Certainty over speed.",
-    "Threshold: the line between alert and silence.",
-    "Narada sees. Narada knows. Narada guards.",
-    "Every pixel on the IMX708 tells a story.",
-    "Privacy preserved. Threats surfaced.",
-    "Hailo-8L: 26 TOPS so the Pi 5 CPU doesn't have to.",
-    "One scissors detection is noise. Five is signal.",
-    "The best alarm is the one that never cries wolf.",
-  ];
-
-  // Simple inline markdown renderer
-  function _md(text) {
-    const esc = text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return esc
-      // Fenced code blocks
-      .replace(/```([^`]*?)```/gs, '<pre class="chat-code-block"><code>$1</code></pre>')
-      // Inline code
-      .replace(/`([^`\n]+)`/g, '<code class="chat-inline-code">$1</code>')
-      // Bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Headers (## / ###) → bold line
-      .replace(/^#{1,3} (.+)$/gm, '<span class="chat-heading">$1</span>')
-      // Bullet lists
-      .replace(/^[-•] (.+)$/gm, '<span class="chat-li">$1</span>')
-      // Newlines
-      .replace(/\n/g, '<br>');
-  }
-
-  function _chatAddUser(text) {
-    const box = $('chat-messages');
-    if (!box) return;
-    const el = document.createElement('div');
-    el.className = 'chat-msg user';
-    el.innerHTML = `<div class="chat-msg-pill">${_md(text)}</div>`;
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function _chatAddAssistant() {
-    // Returns the body element to stream into
-    const box = $('chat-messages');
-    if (!box) return null;
-    const el = document.createElement('div');
-    el.className = 'chat-msg assistant';
-    el.innerHTML = `
-      <div class="chat-msg-content">
-        <div class="chat-msg-body"></div>
-      </div>`;
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-    return el.querySelector('.chat-msg-body');
-  }
-
-  function _showThinking() {
-    const box = $('chat-messages');
-    if (!box || $('chat-thinking')) return;
-    const el = document.createElement('div');
-    el.id = 'chat-thinking';
-    el.className = 'chat-thinking';
-    el.innerHTML = `
-      <div class="think-header">
-        <span class="think-pulse"></span><span>Thinking</span>
-      </div>
-      <div class="think-lines" id="think-lines"></div>`;
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-
-    let idx = Math.floor(Math.random() * _THINKING.length);
-    const shown = [];
-    function addLine() {
-      const lines = $('think-lines');
-      if (!lines) return;
-      const d = document.createElement('div');
-      d.className = 'think-line';
-      d.textContent = _THINKING[idx % _THINKING.length];
-      idx++;
-      lines.appendChild(d);
-      shown.push(d);
-      requestAnimationFrame(() => d.classList.add('think-line-in'));
-      if (shown.length > 3) {
-        const old = shown.shift();
-        old.classList.add('think-line-out');
-        setTimeout(() => old.remove(), 350);
-      }
-      box.scrollTop = box.scrollHeight;
-    }
-    addLine();
-    _thinkTimer = setInterval(addLine, 850);
-  }
-
-  function _hideThinking() {
-    clearInterval(_thinkTimer);
-    _thinkTimer = null;
-    const el = $('chat-thinking');
-    if (el) {
-      el.classList.add('think-fade-out');
-      setTimeout(() => el.remove(), 300);
-    }
-  }
-
-  function _streamInto(bodyEl, text, done) {
-    if (!bodyEl) return;
-    bodyEl.innerHTML = _md(text) + (done ? '' : '<span class="chat-cursor">|</span>');
-    const box = $('chat-messages');
-    if (box) box.scrollTop = box.scrollHeight;
-  }
-
-  async function sendChat() {
-    if (_chatBusy) return;
-    const input = $('chat-input');
-    const btn   = $('chat-send-btn');
-    if (!input) return;
-    const msg = input.value.trim();
-    if (!msg) return;
-    input.value = '';
-    input.style.height = '';
-    _chatAddUser(msg);
-    _chatBusy = true;
-    if (btn) btn.disabled = true;
-    _showThinking();
-    _setDIState('thinking');
-
-    try {
-      const res  = await api('POST', '/api/chat', { message: msg });
-      const text = res.response || '…';
-      _hideThinking();
-      _setDIState('');
-      const bodyEl = _chatAddAssistant();
-      if (window.H) H.decorateChatReply(bodyEl, res);
-      // Typewriter: reveal chars at ~18ms each, then snap remaining on done
-      let i = 0;
-      function tick() {
-        if (!bodyEl) return;
-        i = Math.min(i + 3, text.length);
-        _streamInto(bodyEl, text.slice(0, i), i === text.length);
-        if (i < text.length) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    } catch(e) {
-      _hideThinking();
-      _setDIState('');
-      const bodyEl = _chatAddAssistant();
-      if (bodyEl) bodyEl.textContent = 'Connection error — please try again.';
-    } finally {
-      _chatBusy = false;
-      if (btn) btn.disabled = false;
-      input.focus();
-    }
-  }
-
-  function clearChat() {
-    const box = $('chat-messages');
-    if (!box) return;
-    box.innerHTML = `
-      <div class="chat-msg assistant">
-        <div class="chat-msg-content">
-          <div class="chat-msg-body">Chat cleared. How can I help?</div>
-        </div>
-      </div>`;
-  }
-
-  function _initChatInput() {
-    const input = $('chat-input');
-    if (!input) return;
-    // Remove previous listeners via AbortController to prevent accumulation across logins
-    if (_chatInputController) _chatInputController.abort();
-    _chatInputController = new AbortController();
-    const sig = { signal: _chatInputController.signal };
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
-    }, sig);
-
-    // Pretext-inspired: measure text height via canvas.measureText(), not scrollHeight.
-    // scrollHeight forces a synchronous layout reflow; canvas measurement is pure arithmetic.
-    if (!_measureCanvas) _measureCanvas = document.createElement('canvas');
-    function _resizeTextarea() {
-      const style  = getComputedStyle(input);
-      const lineH  = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.55;
-      const padV   = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-      const ctx    = _measureCanvas.getContext('2d');
-      ctx.font     = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      const availW = input.clientWidth || 240;
-      let lines    = 0;
-      for (const line of (input.value || '').split('\n')) {
-        lines += line ? Math.max(1, Math.ceil(ctx.measureText(line).width / availW)) : 1;
-      }
-      input.style.height = Math.min(Math.max(lines, 1) * lineH + padV, 140) + 'px';
-    }
-    input.addEventListener('input', _resizeTextarea, sig);
-
-    // ResizeObserver on the input wrap: dynamically sync messages padding-bottom
-    // instead of hardcoded magic-number estimates in CSS.
-    if (_chatRo) _chatRo.disconnect();
-    const wrap = input.closest('.chat-input-wrap');
-    const msgs = $('chat-messages');
-    if (wrap && msgs) {
-      _chatRo = new ResizeObserver(([entry]) => {
-        const wrapH    = entry.contentRect.height;
-        const bottomPx = parseInt(getComputedStyle(wrap).bottom) || 16;
-        msgs.style.paddingBottom = (bottomPx + wrapH + 12) + 'px';
-      });
-      _chatRo.observe(wrap);
-    }
-  }
-
   // ── Alert activity heatmap (backend-stored, lifetime-persistent) ────────
   let _lastHeatmapKey = '';
 
@@ -1099,23 +871,23 @@ const G = (() => {
   }
 
   // ── iOS Bottom Navigation ─────────────────────────────────
+  // Hand-drawn icons (icons/*.svg via .gi); more and signout are not drawn yet.
   const _NAV_ICONS = {
-    dashboard: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1.5"/><rect x="10.5" y="1.5" width="6" height="6" rx="1.5"/><rect x="1.5" y="10.5" width="6" height="6" rx="1.5"/><rect x="10.5" y="10.5" width="6" height="6" rx="1.5"/></svg>`,
-    narada:    `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0v-5a3 3 0 0 1 3-3z"/><path d="M3.75 8.25a5.25 5.25 0 0 0 10.5 0"/><line x1="9" y1="13.5" x2="9" y2="16.5"/><line x1="6" y1="16.5" x2="12" y2="16.5"/></svg>`,
+    dashboard: `<span class="gi gi-home"></span>`,
+    narada:    `<span class="gi gi-narada"></span>`,
     users:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="5.5" r="2.5"/><path d="M1.5 15.75a5.5 5.5 0 0 1 11 0"/><path d="M13.5 7.5a2.5 2.5 0 1 1 0-5"/><path d="M16.5 15.75a4 4 0 0 0-3-3.85"/></svg>`,
-    email:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3.75" width="15" height="10.5" rx="1.5"/><path d="M1.5 5.25 9 10.5l7.5-5.25"/></svg>`,
-    settings:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="2.25"/><path d="M14.7 11.1a1 1 0 0 0 .2 1.1l.05.05a1.21 1.21 0 0 1-1.71 1.71l-.05-.05a1 1 0 0 0-1.1-.2 1 1 0 0 0-.61.92v.14a1.21 1.21 0 0 1-2.42 0v-.07a1 1 0 0 0-.65-.92 1 1 0 0 0-1.1.2l-.05.05a1.21 1.21 0 0 1-1.71-1.71l.05-.05a1 1 0 0 0 .2-1.1 1 1 0 0 0-.92-.61H5.4a1.21 1.21 0 0 1 0-2.42h.07a1 1 0 0 0 .92-.65 1 1 0 0 0-.2-1.1l-.05-.05a1.21 1.21 0 0 1 1.71-1.71l.05.05a1 1 0 0 0 1.1.2h.04a1 1 0 0 0 .61-.92V3.4a1.21 1.21 0 0 1 2.42 0v.07a1 1 0 0 0 .61.92 1 1 0 0 0 1.1-.2l.05-.05a1.21 1.21 0 0 1 1.71 1.71l-.05.05a1 1 0 0 0-.2 1.1v.04a1 1 0 0 0 .92.61h.14a1.21 1.21 0 0 1 0 2.42h-.07a1 1 0 0 0-.92.61z"/></svg>`,
-    logs:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h12M3 9h12M3 13.5h7.5"/></svg>`,
-    commands:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 1.5 9 4.5 12"/><polyline points="13.5 6 16.5 9 13.5 12"/><line x1="7.5" y1="3" x2="10.5" y2="15"/></svg>`,
-    emergency: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5 16.5 16.5H1.5Z"/><line x1="9" y1="7" x2="9" y2="11"/><circle cx="9" cy="13.5" r="0.75" fill="currentColor" stroke="none"/></svg>`,
-    devices:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.75 13.5h4.5"/><path d="M7.5 16.5h3"/><path d="M9 1.5a5.25 5.25 0 0 0-3 9.56c.47.34.75.88.75 1.46v.98h4.5v-.98c0-.58.28-1.12.75-1.46A5.25 5.25 0 0 0 9 1.5z"/></svg>`,
-    auto:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.75 1.5 3 10.5h5.25l-.75 6 6.75-9H9z"/></svg>`,
-    insights:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="15.75" x2="3" y2="9"/><line x1="7.5" y1="15.75" x2="7.5" y2="3"/><line x1="12" y1="15.75" x2="12" y2="7.5"/><line x1="16.5" y1="15.75" x2="16.5" y2="11.25"/></svg>`,
+    email:     `<span class="gi gi-mail"></span>`,
+    settings:  `<span class="gi gi-settings"></span>`,
+    logs:      `<span class="gi gi-logs"></span>`,
+    commands:  `<span class="gi gi-commands"></span>`,
+    emergency: `<span class="gi gi-stop"></span>`,
+    devices:   `<span class="gi gi-devices"></span>`,
+    auto:      `<span class="gi gi-automate"></span>`,
+    insights:  `<span class="gi gi-insights"></span>`,
     more:      `<svg viewBox="0 0 18 18" fill="currentColor" stroke="none"><circle cx="3.75" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="14.25" cy="9" r="1.5"/></svg>`,
-    feedback:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.9l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.7l-4.2 2.2.8-4.7-3.4-3.3 4.7-.7z"/></svg>`,
-    theme:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><path d="M9 2v14a7 7 0 0 0 0-14z" fill="currentColor"/></svg>`,
+    feedback:  `<span class="gi gi-feedback"></span>`,
+    theme:     `<span class="gi gi-light-mode"></span>`,
     signout:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.25v6"/><path d="M5.3 4.1a6 6 0 1 0 7.4 0"/></svg>`,
-    chat:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 9.75a6.75 6.75 0 0 1-9.45 6.19L2.25 16.5l.56-4.05A6.75 6.75 0 1 1 15.75 9.75z"/></svg>`,
   };
 
   const _USER_NAV = [
@@ -1123,7 +895,6 @@ const G = (() => {
     { page: 'devices',   label: 'Devices', icon: 'devices'  },
     { page: 'auto',      label: 'Automate', icon: 'auto'    },
     { page: 'insights',  label: 'Insights', icon: 'insights' },
-    { page: 'chat',      label: 'Chat',   icon: 'chat'      },
     { page: 'narada',    label: 'Narada', icon: 'narada'    },
   ];
 
@@ -1132,7 +903,6 @@ const G = (() => {
     { page: 'devices',    label: 'Devices',  icon: 'devices'   },
     { page: 'auto',       label: 'Automate', icon: 'auto'      },
     { page: 'insights',   label: 'Insights', icon: 'insights'  },
-    { page: 'chat',       label: 'Chat',     icon: 'chat'      },
     { page: 'narada',     label: 'Narada',   icon: 'narada'    },
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
     { page: 'a-settings', label: 'System',   icon: 'settings'  },
@@ -1150,8 +920,13 @@ const G = (() => {
     const ovr = 8;
     // getBoundingClientRect() is viewport-relative; pill is positioned in the
     // nav's scrollable content area, so we must add scrollLeft to compensate.
-    const tx  = ir.left - nr.left + navEl.scrollLeft - ovr;
-    const w   = ir.width + ovr * 2;
+    let tx = ir.left - nr.left + navEl.scrollLeft - ovr;
+    let w  = ir.width + ovr * 2;
+    // Keep the pill inside the bar: the first and last tabs sit near its
+    // rounded ends, where the overhang used to poke out.
+    const inset = 4, maxX = navEl.scrollWidth - inset;
+    if (tx < inset) { w -= inset - tx; tx = inset; }
+    if (tx + w > maxX) w = maxX - tx;
     if (instant) {
       pill.style.transition = 'none';
       pill.style.transform  = `translateX(${tx}px)`;
@@ -1168,8 +943,8 @@ const G = (() => {
   // items squeezed into a scrolling strip were unreadable at 390 px.
   const _PHONE_MQ = window.matchMedia('(max-width: 768px)');
   const _PHONE_PRIMARY = _PRODUCT === 'security'
-    ? ['dashboard', 'chat', 'narada']
-    : ['dashboard', 'devices', 'auto', 'chat'];
+    ? ['dashboard', 'narada']
+    : ['dashboard', 'devices', 'auto', 'narada'];
   let _navRole = null;
 
   function _isPhone() { return _PHONE_MQ.matches; }
@@ -1300,7 +1075,6 @@ const G = (() => {
   const _DI_LABELS = {
     'dashboard':   _BRAND,
     'narada':      'Narada',
-    'chat':        'Chat',
     'devices':     'Devices',
     'auto':        'Automations',
     'insights':    'Insights',
@@ -1323,8 +1097,8 @@ const G = (() => {
     const alerting  = hud.classList.contains('di-alert');
     const allclear  = hud.classList.contains('di-allclear');
     const yellow    = hud.classList.contains('di-yellow');
-    // The listening waveform only when a microphone is actually listening.
-    const voice = _currentPage === 'narada' && _voiceMicOk !== false
+    // The voice pill while a Narada voice conversation is live.
+    const voice = !!(window.N && N.voiceActive())
       && !thinking && !alerting && !allclear && !yellow;
     hud.classList.toggle('di-voice', voice);
     hud.classList.toggle('di-idle', !thinking && !alerting && !voice && !allclear && !yellow);
@@ -1390,8 +1164,8 @@ const G = (() => {
     // Hide when not logged in
     const shouldHide = !appEl.classList.contains('logged-in');
     appEl.classList.toggle('fb-hidden', shouldHide);
-    // On chat page, push button up above the input bar instead of hiding
-    appEl.classList.toggle('page-chat', _currentPage === 'chat');
+    // On Narada, push the button up above the input bar instead of hiding
+    appEl.classList.toggle('page-narada', _currentPage === 'narada');
   }
 
   // ── Navigation ────────────────────────────────────────────
@@ -1443,6 +1217,7 @@ const G = (() => {
     }
     if (pageId === 'a-cmds')     loadCmds();
     if (window.H) H.onNav(pageId);
+    if (window.N) N.onNav(pageId);
   }
 
   // ── Mobile sidebar (no-ops — replaced by iOS nav) ─────────
@@ -1675,9 +1450,6 @@ const G = (() => {
     const lcVoice = document.getElementById('log-count-voice');
     if (lcVoice) lcVoice.textContent = ((s.voice_log || []).length + (s.voice_responses || []).length) || 0;
 
-    // Narada feed (conversation-style)
-    _voiceMicOk = s.voice_mic ? s.voice_mic.ok : null;
-    _updateNaradaFeed(s.voice_log || [], s.voice_responses || [], s.voice_mic);
 
     // Security health panel
     _updateSecHealth(s);
@@ -1795,43 +1567,6 @@ const G = (() => {
   }
 
   // ── Narada conversation feed ──────────────────────────────
-  let _lastNaradaKey = '';
-  // Microphone errors are a status, not a conversation: one notice at the
-  // top instead of a bubble for every restart that found no microphone.
-  const _MIC_NOISE = /Error accessing microphone|Could not understand audio|^\[[^\]]+\] Listening\.\.\.$/;
-
-  function _updateNaradaFeed(voiceLog, voiceResponses, mic) {
-    const feed = document.getElementById('narada-feed');
-    if (!feed) return;
-    const micOk = mic ? mic.ok : null;
-    const key = voiceLog.length + ':' + voiceResponses.length + ':' + micOk;
-    if (key === _lastNaradaKey) return;
-    _lastNaradaKey = key;
-    voiceLog = voiceLog.filter(l => !_MIC_NOISE.test(l));
-    const notice = micOk === false
-      ? `<div class="narada-mic-notice"><b>No microphone on the Pi.</b> Plug in a USB microphone and restart Garuda to talk to Narada here. Until then, use <a href="#" onclick="G.nav('chat');return false">Chat</a> — it does everything voice does.</div>`
-      : '';
-
-    // Interleave voice inputs and responses
-    const items = [];
-    const maxLen = Math.max(voiceLog.length, voiceResponses.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (i < voiceLog.length) items.push({ type: 'user', text: voiceLog[i] });
-      if (i < voiceResponses.length) items.push({ type: 'assistant', text: voiceResponses[i] });
-    }
-
-    if (!items.length) {
-      feed.innerHTML = notice + '<div class="empty-state"><div class="empty-state-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg></div><span>' + (micOk === false ? 'Voice commands will appear here' : 'Speak a command to begin') + '</span></div>';
-      return;
-    }
-
-    const atBot = feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 8;
-    feed.innerHTML = notice + items.map(item =>
-      `<div class="narada-msg ${item.type}">${esc(item.text)}</div>`
-    ).join('');
-    if (atBot) feed.scrollTop = feed.scrollHeight;
-  }
-
   function renderModes(modes) {
     const grid   = $('modes-pills');
     const hpills = $('header-pills');
@@ -1944,8 +1679,6 @@ const G = (() => {
       if (wl) wl.value = (cfg.watch_labels || []).join(', ');
       const dl = $('danger-lbl');
       if (dl) dl.value = (cfg.danger_labels || []).join(', ');
-      const gk = $('groq-api-key');
-      if (gk) gk.value = '';
       // Scheduled modes
       const sched = cfg.mode_schedule || {};
       _loadSchedField('night', sched.night);
@@ -2000,7 +1733,6 @@ const G = (() => {
     const wlRaw = val('watch-labels') || '';
     const watchLabels = wlRaw.split(',').map(s => s.trim()).filter(Boolean);
     try {
-      const groqKey = val('groq-api-key');
       const npStartVal = ($('np-start') || {}).value || '';
       const npEndVal   = ($('np-end')   || {}).value || '';
       const payload = {
@@ -2012,7 +1744,6 @@ const G = (() => {
         ...(npStartVal ? { night_presence_start: npStartVal } : {}),
         ...(npEndVal   ? { night_presence_end:   npEndVal   } : {}),
       };
-      if (groqKey) payload.groq_api_key = groqKey;
       const sched = _buildSchedule();
       if (Object.keys(sched).length > 0) payload.mode_schedule = sched;
       await api('POST', '/api/config', payload);
@@ -2504,7 +2235,7 @@ const G = (() => {
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,
-    toggleCamera, takeSnapshot, toggleClip, openDocs, sendChat, clearChat, toggleRateLimitInfo,
+    toggleCamera, takeSnapshot, toggleClip, openDocs,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, toggleNightPresence, saveSettings,
     filterLogs, exportLogs, downloadFullLog,
@@ -2515,12 +2246,15 @@ const G = (() => {
     switchLogTab,
     switchDocsTab,
     showToast,
+    setDI: _setDIState,
+    syncDI: _syncDIContext,
     product: _PRODUCT,
     // Exposed for the feedback widget (separate IIFE, needs access to session + api)
     getSession: () => _session,
     _apiFn: api,
   };
 })();
+window.G = G;
 
 document.addEventListener('DOMContentLoaded', G.init);
 

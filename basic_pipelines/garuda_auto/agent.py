@@ -1,15 +1,11 @@
 """Narada as a home agent: one entry point for chat, voice and the composer.
 
-Three lanes, cheapest first:
-
-  fast   The decision engine (decision.py) labels the utterance. A short,
-         confident command -- "lamp off", "run study", "turn everything
-         off" -- is carried out on the Pi immediately. No network, ~1 ms.
-  agent  Anything else goes to NVIDIA NIM with the house's tools. The model
-         reads state, switches devices, runs scenes, sets timers, changes
-         Garuda modes and drafts automations, then says what it did.
-  local  NIM unreachable or unconfigured: the literal local lane answers
-         what it can and says plainly what needs the model.
+Every request goes to NVIDIA NIM with the house's tools. The model reads
+state, switches devices, runs scenes, sets timers, changes Garuda modes and
+drafts automations, then says what it did. Nothing changes the house without
+the model: when NIM is unconfigured or unreachable, Narada says so and does
+nothing. (Until 2026-10 a local fast lane and keyword fallbacks acted without
+the model; the owner wants one intelligent path for every action.)
 
 Automations are never saved by the model. create_automation compiles the
 sentence into a rule proposal; a person confirms it on the Automations page
@@ -25,7 +21,6 @@ from collections import deque
 from . import actuation_log
 from .device_types import is_actuator
 from .llm import NimUnavailable
-from .local_lane import answer as local_answer
 from .rule_schema import render_rule
 
 log = logging.getLogger(__name__)
@@ -36,6 +31,14 @@ MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
 # What Narada may do on the security-only product (Garuda). Home automation
 # is Drishti's; on Garuda's address the model is not even offered it.
 SECURITY_TOOLS = ("get_security_state", "set_security_mode")
+# Spoken replies: every character is synthesised (and billed), lists and
+# markdown read aloud badly, and a reply that sounds written feels robotic.
+VOICE_STYLE = (
+    "\nYou are speaking out loud in a live conversation. Sound like a warm, "
+    "quick-witted person, not a report: use contractions and plain words, keep it "
+    "to one or two short sentences (under 200 characters), and it's fine to end "
+    "with a brief follow-up question when it helps. Never read out lists, markdown, "
+    "symbols, ids or model names. If the person is just chatting, chat back.")
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -45,27 +48,6 @@ def _fn(name, description, properties=None, required=()):
         "name": name, "description": description,
         "parameters": {"type": "object", "properties": properties or {},
                        "required": list(required)}}}
-
-
-class _NotingRouter:
-    """The local lane switches devices and logs them itself; this keeps the
-    rule base's view of device state in step when it does."""
-
-    def __init__(self, router, runtime):
-        self._router = router
-        self._runtime = runtime
-
-    def set(self, device_id, action):
-        ok, reason = self._router.set(device_id, action)
-        if ok:
-            self._runtime.note_state(device_id, action)
-        return ok, reason
-
-    def state(self, device_id):
-        return self._router.state(device_id)
-
-    def available(self, device_id):
-        return self._router.available(device_id)
 
 
 class HomeAgent:
@@ -80,100 +62,43 @@ class HomeAgent:
         self.security_fn = security_fn or (lambda: {})
         self._clock = clock
         self._history = {}
-        self.stats = {"fast": 0, "agent": 0, "local": 0}
+        self.stats = {"agent": 0, "unavailable": 0}
 
     # ── entry point ───────────────────────────────────────────────────────────
 
-    def handle(self, text, *, user="", role="user", scope="home"):
+    def handle(self, text, *, user="", role="user", scope="home", voice=False):
         text = (text or "").strip()[:500]
         if not text:
-            return {"reply": "Say something for me to do.", "lane": "local", "actions": []}
-        if scope == "security":
-            return self._handle_security(text, user, role)
-        devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
-                   for d in self.ctx.registry.devices if d.get("enabled", True)]
-        scenes = [{"id": s["id"], "name": s["name"]} for s in self.home.scenes.scenes]
-        route = self.decision.route(text, devices, scenes)
-        route_view = {k: {"value": v["value"], "confidence": v["confidence"]}
-                      for k, v in route.items()}
-        route_view["backend"] = next(iter(route.values()))["backend"] if route else "local"
-
-        result = self._fast(route, user)
-        if result is None and self.chat is not None and self.chat.configured:
+            return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
+        route_view = None
+        if scope != "security":
+            devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
+                       for d in self.ctx.registry.devices if d.get("enabled", True)]
+            scenes = [{"id": s["id"], "name": s["name"]} for s in self.home.scenes.scenes]
+            route = self.decision.route(text, devices, scenes)
+            route_view = {k: {"value": v["value"], "confidence": v["confidence"]}
+                          for k, v in route.items()}
+            route_view["backend"] = next(iter(route.values()))["backend"] if route else "local"
+        if self.chat is None or not self.chat.configured:
+            result = self._unavailable("the NVIDIA NIM key is not configured")
+        else:
             try:
-                result = self._agent(text, user, role)
+                result = self._agent(text, user, role, scope=scope, voice=voice)
             except NimUnavailable as exc:
-                result = self._local(text, route, reason=str(exc))
-        if result is None:
-            result = self._local(text, route)
-        result["route"] = route_view
+                result = self._unavailable(str(exc))
+        if route_view is not None:
+            result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
-        self._remember(user, text, result["reply"])
+        if result["lane"] == "agent":
+            self._remember(f"security:{user}" if scope == "security" else user,
+                           text, result["reply"])
         return result
 
-    def _handle_security(self, text, user, role):
-        """Garuda: security questions and modes only. No fast lane -- it only
-        knows devices and scenes -- and without NIM the caller's keyword
-        commands handle modes, as they always have."""
-        result = None
-        if self.chat is not None and self.chat.configured:
-            try:
-                result = self._agent(text, user, role, scope="security")
-            except NimUnavailable:
-                result = None
-        if result is None:
-            result = {"reply": "", "lane": "local", "actions": [], "handled": False}
-        self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
-        if result.get("handled", True):
-            self._remember(f"security:{user}", text, result["reply"])
-        return result
-
-    # ── fast lane ─────────────────────────────────────────────────────────────
-
-    def _fast(self, route, user):
-        threshold = self.decision.threshold
-        intent = route.get("intent")
-        if intent is None or intent.confidence < threshold:
-            return None
-        if intent.value == "device_control":
-            device, action = route["device"], route["action"]
-            if device.value == "none" or action.value == "none" or min(
-                    device.confidence, action.confidence) < threshold:
-                return None
-            ok, reason = self.home.set(device.value, action.value, source="assistant", actor=user)
-            name = self.ctx.registry.get(device.value)["name"]
-            reply = f"{name} is now {action.value}." if ok else f"Could not switch {name}: {reason}"
-            return {"reply": reply, "lane": "fast", "actions": [reply] if ok else []}
-        if intent.value == "all_off":
-            done, failed = self.home.all_off(source="assistant", actor=user)
-            reply = (f"Turned off {', '.join(done)}." if done else "Everything was already off.")
-            if failed:
-                reply += f" Could not turn off: {'; '.join(failed)}."
-            return {"reply": reply, "lane": "fast", "actions": [reply] if done else []}
-        if intent.value == "scene":
-            scene = route["scene"]
-            if scene.value == "none" or scene.confidence < threshold:
-                return None
-            ok, reason, _ = self.home.run_scene(scene.value, actor=user)
-            name = self.home.scenes.get(scene.value)["name"]
-            reply = f"Ran {name}." if ok else f"Ran {name}, but: {reason}"
-            return {"reply": reply, "lane": "fast", "actions": [f"Scene: {name}"]}
-        return None
-
-    # ── local fallback ────────────────────────────────────────────────────────
-
-    def _local(self, text, route, reason=""):
-        local = local_answer(text, registry=self.ctx.registry, descriptor=self.ctx.descriptor,
-                             router=_NotingRouter(self.ctx.device_router, self.home.runtime),
-                             log_path=self.ctx.log_path, store=self.ctx.store)
-        if local is not None:
-            reply = local["text"]
-            return {"reply": reply, "lane": "local",
-                    "actions": [reply] if local.get("kind") == "control" else []}
-        why = reason or "the NVIDIA NIM key is not configured"
-        return {"reply": f"I can switch devices, run scenes and answer simple questions "
-                         f"offline, but that needs the AI service ({why}).",
-                "lane": "local", "actions": [], "handled": False}
+    @staticmethod
+    def _unavailable(why):
+        return {"reply": f"I can't act right now: the AI service is unavailable ({why}). "
+                         "Nothing was changed.",
+                "lane": "unavailable", "actions": []}
 
     # ── agent lane ────────────────────────────────────────────────────────────
 
@@ -243,8 +168,10 @@ class HomeAgent:
             "email_off). You do not control lights or appliances here; if asked, say that "
             "home automation lives in the Drishti app. Be concise. No emojis.")
 
-    def _agent(self, text, user, role, scope="home"):
+    def _agent(self, text, user, role, scope="home", voice=False):
         system = self._security_prompt(user, role) if scope == "security" else self._system_prompt(user, role)
+        if voice:
+            system += VOICE_STYLE
         tools = self._tools()
         if scope == "security":
             tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]

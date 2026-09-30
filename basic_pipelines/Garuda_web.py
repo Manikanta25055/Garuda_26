@@ -127,8 +127,6 @@ last_email_sent_time = 0
 _email_lock = threading.Lock()
 _danger_active = False   # True while danger label is continuously detected
 
-GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL    = "llama-3.3-70b-versatile"
 DANGER_LABELS: list = ["Knife", "scissors", "Hammer"]   # all non-person model outputs
 
 # ── Encrypted evidence exfiltration (AES-256-GCM + SSH) ─────────────────────
@@ -618,8 +616,8 @@ def load_config():
     global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABELS
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
     global NIGHT_PRESENCE_WINDOW
-    # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are NOT loaded from config.json —
-    # they live exclusively in .env / environment variables for security.
+    # NOTE: EMAIL_SENDER_PASS is NOT loaded from config.json —
+    # it lives exclusively in .env / environment variables for security.
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
@@ -736,7 +734,7 @@ async def _async_save_config():
     await asyncio.to_thread(save_config)
 
 def save_config():
-    # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are intentionally excluded —
+    # NOTE: EMAIL_SENDER_PASS is intentionally excluded —
     # credentials must not be stored in plaintext JSON on disk.
     try:
         cfg = {
@@ -1755,202 +1753,6 @@ BUILT_IN_COMMANDS = {
 }
 
 
-def apply_rule_based_command(user_input_lower):
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    for phrase, resp in CUSTOM_VOICE_COMMANDS.items():
-        if phrase in user_input_lower:
-            return resp
-
-    response = None
-    with _mode_lock:
-        if "activate dnd" in user_input_lower:
-            MODE_DND = True; response = "Do Not Disturb activated."
-        elif "deactivate dnd" in user_input_lower:
-            MODE_DND = False; response = "Do Not Disturb deactivated."
-        elif "activate email off" in user_input_lower:
-            MODE_EMAIL_OFF = True; response = "Email alerts disabled."
-        elif "deactivate email off" in user_input_lower:
-            MODE_EMAIL_OFF = False; response = "Email alerts enabled."
-        elif "activate idle" in user_input_lower:
-            MODE_IDLE = True; response = "Idle mode activated."
-        elif "deactivate idle" in user_input_lower:
-            MODE_IDLE = False; response = "Idle mode deactivated."
-        elif "activate night mode" in user_input_lower or "night mode on" in user_input_lower:
-            MODE_NIGHT = True; response = "Night mode activated."
-        elif "deactivate night mode" in user_input_lower or "night mode off" in user_input_lower:
-            MODE_NIGHT = False; response = "Night mode deactivated."
-        elif "activate emergency" in user_input_lower or "emergency on" in user_input_lower:
-            MODE_EMERGENCY = True; MODE_DND = False; response = "EMERGENCY MODE activated."
-        elif "deactivate emergency" in user_input_lower or "emergency off" in user_input_lower:
-            MODE_EMERGENCY = False; response = "Emergency mode deactivated."
-        elif "privacy on" in user_input_lower or "enable privacy" in user_input_lower:
-            MODE_PRIVACY = True; response = "Privacy masking enabled."
-        elif "privacy off" in user_input_lower or "disable privacy" in user_input_lower:
-            MODE_PRIVACY = False; response = "Privacy masking disabled."
-
-    if response:
-        save_config()
-        return response
-    if "time" in user_input_lower or "clock" in user_input_lower:
-        return f"The time is {datetime.datetime.now().strftime('%I:%M %p')}."
-    if any(w in user_input_lower for w in ["hi", "hello", "hey narada"]):
-        return "Hello! I'm Narada, your AI security assistant."
-    if "how are you" in user_input_lower:
-        return "All systems operational. Standing by to assist."
-    if "your name" in user_input_lower:
-        return "I am Narada, voice assistant of the Garuda Security System."
-    if "status" in user_input_lower:
-        with _mode_lock:
-            parts = [m for m, v in [("DND", MODE_DND), ("Night", MODE_NIGHT),
-                                     ("EMERGENCY", MODE_EMERGENCY), ("Idle", MODE_IDLE)] if v]
-        active = ", ".join(parts) if parts else "none"
-        return f"Active modes: {active}. Threshold: {DETECTION_THRESHOLD:.2f}."
-    return "I heard you, but I'm not sure what to do. Try a command like 'activate dnd'."
-
-
-def query_local_llm(user_input, model=None):
-    """Query Groq cloud API — rich project context, live state, natural language commands."""
-    if not GROQ_API_KEY:
-        return None  # No key configured, fall back to rule-based
-    if model is None:
-        model = GROQ_MODEL
-
-    # Build live state snapshot (read under lock)
-    with _mode_lock:
-        active_modes = [name for name, val in [
-            ("DND", MODE_DND), ("Email-Off", MODE_EMAIL_OFF),
-            ("Idle", MODE_IDLE), ("Night", MODE_NIGHT),
-            ("Emergency", MODE_EMERGENCY), ("Privacy", MODE_PRIVACY),
-        ] if val]
-    uptime_s = int(time.time() - _app_start_time)
-    uptime_str = f"{uptime_s // 3600}h {(uptime_s % 3600) // 60}m" if uptime_s >= 60 else f"{uptime_s}s"
-    state_str = (
-        f"Active modes: {', '.join(active_modes) if active_modes else 'none'}. "
-        f"Detection threshold: {DETECTION_THRESHOLD:.2f}. "
-        f"Detections today: {_detections_today}. "
-        f"Alert active: {_alert_active}. Uptime: {uptime_str}."
-    )
-
-    system_prompt = f"""You are Narada, the AI assistant embedded in Garuda — a smart AI home security system built by Manikanta, running on Raspberry Pi 5 with a Hailo-8L AI accelerator and Sony IMX708 camera.
-
-PROJECT OVERVIEW:
-Garuda performs real-time AI object detection to monitor the environment. It can detect threats, send email alerts, control operation modes, and respond to natural language commands through you (Narada).
-
-HARDWARE:
-- Raspberry Pi 5 (8GB RAM)
-- Hailo-8L NPU (13 TOPS) — runs YOLOv6n detection at up to 60fps
-- Sony IMX708 camera (1280×720 @ 60fps)
-- GPIO: LED indicator (lights up on alerts), HC-SR04 ultrasonic distance sensor
-
-DETECTION SYSTEM:
-- Model: YOLOv6n trained on 80 COCO classes
-- Danger label: scissors (requires 15 consecutive frames at confidence ≥ 0.55 to trigger — avoids false alarms)
-- Detection threshold: adjustable 0.05–0.95 (lower = more sensitive, higher = stricter)
-- On threat: plays alarm sound, sends email alert with detection details and timestamp
-
-OPERATION MODES (you can enable/disable these):
-- **DND** (Do Not Disturb): Silences all audio alarms. Email alerts still work.
-- **Email-Off**: Stops all email alert sending. Local alarms still sound.
-- **Idle**: Disables ALL alerts (audio + email). Use when you know someone trusted is present.
-- **Night**: High-sensitivity mode — logs all detections, stricter alert criteria.
-- **Emergency**: Maximum alert mode — overrides DND, triggers immediate emails.
-- **Privacy**: Masks detected objects on the camera feed (blur/box) for privacy.
-
-CURRENT LIVE STATE:
-{state_str}
-Current time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.
-
-NATURAL LANGUAGE COMMANDS (understand intent, not just exact phrasing):
-- "quiet mode" / "turn on dnd" / "don't disturb me" / "mute alerts" → activate DND
-- "unmute" / "alerts on" / "disable dnd" → deactivate DND
-- "no emails" / "stop email alerts" / "turn off notifications" → activate Email-Off
-- "send emails again" / "enable email alerts" → deactivate Email-Off
-- "idle" / "I'm home" / "pause monitoring" / "stand down" → activate Idle
-- "resume" / "start monitoring" / "watch again" / "back on duty" → deactivate Idle
-- "night mode" / "night watch" / "high alert" → activate Night
-- "day mode" / "normal mode" / "lower alert" → deactivate Night
-- "emergency" / "intruder!" / "maximum alert" → activate Emergency
-- "all clear" / "cancel emergency" / "stand down emergency" → deactivate Emergency
-- "privacy on" / "hide objects" / "blur camera" / "mask detections" → activate Privacy
-- "privacy off" / "show everything" → deactivate Privacy
-- "set threshold to 0.5" / "make it less sensitive" / "confidence 0.6" → change DETECTION_THRESHOLD
-- "status" / "what's running?" / "system check" → describe current state
-- "what can you do?" / "help" / "commands" → list capabilities
-- "how does Garuda work?" / "explain the system" → explain the project
-- "what was detected?" / "any alerts today?" → report detection stats
-
-RESPONSE FORMAT — you MUST respond ONLY with this exact JSON (no markdown wrapper, no backticks, no prose outside the JSON):
-{{"modes":{{"MODE_DND":null,"MODE_EMAIL_OFF":null,"MODE_IDLE":null,"MODE_NIGHT":null,"MODE_EMERGENCY":null,"MODE_PRIVACY":null}},"settings":{{"DETECTION_THRESHOLD":null}},"response":"your reply here"}}
-
-RULES:
-- Set mode values to true (activate), false (deactivate), or null (no change).
-- Set DETECTION_THRESHOLD to a float 0.05–0.95 if requested, else null.
-- "response" must be conversational and helpful. Use **bold**, `code`, and bullet lists where they add clarity.
-- When changing a mode, confirm it and explain what it does in 1-2 sentences.
-- When answering project questions, use the context above — be accurate.
-- Never invent capabilities not described above."""
-
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_input},
-        ],
-        "temperature": 0.3,
-        "max_tokens": 600,
-        "response_format": {"type": "json_object"},
-    }
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    try:
-        res = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            json=payload, headers=headers, timeout=8
-        )
-        res.raise_for_status()
-        content = res.json()["choices"][0]["message"]["content"]
-        return json.loads(content)
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-        return None  # Network unavailable — fall back to rule-based
-    except Exception:
-        return None
-
-
-def _apply_llm_result(llm_result):
-    """Apply mode/settings changes from an LLM JSON response and return the reply text."""
-    global DETECTION_THRESHOLD
-    def _to_bool(v):
-        if isinstance(v, bool): return v
-        if isinstance(v, int):  return v != 0
-        if isinstance(v, str):
-            return v.lower() in ("true", "active", "on", "yes", "1", "enabled")
-        return None
-    modes_to_change    = llm_result.get("modes", {}) or {}
-    settings_to_change = llm_result.get("settings", {}) or {}
-    with _mode_lock:
-        for key in ["MODE_DND","MODE_EMAIL_OFF","MODE_IDLE","MODE_NIGHT","MODE_EMERGENCY","MODE_PRIVACY"]:
-            raw = modes_to_change.get(key)
-            if raw is not None:
-                val = _to_bool(raw)
-                if val is not None:
-                    globals()[key] = val
-        raw_thr = settings_to_change.get("DETECTION_THRESHOLD")
-        if raw_thr is not None:
-            try:
-                DETECTION_THRESHOLD = max(0.05, min(0.95, float(raw_thr)))
-            except (ValueError, TypeError):
-                pass
-        if MODE_EMERGENCY:
-            globals()["MODE_DND"] = False
-        if MODE_NIGHT:
-            globals()["MODE_DND"] = False
-    save_config()
-    push_urgent_ws()
-    return llm_result.get("response") or "Done."
-
-
 # None until the voice thread has tried the microphone; then True or False.
 # The web app shows one clear notice instead of a pile of repeated errors.
 _voice_mic_ok = None
@@ -2454,10 +2256,14 @@ async def security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
+        # blob:/data: scripts are the voice client's audio worklets; the
+        # ElevenLabs hosts carry Narada's WebRTC voice session.
+        "script-src 'self' 'unsafe-inline' blob: data:; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' blob: data:; "
-        "connect-src 'self' wss: ws:; "
+        "media-src 'self' blob: mediastream:; "
+        "font-src 'self'; "
+        "connect-src 'self' wss: ws: https://*.elevenlabs.io; "
         "frame-ancestors 'none'"
     )
     return response
@@ -2562,6 +2368,7 @@ try:
     from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
     from .garuda_auto.agent import HomeAgent
     from .garuda_auto.digest import Digest
+    from .garuda_auto.narada_voice import NaradaVoice
     from .garuda_auto.envfile import set_vars as _set_env_vars
     from .home_api import build_home_router
 except ImportError:
@@ -2570,6 +2377,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
     from basic_pipelines.garuda_auto.agent import HomeAgent
     from basic_pipelines.garuda_auto.digest import Digest
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
     from basic_pipelines.garuda_auto.envfile import set_vars as _set_env_vars
     from basic_pipelines.home_api import build_home_router
 
@@ -2653,6 +2461,19 @@ DECISION = DecisionEngine(
 )
 AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
                   set_mode_fn=_home_set_mode, security_fn=_home_security_summary)
+def _voice_turn_logged(user, heard, said):
+    append_voice_log(f"You said: {heard}", user_name=user)
+    append_voice_response(said, user_name=user)
+
+
+# ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.
+NARADA_VOICE = NaradaVoice(
+    os.environ.get("ELEVENLABS_API_KEY", ""),
+    os.environ.get("ELEVENLABS_SPEECH_ENGINE_ID", ""),
+    reply_fn=lambda text, user, role, scope: _assistant_reply(text, user, role, scope, voice=True),
+    on_turn=_voice_turn_logged,
+    voice_id=os.environ.get("ELEVENLABS_VOICE_ID", ""),
+)
 DIGEST = Digest(HOME, NIM_CHAT,
                 alerts_fn=lambda: _alert_history.get(datetime.date.today().isoformat(), 0))
 HOME.digest_fn = DIGEST.text
@@ -2742,7 +2563,6 @@ class ConfigUpdateRequest(BaseModel):
     email_cooldown: Optional[int] = None
     danger_label: Optional[str] = None    # legacy single-label (maps to danger_labels)
     danger_labels: Optional[List[str]] = None
-    groq_api_key: Optional[str] = None
     privacy: Optional[bool] = None
     watch_labels: Optional[List[str]] = None
     mode_schedule: Optional[dict] = None
@@ -3142,87 +2962,23 @@ async def chat(data: ChatRequest, request: Request, session=Depends(require_sess
             "route": result.get("route"), "model": result.get("model")}
 
 
-def _assistant_reply(msg, user="", role="user", scope="home"):
+def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
     """Narada's one brain for chat and voice.
 
-    Phrases the owner taught on the Commands page win outright. Then the home
-    agent: its fast lane acts on confident short commands locally, and with a
-    NIM key everything else goes to the tool-using model. Without NIM, Groq and
-    then the keyword commands are the fallbacks, as before.
+    Phrases the owner taught on the Commands page return their fixed reply
+    (they never change anything). Everything else goes to the NIM agent;
+    without NIM nothing is changed and Narada says why.
     """
     lower = msg.lower()
     for phrase, resp in CUSTOM_VOICE_COMMANDS.items():
         if phrase in lower:
             return {"reply": resp, "lane": "custom", "actions": []}
-    result = AGENT.handle(msg, user=user, role=role, scope=scope)
-    if result.get("handled", True):
-        return result
-    if GROQ_API_KEY:
-        llm_result = query_local_llm(msg, GROQ_MODEL)
-        if llm_result is not None:
-            return {"reply": _apply_llm_result(llm_result), "lane": "groq", "actions": []}
-    reply = apply_rule_based_command(lower)
-    if not GROQ_API_KEY and reply.startswith("I heard you"):
-        reply = ("Narada is not configured yet. I can still switch devices and run scenes, "
-                 "but for anything else an admin needs to add an NVIDIA NIM API key under "
-                 "System → AI.")
-    return {"reply": reply, "lane": "keywords", "actions": []}
+    return AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice)
 
-def _groq_stream_text(user_input):
-    """Sync generator: yields text tokens from Groq streaming API."""
-    if not GROQ_API_KEY:
-        yield apply_rule_based_command(user_input.lower())
-        return
-    system_prompt = (
-        "You are Narada, the AI assistant embedded in Garuda — an AI home security system "
-        "running on Raspberry Pi 5 with Hailo-8L AI accelerator and IMX708 camera (1280×720 @ 60fps).\n"
-        "System details: YOLOv6n object detection, danger label = scissors (single-frame trigger, "
-        "60s cooldown between alerts), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
-        "(0.05–0.95 default 0.35), email alerts via Gmail SMTP, WebRTC + WS binary JPEG + MJPEG "
-        "camera streaming, Groq LLM (llama-3.3-70b-versatile) for this chat.\n"
-        "When the user requests a mode or setting change, confirm what you're doing. "
-        "Be concise and direct. Use markdown (bold, code blocks, lists) where it adds clarity."
-    )
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_input},
-        ],
-        "temperature": 0.7,
-        "max_tokens": 600,
-        "stream": True,
-    }
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    try:
-        with requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            json=payload, headers=headers, stream=True, timeout=30
-        ) as resp:
-            resp.raise_for_status()
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                if line.startswith(b"data: "):
-                    chunk_raw = line[6:]
-                    if chunk_raw == b"[DONE]":
-                        return
-                    try:
-                        chunk = json.loads(chunk_raw)
-                        token = chunk["choices"][0]["delta"].get("content", "")
-                        if token:
-                            yield token
-                    except Exception:
-                        pass
-    except Exception:
-        yield apply_rule_based_command(user_input.lower())
 
 @fastapi_app.post("/api/chat/stream")
 async def chat_stream(data: ChatRequest, request: Request, session=Depends(require_session)):
-    """SSE streaming chat — tokens arrive in real-time; commands applied after full response."""
+    """SSE chat: the NIM agent's reply, replayed word by word."""
     msg = data.message.strip()
     if not msg:
         raise HTTPException(400, "Empty message")
@@ -3245,20 +3001,7 @@ async def chat_stream(data: ChatRequest, request: Request, session=Depends(requi
             loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
         loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
-    def _worker():
-        full_tokens = []
-        for token in _groq_stream_text(msg):
-            full_tokens.append(token)
-            loop.call_soon_threadsafe(queue.put_nowait, ("token", token))
-        # Apply rule-based commands from the streamed text (no second LLM call).
-        # The streaming endpoint is conversational — mode changes should go
-        # through the non-streaming /api/chat endpoint which uses structured JSON.
-        full_text = "".join(full_tokens)
-        apply_rule_based_command(full_text.lower())
-        loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
-
-    use_agent = NIM_CHAT.configured or not GROQ_API_KEY
-    threading.Thread(target=_agent_worker if use_agent else _worker, daemon=True).start()
+    threading.Thread(target=_agent_worker, daemon=True).start()
 
     async def generate():
         yield f"data: {json.dumps({'type': 'start'})}\n\n"
@@ -3378,7 +3121,6 @@ async def get_config(session=Depends(require_admin)):
         "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
         "custom_modes": CUSTOM_MODES,
         "watch_labels": WATCH_LABELS,
-        "groq_configured": bool(GROQ_API_KEY),
         "mode_schedule": MODE_SCHEDULE,
         "night_presence_window": NIGHT_PRESENCE_WINDOW,
     }
@@ -3386,7 +3128,7 @@ async def get_config(session=Depends(require_admin)):
 @fastapi_app.post("/api/config")
 async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
     global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
-    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, GROQ_API_KEY, DANGER_LABELS
+    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, DANGER_LABELS
     global NIGHT_PRESENCE_WINDOW
     if data.detection_threshold is not None:
         DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
@@ -3405,8 +3147,6 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
         if not (5 <= data.email_cooldown <= 3600):
             raise HTTPException(400, "Email cooldown must be between 5 and 3600 seconds.")
         EMAIL_COOLDOWN = data.email_cooldown
-    if data.groq_api_key is not None:
-        GROQ_API_KEY = data.groq_api_key
     if data.privacy is not None:
         with _mode_lock:
             MODE_PRIVACY = data.privacy
@@ -3989,6 +3729,45 @@ async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session
         await asyncio.sleep(0.1)
 
     return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+
+# ── Narada voice (ElevenLabs Speech Engine) ──────────────────────────────────
+@fastapi_app.post("/api/narada/voice/token")
+async def narada_voice_token(request: Request, session=Depends(require_session)):
+    """A one-conversation token for the browser; binds it to this user."""
+    if not NARADA_VOICE.configured:
+        raise HTTPException(503, "Voice is not set up yet: an admin needs to run "
+                                 "scripts/setup_narada_voice.py.")
+    scope = _product_for_host(request.headers.get("host"))
+    try:
+        return await anyio.to_thread.run_sync(
+            lambda: NARADA_VOICE.issue_token(session["username"], session["role"], scope))
+    except Exception as exc:
+        log_system_update(f"Narada voice token failed: {type(exc).__name__}")
+        raise HTTPException(502, "Could not reach the voice service. Try again in a moment.")
+
+
+@fastapi_app.get("/api/narada/info")
+async def narada_info(session=Depends(require_session)):
+    """What the "i" panel on the Narada page shows: models and usage."""
+    nim = NIM_CHAT.status()
+    voice = await anyio.to_thread.run_sync(NARADA_VOICE.info)
+    return {"nim": {k: nim.get(k) for k in ("configured", "models", "last_model",
+                                            "last_latency_s", "calls", "tokens_used")},
+            "voice": voice}
+
+
+@fastapi_app.websocket("/ws/narada-voice")
+async def narada_voice_ws(websocket: WebSocket):
+    """ElevenLabs connects here with each conversation's transcripts."""
+    if not NARADA_VOICE.verify(websocket.headers):
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+    try:
+        await NARADA_VOICE.serve(websocket)
+    except WebSocketDisconnect:
+        pass
+
 
 # ── WebSocket binary JPEG stream (CF Tunnel fallback) ────────────────────────
 @fastapi_app.websocket("/ws/stream")

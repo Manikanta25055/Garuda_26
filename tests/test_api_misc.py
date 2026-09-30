@@ -18,12 +18,12 @@ def test_users_public_lists_only_non_admin_profiles(app_client):
     assert all(user['username'] != 'admin' for user in data)
 
 
-def test_chat_without_any_ai_key_returns_configuration_message(app_client, user_headers, monkeypatch):
-    monkeypatch.setattr(gw, 'GROQ_API_KEY', '')
+def test_chat_without_nim_changes_nothing_and_says_so(app_client, user_headers, monkeypatch):
     monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
-    r = app_client.post('/api/chat', json={'message': 'plan my evening'}, headers=user_headers)
+    r = app_client.post('/api/chat', json={'message': 'activate dnd'}, headers=user_headers)
     assert r.status_code == 200
-    assert 'Narada is not configured yet' in r.json()['response']
+    body = r.json()
+    assert body['lane'] == 'unavailable' and 'Nothing was changed' in body['response']
 
 
 def test_chat_rejects_empty_message(app_client, user_headers):
@@ -31,8 +31,8 @@ def test_chat_rejects_empty_message(app_client, user_headers):
     assert r.status_code == 400
 
 
-def test_chat_stream_without_groq_key_emits_sse_tokens(app_client, user_headers, monkeypatch):
-    monkeypatch.setattr(gw, 'GROQ_API_KEY', '')
+def test_chat_stream_emits_sse_tokens(app_client, user_headers, monkeypatch):
+    monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
     r = app_client.post('/api/chat/stream', json={'message': 'status'}, headers=user_headers)
     assert r.status_code == 200
     assert r.headers['content-type'].startswith('text/event-stream')

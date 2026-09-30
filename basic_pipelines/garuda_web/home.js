@@ -262,10 +262,8 @@ const H = (() => {
   }
 
   function laneLabel(r) {
-    const conf = ((r.route || {}).intent || {}).confidence;
-    if (r.lane === 'fast') return conf != null ? `on-device · ${Math.round(conf * 100)}% sure` : 'on-device';
     if (r.lane === 'agent') return `NVIDIA NIM${r.model ? ' · ' + r.model : ''}`;
-    if (r.lane === 'local') return 'on-device';
+    if (r.lane === 'unavailable') return 'NVIDIA NIM unavailable · nothing changed';
     return r.lane || '';
   }
 
@@ -300,7 +298,7 @@ const H = (() => {
     const acts = (res.actions || []).filter(a => a !== (res.response || res.reply));
     if (acts.length) extra.push(`<div class="ha-chips">${acts.map(a => `<span class="ha-chip">${esc(a)}</span>`).join('')}</div>`);
     if (res.proposal) extra.push(proposalCard(res.proposal, true));
-    if (res.lane && res.lane !== 'custom' && res.lane !== 'keywords') extra.push(`<div class="ha-sub ha-lane">${esc(laneLabel(res))}</div>`);
+    if (res.lane && res.lane !== 'custom') extra.push(`<div class="ha-sub ha-lane">${esc(laneLabel(res))}</div>`);
     if (!extra.length) return;
     const box = document.createElement('div');
     box.className = 'ha-chat-extra';
@@ -674,6 +672,7 @@ const H = (() => {
 
   return {
     onLogin, onNav, onState, decorateChatReply,
+    proposalHtml: p => proposalCard(p, true),
     toggleDevice, allOff, runScene, deleteScene, noticeAction, dismissNotice, instruct,
     openSceneEditor, pickStep, saveScene,
     onKindChange, addDevice, setWatts, setEnabled, deleteDevice,

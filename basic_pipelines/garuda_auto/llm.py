@@ -19,11 +19,13 @@ log = logging.getLogger(__name__)
 
 DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
-# Measured 2026-09-22 against this account with a two-tool home prompt:
-# gpt-oss-20b answered in ~2 s with a correct tool call, deepseek-v4.1-flash
-# in ~4 s with parallel calls. The others timed out, 500'd or were not
-# provisioned for the account.
-DEFAULT_MODELS = ("openai/gpt-oss-20b", "deepseek-ai/deepseek-v4.1-flash")
+# Measured 2026-10-01 with two-action home commands ("hall light on and
+# privacy off"), 8 runs each: nemotron-3-super got every tool call right in
+# ~2-3 s; glm-5.3-flash also 8/8 but slower; gpt-oss-20b (the 2026-09 pick)
+# dropped one of the two actions every time. Kimi K3, GLM 5.3 and Gemma 4
+# timed out on this account.
+DEFAULT_MODELS = ("nvidia/nemotron-3-super-120b-a12b", "z-ai/glm-5.3-flash",
+                  "openai/gpt-oss-20b")
 
 # Worth trying the next model for. A 400 or 401 is our fault or the key's and
 # would fail the same way on every model.

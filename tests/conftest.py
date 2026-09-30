@@ -199,6 +199,11 @@ def app_client(tmp_data, monkeypatch, shared_client):
     """
     import smtplib
 
+    # Never reach ElevenLabs or NVIDIA NIM from a test, whatever the real .env holds.
+    monkeypatch.setattr(gw.NARADA_VOICE, 'api_key', '')
+    monkeypatch.setattr(gw.NARADA_VOICE, 'engine_id', '')
+    monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
+
     # ── File path redirects ──
     monkeypatch.setattr(gw, 'USERS_FILE',          str(tmp_data / 'system_logs/users.json'))
     monkeypatch.setattr(gw, 'CONFIG_FILE',         str(tmp_data / 'system_logs/config.json'))

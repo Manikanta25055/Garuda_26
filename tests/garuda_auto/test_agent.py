@@ -181,11 +181,15 @@ def test_parse_models_keeps_order_and_adds_defaults():
 
 # ── agent ────────────────────────────────────────────────────────────────────
 
-def test_a_confident_command_never_reaches_the_model(house):
+def test_even_a_confident_command_goes_through_the_model(house):
+    # NIM is the only path to an action: no local fast lane.
     ctx, home = house
-    chat = ScriptedChat([])
+    chat = ScriptedChat([
+        completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})]),
+        completion("The lamp is on."),
+    ])
     out = agent(ctx, home, chat).handle("lamp on", user="mani")
-    assert out["lane"] == "fast" and chat.requests == []
+    assert out["lane"] == "agent" and len(chat.requests) == 2
     assert [d["id"] for d in home.on_devices()] == ["lamp"]
 
 
@@ -258,21 +262,23 @@ def test_mode_changes_go_through_the_injected_switch(house):
     assert changed == [("night", True, "mani")]
 
 
-def test_without_nim_the_local_lane_answers_or_says_what_is_missing(house):
+def test_without_nim_nothing_is_changed(house):
     ctx, home = house
     a = agent(ctx, home, None)
-    assert a.handle("is the lamp on?")["reply"] == "Lamp is off."
-    out = a.handle("write me a poem")
-    assert out["handled"] is False and "NIM" in out["reply"]
+    for text in ("lamp on", "turn everything off", "is the lamp on?"):
+        out = a.handle(text)
+        assert out["lane"] == "unavailable" and "Nothing was changed" in out["reply"]
+    assert home.on_devices() == []
 
 
-def test_an_unreachable_model_degrades_to_local(house):
+def test_an_unreachable_model_changes_nothing(house):
     ctx, home = house
 
     def post(*a, **k):
         raise requests.ConnectionError("offline")
-    out = agent(ctx, home, NimChat("k", ["m"], post=post)).handle("what is going on at home today")
-    assert out["lane"] == "local" and "unavailable" in out["reply"]
+    out = agent(ctx, home, NimChat("k", ["m"], post=post)).handle("lamp on")
+    assert out["lane"] == "unavailable" and "unavailable" in out["reply"]
+    assert home.on_devices() == []
 
 
 def test_history_is_kept_per_user(house):
@@ -299,7 +305,14 @@ def test_security_scope_never_touches_devices(house):
     assert "not available in Garuda" in chat.requests[1]["messages"][-1]["content"]
 
 
-def test_security_scope_without_nim_defers_to_keyword_commands(house):
+def test_security_scope_without_nim_changes_nothing(house):
     ctx, home = house
     out = agent(ctx, home, None).handle("activate dnd", user="mani", scope="security")
-    assert out["handled"] is False and home.on_devices() == []
+    assert out["lane"] == "unavailable" and home.on_devices() == []
+
+
+def test_voice_asks_the_model_for_a_short_spoken_reply(house):
+    ctx, home = house
+    chat = ScriptedChat([completion("All quiet.")])
+    agent(ctx, home, chat).handle("anything happening", user="mani", voice=True)
+    assert "speaking out loud" in chat.requests[0]["messages"][0]["content"]

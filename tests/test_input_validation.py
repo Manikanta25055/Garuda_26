@@ -293,10 +293,10 @@ class TestLabelValidation:
 class TestChatValidation:
 
     @pytest.fixture(autouse=True)
-    def _no_groq_key(self, monkeypatch):
+    def _no_nim_key(self, monkeypatch):
         """Validation is what is under test here, not the LLM. With a key set,
-        /api/chat makes a live Groq call and the request times out."""
-        monkeypatch.setattr(gw, 'GROQ_API_KEY', '')
+        /api/chat makes a live NIM call."""
+        monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
 
     def test_empty_message_rejected(self, app_client, user_token):
         headers = {'X-Garuda-Token': user_token}
@@ -311,7 +311,7 @@ class TestChatValidation:
     def test_valid_message_accepted(self, app_client, user_token):
         headers = {'X-Garuda-Token': user_token}
         r = app_client.post('/api/chat', json={'message': 'what is the status?'}, headers=headers)
-        # 200 or 503 (no Groq key) — both OK; just must not be 400
+        # 200 or 503 (no NIM key) — both OK; just must not be 400
         assert r.status_code != 400
 
 
