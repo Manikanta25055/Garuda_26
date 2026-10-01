@@ -214,6 +214,31 @@ def _product_for_host(host):
     host = (host or "").split(":")[0].lower()
     return "security" if host in SECURITY_ONLY_HOSTS else "home"
 
+# The base every part of the service stands on: typed settings, logging,
+# supervised background loops, state backups. See garuda_core/__init__.py.
+try:
+    from .garuda_core import API_VERSION, BUILD
+    from .garuda_core.settings import Settings
+    from .garuda_core.workers import Supervisor
+    from .garuda_core.backup import BackupManager
+    from .garuda_core import http as _core_http
+    from .garuda_core import logging_setup as _core_logging
+    from .garuda_core.system_api import build_system_router
+except ImportError:
+    from basic_pipelines.garuda_core import API_VERSION, BUILD
+    from basic_pipelines.garuda_core.settings import Settings
+    from basic_pipelines.garuda_core.workers import Supervisor
+    from basic_pipelines.garuda_core.backup import BackupManager
+    from basic_pipelines.garuda_core import http as _core_http
+    from basic_pipelines.garuda_core import logging_setup as _core_logging
+    from basic_pipelines.garuda_core.system_api import build_system_router
+
+import logging
+SETTINGS = Settings.load()
+SUPERVISOR = Supervisor()
+BACKUPS = BackupManager(DRISHTI_DATA_DIR, keep=SETTINGS.backup_keep)
+_syslog = logging.getLogger("garuda.system")
+
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
@@ -368,9 +393,16 @@ def _invalidate_user_sessions(username: str, except_token: str | None = None,
     ]
     for t in to_delete:
         _sessions.pop(t, None)
+    global _refresh_dirty
+    keep_digest = _rt_digest(except_refresh) if except_refresh else None
     for t in [t for t, s in list(_refresh_tokens.items())
               if s.get("username") == username and t != except_refresh]:
         _refresh_tokens.pop(t, None)
+        _refresh_dirty = True
+    for d in [d for d, s in list(_persisted_refresh.items())
+              if s.get("username") == username and d != keep_digest]:
+        _persisted_refresh.pop(d, None)
+        _refresh_dirty = True
     return len(to_delete)
 
 # ── Atomic JSON write ────────────────────────────────────
@@ -987,6 +1019,9 @@ def log_system_update(message):
     if len(system_updates_log) > 500:
         system_updates_log[:] = system_updates_log[-500:]
     _perm_write(PERM_SYSTEM_LOG, entry)
+    # Also into the one service log (garuda.log), next to the request and
+    # worker lines, so there is a single file to read when something is wrong.
+    _syslog.info("%s", message)
 
 def append_voice_log(message, user_name=None):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -1018,6 +1053,12 @@ _pending_cache = {"at": 0.0, "count": 0}
 _eq_lock = threading.Lock()
 _net_online = True          # tracked by connectivity monitor
 
+# (version, [SQL]) applied in order to a database older than that version.
+# Version 1 is the table as first shipped; add new entries, never edit old ones.
+_EVENT_DB_MIGRATIONS = [
+    (1, []),
+]
+
 def _init_event_db():
     """Create events table if not exists."""
     os.makedirs(os.path.dirname(EVENTS_DB) or ".", exist_ok=True)
@@ -1035,6 +1076,22 @@ def _init_event_db():
     """)
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_synced ON events(synced)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_events_ts ON events(timestamp)")
+    # WAL: a reader (the state push) no longer waits for a writer (the camera
+    # thread logging a detection), and a power cut cannot leave a half-written
+    # page. NORMAL sync is the documented safe pairing with WAL.
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+    except sqlite3.DatabaseError:
+        pass
+    # The schema carries its own version, so a later change can migrate an
+    # existing database instead of guessing what it looks like.
+    version = conn.execute("PRAGMA user_version").fetchone()[0]
+    for target, statements in _EVENT_DB_MIGRATIONS:
+        if version < target:
+            for statement in statements:
+                conn.execute(statement)
+            conn.execute(f"PRAGMA user_version = {int(target)}")
     conn.commit()
     conn.close()
 
@@ -2099,6 +2156,57 @@ _REFRESH_DURATION = 7 * 24 * 3600  # 7 days — refresh token
 # Refresh token store: token → {username, role, expires, created_at}
 _refresh_tokens: dict = {}
 
+# Every restart used to sign the whole house out: the store above lived only
+# in memory. It is now mirrored to disk, as SHA-256 digests (the file is no
+# use to someone who reads it), and a token that arrives after a restart is
+# recognised by its digest and adopted back into the store above.
+REFRESH_TOKENS_FILE = str(_BASE / "system_logs" / "refresh_tokens.json")
+_persisted_refresh: dict = {}      # sha256(token) → record, loaded at start-up
+_refresh_dirty = False
+
+def _rt_digest(token: str) -> str:
+    return hashlib.sha256(str(token).encode()).hexdigest()
+
+def _load_refresh_tokens():
+    global _persisted_refresh
+    data = {}
+    try:
+        if os.path.exists(REFRESH_TOKENS_FILE):
+            with open(REFRESH_TOKENS_FILE, encoding="utf-8") as f:
+                data = json.load(f)
+    except Exception:
+        data = {}
+    now = time.time()
+    _persisted_refresh = {
+        d: rec for d, rec in (data.items() if isinstance(data, dict) else [])
+        if isinstance(rec, dict) and rec.get("expires", 0) > now and rec.get("username") in USERS
+    }
+
+def _save_refresh_tokens():
+    """Write the digests of every live refresh token. Blocking (fsync)."""
+    global _refresh_dirty
+    _refresh_dirty = False
+    now = time.time()
+    snapshot = {d: rec for d, rec in list(_persisted_refresh.items()) if rec.get("expires", 0) > now}
+    for token, rec in list(_refresh_tokens.items()):
+        if rec.get("expires", 0) > now:
+            snapshot[_rt_digest(token)] = rec
+    try:
+        _atomic_json_write(REFRESH_TOKENS_FILE, snapshot)
+        os.chmod(REFRESH_TOKENS_FILE, 0o600)
+    except Exception as exc:
+        _syslog.warning("could not persist refresh tokens: %s", exc)
+
+def _revoke_refresh(token) -> bool:
+    global _refresh_dirty
+    if not token:
+        return False
+    hit = _refresh_tokens.pop(token, None) is not None
+    hit = (_persisted_refresh.pop(_rt_digest(token), None) is not None) or hit
+    if hit:
+        _refresh_dirty = True
+    return hit
+
 def create_refresh_token(username: str) -> str:
     token = secrets.token_hex(64)
     now = time.time()
@@ -2108,12 +2216,19 @@ def create_refresh_token(username: str) -> str:
         "expires": now + _REFRESH_DURATION,
         "created_at": now,
     }
+    global _refresh_dirty
+    _refresh_dirty = True
     return token
 
 def _prune_expired_refresh_tokens():
+    global _refresh_dirty
     now = time.time()
     for t in [t for t, s in list(_refresh_tokens.items()) if s.get("expires", 0) <= now]:
         _refresh_tokens.pop(t, None)
+        _refresh_dirty = True
+    for d in [d for d, s in list(_persisted_refresh.items()) if s.get("expires", 0) <= now]:
+        _persisted_refresh.pop(d, None)
+        _refresh_dirty = True
 
 def _user_signed_in(username: str) -> bool:
     """True while `username` still holds a live session or refresh token.
@@ -2128,7 +2243,7 @@ def _user_signed_in(username: str) -> bool:
            for s in list(_sessions.values())):
         return True
     return any(s.get("username") == username and s.get("expires", 0) > now
-               for s in list(_refresh_tokens.values()))
+               for s in list(_refresh_tokens.values()) + list(_persisted_refresh.values()))
 
 def _is_cross_site(request) -> bool:
     """True when the page calling the API lives on another site (the Vercel copy).
@@ -2170,10 +2285,15 @@ def _set_session_cookies(request, response, access_token, refresh_token=None, pe
 
 def get_refresh_token(token: str) -> dict | None:
     s = _refresh_tokens.get(token)
+    if not s and token:
+        # Issued before the last restart: known only by its digest.
+        s = _persisted_refresh.pop(_rt_digest(token), None)
+        if s:
+            _refresh_tokens[token] = s
     if not s:
         return None
     if s["expires"] <= time.time():
-        _refresh_tokens.pop(token, None)
+        _revoke_refresh(token)
         return None
     return s
 
@@ -2554,16 +2674,20 @@ async def _lifespan(app):
         f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
         f"{len(DRISHTI_CTX.registry.devices)} devices")
     _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
-    threading.Thread(target=_presence_poller, daemon=True).start()
-    threading.Thread(target=_deadman_monitor, daemon=True).start()
-    threading.Thread(target=_connectivity_monitor, daemon=True).start()
-    threading.Thread(target=_schedule_monitor, daemon=True).start()
-    threading.Thread(target=_flush_log_thread, daemon=True).start()
+    _load_refresh_tokens()
+    # Supervised: a loop that raises is logged, restarted with a pause, and
+    # shows on /api/system/info instead of vanishing until the next restart.
+    SUPERVISOR.spawn("presence", _presence_poller)
+    SUPERVISOR.spawn("deadman", _deadman_monitor)
+    SUPERVISOR.spawn("connectivity", _connectivity_monitor)
+    SUPERVISOR.spawn("mode-schedule", _schedule_monitor)
+    SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
     HOME.stop()
     DRISHTI_RUNTIME.stop()
     # Flush any remaining buffered log lines before exit
     _do_flush_logs()
+    _save_refresh_tokens()
     if _ws_broadcaster_task is not None:
         _ws_broadcaster_task.cancel()
         await asyncio.gather(_ws_broadcaster_task, return_exceptions=True)
@@ -2573,7 +2697,11 @@ async def _lifespan(app):
         await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)
         _pc_set.clear()
 
-fastapi_app = FastAPI(title="Garuda Security System", lifespan=_lifespan)
+# /docs, /redoc and /openapi.json were served to anyone who asked, over the
+# tunnel: a map of every route for whoever is probing. The reference is still
+# there for an admin, at /api/openapi.json.
+fastapi_app = FastAPI(title="Garuda Security System", version=API_VERSION, lifespan=_lifespan,
+                      docs_url=None, redoc_url=None, openapi_url=None)
 
 _VERCEL_PROJECT_RE = re.escape(os.environ.get("GARUDA_VERCEL_PROJECT", "garuda-26").strip().lower() or "garuda-26")
 
@@ -2602,7 +2730,9 @@ fastapi_app.add_middleware(
 # Global rate-limit middleware — applied to all API endpoints
 # Endpoints that do their own per-action rate limiting (login, OTP) keep their
 # individual checks; this catches everything else.
-_RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/")
+# Health and readiness are polled by monitors; they must not eat the budget.
+_RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
+                         "/api/health", "/api/ready")
 
 @fastapi_app.middleware("http")
 async def global_rate_limit(request: Request, call_next):
@@ -2654,6 +2784,11 @@ async def security_headers(request: Request, call_next):
     if request.url.path.startswith("/api/") and "cache-control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
     return response
+
+# Request ids, the /api/v1 alias, one error shape and the access log. Added
+# after the middleware above so it wraps them: a 429 from the rate limiter
+# carries a request id too.
+_core_http.install(fastapi_app, api_version=API_VERSION, client_ip=_get_client_ip)
 
 # Serve static files from garuda_web/
 _static_dir = Path(__file__).parent / "garuda_web"
@@ -3126,7 +3261,7 @@ async def logout(request: Request, response: Response):
     # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
     for refresh in (request.cookies.get("garuda_refresh"), request.headers.get("X-Garuda-Refresh")):
         if refresh:
-            _refresh_tokens.pop(refresh, None)
+            _revoke_refresh(refresh)
     response.delete_cookie("garuda_session")
     response.delete_cookie("garuda_refresh", path="/api/refresh")
     return {"ok": True}
@@ -3145,7 +3280,7 @@ async def refresh_session(request: Request, response: Response):
         raise HTTPException(401, "Refresh token expired or invalid. Please log in again.")
     u = rs["username"]
     if u not in USERS:
-        _refresh_tokens.pop(refresh, None)
+        _revoke_refresh(refresh)
         raise HTTPException(401, "User no longer exists.")
     access_token = create_session(u)
     _set_session_cookies(request, response, access_token)
@@ -3469,6 +3604,10 @@ async def set_mode(data: ModeRequest, session=Depends(require_session)):
     return {"ok": True, "modes": get_state_dict()["modes"]}
 
 _COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+# The native (Swift) app posts to /api/set-mode, which never existed here: its
+# mode switches failed with 404. Same handler, both names.
+fastapi_app.post("/api/set-mode", include_in_schema=False)(set_mode)
 
 @fastapi_app.get("/api/users")
 async def list_users(session=Depends(require_admin)):
@@ -4444,6 +4583,8 @@ async def _ws_broadcaster():
         # got another update until the service was restarted. One bad tick is
         # now logged and the next one runs.
         try:
+            if _refresh_dirty:
+                await asyncio.to_thread(_save_refresh_tokens)
             # Prune expired sessions every ~5 minutes (150 ticks × 2s)
             _prune_counter += 1
             if _prune_counter >= 150:
@@ -4514,6 +4655,80 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         pass
     finally:
         _ws_clients.pop(websocket, None)
+
+##############################################################################
+# SYSTEM: HEALTH, READINESS, DIAGNOSTICS
+##############################################################################
+def _probe_camera():
+    age = time.time() - _frame_ts
+    return (age < 5.0, "delivering frames" if age < 5.0 else
+            ("no frame yet" if not _frame_ts else f"no frame for {int(age)} s"))
+
+def _probe_events_db():
+    conn = sqlite3.connect(EVENTS_DB, timeout=2)
+    try:
+        conn.execute("SELECT 1 FROM events LIMIT 1").fetchall()
+    finally:
+        conn.close()
+    return True, "ok"
+
+def _probe_disk():
+    usage = __import__("shutil").disk_usage(str(_BASE))
+    free_mb = usage.free // (1024 * 1024)
+    return free_mb >= 200, f"{free_mb} MB free"
+
+def _probe_workers():
+    bad = [w["name"] for w in SUPERVISOR.status() if w["critical"] and not w["alive"]]
+    return (not bad, "all running" if not bad else "stopped: " + ", ".join(bad))
+
+def _probe_rules():
+    health = DRISHTI_RUNTIME.health()
+    return bool(health.get("running")), health.get("last_error") or "running"
+
+def _client_meta(request: Request) -> dict:
+    """What a client needs to adapt itself: which product this address is,
+    and which optional parts this server actually has."""
+    product = _product_for_host(request.headers.get("host"))
+    return {
+        "product": product,
+        "name": "Garuda" if product == "security" else "Drishti",
+        "features": {
+            "home_automation": product != "security",
+            "voice": bool(NARADA_VOICE.configured),
+            "assistant": bool(NIM_CHAT.configured),
+            "webrtc": bool(_WEBRTC_AVAILABLE),
+            "clips": True,
+            "email_alerts": bool(EMAIL_SENDER and EMAIL_SENDER_PASS and EMAIL_RECIPIENTS),
+        },
+        "auth": {"access_token_s": _ACCESS_DURATION, "refresh_token_s": _REFRESH_DURATION,
+                 "header": "X-Garuda-Token", "refresh_header": "X-Garuda-Refresh"},
+    }
+
+def _system_extra() -> dict:
+    return {"sessions": {"active": len(_sessions),
+                         "refresh_tokens": len(_refresh_tokens) + len(_persisted_refresh),
+                         "websockets": len(_ws_clients), "video_peers": len(_pc_set)},
+            "log_file": getattr(_core_logging.configure, "path", None)}
+
+fastapi_app.include_router(build_system_router(
+    settings=SETTINGS, supervisor=SUPERVISOR, backups=BACKUPS, admin_dep=require_admin,
+    probes={"camera": (_probe_camera, True), "events_db": (_probe_events_db, True),
+            "disk": (_probe_disk, True), "workers": (_probe_workers, True),
+            "rule_loop": (_probe_rules, False)},
+    meta_fn=_client_meta, openapi_fn=fastapi_app.openapi,
+    started_at=lambda: _app_start_time, extra_info=_system_extra))
+
+_core_http.tag_routes(fastapi_app, [
+    ("/api/login", "Auth"), ("/api/logout", "Auth"), ("/api/refresh", "Auth"),
+    ("/api/session", "Auth"), ("/api/admin/", "Auth"), ("/api/forgot/", "Auth"),
+    ("/api/master_key", "Master keys"), ("/api/users", "Users"),
+    ("/api/config", "Configuration"), ("/api/modes", "Modes"), ("/api/devices", "Presence"),
+    ("/api/arp", "Presence"), ("/api/presence_refresh", "Presence"),
+    ("/api/logs", "Logs"), ("/api/events", "Events"), ("/api/feedback", "Feedback"),
+    ("/api/chat", "Narada"), ("/api/narada", "Narada"), ("/api/home", "Home automation"),
+    ("/api/clip", "Camera"), ("/api/snapshot", "Camera"), ("/stream", "Camera"),
+    ("/webrtc", "Camera"), ("/api/eval", "Evaluation harness"), ("/api/", "Core"),
+])
 
 ##############################################################################
 # CAMERA AUTO-DETECT
@@ -4603,15 +4818,23 @@ def run_web_app(args):
                 log_system_update(f"Pipeline error: {e}. Restarting in {retry_delay}s...")
             time.sleep(retry_delay)
 
-    # Start voice assistant thread
-    threading.Thread(
-        target=voice_assistant_loop,
-        args=(_voice_stop_event,),
-        daemon=True
-    ).start()
+    # One log file for the whole service, and what the configuration lacks,
+    # said once at start-up instead of discovered feature by feature.
+    log_path = _core_logging.configure(str(_BASE / "system_logs"), level=SETTINGS.log_level)
+    log_system_update(f"Garuda starting: commit {BUILD['commit']} ({BUILD['branch']}), "
+                      f"API v{API_VERSION}, log {log_path or 'stderr only'}")
+    for severity, message in SETTINGS.problems():
+        if severity != "info":
+            log_system_update(f"[CONFIG] {severity}: {message}")
+
+    # Start voice assistant thread (returns at once when there is no microphone)
+    SUPERVISOR.spawn("voice-assistant", voice_assistant_loop, args=(_voice_stop_event,), restart=False)
 
     # Start pipeline thread (restarts automatically on failure)
-    threading.Thread(target=_run_pipeline, daemon=True).start()
+    SUPERVISOR.spawn("camera-pipeline", _run_pipeline, critical=True)
+
+    # A daily archive of accounts, settings, keys, devices and rules.
+    SUPERVISOR.spawn("state-backup", BACKUPS.run_forever)
 
     print("\n" + "="*60)
     print("  Garuda Web UI is running at http://localhost:8080")
@@ -4621,7 +4844,10 @@ def run_web_app(args):
     # Bind to 127.0.0.1 only — external access goes via Cloudflare tunnel,
     # which already terminates TLS. Binding to 0.0.0.0 would expose the HTTP
     # port on all network interfaces including LAN.
-    uvicorn.run(fastapi_app, host="127.0.0.1", port=8080, log_level="warning")
+    uvicorn.run(fastapi_app, host=SETTINGS.host, port=SETTINGS.port, log_level="warning",
+                # Open camera streams never finish by themselves; without a
+                # limit a restart waited on them until systemd killed the process.
+                timeout_graceful_shutdown=8)
 
 
 if __name__ == "__main__":

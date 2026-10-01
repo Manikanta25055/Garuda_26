@@ -69,6 +69,11 @@ for _key in ("NIM_API_KEY", "JEV_API_KEY", "GROQ_API_KEY"):
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines'))
 import Garuda_web as gw
 
+# Refresh tokens are mirrored to disk. Point that at a scratch file before the
+# app's lifespan runs, so the suite never reads or writes the live one.
+import tempfile as _tempfile
+gw.REFRESH_TOKENS_FILE = os.path.join(_tempfile.mkdtemp(prefix="garuda-test-"), "refresh_tokens.json")
+
 
 class SyncASGIClient:
     """Small sync wrapper around httpx.AsyncClient for ASGI app tests.
@@ -216,6 +221,8 @@ def app_client(tmp_data, monkeypatch, shared_client):
     # Secrets saved from the settings pages go to .env; never the real one.
     monkeypatch.setattr(gw, 'HOME_ENV_PATH',       str(tmp_data / '.env'))
     monkeypatch.setattr(gw, '_refresh_tokens',     {})
+    monkeypatch.setattr(gw, '_persisted_refresh',  {})
+    monkeypatch.setattr(gw, 'REFRESH_TOKENS_FILE', str(tmp_data / 'system_logs/refresh_tokens.json'))
     monkeypatch.setattr(gw, '_login_failures',     {})
     monkeypatch.setattr(gw, '_forgot_otp_store',   {})
     monkeypatch.setattr(gw, 'PERM_SYSTEM_LOG',     str(tmp_data / 'system_logs/perm_system_log.txt'))

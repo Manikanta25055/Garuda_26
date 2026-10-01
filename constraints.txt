@@ -1,0 +1,11 @@
+# The versions the service runs with on the Pi and is tested against.
+# Install with:  pip install -r requirements.txt -c constraints.txt
+#
+# FastAPI/Starlette are pinned on purpose: Starlette 1.x changes how included
+# routers appear on the app, which this code base has not been moved to yet.
+# Upgrade these together, on a branch, with the test suite.
+fastapi==0.135.1
+starlette==0.52.1
+pydantic==2.12.5
+uvicorn==0.42.0
+httpx==0.28.1

@@ -278,7 +278,7 @@ const G = (() => {
     if (!/^https?:\/\//.test(url)) url = 'http://' + url;
     showEl('m-bk-msg', 'Testing connection…', true);
     try {
-      const r = await fetch(url + '/api/users-public', { signal: _timeoutSignal(5000) });
+      const r = await fetch(url + '/api/health', { signal: _timeoutSignal(5000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       _lsSet('garuda_backend', url);
       updateBackendStatus(url);
@@ -302,7 +302,8 @@ const G = (() => {
     if (!url && !_servedByPi()) { lbl.textContent = displayHost; dot.className = 'bk-dot'; return; }
     lbl.textContent = displayHost + ' · checking…';
     dot.className = 'bk-dot';
-    const pingUrl = (url || '') + '/api/users-public';
+    // The liveness endpoint: public, cheap, and it lists no accounts.
+    const pingUrl = (url || '') + '/api/health';
     // One retry: the first request through a cold tunnel can time out.
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
