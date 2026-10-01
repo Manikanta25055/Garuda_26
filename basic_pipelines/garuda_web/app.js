@@ -1393,7 +1393,8 @@ const G = (() => {
     let ws;
     try { ws = new WebSocket(wsUrl); } catch (_) { _scheduleWsRetry(); return; }
     _ws = ws;
-    ws.onopen = () => { _wsRetryDelay = 3000; _syncPendingEvents(); };
+    let opened = false;
+    ws.onopen = () => { opened = true; _wsRetryDelay = 3000; _syncPendingEvents(); };
     ws.onmessage = e => {
       let state;
       try { state = JSON.parse(e.data); } catch(err) { console.warn('[Garuda] WS parse error', err); return; }
@@ -1405,10 +1406,15 @@ const G = (() => {
       // each loop closed the other's socket, reconnecting forever.
       if (_ws !== ws) return;
       _ws = null;
-      // 4001: the server no longer knows this session. Ask once; api() then
-      // refreshes the token or signs out instead of retrying for ever.
-      if (ev && ev.code === 4001) {
-        api('GET', '/api/session').then(() => _scheduleWsRetry()).catch(() => {});
+      // Refused before it opened (the server answers an unknown session with
+      // a failed handshake, which a browser reports as a plain 1006), or closed
+      // with 4001: the session has probably expired. Ask once; api() then
+      // refreshes the token, or signs out. Either way try again afterwards:
+      // if the server was only restarting, the retry is what reconnects, and
+      // after a sign-out _scheduleWsRetry does nothing.
+      if (!opened || (ev && ev.code === 4001)) {
+        const again = () => _scheduleWsRetry();
+        api('GET', '/api/session').then(again, again);
         return;
       }
       _scheduleWsRetry();
