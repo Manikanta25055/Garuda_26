@@ -222,6 +222,7 @@ try:
     from .garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
     from .garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from .garuda_routes.logs import build_logs_router
+    from .garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -246,6 +247,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
     from basic_pipelines.garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from basic_pipelines.garuda_routes.logs import build_logs_router
+    from basic_pipelines.garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2809,30 +2811,9 @@ fastapi_app.include_router(build_home_router(
     ai_configure=_ai_configure, ai_test=_ai_test))
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-    remember_me: bool = False
-
 class ModeRequest(BaseModel):
     mode: str   # "dnd","email_off","idle","night","emergency","privacy"
     value: bool
-
-class OTPRequest(BaseModel):
-    username: str
-    password: str
-
-class VerifyOTPRequest(BaseModel):
-    username: str
-    otp: str
-
-class ForgotPasswordRequest(BaseModel):
-    username: Optional[str] = None   # omittable — endpoint resolves from OTP store
-    otp: str
-    new_password: str
-
-class SendForgotOTPRequest(BaseModel):
-    username: str
 
 class WebRTCOfferRequest(BaseModel):
     sdp: str
@@ -2879,259 +2860,7 @@ async def service_worker():
     return FileResponse(str(p), media_type="application/javascript",
                         headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"}) if p.exists() else Response("", media_type="application/javascript")
 
-@fastapi_app.get("/api/users-public")
-async def users_public():
-    """Return non-sensitive user info for login screen profile cards."""
-    result = []
-    for uname, udata in USERS.items():
-        if udata.get("role") == "user":
-            result.append({
-                "username": uname,
-                "display_name": udata.get("display_name", uname),
-                "box_color": udata.get("box_color", "#1565c0"),
-            })
-    return result
-
-@fastapi_app.post("/api/login")
-async def login(data: LoginRequest, request: Request, response: Response):
-    ip = _get_client_ip(request)
-    if _is_login_locked(ip):
-        raise HTTPException(429, "Too many failed attempts. Try again later.")
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    u = data.username.strip()[:64]
-    p = data.password.strip()[:256]
-    user = USERS.get(u)
-    # PBKDF2 at 600k rounds takes a noticeable fraction of a second on the Pi;
-    # on the event loop it froze the state socket and every camera stream for
-    # that long. The same work is done for an unknown name, so the answer
-    # takes as long either way.
-    stored = user["password"] if user else _DUMMY_PASSWORD_HASH
-    password_ok = await asyncio.to_thread(_verify_password, p, stored)
-    if user is None or not password_ok:
-        _record_login_failure(ip)
-        raise HTTPException(401, "Invalid username or password.")
-    if user.get("role") == "admin":
-        # Only said once the password has been proved: before, any name could
-        # be tested for "is this an admin?" without knowing anything.
-        # Test-only bypass for the P1-4 evaluation harness. Set GARUDA_EVAL_OTP_BYPASS=1
-        # in the environment before starting the server to allow a named service admin
-        # (GARUDA_EVAL_SERVICE_ADMIN) to sign in via /api/login without the email OTP.
-        _bypass = os.environ.get("GARUDA_EVAL_OTP_BYPASS", "") == "1"
-        _allowed = os.environ.get("GARUDA_EVAL_SERVICE_ADMIN", "")
-        if not (_bypass and _allowed and u == _allowed):
-            raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
-    # Auto-migrate plaintext passwords to hashed
-    if not user["password"].startswith("pbkdf2:"):
-        user["password"] = await asyncio.to_thread(_hash_password, p)
-    _clear_login_failure(ip)
-    access_token = create_session(u)
-    refresh_token = create_refresh_token(u)
-    _set_session_cookies(request, response, access_token, refresh_token,
-                         persistent=bool(data.remember_me))
-    log_system_update(f"Login: {u}")
-    _remember_user_activity(u, "logins", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    await asyncio.to_thread(save_users)
-    body = {
-        "role": user["role"],
-        "username": u,
-        "display_name": user.get("display_name", u),
-        "box_color": user.get("box_color", "#1565c0"),
-        "token": access_token,   # for cross-origin clients that can't use cookies
-    }
-    if _is_cross_site(request):
-        body["refresh_token"] = refresh_token
-    return body
-
-@fastapi_app.get("/api/session")
-async def session_info(session=Depends(require_session)):
-    """Return current session user info — used to restore session on page refresh."""
-    u = session["username"]
-    return {
-        "role": session["role"],
-        "username": u,
-        "display_name": USERS.get(u, {}).get("display_name", u),
-        "box_color": USERS.get(u, {}).get("box_color", "#1565c0"),
-        "logs_unlocked": session.get("logs_unlocked", False),
-    }
-
-@fastapi_app.post("/api/logout")
-async def logout(request: Request, response: Response):
-    token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-    if token:
-        _sessions.pop(token, None)
-    # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
-    for refresh in (request.cookies.get("garuda_refresh"), request.headers.get("X-Garuda-Refresh")):
-        if refresh:
-            _revoke_refresh(refresh)
-    response.delete_cookie("garuda_session")
-    response.delete_cookie("garuda_refresh", path="/api/refresh")
-    return {"ok": True}
-
-@fastapi_app.post("/api/refresh")
-async def refresh_session(request: Request, response: Response):
-    """Exchange a valid refresh token for a new 15-minute access token."""
-    # The header is for a front end hosted on another site (Vercel): its
-    # browser never sends our SameSite cookie back, so it was signed out every
-    # 15 minutes when the access token ran out.
-    refresh = request.cookies.get("garuda_refresh") or request.headers.get("X-Garuda-Refresh")
-    if not refresh:
-        raise HTTPException(401, "No refresh token.")
-    rs = get_refresh_token(refresh)
-    if not rs:
-        raise HTTPException(401, "Refresh token expired or invalid. Please log in again.")
-    u = rs["username"]
-    if u not in USERS:
-        _revoke_refresh(refresh)
-        raise HTTPException(401, "User no longer exists.")
-    access_token = create_session(u)
-    _set_session_cookies(request, response, access_token)
-    return {
-        "token": access_token,
-        "role": USERS[u]["role"],
-        "username": u,
-    }
-
-@fastapi_app.post("/api/admin/send-otp")
-async def admin_send_otp(data: OTPRequest, request: Request, response: Response):
-    """Admin login step 1: verify credentials, send OTP."""
-    ip = _get_client_ip(request)
-    if _is_login_locked(ip):
-        raise HTTPException(429, "Too many failed attempts. Try again later.")
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts, _admin_otp_attempts
-    u = data.username.strip()[:64]
-    p = data.password.strip()[:256]
-    user = USERS.get(u)
-    stored = user["password"] if user else _DUMMY_PASSWORD_HASH
-    password_ok = await asyncio.to_thread(_verify_password, p, stored)
-    if user is None or not password_ok or user.get("role") != "admin":
-        _record_login_failure(ip)
-        raise HTTPException(401, "Invalid admin credentials.")
-    # Auto-migrate plaintext passwords to hashed
-    if not user["password"].startswith("pbkdf2:"):
-        user["password"] = await asyncio.to_thread(_hash_password, p)
-        await asyncio.to_thread(save_users)
-    ADMIN_OTP = generate_otp_code(6)
-    _admin_otp_user = u          # store server-side so step 2 cannot be hijacked
-    _admin_otp_ts = time.time()  # for expiry check
-    _admin_otp_attempts = 0      # a new code gets its own three tries
-    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    # SMTP can take ten seconds; off the event loop so nothing else waits on it.
-    ok, err = await asyncio.to_thread(send_otp_via_email, dest, ADMIN_OTP)
-    if not ok:
-        return {"ok": False, "error": err}
-    return {"ok": True}
-
-@fastapi_app.post("/api/admin/verify-otp")
-async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: Response):
-    """Admin login step 2: verify OTP, issue session."""
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts, _admin_otp_attempts
-    if not ADMIN_OTP or not _admin_otp_user:
-        raise HTTPException(401, "No OTP pending. Please restart login.")
-    if time.time() - _admin_otp_ts > 300:
-        ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
-        raise HTTPException(401, "OTP expired. Please request a new one.")
-    if _admin_otp_attempts >= 3:
-        ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
-        raise HTTPException(401, "Too many incorrect attempts. Please restart login.")
-    if not hmac.compare_digest(data.otp.strip().encode(), str(ADMIN_OTP).encode()):
-        _admin_otp_attempts += 1
-        raise HTTPException(401, "Invalid OTP.")
-    u = _admin_otp_user   # use server-stored username, not client-supplied
-    ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_ts = 0; _admin_otp_attempts = 0
-    if u not in USERS or USERS[u]["role"] != "admin":
-        raise HTTPException(401, "Account not authorised.")
-    ip = _get_client_ip(request)
-    _clear_login_failure(ip)
-    access_token = create_session(u)
-    refresh_token = create_refresh_token(u)
-    _set_session_cookies(request, response, access_token, refresh_token)
-    log_system_update(f"Admin login: {u}")
-    body = {
-        "role": "admin",
-        "username": u,
-        "display_name": USERS[u].get("display_name", u),
-        "token": access_token,   # for cross-origin clients
-    }
-    if _is_cross_site(request):
-        body["refresh_token"] = refresh_token
-    return body
-
-@fastapi_app.post("/api/forgot/send-otp")
-async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    u = data.username.strip()
-    # Always return the same response regardless of whether user exists (anti-enumeration)
-    if u not in USERS:
-        return {"ok": True}
-    otp = generate_otp_code(6)
-    _forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
-    global USER_FORGOT_OTP; USER_FORGOT_OTP = otp   # test-facing alias
-    # Send to the user's own email if stored, else fall back to admin recipient
-    dest = USERS[u].get("email") or (EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER)
-    ok, err = await asyncio.to_thread(send_otp_via_email, dest, otp)
-    if not ok:
-        _forgot_otp_store.pop(u, None)
-        return {"ok": False, "error": err}
-    return {"ok": True}
-
-@fastapi_app.post("/api/forgot/reset")
-async def forgot_reset(data: ForgotPasswordRequest, request: Request):
-    global USER_FORGOT_OTP
-    ip = _get_client_ip(request)
-    if _is_login_locked(ip):
-        raise HTTPException(429, "Too many failed attempts. Try again later.")
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    # username optional: if omitted, find user by matching OTP across store
-    if data.username:
-        u = data.username.strip()
-    else:
-        guess = data.otp.strip()
-        u = next((k for k, v in list(_forgot_otp_store.items())
-                  if hmac.compare_digest(str(v.get("otp", "")).encode(), guess.encode())), None)
-        if not u:
-            # A guess with no username used to cost nothing: no attempt was
-            # counted against anyone. It now counts against the caller.
-            if _forgot_otp_store:
-                _record_login_failure(ip)
-            raise HTTPException(401, "No OTP pending.")
-    state = _forgot_otp_store.get(u)
-    if not state:
-        USER_FORGOT_OTP = None
-        raise HTTPException(401, "No OTP pending.")
-    if time.time() - state["ts"] > 300:
-        _forgot_otp_store.pop(u, None)
-        USER_FORGOT_OTP = None
-        raise HTTPException(401, "OTP expired. Please request a new one.")
-    if state["attempts"] >= 3:
-        _forgot_otp_store.pop(u, None)
-        USER_FORGOT_OTP = None
-        raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
-    if not hmac.compare_digest(data.otp.strip().encode(), str(state["otp"]).encode()):
-        state["attempts"] += 1
-        _record_login_failure(ip)
-        if state["attempts"] >= 3:
-            _forgot_otp_store.pop(u, None)
-            USER_FORGOT_OTP = None
-        raise HTTPException(401, "Invalid OTP.")
-    err = _validate_password_strength(data.new_password)
-    if err:
-        raise HTTPException(400, err)
-    if u not in USERS:
-        raise HTTPException(404, "User not found.")
-    USERS[u]["password"] = await asyncio.to_thread(_hash_password, data.new_password.strip())
-    _invalidate_user_sessions(u)
-    await asyncio.to_thread(save_users)
-    log_system_update(f"Password reset for {u}.")
-    _forgot_otp_store.pop(u, None)
-    USER_FORGOT_OTP = None
-    return {"ok": True}
+fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 
 @fastapi_app.get("/api/state")
 async def get_state(session=Depends(require_session)):

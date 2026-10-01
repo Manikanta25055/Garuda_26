@@ -126,6 +126,11 @@ def rewrite(block, gw_names):
         local = function_locals(top)
         for node in ast.walk(top):
             if isinstance(node, ast.Global):
+                # The whole line is dropped, so it must hold nothing else.
+                text = lines[node.lineno - 1].strip()
+                if ";" in text or not text.startswith("global ") or node.end_lineno != node.lineno:
+                    raise SystemExit(f"line {node.lineno} of the block mixes `global` with other "
+                                     f"code; split it first: {text!r}")
                 drop_lines.add(node.lineno - 1)
             if not isinstance(node, ast.Name):
                 continue
@@ -255,6 +260,12 @@ def main():
                 + ("  # noqa: F401" if model_names else "") + "\n")
         new_source = new_source.replace(anchor, line + anchor, 1)
     compile(new_source, "Garuda_web.py", "exec")
+    # A moved handler is no longer a name in Garuda_web. Anything left there
+    # that still refers to it would fail only when that line runs.
+    remaining = {n.id for n in ast.walk(ast.parse(new_source)) if isinstance(n, ast.Name)}
+    dangling = sorted(set(functions) & remaining)
+    if dangling:
+        raise SystemExit(f"Garuda_web.py still refers to moved handlers: {dangling}")
 
     print(f"functions moved : {', '.join(functions)}")
     print(f"models moved    : {', '.join(model_names) or '-'}")
