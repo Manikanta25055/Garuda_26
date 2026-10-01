@@ -218,6 +218,7 @@ def _product_for_host(host):
 # supervised background loops, state backups. See garuda_core/__init__.py.
 try:
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
+    from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -236,6 +237,7 @@ try:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 except ImportError:
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -3867,28 +3869,7 @@ async def emergency_stop(session=Depends(require_admin)):
     return {"ok": True}
 
 # ── Offline event queue endpoints ─────────────────────────────────────────────
-@fastapi_app.get("/api/events/since")
-async def events_since(since: str = "", limit: int = 500, session=Depends(require_session)):
-    """Return events after the given ISO timestamp, oldest-first."""
-    limit = max(1, min(limit, 500))   # SQLite reads LIMIT -1 as "no limit"
-    events = get_events_since(since[:40], limit)
-    return {"events": events, "count": len(events)}
-
-@fastapi_app.get("/api/events/pending")
-async def events_pending(session=Depends(require_session)):
-    """Return all unsynced events and mark them as synced."""
-    unsynced = get_unsynced_events(1000)
-    if unsynced:
-        max_id = max(e["id"] for e in unsynced)
-        mark_events_synced(max_id)
-    return {"events": unsynced, "count": len(unsynced)}
-
-@fastapi_app.get("/api/events/stats")
-async def events_stats(session=Depends(require_session)):
-    """Return queue statistics."""
-    pending = get_pending_count()
-    total = _events.total(EVENTS_DB)
-    return {"pending": pending, "total": total, "online": _net_online}
+fastapi_app.include_router(build_events_router(sys.modules[__name__]))
 
 # ── Feedback ─────────────────────────────────────────────────────────────────
 _feedback_lock = threading.Lock()
