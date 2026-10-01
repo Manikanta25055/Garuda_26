@@ -227,6 +227,7 @@ try:
     from .garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
+    from .garuda_routes.pages import build_pages_router
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -256,6 +257,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.pages import build_pages_router
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2821,41 +2823,7 @@ fastapi_app.include_router(build_home_router(
 # ── Pydantic models ──────────────────────────────────────────────────────────
 # ── Routes ───────────────────────────────────────────────────────────────────
 
-@fastapi_app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    host = (request.headers.get("host") or "").split(":")[0].lower()
-    if DRISHTI_APP_ENABLED and host == DRISHTI_HOST:
-        drishti_index = DRISHTI_DIST / "index.html"
-        if drishti_index.is_file():
-            return HTMLResponse(drishti_index.read_text())
-    html_path = _static_dir / "index.html"
-    if html_path.exists():
-        product = _product_for_host(host)
-        html = html_path.read_text().replace(
-            '<html lang="en" data-theme="light">',
-            f'<html lang="en" data-theme="light" data-product="{product}">', 1)
-        if product == "home":
-            html = html.replace("<title>Garuda</title>", "<title>Drishti</title>", 1)
-        # Always revalidated: the page names the versioned scripts, so a stale
-        # copy of it pins a browser to an old build.
-        return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
-    return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
-
-@fastapi_app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    p = _static_dir / "favicon.ico"
-    return FileResponse(str(p), media_type="image/x-icon") if p.exists() else Response(status_code=204)
-
-@fastapi_app.get("/manifest.json")
-async def pwa_manifest():
-    p = _static_dir / "manifest.json"
-    return FileResponse(str(p), media_type="application/manifest+json") if p.exists() else JSONResponse({})
-
-@fastapi_app.get("/sw.js")
-async def service_worker():
-    p = _static_dir / "sw.js"
-    return FileResponse(str(p), media_type="application/javascript",
-                        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"}) if p.exists() else Response("", media_type="application/javascript")
+fastapi_app.include_router(build_pages_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 
