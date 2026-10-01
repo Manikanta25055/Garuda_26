@@ -217,6 +217,7 @@ def _product_for_host(host):
 # The base every part of the service stands on: typed settings, logging,
 # supervised background loops, state backups. See garuda_core/__init__.py.
 try:
+    from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -234,6 +235,7 @@ try:
     from .garuda_core.validation import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 except ImportError:
+    from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -2849,12 +2851,6 @@ class CustomCommandRequest(BaseModel):
 class DeleteCommandRequest(BaseModel):
     phrase: str
 
-class FeedbackRequest(BaseModel):
-    message: str
-    category: str = "general"   # bug | feature | general | other
-    rating: int   = 0           # 1-5 stars, 0 = not rated
-    name: str     = ""          # optional, anonymous if blank
-
 class OTPRequest(BaseModel):
     username: str
     password: str
@@ -3919,59 +3915,7 @@ def _save_feedback(entries: list):
     except Exception as e:
         log_system_update(f"Failed to save feedback: {e}")
 
-@fastapi_app.post("/api/feedback")
-async def submit_feedback(data: FeedbackRequest, request: Request):
-    """Public endpoint — no auth required. Rate-limited to 5 per hour per IP."""
-    ip = _get_client_ip(request)
-    now = time.time()
-    # Reuse _rate_store but with a separate key to avoid conflating with API limits
-    fb_key = f"fb:{ip}"
-    stamps = _rate_store[fb_key]
-    stamps[:] = [t for t in stamps if now - t < 3600]
-    if len(stamps) >= 5:
-        raise HTTPException(429, "Too many feedback submissions. Try again later.")
-    stamps.append(now)
-
-    msg = data.message.strip()
-    if not msg:
-        raise HTTPException(400, "Message cannot be empty.")
-    if len(msg) > 1000:
-        raise HTTPException(400, "Message too long (max 1000 chars).")
-    rating = max(0, min(5, int(data.rating)))
-    category = data.category.strip().lower()[:16]
-    if category not in ("bug", "feature", "general", "other"):
-        category = "general"
-    name = data.name.strip()[:64] if data.name else ""
-
-    entry = {
-        "id": int(time.time() * 1000),
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "category": category,
-        "rating": rating,
-        "name": name or "Anonymous",
-        "message": msg,
-        "ip": ip,
-    }
-
-    def _write_entry():
-        with _feedback_lock:
-            entries = _load_feedback()
-            entries.append(entry)
-            del entries[:-_FEEDBACK_MAX]    # an open endpoint must not grow a file for ever
-            _save_feedback(entries)
-
-    await asyncio.to_thread(_write_entry)
-    log_system_update(f"Feedback received [{category}] from {name or 'Anonymous'}")
-    return {"ok": True}
-
-@fastapi_app.get("/api/feedback")
-async def get_feedback(session=Depends(require_admin)):
-    """Admin-only — returns all stored feedback entries."""
-    def _read():
-        with _feedback_lock:
-            return _load_feedback()
-    entries = await asyncio.to_thread(_read)
-    return {"feedback": entries, "count": len(entries)}
+fastapi_app.include_router(build_feedback_router(sys.modules[__name__]))
 
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
 # Uses _frame_seq to detect new frames only — avoids re-sending duplicate
