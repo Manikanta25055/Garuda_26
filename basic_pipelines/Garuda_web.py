@@ -219,6 +219,7 @@ def _product_for_host(host):
 try:
     from .garuda_routes.master_keys import build_master_keys_router
     from .garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
+    from .garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -240,6 +241,7 @@ try:
 except ImportError:
     from basic_pipelines.garuda_routes.master_keys import build_master_keys_router
     from basic_pipelines.garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2812,34 +2814,12 @@ class ModeRequest(BaseModel):
     mode: str   # "dnd","email_off","idle","night","emergency","privacy"
     value: bool
 
-class ConfigUpdateRequest(BaseModel):
-    detection_threshold: Optional[float] = None
-    email_sender: Optional[str] = None
-    email_sender_pass: Optional[str] = None
-    email_recipients: Optional[List[str]] = None
-    email_cooldown: Optional[int] = None
-    danger_label: Optional[str] = None    # legacy single-label (maps to danger_labels)
-    danger_labels: Optional[List[str]] = None
-    privacy: Optional[bool] = None
-    watch_labels: Optional[List[str]] = None
-    mode_schedule: Optional[dict] = None
-    night_presence_start: Optional[str] = None
-    night_presence_end: Optional[str] = None
-    night_presence_enabled: Optional[bool] = None
-
 class DeviceAddRequest(BaseModel):
     name: str
     mac: str
 
 class DeviceDeleteRequest(BaseModel):
     mac: str
-
-class CustomCommandRequest(BaseModel):
-    phrase: str
-    response: str
-
-class DeleteCommandRequest(BaseModel):
-    phrase: str
 
 class OTPRequest(BaseModel):
     username: str
@@ -3334,126 +3314,7 @@ fastapi_app.post("/api/set-mode", include_in_schema=False)(set_mode)
 
 fastapi_app.include_router(build_users_router(sys.modules[__name__]))
 
-@fastapi_app.get("/api/config")
-async def get_config(session=Depends(require_admin)):
-    return {
-        "detection_threshold": DETECTION_THRESHOLD,
-        "danger_labels": DANGER_LABELS,
-        "email_sender": EMAIL_SENDER,
-        "email_recipients": EMAIL_RECIPIENTS,
-        "email_cooldown": EMAIL_COOLDOWN,
-        "privacy": MODE_PRIVACY,
-        "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
-        "custom_modes": CUSTOM_MODES,
-        "watch_labels": WATCH_LABELS,
-        "mode_schedule": MODE_SCHEDULE,
-        "night_presence_window": NIGHT_PRESENCE_WINDOW,
-    }
-
-@fastapi_app.post("/api/config")
-async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
-    global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
-    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, DANGER_LABELS
-    global NIGHT_PRESENCE_WINDOW
-    if data.detection_threshold is not None:
-        DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
-    if data.email_sender is not None:
-        sender = data.email_sender.strip()
-        if sender and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', sender):
-            raise HTTPException(400, f"Invalid sender address: {sender}")
-        EMAIL_SENDER = sender
-    if data.email_sender_pass is not None:
-        new_pass = data.email_sender_pass.strip()
-        if len(new_pass) > 128 or any(c in new_pass for c in "\r\n\x00"):
-            raise HTTPException(400, "Invalid app password.")
-        EMAIL_SENDER_PASS = new_pass
-        # Kept out of config.json on purpose, which meant a password typed
-        # into the Email page worked until the next restart and then silently
-        # reverted. It goes to .env (0600), next to the other secrets.
-        try:
-            await asyncio.to_thread(_set_env_vars, HOME_ENV_PATH, {"EMAIL_SENDER_PASS": new_pass})
-            os.environ["EMAIL_SENDER_PASS"] = new_pass
-        except (OSError, ValueError) as exc:
-            log_system_update(f"Email password applied but not saved: {exc}")
-    if data.email_recipients is not None:
-        if len(data.email_recipients) > 10:
-            raise HTTPException(400, "Maximum 10 email recipients allowed.")
-        for addr in data.email_recipients:
-            if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', addr):
-                raise HTTPException(400, f"Invalid email address: {addr}")
-        EMAIL_RECIPIENTS = data.email_recipients
-    if data.email_cooldown is not None:
-        if not (5 <= data.email_cooldown <= 3600):
-            raise HTTPException(400, "Email cooldown must be between 5 and 3600 seconds.")
-        EMAIL_COOLDOWN = data.email_cooldown
-    if data.privacy is not None:
-        with _mode_lock:
-            MODE_PRIVACY = data.privacy
-    # Accept danger_labels (list) or legacy danger_label (single)
-    if data.danger_labels is not None:
-        cleaned = _clean_labels(data.danger_labels)
-        if not cleaned:
-            # An empty list would switch every alert off without saying so.
-            raise HTTPException(400, "At least one danger label is required.")
-        DANGER_LABELS = cleaned
-        if app_gst and hasattr(app_gst, 'user_data'):
-            app_gst.user_data.danger_labels = list(DANGER_LABELS)
-    elif data.danger_label is not None:
-        new_lbl = data.danger_label.strip()[:64]
-        if new_lbl:
-            DANGER_LABELS = [new_lbl]
-            if app_gst and hasattr(app_gst, 'user_data'):
-                app_gst.user_data.danger_labels = list(DANGER_LABELS)
-    if data.watch_labels is not None:
-        global WATCH_LABELS
-        WATCH_LABELS = _clean_labels(data.watch_labels)
-    if data.mode_schedule is not None:
-        global MODE_SCHEDULE
-        # Validate structure: {mode: {start: HH:MM, end: HH:MM}}
-        valid_modes = {"dnd", "email_off", "idle", "night"}
-        clean = {}
-        for k, v in data.mode_schedule.items():
-            if k in valid_modes and isinstance(v, dict):
-                s = v.get("start", "")
-                e = v.get("end", "")
-                if isinstance(s, str) and isinstance(e, str) and _HHMM_RE.match(s) and _HHMM_RE.match(e):
-                    clean[k] = {"start": s, "end": e}
-        MODE_SCHEDULE = clean
-    # Night presence window
-    if data.night_presence_start is not None or data.night_presence_end is not None or data.night_presence_enabled is not None:
-        with _np_lock:
-            if data.night_presence_start is not None:
-                if _HHMM_RE.match(data.night_presence_start):
-                    NIGHT_PRESENCE_WINDOW["start"] = data.night_presence_start
-            if data.night_presence_end is not None:
-                if _HHMM_RE.match(data.night_presence_end):
-                    NIGHT_PRESENCE_WINDOW["end"] = data.night_presence_end
-            if data.night_presence_enabled is not None:
-                NIGHT_PRESENCE_WINDOW["enabled"] = data.night_presence_enabled
-    await _async_save_config()
-    log_system_update("Config updated.")
-    return {"ok": True}
-
-@fastapi_app.post("/api/config/command/add")
-async def add_command(data: CustomCommandRequest, session=Depends(require_admin)):
-    phrase = (data.phrase or "").strip()
-    if not phrase:
-        raise HTTPException(400, "Command phrase cannot be empty.")
-    if len(phrase) > 200:
-        raise HTTPException(400, "Command phrase must be 200 characters or fewer.")
-    if len(data.response or "") > 500:
-        raise HTTPException(400, "Command response must be 500 characters or fewer.")
-    if len(CUSTOM_VOICE_COMMANDS) >= 100 and phrase.lower() not in CUSTOM_VOICE_COMMANDS:
-        raise HTTPException(400, "Maximum 100 custom commands reached.")
-    CUSTOM_VOICE_COMMANDS[phrase.lower()] = data.response
-    await _async_save_config()
-    return {"ok": True}
-
-@fastapi_app.post("/api/config/command/delete")
-async def delete_command(data: DeleteCommandRequest, session=Depends(require_admin)):
-    CUSTOM_VOICE_COMMANDS.pop(data.phrase.lower(), None)
-    await _async_save_config()
-    return {"ok": True}
+fastapi_app.include_router(build_config_router(sys.modules[__name__]))
 
 @fastapi_app.get("/api/devices")
 async def get_devices(session=Depends(require_admin)):
