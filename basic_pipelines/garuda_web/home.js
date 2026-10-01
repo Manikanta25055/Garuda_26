@@ -20,6 +20,7 @@ const H = (() => {
   let _seenNotices = new Set();
   let _sceneDraft = null;
   let _settings = {};
+  const _busy = new Set();          // devices mid-toggle: pushes sent before the server answers are ignored
 
   const isAdmin = () => _role === 'admin';
   const errText = e => (e && (e.detail || e.message)) || 'Something went wrong';
@@ -78,7 +79,7 @@ const H = (() => {
       let changed = false;
       _overview.devices.forEach(d => {
         const s = home.states[d.id];
-        if (s && (s[0] !== d.state || s[1] !== d.available)) { d.state = s[0]; d.available = s[1]; changed = true; }
+        if (s && !_busy.has(d.id) && (s[0] !== d.state || s[1] !== d.available)) { d.state = s[0]; d.available = s[1]; changed = true; }
       });
       const known = new Set(_overview.devices.map(d => d.id));
       const noticesChanged = (home.notices || []).length !== (_overview.notices || []).length;
@@ -188,19 +189,39 @@ const H = (() => {
     const off = d.enabled === false;
     return `<button class="ha-tile ${on ? 'on' : ''} ${!d.available || off ? 'unavail' : ''}"
         ${!d.available || off ? 'disabled' : ''} aria-pressed="${on}"
-        onclick="H.toggleDevice('${esc(d.id)}', '${on ? 'off' : 'on'}', this)">
+        onclick="H.toggleDevice('${esc(d.id)}', this)">
       <div class="ha-tile-top"><span class="ha-dot"></span><span class="ha-sub">${esc(d.type)}</span></div>
       <div class="ha-tile-name">${esc(d.name)}</div>
       <div class="ha-tile-state">${off ? 'Disabled' : !d.available ? 'Unreachable' : on ? 'On' : 'Off'}</div>
     </button>`;
   }
 
-  async function toggleDevice(id, action, btn) {
-    if (btn) btn.classList.add('busy');
+  // The tile flips under the finger; the server is told afterwards, and the
+  // tile only goes back if it says no.
+  function paintTile(btn, on) {
+    btn.classList.toggle('on', on);
+    btn.setAttribute('aria-pressed', String(on));
+    const state = btn.querySelector('.ha-tile-state');
+    if (state) state.textContent = on ? 'On' : 'Off';
+  }
+  async function toggleDevice(id, btn) {
+    if (btn.dataset.pending === '1') return;
+    const on = btn.getAttribute('aria-pressed') !== 'true';
+    const dev = ((_overview && _overview.devices) || []).find(d => d.id === id);
+    btn.dataset.pending = '1';
+    _busy.add(id);
+    paintTile(btn, on);
+    if (dev) dev.state = on ? 'on' : 'off';
+    if (navigator.vibrate) { try { navigator.vibrate(8); } catch (_) {} }
     try {
-      await api('POST', `/api/home/devices/${encodeURIComponent(id)}/set`, { action });
-    } catch (e) { G.showToast(errText(e), 'error'); }
-    await loadOverview();
+      await api('POST', `/api/home/devices/${encodeURIComponent(id)}/set`, { action: on ? 'on' : 'off' });
+    } catch (e) {
+      if (dev) dev.state = on ? 'off' : 'on';
+      if (btn.isConnected) paintTile(btn, !on);
+      G.showToast(errText(e), 'error');
+    }
+    delete btn.dataset.pending;
+    _busy.delete(id);
   }
 
   async function allOff() {
@@ -372,7 +393,7 @@ const H = (() => {
           <span class="ha-sub">${esc(d.room)} · ${esc(d.type)} · ${d.transport.kind === 'relay' ? 'relay ' + d.transport.channel : 'mqtt ' + esc(d.transport.topic_base)}</span></div>
         <input class="input input-sm ha-watts" type="number" min="0" max="5000" value="${d.watts ?? ''}" placeholder="W"
                aria-label="Watts for ${esc(d.name)}" onchange="H.setWatts('${esc(d.id)}', this.value)"/>
-        <div class="toggle ${d.enabled === false ? '' : 'on'}" title="Enabled" onclick="H.setEnabled('${esc(d.id)}', ${d.enabled === false})"></div>
+        <div class="toggle ${d.enabled === false ? '' : 'on'}" title="Enabled" onclick="H.setEnabled('${esc(d.id)}', this)"></div>
         <button class="ha-x" title="Remove" aria-label="Remove ${esc(d.name)}" onclick="H.deleteDevice('${esc(d.id)}', '${esc(d.name)}')">&times;</button>
       </div>`).join('') || '<div class="ha-empty">No devices yet.</div>';
   }
@@ -415,8 +436,13 @@ const H = (() => {
     } catch (e) { G.showToast(errText(e), 'error'); }
   }
 
-  async function setEnabled(id, enabled) {
-    try { await api('PATCH', `/api/home/devices/${encodeURIComponent(id)}`, { enabled }); }
+  // A switch moves at once and is given time to finish before the list is
+  // redrawn around it; the redraw then lands on the state it already shows.
+  const settle = p => Promise.all([p, new Promise(r => setTimeout(r, 520))]).then(v => v[0]);
+
+  async function setEnabled(id, sw) {
+    const enabled = sw.classList.toggle('on');
+    try { await settle(api('PATCH', `/api/home/devices/${encodeURIComponent(id)}`, { enabled })); }
     catch (e) { G.showToast(errText(e), 'error'); }
     loadOverview();
   }
@@ -461,7 +487,7 @@ const H = (() => {
           <div class="ha-sub">${r.fired_count ? `Ran ${r.fired_count}× · last ${ago(r.last_fired)}` : 'Has not run yet'}</div>
         </div>
         ${isAdmin() ? `<div class="ha-row-actions">
-          <div class="toggle ${r.enabled === false ? '' : 'on'}" onclick="H.toggleRule('${esc(r.id)}')"></div>
+          <div class="toggle ${r.enabled === false ? '' : 'on'}" onclick="H.toggleRule('${esc(r.id)}', this)"></div>
           <button class="ha-x" aria-label="Delete rule" onclick="H.deleteRule('${esc(r.id)}')">&times;</button></div>` : ''}
       </div>`).join('')
       + (rules.orphaned.length ? `<div class="ha-sub warn">${rules.orphaned.length} rule(s) paused because a device they use was removed.</div>` : '')
@@ -477,7 +503,7 @@ const H = (() => {
             ${e.next_run && e.kind !== 'once' ? ` · next ${whenLabel(e.next_run)}` : ''}${e.label ? ' · ' + esc(e.label) : ''}</div>
         </div>
         ${isAdmin() || e.created_by === me ? `<div class="ha-row-actions">
-          ${e.kind === 'daily' ? `<div class="toggle ${e.enabled === false ? '' : 'on'}" onclick="H.toggleSchedule('${esc(e.id)}')"></div>` : ''}
+          ${e.kind === 'daily' ? `<div class="toggle ${e.enabled === false ? '' : 'on'}" onclick="H.toggleSchedule('${esc(e.id)}', this)"></div>` : ''}
           <button class="ha-x" aria-label="Delete schedule" onclick="H.deleteSchedule('${esc(e.id)}')">&times;</button></div>` : ''}
       </div>`).join('') : '<div class="ha-empty">Nothing scheduled.</div>';
 
@@ -538,9 +564,10 @@ const H = (() => {
   const confirmProposal = id => reloadAuto(api('POST', `/api/home/proposals/${encodeURIComponent(id)}/confirm`)
     .then(() => G.showToast('Rule saved — it is live now', 'success')));
   const discardProposal = id => reloadAuto(api('DELETE', `/api/home/proposals/${encodeURIComponent(id)}`));
-  const toggleRule = id => reloadAuto(api('POST', `/api/home/rules/${encodeURIComponent(id)}/toggle`));
+  const flip = sw => { if (sw) { sw.classList.toggle('on'); sw.closest('.ha-row')?.classList.toggle('off'); } };
+  const toggleRule = (id, sw) => { flip(sw); return reloadAuto(settle(api('POST', `/api/home/rules/${encodeURIComponent(id)}/toggle`))); };
   const deleteRule = id => confirm('Delete this rule?') && reloadAuto(api('DELETE', `/api/home/rules/${encodeURIComponent(id)}`));
-  const toggleSchedule = id => reloadAuto(api('POST', `/api/home/schedules/${encodeURIComponent(id)}/toggle`));
+  const toggleSchedule = (id, sw) => { flip(sw); return reloadAuto(settle(api('POST', `/api/home/schedules/${encodeURIComponent(id)}/toggle`))); };
   const deleteSchedule = id => reloadAuto(api('DELETE', `/api/home/schedules/${encodeURIComponent(id)}`));
   const acceptSuggestion = id => reloadAuto(api('POST', `/api/home/suggestions/${encodeURIComponent(id)}/accept`)
     .then(() => G.showToast('Schedule created', 'success')));

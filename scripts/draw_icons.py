@@ -14,7 +14,8 @@ rebuild gives the same drawing.
 
 An icon the owner draws later replaces the file of the same name (build_icons
 writes the same folder); nothing else has to change. Never add a name here
-that build_icons.py already produces.
+that build_icons.py already produces, unless it is listed in that script's
+REDRAWN set (narada, mail: redesigned here at the owner's request).
 """
 import math
 import random
@@ -56,7 +57,7 @@ def box(x0, y0, x1, y1, r=1.6):
     pts = []
     for cx, cy, a in ((x1 - r, y0 + r, -90), (x1 - r, y1 - r, 0), (x0 + r, y1 - r, 90), (x0 + r, y0 + r, 180)):
         pts += arc(cx, cy, r, a, a + 90)
-    return pts + line(pts[-1], (x0 + r + 1.2, y0))
+    return pts + line(pts[-1], (x1 - r + 0.6, y0))      # the top edge, running a little past its start
 
 
 # ── the hand ──────────────────────────────────────────────────────────────────
@@ -138,6 +139,14 @@ def shield():
 SLASH = line((4.2, 4.6), (19.8, 20))
 
 ICONS = {
+    # Narada: the sage's veena (a round gourd, a long neck, two pegs) with his
+    # voice leaving it as two waves. The name and the job in one mark.
+    "narada": [ring(7.8, 15.2, 4.8), line((11.3, 11.8), (20.4, 2.8)),
+               line((15.4, 4.9), (18.2, 7.7)), line((17.8, 2.6), (20.6, 5.4)),
+               arc(7.8, 15.2, 8, -10, 52), arc(7.8, 15.2, 11, 2, 38),
+               light(arc(7.8, 15.2, 1.9, 150, 300))],
+    # A sealed letter: the flap is one clean V, nothing else.
+    "mail": [box(2.8, 5.4, 21.2, 18.6, r=2.4), line((3.6, 7.4), (12, 13.6), (20.4, 7.4))],
     # Narada's dock
     "mic": [box(8.9, 2.8, 15.1, 13.6, r=3.05), arc(12, 11, 6.3, 8, 172), line((12, 17.4), (12, 20.8)),
             line((8.6, 20.9), (15.4, 20.8)), light(line((10.6, 5.6), (10.6, 8.4)))],
@@ -164,13 +173,16 @@ ICONS = {
     "forward": [line((9.4, 4.8), (16.8, 12), (9.4, 19.2))],
     "info": [ring(12, 12, 8.6), line((12, 11), (12, 16.6)), dot(12, 7.6, 1.1)],
     # modes
-    "dnd": [ring(12, 12, 8.6), line((7.4, 12), (16.6, 12)), light(line((8.6, 13.7), (15, 13.6)))],
+    "dnd": [ring(12, 12, 8.6), line((7.6, 12), (16.4, 12))],
     "privacy": [arc(12, 15.4, 9.6, 205, 335, 9.2), arc(12, 8.6, 9.6, 25, 155, 9.2), ring(12, 12, 2.7), SLASH],
     "idle": [ring(12, 12, 8.6), line((9.6, 8.4), (9.6, 15.6)), line((14.4, 8.4), (14.4, 15.6))],
     "emergency": [arc(12, 15.6, 5.2, 180, 360) + line((17.2, 15.6), (17.2, 18)), line((6.8, 15.6), (6.8, 18)),
                   line((4.6, 18.6), (19.4, 18.6)), line((12, 3), (12, 6.2)), line((4.2, 7), (6.6, 9.2)),
                   line((19.8, 7), (17.4, 9.2)), light(arc(12, 15.6, 2.4, 190, 270))],
-    "email-off": [box(3, 5.6, 21, 18.4, r=1.8), line((4.2, 7.6), (12, 13.4), (19.8, 7.6)), SLASH],
+    # The same letter as "mail", muted: a bell-style strike through it, drawn
+    # corner to corner so it never tangles with the flap.
+    "email-off": [box(2.8, 6.2, 21.2, 18.8, r=2.4), line((13.2, 13.4), (20.2, 8.4)),
+                  line((3.6, 3.2), (20.6, 21.4))],
     # camera controls
     "snapshot": [box(2.8, 7, 21.2, 19.4, r=2.2), line((8, 7), (9.6, 4.4), (14.4, 4.4), (16, 7)),
                  ring(12, 13.2, 3.5), light(arc(12, 13.2, 1.7, 190, 280))],
@@ -181,7 +193,7 @@ ICONS = {
     "light": [arc(12, 9.6, 5.8, 128, 412) + line((15.6, 14.2), (15.4, 16.6), (8.6, 16.6), (8.4, 14.2)),
               line((9.4, 18.8), (14.6, 18.8)), line((10.6, 21), (13.4, 21)),
               light(line((10.4, 10.4), (12, 12.4), (13.6, 10.4)))],
-    "fan": [dot(12, 12, 1.5), blade(-90), blade(30), blade(150)],
+    "fan": [ring(12, 12, 1.5), blade(-90, 9.6, 2.5), blade(30, 9.6, 2.5), blade(150, 9.6, 2.5)],
     "plug": [line((9, 2.8), (9, 7.4)), line((15, 2.8), (15, 7.4)),
              line((6.2, 7.6), (17.8, 7.6), (17.8, 11.4)) + arc(12, 11.4, 5.8, 0, 180) + line((6.2, 11.4), (6.2, 7.2)),
              line((12, 17.2), (12, 21.2))],

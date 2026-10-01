@@ -439,25 +439,30 @@ textarea:-webkit-autofill {
   flex: 1;
   font-family: var(--font); font-size: 13px; font-weight: 400;
   color: var(--t2);
-  transition: color var(--trans);
+  transition: color 0.3s ease;
 }
+.mode-row { -webkit-tap-highlight-color: transparent; }
+.mode-row, .mode-row-icon { transition: background-color 0.3s ease; }
 
 /* macOS toggle switch — exact 51×31 dimensions */
 .mode-toggle {
   width: 51px; height: 31px; border-radius: 15.5px;
   background: var(--surface-3); flex-shrink: 0;
   position: relative;
-  transition: background 0.25s ease;
+  transition: background-color 0.3s ease;
 }
 .mode-toggle.on { background: var(--accent); }
 .mode-toggle::after {
   content: '';
   position: absolute; top: 2px; left: 2px;
-  width: 27px; height: 27px; border-radius: 50%;
+  width: 27px; height: 27px; border-radius: 13.5px;
   background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 0.5s var(--spring), width 0.25s var(--ease-apple), background-color 0.3s ease;
 }
 .mode-toggle.on::after { transform: translateX(20px); }
+/* Held down, the knob stretches towards where it is going. */
+.mode-row:active .mode-toggle::after { width: 33px; }
+.mode-row:active .mode-toggle.on::after { transform: translateX(14px); }
 
 /* Active states */
 .mode-row.on                { background: var(--accent-d); }
@@ -511,18 +516,21 @@ textarea:-webkit-autofill {
   width: 51px; height: 31px; border-radius: 15.5px;
   background: var(--surface-3); cursor: pointer;
   position: relative; flex-shrink: 0;
-  transition: background 0.25s ease;
+  transition: background-color 0.3s ease;
   border: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .toggle.on { background: var(--accent); }
 .toggle::after {
   content: '';
   position: absolute; top: 2px; left: 2px;
-  width: 27px; height: 27px; border-radius: 50%;
+  width: 27px; height: 27px; border-radius: 13.5px;
   background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-  transition: transform 0.25s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 0.5s var(--spring), width 0.25s var(--ease-apple), background-color 0.3s ease;
 }
 .toggle.on::after { transform: translateX(20px); }
+.toggle:active::after { width: 33px; }
+.toggle.on:active::after { transform: translateX(14px); }
 
 /* ── App shell ──────────────────────────────────────────── */
 #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
@@ -717,49 +725,60 @@ textarea:-webkit-autofill {
 .hdr-user { font-size: 13px; color: var(--t2); }
 
 /* ── Dynamic Island ─────────────────────────────────────────
-   iPhone proportions: 126 x 37 at rest (3.4 : 1), always black, fully
-   rounded. It grows sideways for live states with a spring, like iOS.
-   The theme, user and power controls live in #top-actions beside it. */
+   Always black. #top-hud is only a frame that holds the position and the
+   shadow; the black shape is .di-shell, cut to a continuous-corner outline
+   by island.js, which springs its width, height and radius. Each state asks
+   for a pill width through --di-w. Nothing is transformed or filtered at
+   rest, so the text stays sharp. The theme, user and power controls live
+   in #top-actions beside it. */
 #top-hud {
-  --di-w: 126px;
-  position: fixed;
+  --di-w: var(--di-rest-w, 126px);
+  --di-ring: transparent;
+  position: fixed; z-index: 80;
   top: max(10px, env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 80;
-  width: var(--di-w); height: 37px;
-  border-radius: 18.5px;
-  background: #000;
+  left: 0; right: 0; margin-inline: auto;
+  width: calc(min(376px, 100vw - 24px) + 24px); height: 37px;
   color: #fff;
-  align-items: center; justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
-  transition: width 0.55s cubic-bezier(0.32, 1.42, 0.52, 1),
-              box-shadow 0.35s ease;
-  cursor: default;
-  user-select: none;
+  pointer-events: none; user-select: none;
+  filter: drop-shadow(0 5px 12px rgba(0,0,0,0.20));
+  transition: filter 0.35s ease;
 }
-[data-theme="dark"] #top-hud {
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.10), 0 8px 22px rgba(0,0,0,0.45);
-}
-#top-hud.di-alert    { --di-w: 176px; box-shadow: 0 0 0 1px rgba(255,69,58,0.55), 0 8px 26px rgba(255,69,58,0.35); }
-#top-hud.di-yellow   { --di-w: 208px; box-shadow: 0 0 0 1px rgba(255,159,10,0.50), 0 8px 26px rgba(255,159,10,0.30); }
-#top-hud.di-allclear { --di-w: 172px; box-shadow: 0 0 0 1px rgba(48,209,88,0.45), 0 8px 22px rgba(0,0,0,0.20); }
+[data-theme="dark"] #top-hud { --di-ring: rgba(255,255,255,0.16); filter: drop-shadow(0 8px 18px rgba(0,0,0,0.5)); }
+#top-hud.di-alert    { --di-w: 176px; --di-ring: rgba(255,69,58,0.8);  animation: di-glow-red 1.1s ease-in-out infinite; }
+#top-hud.di-yellow   { --di-w: 208px; --di-ring: rgba(255,159,10,0.6); filter: drop-shadow(0 6px 16px rgba(255,159,10,0.35)); }
+#top-hud.di-allclear { --di-w: 172px; --di-ring: rgba(48,209,88,0.5); }
 #top-hud.di-thinking { --di-w: 164px; }
 #top-hud.di-voice    { --di-w: 184px; }
-#top-hud.di-alert { animation: di-glow-red 1.1s ease-in-out infinite; }
 @keyframes di-glow-red {
-  50% { box-shadow: 0 0 0 1px rgba(255,69,58,0.85), 0 8px 34px rgba(255,69,58,0.55); }
+  0%, 100% { filter: drop-shadow(0 6px 14px rgba(255,69,58,0.40)); }
+  50%      { filter: drop-shadow(0 6px 24px rgba(255,69,58,0.80)); }
 }
-#top-hud:active { transition-duration: 0.25s; }
 
-/* Rest content: the page name, centred. */
+/* The shape. Until island.js takes over the clip-path this inset is the pill. */
+.di-shell {
+  position: absolute; top: 0; left: 0; width: 100%; height: 37px;
+  display: flex; justify-content: center; align-items: flex-start;
+  background: #000;
+  clip-path: inset(0 calc((100% - var(--di-w)) / 2) round 18.5px);   /* island.js replaces this with the true outline */
+  pointer-events: auto; cursor: pointer; outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.di-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.di-ring path { fill: none; stroke: var(--di-ring); stroke-width: 2; transition: stroke 0.3s ease; }
+.di-shell:focus-visible .di-ring path { stroke: #fff; stroke-width: 4; }
+.di-pill {
+  position: relative; flex: none; width: var(--di-w); height: 37px;
+  display: flex; align-items: center; justify-content: center;
+}
+
+/* Rest content: the page's glyph, its name, and a live figure. */
+.hud-rest { flex: none; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
 .hud-brand {
   font-family: var(--font); font-size: 11.5px; font-weight: 600;
   letter-spacing: 2.2px; text-transform: uppercase; color: rgba(255,255,255,0.92);
-  transition: opacity 0.18s ease, transform 0.35s cubic-bezier(0.32, 1.42, 0.52, 1);
 }
-#top-hud:not(.di-idle) .hud-brand { opacity: 0; transform: scale(0.85); }
+.di-val { font: 600 11px/1 var(--font); letter-spacing: 0.3px; color: rgba(255,255,255,0.55); }
+.di-val:empty { display: none; }
 .hud-status { display: none; }
 
 /* Live content sits on top and fades in once the pill has started to grow. */
@@ -767,12 +786,10 @@ textarea:-webkit-autofill {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   opacity: 0; pointer-events: none;
-  transition: opacity 0.18s ease;
 }
-#top-hud:not(.di-idle) .di-live { opacity: 1; transition: opacity 0.25s ease 0.12s; }
-.di-cnt { display: none; width: 100%; padding: 0 14px; align-items: center; gap: 8px; }
+.di-cnt { display: none; width: 100%; padding: 0 14px; align-items: center; gap: 8px; white-space: nowrap; }
 .di-lbl { font-size: 12px; font-weight: 600; color: #fff; letter-spacing: 0.2px; }
-.di-cnt .di-grow { flex: 1; }
+.di-cnt .di-grow, .di-grow { flex: 1; }
 #top-hud.di-alert    .di-cnt-alert,
 #top-hud.di-thinking .di-cnt-think,
 #top-hud.di-allclear .di-cnt-allclear,
@@ -813,7 +830,6 @@ textarea:-webkit-autofill {
   transform: scaleY(var(--v, 0.35));
   transition: transform 0.08s linear;
 }
-#top-hud.di-talk .di-vbar { background: #fff; }
 #top-hud.di-voice:not(.di-live-levels) .di-vbar { animation: di-vbar-wave 0.85s ease-in-out infinite; }
 .di-vbar:nth-child(2) { animation-delay: 0.12s; }
 .di-vbar:nth-child(3) { animation-delay: 0.24s; }
@@ -2914,10 +2930,19 @@ input[type=range]::-webkit-slider-thumb {
   object-fit: contain;
   display: block;
 }
-.cam-view object {
-  width: 100%; height: 100%;
-  display: block;
-}
+/* The floor plan is drawn in ink (scripts/draw_floorplan.py) and inlined by
+   app.js, so it takes the theme's colours. The walls draw themselves when
+   the tab opens. */
+#cam-view-floor { background: var(--surface); color: var(--t1); }
+#floorplan-svg { position: absolute; inset: 0; padding: 14px; box-sizing: border-box; }
+#floorplan-svg svg { width: 100%; height: 100%; display: block; }
+#floorplan-svg .fp-walls path { stroke-dasharray: 1; animation: fp-draw 1.1s var(--ease-apple) backwards; }
+#floorplan-svg .fp-walls path:nth-child(n+2) { animation-delay: 0.25s; }
+#floorplan-svg .fp-walls path:nth-child(n+6) { animation-delay: 0.4s; }
+#floorplan-svg :is(.fp-doors, .fp-furniture, .fp-windows, .fp-hatch, .fp-labels) { animation: fp-fade 0.6s ease 0.7s backwards; }
+#floorplan-svg .fp-labels { animation-delay: 0.95s; }
+@keyframes fp-draw { from { stroke-dashoffset: 1; } }
+@keyframes fp-fade { from { opacity: 0; } }
 
 /* HUD overlay on camera */
 .cam-hud-overlay {
@@ -3095,7 +3120,7 @@ input[type=range]::-webkit-slider-thumb {
   width: 34px; height: 20px; border-radius: 10px;
   background: var(--surface-3); flex-shrink: 0;
   position: relative;
-  transition: background 0.2s ease;
+  transition: background-color 0.3s ease;
 }
 .mode-pill-toggle.on { background: var(--accent); }
 .mode-pill-toggle::after {
@@ -3103,7 +3128,7 @@ input[type=range]::-webkit-slider-thumb {
   position: absolute; top: 2px; left: 2px;
   width: 16px; height: 16px; border-radius: 50%;
   background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-  transition: transform 0.2s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transition: transform 0.5s var(--spring), background-color 0.3s ease;
 }
 .mode-pill-toggle.on::after { transform: translateX(14px); }
 
@@ -3267,8 +3292,17 @@ input:-webkit-autofill:focus {
   .cam-main-card { min-height: 220px; }
   .activity-card-scroll { max-height: 340px; }
   .status-card {
-    padding: 22px 20px;
+    padding: 16px 18px; text-align: left;
   }
+  .status-state {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center; justify-items: start; column-gap: 14px; row-gap: 2px;
+  }
+  .status-state > * { grid-column: 1; }
+  .status-pulse-ring { grid-column: 2; grid-row: 1 / span 2; width: 44px; height: 44px; }
+  .status-label { font-size: 19px; }
+  .status-desc { margin-top: 0; }
+  .status-foot { justify-content: space-between; margin-top: 12px; }
   .status-card.alert {
     background: rgba(255,69,58,0.07);
     border-color: rgba(255,69,58,0.30);
@@ -3842,14 +3876,13 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
   color: var(--t1); transition: background var(--trans), transform var(--trans);
 }
 .ha-tile:active { transform: scale(0.97); }
-.ha-tile.on { background: #FFF7E0; border-color: rgba(245,158,11,0.35); }
-[data-theme="dark"] .ha-tile.on { background: rgba(245,158,11,0.16); }
+.ha-tile.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.ha-tile.on .ha-sub, .ha-tile.on .ha-tile-state { color: color-mix(in srgb, var(--on-accent) 62%, transparent); }
 .ha-tile.unavail { opacity: 0.5; cursor: not-allowed; }
-.ha-tile.busy { opacity: 0.6; }
 .ha-tile.sensor { cursor: default; }
 .ha-tile-top { display: flex; align-items: center; justify-content: space-between; }
 .ha-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--t4); }
-.ha-tile.on .ha-dot { background: var(--warn); box-shadow: 0 0 10px rgba(245,158,11,0.7); }
+.ha-tile.on .ha-dot { background: var(--on-accent); }
 .ha-tile-name { font-size: 14px; font-weight: 600; margin-top: auto; }
 .ha-tile-state { font-size: 12px; color: var(--t2); }
 
@@ -3913,7 +3946,16 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
 
 @media (max-width: 1023px) {
   .dash-split-row { grid-template-columns: 1fr; }
-  .dash-split-row .dash-console-card, .ha-glance { height: auto; min-height: 180px; }
+  .ha-glance { height: auto; min-height: 180px; }
+  /* The console keeps a fixed, short window on a phone and scrolls inside it,
+     instead of growing with every line. */
+  .dash-split-row .dash-console-card { height: 176px; min-height: 0; }
+  .dash-split-row .dash-console-card .console { overflow-y: auto; overscroll-behavior: contain; }
+  /* The floor plan sets the height of its own view here (the card has no
+     fixed height to fill), so it sits centred at its true proportions. */
+  #cam-view-floor { flex: none; display: block; }
+  #floorplan-svg { position: static; padding: 12px; }
+  #floorplan-svg svg { height: auto; aspect-ratio: 580 / 420; }
 }
 @media (max-width: 700px) {
   .ha-add-grid { grid-template-columns: 1fr 1fr; }
@@ -4070,16 +4112,36 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
 /* ════════════════════════════════════════════════════════════════
    Motion — one curve, short durations, and respect for Reduce Motion
    ════════════════════════════════════════════════════════════════ */
-:root { --ease-apple: cubic-bezier(0.32, 0.72, 0, 1); }
+:root {
+  --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+  /* A real spring (damping 0.72): it passes the target by about 4% and
+     settles. Browsers without linear() get the nearest single curve. */
+  --spring: cubic-bezier(0.3, 1.25, 0.5, 1);
+}
+@supports (transition-timing-function: linear(0, 1)) {
+  :root { --spring: linear(0, 0.042, 0.143, 0.275, 0.415, 0.55, 0.672, 0.775, 0.858, 0.922, 0.969, 1.001, 1.022, 1.033, 1.038, 1.038, 1.035, 1.03, 1.025, 1.02, 1.015, 1.01, 1.007, 1.004, 1.002, 1, 0.999, 0.999, 1); }
+}
 .page { transition: opacity 0.28s var(--ease-apple), transform 0.28s var(--ease-apple); }
 .page:not(.active) { transform: translateY(6px); }
 .page.active { transform: none; }
-.btn, .ha-tile, .ha-scene-run, .ha-day, .more-tile, .more-row, .toggle {
-  transition: transform 0.18s var(--ease-apple), background-color 0.2s ease,
-              color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+.btn, .ha-scene-run, .ha-day, .more-tile, .more-row {
+  transition: transform 0.45s var(--spring), background-color 0.25s ease,
+              color 0.25s ease, box-shadow 0.25s ease, opacity 0.2s ease;
 }
-.ha-tile:active, .ha-scene-run:active { transform: scale(0.96); }
-.ha-tile .ha-dot { transition: background 0.25s ease, box-shadow 0.35s var(--ease-apple); }
+.btn:active, .ha-scene-run:active, .ha-day:active, .more-tile:active, .more-row:active { transition-duration: 0.12s, 0.25s, 0.25s, 0.25s, 0.2s; }
+.ha-scene-run:active { transform: scale(0.96); }
+/* Device tiles answer the finger at once (home.js flips them before the
+   server replies): the press is a quick squash, the release a spring, and
+   on/off is ink filling the tile. */
+.ha-tile {
+  transition: scale 0.5s var(--spring), background-color 0.35s ease, color 0.35s ease,
+              border-color 0.35s ease, box-shadow 0.35s ease, opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.ha-tile:active { transform: none; scale: 0.95; transition-duration: 0.12s, 0.35s, 0.35s, 0.35s, 0.35s, 0.2s; }
+.ha-tile .ha-sub, .ha-tile .ha-tile-state { transition: color 0.35s ease; }
+.ha-tile .ha-dot { transition: background-color 0.35s ease, scale 0.5s var(--spring); }
+.ha-tile.on .ha-dot { scale: 1.25; }
 .ha-result,
 .ha-notice,
 .ha-proposal { animation: haRise 0.36s var(--ease-apple) both; }
@@ -4415,123 +4477,189 @@ body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-a
 .docs-close-btn .gi { width: 15px; height: 15px; }
 @media (max-width: 768px) { #m-docs .docs-close-btn .gi { width: 19px; height: 19px; } }
 
-/* ── Dynamic Island: press, open, activities (island.js) ─────
-   Appended last on purpose: these build on the pill above and must win
-   over its per-state widths when the island is open. */
-#top-hud {
-  height: var(--di-h, 37px);
-  cursor: pointer;
-  transform: translateX(-50%) scale(var(--di-s, 1));
-  transform-origin: top center;
-  transition: width 0.55s cubic-bezier(0.32, 1.42, 0.52, 1),
-              height 0.55s cubic-bezier(0.32, 1.28, 0.52, 1),
-              border-radius 0.4s ease, box-shadow 0.35s ease,
-              transform 0.35s cubic-bezier(0.32, 1.42, 0.52, 1);
-  -webkit-tap-highlight-color: transparent;
-}
-#top-hud:focus-visible { outline: 2px solid var(--t1); outline-offset: 3px; }
-@media (hover: hover) { #top-hud:hover:not(.di-open) { --di-s: 1.045; } }
-#top-hud:active:not(.di-open) { --di-s: 0.95; transition-duration: 0.12s; }
+/* ── Dynamic Island: press, pages, activities, open (island.js) ──
+   Appended last on purpose: these build on the pill above. */
+.di-shell { transform-origin: 50% 18px; transition: transform 0.5s var(--spring); }
+@media (hover: hover) { #top-hud:not(.di-open) .di-shell:hover { transform: scale(1.045); } }
+#top-hud:not(.di-open) .di-shell:active { transform: scale(0.95); transition-duration: 0.18s; }
+#top-hud.di-open { z-index: 960; filter: drop-shadow(0 18px 36px rgba(0,0,0,0.34)); animation: none; }
+#top-hud.di-open .di-shell { cursor: default; }
+[data-theme="dark"] #top-hud.di-open { filter: drop-shadow(0 18px 40px rgba(0,0,0,0.7)); }
 
-/* Content leaves and arrives out of focus, the way the real one does. */
-.hud-brand, .di-live { transition: opacity 0.22s ease, transform 0.4s cubic-bezier(0.32, 1.42, 0.52, 1), filter 0.3s ease; }
-#top-hud:not(.di-idle) .hud-brand { filter: blur(5px); }
+/* Content leaves and arrives out of focus, the way the real one does.
+   The resting state of every layer is "no transform, no filter". */
+.hud-rest, .di-live { transition: opacity 0.2s ease, transform 0.5s var(--spring), filter 0.25s ease; }
+#top-hud:not(.di-idle) .hud-rest,
+#top-hud.di-idle:is(.di-rec, .di-offline, .di-notice) .hud-rest,
+#top-hud.di-open .hud-rest { opacity: 0; transform: scale(0.86); filter: blur(5px); transition-duration: 0.14s, 0.3s, 0.14s; }
+#top-hud:not(.di-idle) .di-live,
+#top-hud.di-idle:is(.di-rec, .di-offline, .di-notice) .di-live { opacity: 1; transition-delay: 0.12s; }
+#top-hud.di-open .di-live { opacity: 0; transform: scale(0.86); filter: blur(5px); transition-delay: 0s; transition-duration: 0.14s, 0.3s, 0.14s; }
+/* Coming back, the pill's own content waits for the shape to arrive. */
+#top-hud.di-idle:not(.di-open, .di-rec, .di-offline, .di-notice) .hud-rest { transition-delay: 0.16s; }
+.hud-rest.di-swap { animation: di-slide-in 0.5s var(--spring) backwards; }
 .di-num { font-variant-numeric: tabular-nums; }
 .di-cnt .gi { width: 15px; height: 15px; flex-shrink: 0; }
 
 /* Activities and notices only take the pill when nothing urgent has it. */
-#top-hud.di-idle:is(.di-rec, .di-offline, .di-notice) .hud-brand { opacity: 0; transform: scale(0.85); filter: blur(5px); }
-#top-hud.di-idle:is(.di-rec, .di-offline, .di-notice) .di-live { opacity: 1; transition: opacity 0.25s ease 0.12s; }
 #top-hud.di-idle.di-offline { --di-w: 132px; }
 #top-hud.di-idle.di-offline:not(.di-rec):not(.di-notice) .di-cnt-offline { display: flex; justify-content: center; }
 #top-hud.di-idle.di-rec { --di-w: 190px; }
 #top-hud.di-idle.di-rec:not(.di-notice) .di-cnt-rec { display: flex; }
 #top-hud.di-idle.di-notice { --di-w: var(--di-notice-w, 200px); }
-#top-hud.di-idle.di-notice .di-cnt-notice { display: flex; justify-content: center; animation: di-slide-in 0.45s cubic-bezier(0.32, 1.42, 0.52, 1); }
-.di-cnt-notice .di-lbl { white-space: nowrap; }
-@keyframes di-slide-in { from { opacity: 0; transform: translateY(9px) scale(0.92); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+#top-hud.di-idle.di-notice .di-cnt-notice { display: flex; justify-content: center; animation: di-slide-in 0.5s var(--spring) backwards; }
+@keyframes di-slide-in { from { opacity: 0; transform: translateY(8px) scale(0.94); filter: blur(4px); } }
 
-#top-hud.di-bump { animation: di-bump 0.5s cubic-bezier(0.32, 1.42, 0.52, 1); }
-@keyframes di-bump { 0% { --di-s: 1; } 35% { --di-s: 1.09; } 100% { --di-s: 1; } }
-#top-hud.di-shake { animation: di-shake 0.5s ease, di-glow-red 1.1s ease-in-out 0.5s infinite; }
+.di-shell.di-bump { animation: di-bump 0.55s var(--spring); }
+@keyframes di-bump { 30% { scale: 1.08; } }
+.di-shell.di-shake { animation: di-shake 0.5s ease; }
 @keyframes di-shake {
   0%, 100% { translate: 0 0; } 15% { translate: -7px 0; } 30% { translate: 6px 0; }
   45% { translate: -5px 0; } 60% { translate: 4px 0; } 80% { translate: -2px 0; }
 }
-@property --di-s { syntax: '<number>'; inherits: false; initial-value: 1; }
 
-/* Open: the pill grows into a panel. */
-#top-hud.di-open {
-  --di-w: min(376px, calc(100vw - 24px));
-  --di-s: 1;
-  border-radius: 30px; cursor: default; z-index: 960;
-  box-shadow: 0 24px 60px rgba(0,0,0,0.34), 0 4px 12px rgba(0,0,0,0.18);
-  animation: none;
-}
-[data-theme="dark"] #top-hud.di-open { box-shadow: 0 0 0 1px rgba(255,255,255,0.14), 0 24px 60px rgba(0,0,0,0.6); }
-#top-hud.di-open .hud-brand, #top-hud.di-open .di-live {
-  opacity: 0 !important; filter: blur(6px); transform: scale(0.8); pointer-events: none; transition-delay: 0s !important;
-}
+/* ── A glyph for every page ──────────────────────────────────
+   16 px drawings in white ink, each moving the way its page works. */
+.dg { position: relative; flex: none; display: inline-block; width: 16px; height: 16px; color: #fff; }
+.dg b { position: absolute; display: block; }
+.dg svg { position: absolute; inset: 0; width: 16px; height: 16px; fill: none; stroke: currentColor;
+          stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+@keyframes dg-spin { to { rotate: 1turn; } }
+
+/* Dashboard: a radar sweep, the camera keeping watch. */
+.dg-radar { border-radius: 50%; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.9); }
+.dg-radar b { inset: 1.5px; border-radius: 50%; animation: dg-spin 2.6s linear infinite;
+              background: conic-gradient(from 0deg, transparent 0 62%, rgba(255,255,255,0.9)); }
+.dg-radar::after { content: ''; position: absolute; inset: 6.5px; border-radius: 50%; background: #fff; }
+
+/* Narada: a plucked string, his veena and his voice. */
+.dg-dots { width: 20px; }
+.dg-dots b { top: 6.5px; width: 3px; height: 3px; border-radius: 50%; background: currentColor;
+             animation: dg-pluck 1.5s ease-in-out infinite; }
+.dg-dots b:nth-child(1) { left: 0;      animation-delay: 0s; }
+.dg-dots b:nth-child(2) { left: 4.25px; animation-delay: 0.12s; }
+.dg-dots b:nth-child(3) { left: 8.5px;  animation-delay: 0.24s; }
+.dg-dots b:nth-child(4) { left: 12.75px; animation-delay: 0.36s; }
+.dg-dots b:nth-child(5) { left: 17px;   animation-delay: 0.48s; }
+@keyframes dg-pluck { 0%, 55%, 100% { translate: 0 0; opacity: 0.5; } 20% { translate: 0 -4px; opacity: 1; } 38% { translate: 0 3px; opacity: 0.9; } }
+
+/* Devices: a switch being thrown. */
+.dg-sw { width: 20px; height: 12px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px currentColor;
+         animation: dg-sw-track 3.4s var(--spring) infinite; }
+.dg-sw b { top: 3px; left: 3px; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+           animation: dg-sw-knob 3.4s var(--spring) infinite; }
+@keyframes dg-sw-track { 0%, 42%, 100% { background: transparent; } 50%, 92% { background: #fff; } }
+@keyframes dg-sw-knob  { 0%, 42%, 100% { translate: 0 0; background: #fff; } 50%, 92% { translate: 8px 0; background: #000; } }
+
+/* Automations: a clock that keeps ticking. */
+.dg-clock { border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
+.dg-clock b { left: 7.25px; top: 3.4px; width: 1.5px; height: 5.4px; border-radius: 1px; background: currentColor;
+              transform-origin: 50% 4.6px; animation: dg-tick 8s steps(8) infinite; }
+.dg-clock::after { content: ''; position: absolute; left: 7.25px; top: 7.25px; width: 4px; height: 1.5px; border-radius: 1px; background: currentColor; }
+@keyframes dg-tick { to { transform: rotate(1turn); } }
+
+/* Insights: bars finding their level. */
+.dg-bars b { bottom: 2px; width: 2.5px; height: 12px; border-radius: 1.25px; background: currentColor;
+             transform-origin: bottom; animation: dg-bar 2.4s ease-in-out infinite; }
+.dg-bars b:nth-child(1) { left: 1px;    --lo: 0.3;  --hi: 0.55; animation-delay: 0s; }
+.dg-bars b:nth-child(2) { left: 5px;    --lo: 0.45; --hi: 0.9;  animation-delay: 0.3s; }
+.dg-bars b:nth-child(3) { left: 9px;    --lo: 0.25; --hi: 0.7;  animation-delay: 0.6s; }
+.dg-bars b:nth-child(4) { left: 13px;   --lo: 0.6;  --hi: 1;    animation-delay: 0.9s; }
+@keyframes dg-bar { 0%, 100% { transform: scaleY(var(--lo)); } 50% { transform: scaleY(var(--hi)); } }
+
+/* Email: the flap seals, again and again. */
+.dg-mail .dg-draw { stroke-dasharray: 1; animation: dg-draw 3.2s ease-in-out infinite; }
+@keyframes dg-draw { 0% { stroke-dashoffset: 1; } 28%, 86% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -1; } }
+
+/* Settings: two sliders being set. */
+.dg-sliders { background: linear-gradient(currentColor, currentColor) 1px 4.25px / 14px 1.5px no-repeat,
+                          linear-gradient(currentColor, currentColor) 1px 10.25px / 14px 1.5px no-repeat; }
+.dg-sliders b { width: 5px; height: 5px; border-radius: 50%; background: #000; box-shadow: 0 0 0 1.5px currentColor;
+                animation: dg-slide 3s var(--spring) infinite alternate; }
+.dg-sliders b:nth-child(1) { top: 2.5px; left: 2px; --to: 7px; }
+.dg-sliders b:nth-child(2) { top: 8.5px; left: 9px; --to: -6px; animation-delay: 0.25s; }
+@keyframes dg-slide { 0%, 30% { translate: 0 0; } 70%, 100% { translate: var(--to) 0; } }
+
+/* Logs: lines being written. */
+.dg-lines b { left: 1.5px; height: 1.5px; border-radius: 1px; background: currentColor;
+              transform-origin: left; animation: dg-write 3s ease-out infinite; }
+.dg-lines b:nth-child(1) { top: 3.5px;  width: 13px; animation-delay: 0s; }
+.dg-lines b:nth-child(2) { top: 7.25px; width: 9px;  animation-delay: 0.35s; }
+.dg-lines b:nth-child(3) { top: 11px;   width: 11px; animation-delay: 0.7s; }
+@keyframes dg-write { 0% { transform: scaleX(0); opacity: 1; } 25%, 80% { transform: scaleX(1); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+
+/* Commands: a prompt, waiting. */
+.dg-prompt b { left: 8.5px; top: 11px; width: 6px; height: 1.5px; border-radius: 1px; background: currentColor;
+               animation: dg-blink 1.1s steps(2, jump-none) infinite; }
+@keyframes dg-blink { to { opacity: 0; } }
+
+/* ── Open: the pill grows into a panel ──────────────────────── */
 .di-panel {
-  position: absolute; top: 0; left: 0;
-  width: min(376px, calc(100vw - 24px)); box-sizing: border-box;
-  padding: 18px 16px 14px;
-  display: flex; flex-direction: column; gap: 14px;
-  opacity: 0; filter: blur(8px); transform: scale(0.92); transform-origin: top center;
-  pointer-events: none;
-  transition: opacity 0.16s ease, filter 0.25s ease, transform 0.45s cubic-bezier(0.32, 1.42, 0.52, 1);
+  position: absolute; top: 0; left: 12px; width: calc(100% - 24px); box-sizing: border-box;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: scale(0.94); transform-origin: 50% 0; filter: blur(6px);
+  transition: opacity 0.14s ease, filter 0.18s ease, transform 0.3s var(--ease-apple), visibility 0s 0.3s;
 }
 #top-hud.di-open .di-panel {
-  opacity: 1; filter: none; transform: none; pointer-events: auto;
-  transition: opacity 0.3s ease 0.14s, filter 0.35s ease 0.14s, transform 0.55s cubic-bezier(0.32, 1.42, 0.52, 1) 0.06s;
+  opacity: 1; visibility: visible; pointer-events: auto; transform: none; filter: none;
+  transition: opacity 0.25s ease 0.08s, filter 0.3s ease 0.08s, transform 0.55s var(--spring) 0.04s, visibility 0s;
 }
-.di-p-head { display: flex; align-items: center; gap: 12px; }
+.di-p-eyebrow { display: flex; align-items: center; gap: 8px; height: 20px; padding: 0 2px; }
+.di-p-eyebrow #di-p-page { font: 600 11px/1 var(--font); letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.62); }
+.di-p-clock { font: 500 13px/1 var(--font); letter-spacing: 0.2px; color: rgba(255,255,255,0.62); }
+.di-p-head { display: flex; align-items: center; gap: 12px; padding: 0 2px; }
 .di-p-ic {
-  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
   display: inline-flex; align-items: center; justify-content: center;
   background: rgba(255,255,255,0.12); color: #fff;
 }
-.di-p-ic .gi { width: 25px; height: 25px; }
+.di-p-ic .gi { width: 26px; height: 26px; }
 .di-panel[data-tone="alert"] .di-p-ic { background: rgba(255,69,58,0.22); color: #ff6b61; animation: di-pip-pulse 1s ease-in-out infinite; }
 .di-panel[data-tone="warn"] .di-p-ic { background: rgba(255,159,10,0.2); color: #ffb340; }
-.di-p-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.di-p-title b { font-size: 16px; font-weight: 650; letter-spacing: -0.2px; color: #fff; }
-.di-p-title span { font-size: 12.5px; color: rgba(255,255,255,0.58); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.di-p-clock { font-size: 22px; font-weight: 300; letter-spacing: -0.5px; color: #fff; }
+.di-p-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.di-p-title b { font-size: 17px; font-weight: 650; letter-spacing: -0.2px; color: #fff; }
+.di-p-title span { font-size: 13px; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .di-p-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.di-p-stats > div { padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.di-p-stats span { font-size: 9.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: rgba(255,255,255,0.45); }
-.di-p-stats b { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Concentric with the shell: its 30 px corner less the 14 px padding. */
+.di-p-stats > div { padding: 10px 11px; border-radius: 16px; background: rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.di-p-stats span { font-size: 11px; font-weight: 600; letter-spacing: 0.3px; color: rgba(255,255,255,0.5); white-space: nowrap; }
+.di-p-stats b { font-size: 13.5px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .di-p-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.di-p-modes[hidden] { display: none; }
 .di-chip {
-  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
-  border: 0; border-radius: 14px; cursor: pointer;
-  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.72);
-  font: 600 12.5px/1 var(--font); text-align: left;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.32, 1.42, 0.52, 1);
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 13px;
+  border: 0; border-radius: 16px; cursor: pointer;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.74);
+  font: 600 13px/1 var(--font); text-align: left; white-space: nowrap;
+  transition: background-color 0.3s ease, color 0.3s ease, scale 0.45s var(--spring);
+  -webkit-tap-highlight-color: transparent;
 }
 .di-chip .gi { width: 18px; height: 18px; flex-shrink: 0; }
-.di-chip:hover { background: rgba(255,255,255,0.14); color: #fff; }
-.di-chip:active { transform: scale(0.95); }
-.di-chip[aria-pressed="true"] { background: #fff; color: #000; }
+@media (hover: hover) { .di-chip:hover { background: rgba(255,255,255,0.14); color: #fff; } }
+.di-chip:active { scale: 0.95; transition-duration: 0.3s, 0.3s, 0.12s; }
+.di-chip[aria-pressed="true"], .di-chip[aria-pressed="true"]:hover { background: #fff; color: #000; }
 .di-p-acts { display: flex; gap: 6px; }
 .di-act {
-  height: 42px; min-width: 42px; padding: 0; border: 0; border-radius: 21px; cursor: pointer;
+  height: 44px; min-width: 44px; padding: 0; border: 0; border-radius: 16px; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-  background: rgba(255,255,255,0.1); color: #fff; font: 600 13.5px/1 var(--font);
-  transition: background 0.2s ease, transform 0.2s cubic-bezier(0.32, 1.42, 0.52, 1);
+  background: rgba(255,255,255,0.1); color: #fff; font: 600 14px/1 var(--font);
+  transition: background-color 0.25s ease, scale 0.45s var(--spring);
+  -webkit-tap-highlight-color: transparent;
 }
 .di-act .gi { width: 19px; height: 19px; }
-.di-act:hover { background: rgba(255,255,255,0.18); }
-.di-act:active { transform: scale(0.94); }
+@media (hover: hover) { .di-act:hover { background: rgba(255,255,255,0.18); } }
+.di-act:active { scale: 0.95; transition-duration: 0.25s, 0.12s; }
 .di-act-main { flex: 1; background: #fff; color: #000; padding: 0 16px; }
-.di-act-main:hover { background: rgba(255,255,255,0.88); }
-/* The four staggered rows rise in one after another. */
-#top-hud.di-open .di-panel > * { animation: di-slide-in 0.5s cubic-bezier(0.32, 1.42, 0.52, 1) both; }
-#top-hud.di-open .di-panel > :nth-child(1) { animation-delay: 0.10s; }
-#top-hud.di-open .di-panel > :nth-child(2) { animation-delay: 0.15s; }
-#top-hud.di-open .di-panel > :nth-child(3) { animation-delay: 0.20s; }
-#top-hud.di-open .di-panel > :nth-child(4) { animation-delay: 0.25s; }
+@media (hover: hover) { .di-act-main:hover { background: rgba(255,255,255,0.88); } }
+/* The rows rise in one after another, then hold no animation at all. */
+#top-hud.di-open .di-panel > * { animation: di-slide-in 0.55s var(--spring) backwards; }
+#top-hud.di-open .di-panel > :nth-child(1) { animation-delay: 0.06s; }
+#top-hud.di-open .di-panel > :nth-child(2) { animation-delay: 0.09s; }
+#top-hud.di-open .di-panel > :nth-child(3) { animation-delay: 0.12s; }
+#top-hud.di-open .di-panel > :nth-child(n+4) { animation-delay: 0.15s; }
+#top-hud.di-open .di-panel > :last-child { animation-delay: 0.18s; }
 
 /* Mode rows on the dashboard: drawn icons, in ink. */
 .mode-row-icon .gi { width: 19px; height: 19px; }

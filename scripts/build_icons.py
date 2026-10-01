@@ -50,6 +50,7 @@ names = {"L": ["documentation", "feedback", "sign-in", "home", "devices", "autom
                "insights", "narada", "mail", "logs"],
          "R": ["commands", "settings", "stop", "light-mode", "night-mode", "camera"]}
 BOX, AREA, MAXF, STROKE = 24.0, 0.82, 0.96, 1.15   # optical size, max extent, stroke in px@24
+REDRAWN = {"narada", "mail"}    # the owner asked for these to be redesigned: draw_icons.py owns them now
 def rnd(m): return f"{float(m.group(0)):.2f}".rstrip("0").rstrip(".")
 for col, (x0, x1) in cols.items():
     sel = sorted([i for i in items if x0 <= i["cx"] <= x1 and i["cy"] < 600], key=lambda i: i["cy"])
@@ -60,6 +61,7 @@ for col, (x0, x1) in cols.items():
         else:
             groups.append([it])
     for name, g in zip(names[col], groups):
+        if name in REDRAWN: continue
         mx = min(i["bb"][0] for i in g); my = min(i["bb"][1] for i in g)
         Mx = max(i["bb"][2] for i in g); My = max(i["bb"][3] for i in g)
         w, h = Mx - mx, My - my

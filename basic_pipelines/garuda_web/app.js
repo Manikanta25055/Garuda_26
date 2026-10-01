@@ -730,6 +730,17 @@ const G = (() => {
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
   }
 
+  // The floor plan is inlined (not an <object>) so the theme can ink it.
+  let _floorplanLoaded = false;
+  function _loadFloorplan() {
+    const box = $('floorplan-svg');
+    if (!box || _floorplanLoaded) return;
+    _floorplanLoaded = true;
+    fetch('/static/floorplan.svg?v=2').then(r => r.ok ? r.text() : Promise.reject())
+      .then(svg => { box.innerHTML = svg; })
+      .catch(() => { _floorplanLoaded = false; });
+  }
+
   function switchCamTab(tab) {
     const live      = $('cam-view-live');
     const floor     = $('cam-view-floor');
@@ -741,6 +752,7 @@ const G = (() => {
       tabLive?.classList.add('active');
       tabFloor?.classList.remove('active');
     } else {
+      _loadFloorplan();
       floor?.classList.remove('hidden');
       live?.classList.add('hidden');
       tabFloor?.classList.add('active');
@@ -1203,6 +1215,7 @@ const G = (() => {
     }
     // Dynamic Island: update label per page
     _setDILabel(_DI_LABELS[pageId] || _BRAND);
+    if (window.DI) DI.onNav(pageId);
     _syncDIContext();
     _syncFeedbackVisibility();
     if (pageId === 'a-email')    loadEmailCfg();
@@ -1590,6 +1603,9 @@ const G = (() => {
         });
         grid.appendChild(row);
       }
+      // A row the user just tapped keeps what they chose until the server
+      // answers; a push sent before then would flick the switch back.
+      if (row.dataset.pending === '1') return;
       // Smooth in-place state update (CSS transitions play)
       row.classList.toggle('on', isOn);
       const toggle = row.querySelector('.mode-toggle');

@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=64"/>
+  <link rel="stylesheet" href="/static/style.css?v=66"/>
 </head>
 <body>
 <div id="app">
@@ -187,7 +187,11 @@
 
   <!-- Dynamic Island — visible when logged in -->
   <div id="top-hud" class="di-idle">
-    <div class="hud-brand" id="hud-brand">GARUDA</div>
+   <div class="di-shell" id="di-shell">
+   <div class="di-pill" id="di-pill">
+    <div class="hud-rest" id="hud-rest">
+      <span id="di-glyph"></span><span class="hud-brand" id="hud-brand">GARUDA</span><span class="di-val di-num" id="di-val"></span>
+    </div>
     <div class="di-live" id="di-live" aria-hidden="true">
       <div class="di-cnt di-cnt-alert">
         <span class="di-pip di-r"></span><span class="di-lbl">Alert</span>
@@ -210,6 +214,8 @@
         <span class="di-pip di-y"></span><span class="di-lbl">Night Presence</span>
       </div>
     </div>
+   </div>
+   </div>
     <div class="hud-status"><div id="hud-dot" class="hdr-dot"></div><span id="hud-label"></span></div>
   </div>
 
@@ -365,7 +371,7 @@
               </div>
               <!-- Floor plan -->
               <div class="cam-view hidden" id="cam-view-floor">
-                <object id="floorplan-svg" data="/static/floorplan.svg" type="image/svg+xml"></object>
+                <div id="floorplan-svg"></div>
               </div>
             </div>
 
@@ -1258,8 +1264,8 @@
 <div id="toast-container" class="toast-container"></div>
 
 <script src="/static/narada.js?v=5"></script>
-<script src="/static/island.js?v=1"></script>
-<script src="/static/app.js?v=61"></script>
-<script src="/static/home.js?v=6"></script>
+<script src="/static/island.js?v=2"></script>
+<script src="/static/app.js?v=62"></script>
+<script src="/static/home.js?v=7"></script>
 </body>
 </html>
