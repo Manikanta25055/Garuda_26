@@ -384,9 +384,12 @@ const N = (() => {
   // The "i" button on phones sits just above the dock; tell CSS how tall
   // the minimised dock is (the open sheet hides the button instead).
   function measureDock() {
-    const dock = $('nx-dock'), page = $('page-narada');
-    if (!dock || !page || sheetOpen || !dock.offsetHeight) return;
-    page.style.setProperty('--nx-dock-h', dock.offsetHeight + 'px');
+    // Bar plus the peek line: the dock's own height is no use here, it is
+    // still the tall open sheet while the closing animation runs.
+    const bar = $('nx-bar'), peek = $('nx-peek'), page = $('page-narada');
+    if (!bar || !page || !bar.offsetHeight) return;
+    const peekH = !sheetOpen && peek && peek.offsetParent ? peek.offsetHeight : 0;
+    page.style.setProperty('--nx-dock-h', (bar.offsetHeight + peekH) + 'px');
   }
 
   function syncDock() {

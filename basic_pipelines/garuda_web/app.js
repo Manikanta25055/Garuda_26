@@ -179,12 +179,12 @@ const G = (() => {
   ];
 
   const MODE_CFG = [
-    { key:'privacy',   label:'Privacy Blur',     icon:'◉', cls:'mode-blue'   },
-    { key:'night',     label:'Night Mode',        icon:'◑', cls:'mode-purple' },
-    { key:'dnd',       label:'Do Not Disturb',    icon:'◯', cls:'mode-warn'   },
-    { key:'idle',      label:'Idle',              icon:'⊟', cls:'mode-muted'  },
-    { key:'email_off', label:'Email Alerts Off',  icon:'◫', cls:'mode-muted'  },
-    { key:'emergency', label:'Emergency',         icon:'△', cls:'mode-danger' },
+    { key:'privacy',   label:'Privacy Blur',     icon:'<span class="gi gi-privacy"></span>', cls:'mode-blue'   },
+    { key:'night',     label:'Night Mode',        icon:'<span class="gi gi-night-mode"></span>', cls:'mode-purple' },
+    { key:'dnd',       label:'Do Not Disturb',    icon:'<span class="gi gi-dnd"></span>', cls:'mode-warn'   },
+    { key:'idle',      label:'Idle',              icon:'<span class="gi gi-idle"></span>', cls:'mode-muted'  },
+    { key:'email_off', label:'Email Alerts Off',  icon:'<span class="gi gi-email-off"></span>', cls:'mode-muted'  },
+    { key:'emergency', label:'Emergency',         icon:'<span class="gi gi-emergency"></span>', cls:'mode-danger' },
   ];
 
   // ── Backend URL config ───────────────────────────────────
@@ -1313,6 +1313,7 @@ const G = (() => {
   }
 
   function tick(s) {
+    if (window.DI) DI.onState(s);
     if (!s || typeof s !== 'object') return;
     const pipeDot = $('pipeline-dot');
     const pipeLabel = $('pipeline-label');

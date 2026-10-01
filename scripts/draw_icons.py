@@ -146,8 +146,11 @@ ICONS = {
     "expand": [line((4.8, 15), (12, 8), (19.2, 15)), light(line((8.4, 16.6), (12, 13.2), (15.6, 16.6)))],
     "minimise": [line((4.8, 8.2), (12, 15.2), (19.2, 8.2)), line((6.2, 19.6), (17.8, 19.5))],
     # status
-    "all-clear": [shield(), line((8.2, 12.2), (11.2, 15.3), (16.4, 8.6)),
-                  light(arc(12, 12.4, 5.6, 200, 250))],
+    # All clear: one loose circle and a tick that sweeps out of it, signed off
+    # in a single go. The counterpart of the owner's warning triangle. (A
+    # shield with a tick was the first try; it read as a logo, not a state.)
+    "all-clear": [ring(11.4, 12.6, 8.2), line((7, 12.4), (10.8, 16.2), (20.6, 4.2)),
+                  light(arc(11.4, 12.6, 5.6, 150, 215))],
     "shield": [shield(), light(line((12, 5.6), (12, 19.2)))],
     "bell": [arc(12, 11.2, 5.6, 180, 360) + line((17.6, 11.2), (17.7, 15), (19.6, 17.4), (4.4, 17.4), (6.3, 15), (6.4, 11.2)),
              arc(12, 18.4, 2, 10, 170), line((12, 3), (12, 5.4))],

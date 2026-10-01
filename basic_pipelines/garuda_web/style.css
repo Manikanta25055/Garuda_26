@@ -237,6 +237,9 @@ html {
   overflow-x: auto;
   scrollbar-width: none;
 }
+/* The page stops at its edges: no rubber-band pull that shows the bare
+   canvas behind the app, on a trackpad or a phone. */
+html, body { overscroll-behavior: none; }
 /* Form controls do not inherit the page font by default. */
 button, input, select, textarea { font-family: inherit; }
 body { background: transparent; }
@@ -337,7 +340,7 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .btn-primary  { background: var(--accent); color: var(--on-accent); }
-.btn-primary:hover { background: #0977e6; }
+.btn-primary:hover { background: color-mix(in srgb, var(--accent) 80%, var(--on-accent)); }
 .btn-danger   { background: var(--danger); color: #fff; }
 .btn-danger:hover { background: #e63e35; }
 .btn-ghost    {
@@ -1151,11 +1154,15 @@ textarea:-webkit-autofill {
 /* ── Admin pages — macOS System Preferences style ──────── */
 .admin-page {
   max-width: 720px;
+  width: 100%; box-sizing: border-box;
   margin: 0 auto;
   padding: 28px 32px;
   flex: 1;
   overflow-y: auto;
 }
+/* Email, system settings, logs and commands use the room a laptop has. */
+#page-a-email .admin-page, #page-a-settings .admin-page,
+#page-a-logs .admin-page, #page-a-cmds .admin-page { max-width: 1180px; }
 .admin-page-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 24px;
@@ -1649,13 +1656,13 @@ input[type=range]::-webkit-slider-thumb {
   font-family: var(--mono); font-size: 14px; font-weight: 600;
   cursor: pointer; transition: background var(--trans);
 }
-.lc-signin:hover { background: #1a86f0; }
+.lc-signin:hover { background: color-mix(in srgb, var(--accent) 80%, var(--on-accent)); }
 .lc-signin:disabled { opacity: 0.4; cursor: not-allowed; }
 .lc-arrow { font-size: 18px; font-weight: 300; }
 .lc-signin-danger { background: var(--danger); }
 .lc-signin-danger:hover { background: #d93530; }
 .lc-signin-mk { background: var(--mk-orange); }
-.lc-signin-mk:hover { background: #d4703a; }
+.lc-signin-mk:hover { background: color-mix(in srgb, var(--accent) 80%, var(--on-accent)); }
 .mk-key-input { border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
 .mk-key-input:focus { border-color: var(--mk-orange); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
 
@@ -3401,9 +3408,9 @@ input:-webkit-autofill:focus {
   text-align: center;
   user-select: none;
 }
-.fb-star:hover { color: var(--warn); transform: scale(1.2); }
-.fb-star.lit    { color: var(--warn); transform: scale(1.1); }
-.fb-star.hover-preview { color: var(--warn); transform: scale(1.2); }
+.fb-star:hover { color: var(--t1); transform: scale(1.2); }
+.fb-star.lit    { color: var(--t1); transform: scale(1.1); }
+.fb-star.hover-preview { color: var(--t1); transform: scale(1.2); }
 
 /* Category pills */
 .fb-cats {
@@ -4097,8 +4104,13 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
 }
 .nx-glyph {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  /* A drag on the field must not start a page scroll: on phones the browser
+     then kept the page as the thing being scrolled, and the conversation
+     would not move until the dock was touched again. */
+  touch-action: none; -webkit-tap-highlight-color: transparent;
 }
+html:has(#page-narada.active), body:has(#page-narada.active) { overflow: hidden; }
+body:has(#page-narada.active) { position: fixed; inset: 0; width: 100%; }
 .nx-status {
   position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%);
   white-space: nowrap; pointer-events: none;
@@ -4158,6 +4170,7 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
 .nx-hbtn-text { padding: 0 12px; font: 600 12px/1 var(--font); color: rgba(255,255,255,0.75); }
 .nx-log {
   max-height: min(56vh, 500px); overflow-y: auto; overscroll-behavior: contain;
+  touch-action: pan-y; -webkit-overflow-scrolling: touch;
   display: flex; flex-direction: column; gap: 10px;
   padding: 8px 20px 14px;
   scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent;
@@ -4312,3 +4325,213 @@ body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-a
 .mode-toggle.on::after, .mode-row.on .mode-toggle::after,
 .toggle.on::after, .mode-pill-toggle.on::after { background: var(--on-accent); }
 .mode-row.on.mode-danger .mode-toggle::after, .mode-row.on.mode-warn .mode-toggle::after { background: #fff; }
+
+/* ── Wide admin pages on a laptop ───────────────────────────
+   Settings sections sit two abreast and the email form pairs its
+   fields, instead of one narrow column down the middle. */
+@media (min-width: 1100px) {
+  #page-a-settings .admin-page {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 48px; align-content: start;
+  }
+  #page-a-settings .admin-page > :not(.settings-card) { grid-column: 1 / -1; }
+  #page-a-email .settings-card {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 28px;
+  }
+  #page-a-email .settings-card > :not(.input-group) { grid-column: 1 / -1; }
+}
+
+/* ── Documentation on a phone ───────────────────────────────
+   A full-screen reader instead of a small floating card: a fixed title
+   bar, section chips that scroll sideways, text at reading size, and
+   term/definition pairs stacked so neither is squeezed. */
+@media (max-width: 768px) {
+  #m-docs.modal-overlay { align-items: stretch; backdrop-filter: none; background: var(--surface); }
+  #m-docs .modal.docs-modal {
+    width: 100vw; max-width: 100vw !important; height: 100dvh; max-height: 100dvh;
+    border: 0; border-radius: 0; box-shadow: none; background: var(--surface);
+    overflow: hidden;
+  }
+  #m-docs .docs-topbar {
+    align-items: center;
+    padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
+    background: var(--surface);
+  }
+  #m-docs .docs-topbar h2 { font-size: 22px; letter-spacing: -0.4px; }
+  #m-docs .docs-subtitle { display: none; }
+  #m-docs .docs-close-btn { width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; }
+  #m-docs .docs-close-btn span { font-size: 22px; }
+  #m-docs .docs-body {
+    padding: 0 18px calc(28px + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
+  #m-docs .docs-tabs {
+    gap: 8px; margin: 0 -18px 6px; padding: 10px 18px;
+    border-bottom: 0.5px solid var(--border);
+    scroll-snap-type: x proximity;
+  }
+  #m-docs .docs-tab {
+    flex-shrink: 0; scroll-snap-align: start;
+    min-height: 38px; padding: 0 15px;
+    border: 1px solid var(--border); border-radius: 99px;
+    font-size: 14px; color: var(--t2); background: transparent;
+  }
+  #m-docs .docs-tab.active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  #m-docs .docs-section { padding: 6px 0 12px; border-bottom: 0; }
+  #m-docs .docs-section h3 { font-size: 21px; letter-spacing: -0.3px; margin: 16px 0 8px; }
+  #m-docs .docs-section h4 {
+    font-size: 12px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--t3); margin: 24px 0 8px;
+  }
+  #m-docs .docs-section p, #m-docs .docs-section li { font-size: 15.5px; line-height: 1.6; color: var(--t1); }
+  #m-docs .docs-section ul, #m-docs .docs-section ol { padding-left: 20px; }
+  #m-docs .docs-section code { font-size: 13px; overflow-wrap: anywhere; }
+  #m-docs .docs-section pre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  /* Term over definition, as a list of cards. */
+  #m-docs .docs-rows { gap: 8px; }
+  #m-docs .docs-row {
+    flex-direction: column; gap: 3px;
+    padding: 11px 13px; border: 0; border-radius: 12px;
+    background: var(--surface-2); font-size: 14.5px;
+  }
+  #m-docs .docs-term { min-width: 0; font-size: 12.5px; color: var(--t1); font-weight: 600; }
+  #m-docs .docs-def { color: var(--t2); line-height: 1.5; }
+  /* Steps run down the page, not across it. */
+  #m-docs .docs-flow { flex-direction: column; align-items: stretch; gap: 6px; margin: 10px 0; }
+  #m-docs .docs-flow-step {
+    padding: 11px 13px; border-radius: 12px; background: var(--surface-2);
+    font-size: 15px; color: var(--t1);
+  }
+  #m-docs .docs-flow-arrow { display: none; }
+  #m-docs .docs-stack-grid { grid-template-columns: 1fr; gap: 8px; }
+  #m-docs .docs-stack-item { padding: 13px; border-radius: 12px; }
+  #m-docs .docs-stack-item strong { font-size: 15px; }
+  #m-docs .docs-stack-item span { font-size: 14px; line-height: 1.5; }
+  /* Diagrams keep their shape and scroll sideways rather than crushing. */
+  #m-docs .fc-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -18px; padding: 4px 18px; }
+  #m-docs .fc-row { flex-wrap: nowrap; width: max-content; }
+  #m-docs table { min-width: 0; width: 100%; }
+}
+.docs-close-btn .gi { width: 15px; height: 15px; }
+@media (max-width: 768px) { #m-docs .docs-close-btn .gi { width: 19px; height: 19px; } }
+
+/* ── Dynamic Island: press, open, activities (island.js) ─────
+   Appended last on purpose: these build on the pill above and must win
+   over its per-state widths when the island is open. */
+#top-hud {
+  height: var(--di-h, 37px);
+  cursor: pointer;
+  transform: translateX(-50%) scale(var(--di-s, 1));
+  transform-origin: top center;
+  transition: width 0.55s cubic-bezier(0.32, 1.42, 0.52, 1),
+              height 0.55s cubic-bezier(0.32, 1.28, 0.52, 1),
+              border-radius 0.4s ease, box-shadow 0.35s ease,
+              transform 0.35s cubic-bezier(0.32, 1.42, 0.52, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+#top-hud:focus-visible { outline: 2px solid var(--t1); outline-offset: 3px; }
+@media (hover: hover) { #top-hud:hover:not(.di-open) { --di-s: 1.045; } }
+#top-hud:active:not(.di-open) { --di-s: 0.95; transition-duration: 0.12s; }
+
+/* Content leaves and arrives out of focus, the way the real one does. */
+.hud-brand, .di-live { transition: opacity 0.22s ease, transform 0.4s cubic-bezier(0.32, 1.42, 0.52, 1), filter 0.3s ease; }
+#top-hud:not(.di-idle) .hud-brand { filter: blur(5px); }
+.di-num { font-variant-numeric: tabular-nums; }
+.di-cnt .gi { width: 15px; height: 15px; flex-shrink: 0; }
+
+/* Activities and notices only take the pill when nothing urgent has it. */
+#top-hud.di-idle:is(.di-rec, .di-offline, .di-notice) .hud-brand { opacity: 0; transform: scale(0.85); filter: blur(5px); }
+#top-hud.di-idle:is(.di-rec, .di-offline, .di-notice) .di-live { opacity: 1; transition: opacity 0.25s ease 0.12s; }
+#top-hud.di-idle.di-offline { --di-w: 132px; }
+#top-hud.di-idle.di-offline:not(.di-rec):not(.di-notice) .di-cnt-offline { display: flex; justify-content: center; }
+#top-hud.di-idle.di-rec { --di-w: 190px; }
+#top-hud.di-idle.di-rec:not(.di-notice) .di-cnt-rec { display: flex; }
+#top-hud.di-idle.di-notice { --di-w: var(--di-notice-w, 200px); }
+#top-hud.di-idle.di-notice .di-cnt-notice { display: flex; justify-content: center; animation: di-slide-in 0.45s cubic-bezier(0.32, 1.42, 0.52, 1); }
+.di-cnt-notice .di-lbl { white-space: nowrap; }
+@keyframes di-slide-in { from { opacity: 0; transform: translateY(9px) scale(0.92); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+
+#top-hud.di-bump { animation: di-bump 0.5s cubic-bezier(0.32, 1.42, 0.52, 1); }
+@keyframes di-bump { 0% { --di-s: 1; } 35% { --di-s: 1.09; } 100% { --di-s: 1; } }
+#top-hud.di-shake { animation: di-shake 0.5s ease, di-glow-red 1.1s ease-in-out 0.5s infinite; }
+@keyframes di-shake {
+  0%, 100% { translate: 0 0; } 15% { translate: -7px 0; } 30% { translate: 6px 0; }
+  45% { translate: -5px 0; } 60% { translate: 4px 0; } 80% { translate: -2px 0; }
+}
+@property --di-s { syntax: '<number>'; inherits: false; initial-value: 1; }
+
+/* Open: the pill grows into a panel. */
+#top-hud.di-open {
+  --di-w: min(376px, calc(100vw - 24px));
+  --di-s: 1;
+  border-radius: 30px; cursor: default; z-index: 960;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.34), 0 4px 12px rgba(0,0,0,0.18);
+  animation: none;
+}
+[data-theme="dark"] #top-hud.di-open { box-shadow: 0 0 0 1px rgba(255,255,255,0.14), 0 24px 60px rgba(0,0,0,0.6); }
+#top-hud.di-open .hud-brand, #top-hud.di-open .di-live {
+  opacity: 0 !important; filter: blur(6px); transform: scale(0.8); pointer-events: none; transition-delay: 0s !important;
+}
+.di-panel {
+  position: absolute; top: 0; left: 0;
+  width: min(376px, calc(100vw - 24px)); box-sizing: border-box;
+  padding: 18px 16px 14px;
+  display: flex; flex-direction: column; gap: 14px;
+  opacity: 0; filter: blur(8px); transform: scale(0.92); transform-origin: top center;
+  pointer-events: none;
+  transition: opacity 0.16s ease, filter 0.25s ease, transform 0.45s cubic-bezier(0.32, 1.42, 0.52, 1);
+}
+#top-hud.di-open .di-panel {
+  opacity: 1; filter: none; transform: none; pointer-events: auto;
+  transition: opacity 0.3s ease 0.14s, filter 0.35s ease 0.14s, transform 0.55s cubic-bezier(0.32, 1.42, 0.52, 1) 0.06s;
+}
+.di-p-head { display: flex; align-items: center; gap: 12px; }
+.di-p-ic {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.12); color: #fff;
+}
+.di-p-ic .gi { width: 25px; height: 25px; }
+.di-panel[data-tone="alert"] .di-p-ic { background: rgba(255,69,58,0.22); color: #ff6b61; animation: di-pip-pulse 1s ease-in-out infinite; }
+.di-panel[data-tone="warn"] .di-p-ic { background: rgba(255,159,10,0.2); color: #ffb340; }
+.di-p-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.di-p-title b { font-size: 16px; font-weight: 650; letter-spacing: -0.2px; color: #fff; }
+.di-p-title span { font-size: 12.5px; color: rgba(255,255,255,0.58); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.di-p-clock { font-size: 22px; font-weight: 300; letter-spacing: -0.5px; color: #fff; }
+.di-p-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.di-p-stats > div { padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.di-p-stats span { font-size: 9.5px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+.di-p-stats b { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.di-p-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.di-chip {
+  display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px;
+  border: 0; border-radius: 14px; cursor: pointer;
+  background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.72);
+  font: 600 12.5px/1 var(--font); text-align: left;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.32, 1.42, 0.52, 1);
+}
+.di-chip .gi { width: 18px; height: 18px; flex-shrink: 0; }
+.di-chip:hover { background: rgba(255,255,255,0.14); color: #fff; }
+.di-chip:active { transform: scale(0.95); }
+.di-chip[aria-pressed="true"] { background: #fff; color: #000; }
+.di-p-acts { display: flex; gap: 6px; }
+.di-act {
+  height: 42px; min-width: 42px; padding: 0; border: 0; border-radius: 21px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(255,255,255,0.1); color: #fff; font: 600 13.5px/1 var(--font);
+  transition: background 0.2s ease, transform 0.2s cubic-bezier(0.32, 1.42, 0.52, 1);
+}
+.di-act .gi { width: 19px; height: 19px; }
+.di-act:hover { background: rgba(255,255,255,0.18); }
+.di-act:active { transform: scale(0.94); }
+.di-act-main { flex: 1; background: #fff; color: #000; padding: 0 16px; }
+.di-act-main:hover { background: rgba(255,255,255,0.88); }
+/* The four staggered rows rise in one after another. */
+#top-hud.di-open .di-panel > * { animation: di-slide-in 0.5s cubic-bezier(0.32, 1.42, 0.52, 1) both; }
+#top-hud.di-open .di-panel > :nth-child(1) { animation-delay: 0.10s; }
+#top-hud.di-open .di-panel > :nth-child(2) { animation-delay: 0.15s; }
+#top-hud.di-open .di-panel > :nth-child(3) { animation-delay: 0.20s; }
+#top-hud.di-open .di-panel > :nth-child(4) { animation-delay: 0.25s; }
+
+/* Mode rows on the dashboard: drawn icons, in ink. */
+.mode-row-icon .gi { width: 19px; height: 19px; }
