@@ -54,6 +54,9 @@ OWN_IMPORTS = {
 }
 
 
+MODULE_BOUND = {"globals", "locals", "vars", "__name__", "__file__", "__spec__", "__package__"}
+
+
 def module_names(tree):
     """Every name bound at the top level of a module (defs, assignments, imports)."""
     names = set()
@@ -144,6 +147,12 @@ def rewrite(block, gw_names):
         functions.append(top.name)
         local = function_locals(top)
         for node in ast.walk(top):
+            # These mean "the module this code is written in". Moved to another
+            # file they would quietly point at the wrong module.
+            if isinstance(node, ast.Name) and node.id in MODULE_BOUND and node.id not in local:
+                raise SystemExit(f"{top.name}() uses {node.id} (line {node.lineno} of the block), "
+                                 f"which is tied to Garuda_web. Wrap that in a helper that stays "
+                                 f"in Garuda_web and call the helper.")
             if isinstance(node, ast.Global):
                 # The whole line is dropped, so it must hold nothing else.
                 text = lines[node.lineno - 1].strip()

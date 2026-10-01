@@ -225,6 +225,8 @@ try:
     from .garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
     from .garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
     from .garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
+    from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
+    from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -252,6 +254,8 @@ except ImportError:
     from basic_pipelines.garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
     from basic_pipelines.garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
     from basic_pipelines.garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2815,10 +2819,6 @@ fastapi_app.include_router(build_home_router(
     ai_configure=_ai_configure, ai_test=_ai_test))
 
 # ── Pydantic models ──────────────────────────────────────────────────────────
-class ModeRequest(BaseModel):
-    mode: str   # "dnd","email_off","idle","night","emergency","privacy"
-    value: bool
-
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @fastapi_app.get("/", response_class=HTMLResponse)
@@ -2859,14 +2859,7 @@ async def service_worker():
 
 fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 
-@fastapi_app.get("/api/state")
-async def get_state(session=Depends(require_session)):
-    payload = await asyncio.to_thread(get_state_dict)
-    return _state_for_role(payload, session["role"])
-
-@fastapi_app.get("/api/cascade_metrics")
-async def get_cascade_metrics(session=Depends(require_session)):
-    return _cascade_metrics.snapshot()
+fastapi_app.include_router(build_control_router(sys.modules[__name__]))
 
 def _require_eval_token(request: Request):
     """Token-gated access for the P1-4 evaluation harness."""
@@ -2877,58 +2870,7 @@ def _require_eval_token(request: Request):
     if not hmac.compare_digest(got.encode(), expected.encode()):
         raise HTTPException(403, "Bad eval token")
 
-class EvalInjectRequest(BaseModel):
-    label: str = "Knife"
-    confidence: float = 0.92
-    email: bool = False
-
-@fastapi_app.post("/api/eval/inject_danger")
-async def eval_inject_danger(data: EvalInjectRequest, request: Request):
-    _require_eval_token(request)
-    t_req = time.time()
-    log_scissors_detection(data.label)
-    log_system_update(f"[EVAL_INJECT] {data.label} conf={data.confidence:.2f}")
-    trigger_software_alert()
-    if data.email:
-        try:
-            await asyncio.to_thread(send_email_alert)
-        except Exception as e:
-            log_system_update(f"[EVAL_INJECT] email failed: {e}")
-    return {"ok": True, "t_request": t_req, "t_alert": time.time(),
-            "latency_ms": round((time.time() - t_req) * 1000, 2),
-            "label": data.label, "confidence": data.confidence}
-
-class EvalTagRequest(BaseModel):
-    tag: str
-    note: str = ""
-
-@fastapi_app.post("/api/eval/tag")
-async def eval_tag(data: EvalTagRequest, request: Request):
-    _require_eval_token(request)
-    msg = f"[EVAL_TAG] {data.tag}"
-    if data.note:
-        msg += f" — {data.note}"
-    log_system_update(msg)
-    return {"ok": True, "t": time.time(), "tag": data.tag, "note": data.note}
-
-@fastapi_app.get("/api/eval/fps_probe")
-async def eval_fps_probe(request: Request):
-    _require_eval_token(request)
-    with _mode_lock:
-        modes = {
-            "dnd": MODE_DND, "email_off": MODE_EMAIL_OFF,
-            "idle": MODE_IDLE, "night": MODE_NIGHT,
-            "emergency": MODE_EMERGENCY, "privacy": MODE_PRIVACY,
-        }
-    cm = _cascade_metrics.snapshot() if _cascade_metrics else {}
-    return {
-        "t": time.time(),
-        "uptime": time.time() - _app_start_time,
-        "total_frames": _total_frames,
-        "modes": modes,
-        "cascade": cm,
-        "alert_active": _alert_active,
-    }
+fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
 
 def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
     """Narada's one brain for chat and voice.
@@ -2948,33 +2890,14 @@ fastapi_app.include_router(build_narada_router(sys.modules[__name__]))
 
 ADMIN_ONLY_MODES = frozenset({"idle", "email_off"})
 
-@fastapi_app.post("/api/modes")
-async def set_mode(data: ModeRequest, session=Depends(require_session)):
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    mode_map = {
-        "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
-        "idle": "MODE_IDLE", "night": "MODE_NIGHT",
-        "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY",
-    }
-    if data.mode not in mode_map:
-        raise HTTPException(400, f"Unknown mode: {data.mode}")
-    if data.mode in ADMIN_ONLY_MODES and data.value and session["role"] != "admin":
-        # Idle and Email Off stop the system telling anyone about a threat.
-        # Any signed-in profile could switch them on; switching them back off
-        # (the safe direction) stays open to everyone.
-        raise HTTPException(403, "Only an admin can turn this mode on: it silences alerts.")
-    with _mode_lock:
-        globals()[mode_map[data.mode]] = data.value
-        if data.mode == "emergency" and data.value:
-            MODE_DND = False
-    await _async_save_config()
-    log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
-    push_urgent_ws()
-    return {"ok": True, "modes": get_state_dict()["modes"]}
+def _set_mode_flag(global_name: str, value):
+    """Set one MODE_* flag of this module by name.
 
-# The native (Swift) app posts to /api/set-mode, which never existed here: its
-# mode switches failed with 404. Same handler, both names.
-fastapi_app.post("/api/set-mode", include_in_schema=False)(set_mode)
+    A function of its own because it relies on globals(), which always means
+    the module the code is written in: a route handler that lives in another
+    file must call this, not write to its own globals.
+    """
+    globals()[global_name] = value
 
 fastapi_app.include_router(build_users_router(sys.modules[__name__]))
 
@@ -3055,29 +2978,6 @@ _master_otp_ts = 0.0
 _master_otp_attempts = 0
 
 fastapi_app.include_router(build_master_keys_router(sys.modules[__name__]))
-
-@fastapi_app.get("/api/heartbeat")
-async def heartbeat(request: Request, key: Optional[str] = None):
-    """Health check for external monitors (UptimeRobot etc.).
-    Accepts an optional ?key= query param or X-Heartbeat-Key header to guard
-    the dead-man reset. Without a key the endpoint still returns health data
-    but does NOT reset the deadman timer (prevents unauthenticated suppression).
-    """
-    global _last_heartbeat, _deadman_alert_sent, _heartbeat_ever
-    _HEARTBEAT_KEY = os.environ.get("HEARTBEAT_KEY", "")
-    provided = key or request.headers.get("X-Heartbeat-Key", "")
-    # Only reset dead-man's switch if key matches (or no key configured)
-    if not _HEARTBEAT_KEY or hmac.compare_digest(str(provided).encode(), _HEARTBEAT_KEY.encode()):
-        _last_heartbeat = time.time()
-        _deadman_alert_sent = False
-        _heartbeat_ever = True
-    return {"ok": True, "uptime": int(time.time() - _app_start_time)}
-
-@fastapi_app.post("/api/emergency-stop")
-async def emergency_stop(session=Depends(require_admin)):
-    log_system_update(f"Emergency stop by {session['username']}.")
-    threading.Thread(target=stop_app, daemon=True).start()
-    return {"ok": True}
 
 # ── Offline event queue endpoints ─────────────────────────────────────────────
 fastapi_app.include_router(build_events_router(sys.modules[__name__]))
