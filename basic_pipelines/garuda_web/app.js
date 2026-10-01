@@ -11,6 +11,11 @@
       || (navigator.platform === 'MacIntel');
     const root = document.documentElement;
     if (!apple) root.classList.add('plat-other');
+    // Phones and tablets that are not Apple's get the light rendering from
+    // the start: blur and layered shadows are what made scrolling stutter
+    // there, and waiting to measure it meant a laggy first minute.
+    const touchOnly = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (!apple && touchOnly) root.classList.add('perf-lite');
     const slowHint = (navigator.deviceMemory && navigator.deviceMemory <= 2)
       || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)
       || (window.matchMedia && window.matchMedia('(prefers-reduced-transparency: reduce)').matches);
@@ -1315,14 +1320,19 @@ const G = (() => {
     if (!navEl || !navEl.isConnected) navEl = _navItemFor(pageId);
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
+    // Every other page is hidden now. The old page used to be hidden from a
+    // timer, which could fire after the new page was shown: tapping the tab
+    // you were already on then hid it and left the screen blank.
+    const target = 'page-' + pageId;
+    let changed = false;
     document.querySelectorAll('.page').forEach(p => {
-      if (p.classList.contains('active')) {
-        p.style.opacity = '0';
-        setTimeout(() => { p.classList.remove('active'); p.style.opacity = ''; }, 0);
-      } else {
-        p.classList.remove('active');
-      }
+      if (p.id === target) return;
+      if (p.classList.contains('active')) changed = true;
+      p.classList.remove('active');
+      p.style.opacity = '';
     });
+    // On a phone the document itself scrolls; a new page starts at its top.
+    if (changed && _isPhone()) window.scrollTo(0, 0);
     document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
     // Dashboard uses overflow:hidden on #main to avoid nav-bar gap
     const mainEl = $('main');

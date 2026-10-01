@@ -4702,7 +4702,7 @@ body::before { will-change: transform; }
    edge stretch/glow (which `none` removed) and still blocks
    pull-to-refresh from reloading the app mid-scroll. */
 @media (hover: none) and (pointer: coarse) {
-  html.plat-other, html.plat-other body { overscroll-behavior-y: contain; }
+  html.plat-other { overscroll-behavior-y: contain; }
   html.plat-other .sidebar-left, html.plat-other .sidebar-right, html.plat-other .timeline-list,
   html.plat-other .admin-page, html.plat-other .console, html.plat-other .nx-log,
   html.plat-other .docs-body, html.plat-other .modal { overscroll-behavior-y: contain; }
@@ -4759,3 +4759,33 @@ html.perf-lite #top-hud, html.perf-lite #top-hud.di-open { filter: none; }
 html.perf-lite #top-hud.di-alert { animation: none; }
 html.perf-lite .dg *, html.perf-lite .status-pulse-ring, html.perf-lite .cam-live-pulse { animation: none !important; }
 html.perf-lite .card, html.perf-lite .settings-card { box-shadow: none; }
+
+/* ── Phones could not scroll (Android Chrome) ──────────────────
+   Two things together did it. `overscroll-behavior` was set on <body> as well
+   as <html>; and on phones <body>, #app, #app-shell, #body and #main all had
+   `overflow-x: hidden`, which turns each into a scroll container (the other
+   axis computes to `auto`). None of them can scroll: they are as tall as
+   their content. Chromium does not pass a touch scroll on from a scroll
+   container whose overscroll-behavior is not `auto`, so the swipe stopped at
+   <body> and never reached the page. iOS Safari chains regardless, which is
+   why an iPhone was fine.
+   The root keeps its overscroll rule (it is the one that scrolls). <body>
+   lets go of it, and on phones the wrappers clip sideways overflow without
+   becoming scroll containers at all, which is also less work per frame. */
+body { overscroll-behavior: auto; }
+@media (max-width: 768px) {
+  @supports (overflow: clip) {
+    body, #app, #app-shell, #body, #main, #main.dash-active,
+    #page-dashboard, #page-dashboard.active {
+      overflow: visible;
+      overflow-x: clip;
+    }
+  }
+}
+/* Between a phone and a laptop (tablets, a narrow window) the dashboard is
+   already one column, but its frame was still a fixed-height box with the
+   overflow hidden: everything below the fold was cut off, unreachable. */
+@media (min-width: 769px) and (max-width: 1023px) {
+  #main.dash-active { overflow-y: auto; display: block; }
+  #page-dashboard, #page-dashboard.active { overflow: visible; height: auto; flex: none; }
+}

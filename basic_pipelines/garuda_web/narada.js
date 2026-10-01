@@ -87,7 +87,9 @@ const N = (() => {
     if (!canvas) return;
     const r = canvas.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    // Four times the pixels at DPR 2: too much for a mid-range phone's canvas.
+    const lite = document.documentElement.classList.contains('perf-lite');
+    DPR = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 2);
     CW = Math.round(r.width * DPR);
     CH = Math.round(r.height * DPR);
     canvas.width = CW; canvas.height = CH;
