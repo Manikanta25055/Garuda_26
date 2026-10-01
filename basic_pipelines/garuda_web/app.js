@@ -871,11 +871,11 @@ const G = (() => {
   }
 
   // ── iOS Bottom Navigation ─────────────────────────────────
-  // Hand-drawn icons (icons/*.svg via .gi); more and signout are not drawn yet.
+  // Hand-drawn icons (icons/*.svg via .gi).
   const _NAV_ICONS = {
     dashboard: `<span class="gi gi-home"></span>`,
     narada:    `<span class="gi gi-narada"></span>`,
-    users:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="5.5" r="2.5"/><path d="M1.5 15.75a5.5 5.5 0 0 1 11 0"/><path d="M13.5 7.5a2.5 2.5 0 1 1 0-5"/><path d="M16.5 15.75a4 4 0 0 0-3-3.85"/></svg>`,
+    users:     `<span class="gi gi-users"></span>`,
     email:     `<span class="gi gi-mail"></span>`,
     settings:  `<span class="gi gi-settings"></span>`,
     logs:      `<span class="gi gi-logs"></span>`,
@@ -884,10 +884,10 @@ const G = (() => {
     devices:   `<span class="gi gi-devices"></span>`,
     auto:      `<span class="gi gi-automate"></span>`,
     insights:  `<span class="gi gi-insights"></span>`,
-    more:      `<svg viewBox="0 0 18 18" fill="currentColor" stroke="none"><circle cx="3.75" cy="9" r="1.5"/><circle cx="9" cy="9" r="1.5"/><circle cx="14.25" cy="9" r="1.5"/></svg>`,
+    more:      `<span class="gi gi-more"></span>`,
     feedback:  `<span class="gi gi-feedback"></span>`,
     theme:     `<span class="gi gi-light-mode"></span>`,
-    signout:   `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2.25v6"/><path d="M5.3 4.1a6 6 0 1 0 7.4 0"/></svg>`,
+    signout:   `<span class="gi gi-power"></span>`,
   };
 
   const _USER_NAV = [

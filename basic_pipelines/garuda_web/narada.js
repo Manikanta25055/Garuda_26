@@ -1,5 +1,10 @@
 /* Narada: one page to talk or type to the house.
 
+   Two things on the page. The dot field, edge to edge. And the dock: the
+   black bar you type in, which opens upward into the whole conversation
+   (typed and spoken turns alike) and minimises back to the bar. Nothing is
+   written over the field itself.
+
    The glyph is a full-page dot field: concentric rings packed close, the
    dots shrinking from a large core outward to the edges of the screen.
    Every dot's size and brightness come from one "energy" value, and each
@@ -42,6 +47,10 @@ const N = (() => {
   let conv = null, voice = 'off';     // off | connecting | on
   let clientMod = null, busy = false, lastUserAt = 0;
   let lastReply = null, infoOpen = false, infoData = null;
+  // The conversation: [{who: 'you' | 'narada' | 'error', text}]; kept for the
+  // tab's lifetime so a reload or a trip to another page does not lose it.
+  const SESSION_KEY = 'narada-session', SESSION_MAX = 80;
+  let session = [], sheetOpen = false, userMinimised = false, pendingEl = null;
 
   function voiceActive() { return voice !== 'off'; }
 
@@ -89,12 +98,12 @@ const N = (() => {
   // off with distance; ring spacing and dots per ring follow the size, so
   // neighbours stay a small, even gap apart at every radius.
   function buildField(rect) {
-    const top = 64, bar = $('nx-bar'), caps = $('nx-captions');
-    const barTop = bar ? bar.getBoundingClientRect().top - rect.top : rect.height - 120;
-    const capTop = caps ? Math.min(caps.getBoundingClientRect().top - rect.top, barTop) : barTop;
+    // Centred on the page above the dock, so the core stays a clear target.
+    const dock = $('nx-bar');
+    const floor = dock ? dock.getBoundingClientRect().top - rect.top : rect.height - 120;
     cx = CW / 2;
-    cy = ((top + capTop) / 2) * DPR;
-    Rfx = Math.max(60 * DPR, Math.min(CW / 2, (capTop - top) / 2 * DPR) * 0.98);
+    cy = Math.min(rect.height * 0.46, (64 + floor) / 2) * DPR;
+    Rfx = Math.max(60 * DPR, Math.min(CW / 2, cy - 40 * DPR) * 0.98);
     coreR = Rfx * 0.075;
     const Rmax = Math.hypot(Math.max(cx, CW - cx), Math.max(cy, CH - cy)) + 4 * DPR;
     const s0 = Rfx * 0.03;
@@ -118,25 +127,13 @@ const N = (() => {
     const n = pts.length / 5;
     D = { n, x: new Float32Array(n), y: new Float32Array(n), ang: new Float32Array(n),
           rf: new Float32Array(n), size: new Float32Array(n), bin: new Uint8Array(n),
-          rbin: new Uint8Array(n), dim: new Float32Array(n) };
-    // Dots behind the captions fade back so the words stay readable.
-    const cr = caps ? caps.getBoundingClientRect() : null;
-    const feather = 70;
+          rbin: new Uint8Array(n) };
     for (let i = 0; i < n; i++) {
-      const x = pts[i * 5], y = pts[i * 5 + 1], ang = pts[i * 5 + 2], rf = pts[i * 5 + 3];
-      D.x[i] = x; D.y[i] = y; D.ang[i] = ang; D.rf[i] = rf; D.size[i] = pts[i * 5 + 4];
+      const ang = pts[i * 5 + 2], rf = pts[i * 5 + 3];
+      D.x[i] = pts[i * 5]; D.y[i] = pts[i * 5 + 1]; D.ang[i] = ang; D.rf[i] = rf; D.size[i] = pts[i * 5 + 4];
       const u = ((ang + Math.PI / 2) / (Math.PI * 2) % 1 + 1) % 1;
       D.bin[i] = Math.min(RAYS - 1, Math.floor(u * RAYS));
       D.rbin[i] = Math.min(RINGS - 1, Math.floor(Math.min(rf, 0.999) * RINGS));
-      let dim = 1;
-      if (cr && cr.height > 4) {
-        // Distance outside the caption box, feathered so there is no hard edge.
-        const px = x / DPR + rect.left, py = y / DPR + rect.top;
-        const ox = Math.max(cr.left - px, 0, px - cr.right), oy = Math.max(cr.top - py, 0, py - cr.bottom);
-        const out = Math.hypot(ox, oy);
-        dim = 0.2 + 0.8 * clamp(out / feather);
-      }
-      D.dim[i] = dim;
     }
   }
 
@@ -257,7 +254,7 @@ const N = (() => {
         }
       }
       const size = D.size[i] * (0.42 + 0.58 * clamp(e * 1.25));
-      const alpha = clamp((0.1 + 0.9 * e) * D.dim[i]);
+      const alpha = clamp(0.1 + 0.9 * e);
       const k = Math.min(ALPHA_STEPS - 1, Math.round(alpha * (ALPHA_STEPS - 1)));
       if (k === 0) continue;
       const c = active && e > 0.62 && state === 'error' ? 1 : 0;
@@ -326,8 +323,8 @@ const N = (() => {
       mic.setAttribute('aria-pressed', String(voice !== 'off'));
       mic.setAttribute('aria-label', voice === 'off' ? 'Talk to Narada' : 'End conversation');
     }
-    const stage = $('nx-stage');
-    if (stage) stage.dataset.state = state;
+    const dock = $('nx-dock');
+    if (dock) dock.dataset.state = state;
     if (status) {
       status.textContent = {
         idle: voice === 'on' ? 'Listening' : 'Tap the core to talk · or type',
@@ -347,32 +344,101 @@ const N = (() => {
     }
   }
 
-  // ── Captions ───────────────────────────────────────────────
-  let capTimer = 0;
-  function caption(who, text) {
-    const el = $(who === 'you' ? 'nx-cap-you' : 'nx-cap-narada');
-    const box = $('nx-captions');
-    if (!el || !box) return;
-    el.textContent = text || '';
-    el.classList.remove('in'); void el.offsetWidth; el.classList.add('in');
-    box.classList.remove('fade');
-    clearTimeout(capTimer);
-    capTimer = setTimeout(() => box.classList.add('fade'), 9000);
+  // ── Conversation ───────────────────────────────────────────
+  function save() {
+    try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(session.slice(-SESSION_MAX))); } catch (_) {}
   }
-  function clearExtra() { const x = $('nx-extra'); if (x) x.innerHTML = ''; }
+  function restore() {
+    try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '[]') || []; } catch (_) { session = []; }
+    if (!Array.isArray(session)) session = [];
+    for (const m of session) bubble(m.who, m.text);
+    syncDock();
+  }
 
-  function typeReply(text) {
-    const el = $('nx-cap-narada');
-    if (!el) return;
-    caption('narada', '');
+  function scrollLog() {
+    const log = $('nx-log');
+    if (log) log.scrollTop = log.scrollHeight;
+  }
+  function bubble(who, text) {
+    const log = $('nx-log');
+    if (!log) return null;
+    const el = document.createElement('div');
+    el.className = 'nx-msg ' + (who === 'error' ? 'narada error' : who);
+    el.textContent = text || '';
+    log.appendChild(el);
+    return el;
+  }
+
+  // "Narada is working on it": three dots where the reply will appear.
+  function setPending(on) {
+    if (pendingEl) { pendingEl.remove(); pendingEl = null; }
+    const log = $('nx-log');
+    if (!on || !log) return;
+    pendingEl = document.createElement('div');
+    pendingEl.className = 'nx-msg narada pending';
+    pendingEl.innerHTML = '<i></i><i></i><i></i>';
+    log.appendChild(pendingEl);
+    scrollLog();
+  }
+
+  function syncDock() {
+    const dock = $('nx-dock'), peek = $('nx-peek'), exp = $('nx-expand');
+    if (!dock) return;
+    const last = session.length ? session[session.length - 1] : null;
+    dock.classList.toggle('has-log', session.length > 0);
+    dock.classList.toggle('open', sheetOpen);
+    dock.classList.toggle('has-peek', !!last && last.who !== 'you');
+    if (peek) peek.textContent = last ? last.text : '';
+    if (exp) {
+      exp.setAttribute('aria-expanded', String(sheetOpen));
+      exp.setAttribute('aria-label', sheetOpen ? 'Minimise conversation' : 'Open conversation');
+    }
+  }
+
+  // Add a turn. The sheet opens by itself unless it was minimised by hand;
+  // then the newest line shows above the bar instead.
+  function say(who, text, typed) {
+    text = (text || '').trim();
+    if (!text) return null;
+    setPending(false);
+    session.push({ who, text });
+    if (session.length > SESSION_MAX) session = session.slice(-SESSION_MAX);
+    save();
+    const el = bubble(who, typed ? '' : text);
+    if (!userMinimised) sheetOpen = true;
+    syncDock();
+    if (typed && el) typeInto(el, text); else scrollLog();
+    return el;
+  }
+
+  function typeInto(el, text) {
     let i = 0;
     synthTalkUntil = performance.now() + Math.min(6000, 400 + text.length * 22);
     setState('talking');
     (function tick() {
-      i = Math.min(i + 2, text.length);
+      i = Math.min(i + 3, text.length);
       el.textContent = text.slice(0, i);
+      scrollLog();
       if (i < text.length) requestAnimationFrame(tick);
     })();
+  }
+
+  function toggleSheet(force) {
+    sheetOpen = typeof force === 'boolean' ? force : !sheetOpen;
+    userMinimised = !sheetOpen;
+    haptic('tap');
+    syncDock();
+    if (sheetOpen) requestAnimationFrame(scrollLog);
+  }
+
+  function clearSession() {
+    session = []; save();
+    setPending(false);
+    const log = $('nx-log');
+    if (log) log.innerHTML = '';
+    sheetOpen = false; userMinimised = false;
+    haptic('tap');
+    syncDock();
   }
 
   // ── Voice ──────────────────────────────────────────────────
@@ -388,6 +454,7 @@ const N = (() => {
     const status = $('nx-status');
     if (status) status.dataset.err = msg;
     voice = 'off'; conv = null;
+    setPending(false);
     setState('error');
     haptic('error');
     if (window.G) G.showToast(msg, 'error');
@@ -410,22 +477,23 @@ const N = (() => {
         onDisconnect: () => {
           const wasOn = voice !== 'off';
           conv = null; voice = 'off';
+          setPending(false);
           setState('idle');
           if (wasOn) haptic('stop');
         },
         onModeChange: ({ mode }) => {
-          if (mode === 'speaking') { setState('talking'); haptic('talk'); }
+          if (mode === 'speaking') { setPending(false); setState('talking'); haptic('talk'); }
           else if (voice === 'on') setState('listening');
         },
         onMessage: (m) => {
           const who = m.role || m.source;
           if (who === 'user') {
-            clearExtra();
-            caption('you', m.message);
+            say('you', m.message);
             lastUserAt = performance.now();
             setState('thinking');
+            setPending(true);
           } else if (m.message) {
-            caption('narada', m.message);
+            say('narada', m.message);
           }
         },
         onError: (message) => voiceError(typeof message === 'string' ? message : 'Voice connection failed'),
@@ -440,6 +508,7 @@ const N = (() => {
   async function stopVoice() {
     const c = conv;
     voice = 'off'; conv = null;
+    setPending(false);
     if (c) { try { await c.endSession(); } catch (_) {} }
     setState('idle');
     haptic('stop');
@@ -457,8 +526,8 @@ const N = (() => {
     if (!text || busy) return;
     input.value = '';
     haptic('send');
-    clearExtra();
-    caption('you', text);
+    say('you', text);
+    setPending(true);
     if (conv && voice === 'on') {           // mid-conversation: Narada answers aloud
       conv.sendUserMessage(text);
       setState('thinking');
@@ -470,14 +539,18 @@ const N = (() => {
       const t0 = performance.now();
       const res = await G._apiFn('POST', '/api/chat', { message: text });
       lastReply = { ...res, seconds: (performance.now() - t0) / 1000 };
-      typeReply(res.response || '…');
-      // A drafted automation needs a Confirm button, so it stays in view;
-      // what ran and which model answered go to the "i" panel.
-      if (res.proposal && window.H && H.proposalHtml) $('nx-extra').innerHTML = H.proposalHtml(res.proposal);
+      say('narada', res.response || '…', true);
+      // A drafted automation needs a Confirm button, so it goes into the
+      // conversation; what ran and which model answered go to the "i" panel.
+      if (res.proposal && window.H && H.proposalHtml) {
+        const card = bubble('extra', '');
+        if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
+      }
       if (infoOpen) renderInfo();
     } catch (e) {
-      caption('narada', '');
-      voiceError((e && e.detail) || 'Connection error. Please try again.');
+      const msg = (e && e.detail) || 'Connection error. Please try again.';
+      say('error', msg);
+      voiceError(msg);
     } finally {
       busy = false;
     }
@@ -540,8 +613,9 @@ const N = (() => {
     });
 
     const input = $('nx-input');
-    input.addEventListener('focus', () => $('nx-bar').classList.add('focus'));
-    input.addEventListener('blur', () => $('nx-bar').classList.remove('focus'));
+    input.addEventListener('focus', () => $('nx-dock').classList.add('focus'));
+    input.addEventListener('blur', () => $('nx-dock').classList.remove('focus'));
+    restore();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) stop(); else if (window.G && $('page-narada').classList.contains('active')) start();
     });
@@ -556,6 +630,6 @@ const N = (() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  return { toggleVoice, stopVoice, submit, onNav, voiceActive, haptic, toggleInfo };
+  return { toggleVoice, stopVoice, submit, onNav, voiceActive, haptic, toggleInfo, toggleSheet, clearSession };
 })();
 window.N = N;

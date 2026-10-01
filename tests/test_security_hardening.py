@@ -392,7 +392,7 @@ def test_generate_otp_code_respects_length():
 
 def test_global_rate_limit_applies_to_modes_endpoint(app_client, admin_token, monkeypatch):
     """The /api/modes endpoint is covered by the global rate-limit middleware."""
-    monkeypatch.setattr(gw, '_RATE_LIMIT', 5)
+    monkeypatch.setattr(gw, '_RATE_LIMIT_SESSION', 5)
     monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
     headers = {'X-Garuda-Token': admin_token}
     statuses = []
@@ -404,7 +404,7 @@ def test_global_rate_limit_applies_to_modes_endpoint(app_client, admin_token, mo
 
 def test_global_rate_limit_applies_to_config_endpoint(app_client, admin_token, monkeypatch):
     """The /api/config endpoint is covered by the global rate-limit middleware."""
-    monkeypatch.setattr(gw, '_RATE_LIMIT', 5)
+    monkeypatch.setattr(gw, '_RATE_LIMIT_SESSION', 5)
     monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
     headers = {'X-Garuda-Token': admin_token}
     statuses = []
@@ -416,7 +416,7 @@ def test_global_rate_limit_applies_to_config_endpoint(app_client, admin_token, m
 
 def test_global_rate_limit_applies_to_users_endpoint(app_client, admin_token, monkeypatch):
     """The /api/users endpoint is covered by the global rate-limit middleware."""
-    monkeypatch.setattr(gw, '_RATE_LIMIT', 5)
+    monkeypatch.setattr(gw, '_RATE_LIMIT_SESSION', 5)
     monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
     headers = {'X-Garuda-Token': admin_token}
     statuses = []
@@ -424,3 +424,17 @@ def test_global_rate_limit_applies_to_users_endpoint(app_client, admin_token, mo
         r = app_client.get('/api/users', headers=headers)
         statuses.append(r.status_code)
     assert 429 in statuses
+
+
+def test_signed_in_pages_do_not_share_the_anonymous_budget(app_client, admin_token, monkeypatch):
+    """Ordinary use of a signed-in page must not hit "Too many requests":
+    it has its own, larger budget than anonymous traffic from the same address."""
+    monkeypatch.setattr(gw, '_RATE_LIMIT', 5)
+    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    anonymous = {'X-Garuda-Token': 'not-a-session'}   # the test client keeps a login cookie
+    for _ in range(8):
+        app_client.get('/api/users-public', headers=anonymous)
+    assert app_client.get('/api/users-public', headers=anonymous).status_code == 429
+    headers = {'X-Garuda-Token': admin_token}
+    statuses = [app_client.get('/api/users', headers=headers).status_code for _ in range(40)]
+    assert 429 not in statuses

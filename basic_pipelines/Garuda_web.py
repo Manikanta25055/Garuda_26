@@ -38,6 +38,7 @@ import ipaddress
 import subprocess
 import asyncio
 import threading
+import traceback
 import hashlib
 import hmac
 import tempfile
@@ -383,6 +384,10 @@ def _safe_json_load(filepath: str, default):
 _rate_store: dict = defaultdict(list)   # IP → [timestamps]
 _RATE_LIMIT = 30     # max requests
 _RATE_WINDOW = 60    # per N seconds
+# A signed-in page is not an attacker: one page load fires several API calls
+# and the home pages refresh on their own. Sharing the anonymous budget made
+# "Too many requests" pop up during ordinary use.
+_RATE_LIMIT_SESSION = 300
 
 # ── Brute-force login lockout ────────────────────────────
 _login_failures: dict = {}   # IP → {"count": int, "lockout_until": float}
@@ -398,13 +403,14 @@ def _get_client_ip(request) -> str:
         return fwd or client
     return client
 
-def _check_rate_limit(request) -> bool:
+def _check_rate_limit(request, bucket: str = "", limit: Optional[int] = None) -> bool:
     """Return True if request is within rate limit, False if exceeded."""
+    limit = _RATE_LIMIT if limit is None else limit
     ip = _get_client_ip(request)
     now = time.time()
-    stamps = _rate_store[ip]
+    stamps = _rate_store[f"{bucket}:{ip}" if bucket else ip]
     stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
-    if len(stamps) >= _RATE_LIMIT:
+    if len(stamps) >= limit:
         return False
     stamps.append(now)
     return True
@@ -1580,6 +1586,10 @@ def app_callback(pad, info, user_data):
     return Gst.PadProbeReturn.OK
 
 
+PI_CAMERA_SIZE = (1280, 720)
+PI_CAMERA_FPS = 60
+
+
 class GStreamerDetectionApp(GStreamerApp):
     def __init__(self, args, user_data):
         # Force frame capture for MJPEG stream; suppress display
@@ -1654,6 +1664,13 @@ class GStreamerDetectionApp(GStreamerApp):
         disable_qos(self.pipeline)
         self.pipeline.set_state(Gst.State.PLAYING)
 
+        camera_stop, camera_thread = threading.Event(), None
+        appsrc = self.pipeline.get_by_name("app_source")
+        if appsrc is not None:
+            camera_thread = threading.Thread(target=self._feed_pi_camera,
+                                             args=(appsrc, camera_stop), daemon=True)
+            camera_thread.start()
+
         if self.options_menu.dump_dot:
             GLib.timeout_add_seconds(3, self.dump_dot_file)
 
@@ -1663,16 +1680,67 @@ class GStreamerDetectionApp(GStreamerApp):
             pass
 
         self.user_data.running = False
+        # The camera must be closed before the next pipeline opens it again.
+        camera_stop.set()
+        if camera_thread is not None:
+            camera_thread.join(timeout=8)
         self.pipeline.set_state(Gst.State.NULL)
+
+    def _feed_pi_camera(self, appsrc, stop):
+        """Capture from the Pi camera with picamera2 and push frames into appsrc.
+
+        Until 2026-10 the pipeline used libcamerasrc. That GStreamer plugin
+        (libcamera 0.5.2) aborts the whole process on an internal assertion
+        (a request completes while its queue is empty) when the Pi is busy,
+        taking the web server down with it: seven times on 2026-10-01 alone.
+        picamera2 talks to the same camera without that plugin, and a failure
+        here is an ordinary Python exception: the pipeline loop is asked to
+        quit and _run_pipeline starts a fresh one.
+        """
+        picam2 = None
+        try:
+            from picamera2 import Picamera2
+            # appsrc has to announce what it sends; the capsfilter after it
+            # only checks, it does not describe the buffers.
+            appsrc.set_property("caps", Gst.Caps.from_string(
+                f"video/x-raw, format={self.network_format}, width={PI_CAMERA_SIZE[0]}, "
+                f"height={PI_CAMERA_SIZE[1]}, framerate={PI_CAMERA_FPS}/1, pixel-aspect-ratio=1/1"))
+            picam2 = Picamera2()
+            # libcamera names formats back to front: "BGR888" is R,G,B in memory,
+            # which is what the pipeline's video/x-raw format=RGB expects.
+            picam2.configure(picam2.create_video_configuration(
+                main={"size": PI_CAMERA_SIZE, "format": "BGR888"},
+                controls={"FrameRate": PI_CAMERA_FPS}, buffer_count=4, queue=False))
+            picam2.start()
+            while not stop.is_set():
+                frame = picam2.capture_array("main")
+                ret = appsrc.emit("push-buffer", Gst.Buffer.new_wrapped(frame.tobytes()))
+                if ret not in (Gst.FlowReturn.OK, Gst.FlowReturn.FLUSHING):
+                    raise RuntimeError(f"appsrc refused a frame: {ret.value_nick}")
+        except Exception as exc:
+            if not stop.is_set():
+                log_system_update(f"[CAMERA] Pi camera feed failed: {type(exc).__name__}: {exc}")
+                traceback.print_exc()
+                GLib.idle_add(self.loop.quit)
+        finally:
+            if picam2 is not None:
+                for close in (picam2.stop, picam2.close):
+                    try:
+                        close()
+                    except Exception:
+                        pass
 
     def get_pipeline_string(self):
         if self.source_type == "rpi":
             # 1280x720 @ 60fps — IMX708 supports up to 120fps at 720p vs 30fps at 1536x864
-            # libcamerasrc already outputs RGB at the requested size; skip the common
-            # videoscale+videoconvert to avoid redundant processing on the Pi 5.
+            # Frames arrive from _feed_pi_camera (picamera2) already RGB at this
+            # size; skip the common videoscale+videoconvert to avoid redundant
+            # processing on the Pi 5. Leaky: a late frame is dropped, never queued.
             source_element = (
-                "libcamerasrc name=src_0 ! "
-                f"video/x-raw, format={self.network_format}, width=1280, height=720, framerate=60/1 ! "
+                "appsrc name=app_source is-live=true do-timestamp=true format=time "
+                "max-buffers=2 leaky-type=downstream ! "
+                f"video/x-raw, format={self.network_format}, width={PI_CAMERA_SIZE[0]}, "
+                f"height={PI_CAMERA_SIZE[1]}, framerate={PI_CAMERA_FPS}/1 ! "
                 + QUEUE("queue_src_scale")
                 + "videoscale n-threads=2 ! "
                 f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, "
@@ -2232,7 +2300,11 @@ async def global_rate_limit(request: Request, call_next):
     _tok_hdr = request.headers.get("X-Eval-Token", "")
     _eval_bypass = bool(_eval_tok) and _tok_hdr == _eval_tok
     if not _eval_bypass and not any(path.startswith(p) for p in _RATE_EXEMPT_PREFIXES):
-        if not _check_rate_limit(request):
+        token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
+        signed_in = bool(token) and get_session(token) is not None
+        allowed = (_check_rate_limit(request, "session", _RATE_LIMIT_SESSION) if signed_in
+                   else _check_rate_limit(request))
+        if not allowed:
             from fastapi.responses import JSONResponse
             return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
     return await call_next(request)

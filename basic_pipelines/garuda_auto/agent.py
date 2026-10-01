@@ -20,13 +20,21 @@ from collections import deque
 
 from . import actuation_log
 from .device_types import is_actuator
-from .llm import NimUnavailable
+from .llm import NO_THINKING, NimUnavailable
 from .rule_schema import render_rule
 
 log = logging.getLogger(__name__)
 
 MAX_ROUNDS = 5
-HISTORY_TURNS = 6
+# Whole turns (the question, the tool calls and their results, the answer) are
+# remembered, not just the two sentences. With only "user: turn it on /
+# assistant: it's on" in memory the model learned that saying so was enough
+# and started confirming actions it had never called a tool for.
+# A turn is a conversation, not a batch job: give up on a stalled request
+# quickly and race a second one when the first is slow (see llm.py).
+TURN_TIMEOUT_S = 10
+HEDGE_AFTER_S = 1.5
+HISTORY_TURNS = 4
 MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
 # What Narada may do on the security-only product (Garuda). Home automation
 # is Drishti's; on Garuda's address the model is not even offered it.
@@ -34,11 +42,14 @@ SECURITY_TOOLS = ("get_security_state", "set_security_mode")
 # Spoken replies: every character is synthesised (and billed), lists and
 # markdown read aloud badly, and a reply that sounds written feels robotic.
 VOICE_STYLE = (
-    "\nYou are speaking out loud in a live conversation. Sound like a warm, "
-    "quick-witted person, not a report: use contractions and plain words, keep it "
-    "to one or two short sentences (under 200 characters), and it's fine to end "
-    "with a brief follow-up question when it helps. Never read out lists, markdown, "
-    "symbols, ids or model names. If the person is just chatting, chat back.")
+    "\nYou are speaking out loud in a live conversation, in everyday Indian English. "
+    "Sound like a warm, quick-witted person from the house, not a report: contractions, "
+    "plain words, the rhythm of speech. One or two short sentences (under 200 "
+    "characters). Let the feeling show in the wording: a light 'okay', 'sure', 'ah', "
+    "'right' where a person would say it, commas where they would breathe, and vary "
+    "how you begin. Do not tack a question like 'anything else?' onto every reply; ask "
+    "only when you really need an answer. Never read out lists, markdown, symbols, ids "
+    "or model names. If the person is just chatting, chat back.")
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -89,9 +100,9 @@ class HomeAgent:
         if route_view is not None:
             result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
-        if result["lane"] == "agent":
-            self._remember(f"security:{user}" if scope == "security" else user,
-                           text, result["reply"])
+        turn = result.pop("_turn", None)
+        if result["lane"] == "agent" and turn:
+            self._remember(f"security:{user}" if scope == "security" else user, turn)
         return result
 
     @staticmethod
@@ -117,6 +128,8 @@ class HomeAgent:
             "schedule: call schedule_action.\n"
             "- Only switch devices the person asked about. Confirm what you did in one or two "
             "short sentences. No emojis. If a tool refused, say why.\n"
+            "- Nothing changes unless you call a tool in this turn. Never say something was "
+            "switched, set or scheduled unless its tool call just returned ok.\n"
             "- Security modes: dnd, night, idle, emergency, privacy, email_off.")
 
     def _tools(self):
@@ -166,10 +179,32 @@ class HomeAgent:
             "Use get_security_state for anything about the current situation and "
             "set_security_mode to change a mode (dnd, night, idle, emergency, privacy, "
             "email_off). You do not control lights or appliances here; if asked, say that "
-            "home automation lives in the Drishti app. Be concise. No emojis.")
+            "home automation lives in the Drishti app. Be concise. No emojis. A mode only "
+            "changes through a set_security_mode call in this turn; never claim a change "
+            "you did not just make.")
+
+    def _state_brief(self, scope):
+        """The current state, handed over with the question.
+
+        Without it the model's first move for almost every sentence was to
+        call get_house_state: one more trip to NIM before anything happened.
+        """
+        try:
+            if scope == "security":
+                state = self._tool_get_security_state({}, "", "")
+            else:
+                snap = self.state_snapshot()
+                state = {k: snap.get(k) for k in ("devices", "scenes", "modes", "occupancy",
+                                                  "person_count", "owner_presence")}
+        except Exception:
+            log.exception("state brief")
+            return ""
+        return ("\nCurrent state, read just now (act on it directly; only call a state tool "
+                "for something not listed here):\n" + json.dumps(state, default=str)[:3000])
 
     def _agent(self, text, user, role, scope="home", voice=False):
         system = self._security_prompt(user, role) if scope == "security" else self._system_prompt(user, role)
+        system += self._state_brief(scope)
         if voice:
             system += VOICE_STYLE
         tools = self._tools()
@@ -178,17 +213,21 @@ class HomeAgent:
         messages = [{"role": "system", "content": system}]
         # Separate memories, so a Drishti conversation never leaks into Garuda's.
         history_key = f"security:{user}" if scope == "security" else user
-        messages += list(self._history.get(history_key, ()))
+        for past in self._history.get(history_key, ()):
+            messages += past
+        first = len(messages)
         messages.append({"role": "user", "content": text})
         actions, proposal = [], None
         for _ in range(MAX_ROUNDS):
-            message = self.chat.chat(messages, tools=tools, max_tokens=1200,
-                                     temperature=0.2)
+            message = self.chat.chat(messages, tools=tools, max_tokens=700,
+                                     temperature=0.2, timeout=TURN_TIMEOUT_S,
+                                     extra=NO_THINKING, hedge_after=HEDGE_AFTER_S)
             calls = message.get("tool_calls") or []
             if not calls:
                 reply = (message.get("content") or "").strip() or "Done."
                 return {"reply": reply, "lane": "agent", "actions": actions,
-                        "proposal": proposal, "model": self.chat.last_model}
+                        "proposal": proposal, "model": self.chat.last_model,
+                        "_turn": messages[first:] + [{"role": "assistant", "content": reply}]}
             messages.append({"role": "assistant", "content": message.get("content") or "",
                              "tool_calls": calls})
             for call in calls:
@@ -207,7 +246,7 @@ class HomeAgent:
                 if out.get("proposal"):
                     proposal = out["proposal"]
                 messages.append({"role": "tool", "tool_call_id": call.get("id", ""),
-                                 "content": json.dumps(out)[:4000]})
+                                 "content": json.dumps(out, default=str)[:4000]})
         return {"reply": "I did what I could: " + "; ".join(actions) if actions
                 else "That took too many steps; try asking more specifically.",
                 "lane": "agent", "actions": actions, "proposal": proposal,
@@ -386,10 +425,11 @@ class HomeAgent:
 
     # ── memory ────────────────────────────────────────────────────────────────
 
-    def _remember(self, user, text, reply):
+    def _remember(self, user, turn):
         history = self._history.setdefault(user, deque(maxlen=HISTORY_TURNS))
-        history.append({"role": "user", "content": text})
-        history.append({"role": "assistant", "content": reply})
+        # Old tool results are only kept short: the state brief is the truth now.
+        history.append([{**m, "content": m["content"][:300]} if m["role"] == "tool" else m
+                        for m in turn])
 
     def forget(self, user):
         self._history.pop(user, None)
