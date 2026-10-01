@@ -169,6 +169,8 @@ const G = (() => {
                  || h.startsWith('172.');
     if (isLocal) return '';
     if (h === 'garuda.veeramanikanta.in') return 'https://api.veeramanikanta.in';
+    // The Vercel copy is only the static front end; it talks to the Pi's API.
+    if (h.endsWith('.vercel.app')) return localStorage.getItem('garuda_backend') || 'https://api.veeramanikanta.in';
     return localStorage.getItem('garuda_backend') || '';
   }
 
