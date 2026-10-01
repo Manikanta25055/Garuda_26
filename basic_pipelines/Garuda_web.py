@@ -228,6 +228,7 @@ try:
     from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from .garuda_routes.pages import build_pages_router
+    from .garuda_routes.sockets import build_sockets_router
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -258,6 +259,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from basic_pipelines.garuda_routes.pages import build_pages_router
+    from basic_pipelines.garuda_routes.sockets import build_sockets_router
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -3065,43 +3067,6 @@ def _ws_connect_allowed(websocket) -> bool:
 
 
 # ── WebSocket binary JPEG stream (CF Tunnel fallback) ────────────────────────
-@fastapi_app.websocket("/ws/stream")
-async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
-    """Streams JPEG frames as binary WebSocket messages (~same as MJPEG but WS).
-    Works through Cloudflare Tunnel (unlike raw UDP WebRTC)."""
-    # Rate-limit WebSocket connections per IP (re-use the global _rate_store)
-    if not _ws_connect_allowed(websocket):
-        await websocket.close(code=4029)
-        return
-    token = websocket.cookies.get("garuda_session") or token
-    session = get_session(token)
-    if not session:
-        await websocket.close(code=4001)
-        return
-    username = session["username"]
-    await websocket.accept()
-    last_seq = -1
-    next_check = time.time() + _STREAM_RECHECK_S
-    try:
-        while True:
-            if time.time() >= next_check:
-                if not _user_signed_in(username):
-                    await websocket.close(code=4001)
-                    return
-                next_check = time.time() + _STREAM_RECHECK_S
-            with _frame_lock:
-                seq   = _frame_seq
-                frame = _frame_buffer if seq != last_seq else None
-            if frame is not None:
-                last_seq = seq
-                await websocket.send_bytes(frame)
-            else:
-                await asyncio.sleep(0.02)
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        log_system_update(f"[STREAM] WS stream error: {type(e).__name__}")
-
 # ── WebSocket broadcaster (event-driven) ─────────────────────────────────────
 # Waits on _ws_trigger asyncio.Event with a 2s timeout (heartbeat).
 # push_urgent_ws() sets the event from any thread → immediate broadcast.
@@ -3192,32 +3157,7 @@ async def _ws_broadcaster():
             log_system_update(f"[WS] broadcast failed: {type(exc).__name__}: {exc}")
 
 
-@fastapi_app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
-    # Rate-limit WebSocket connections per IP
-    if not _ws_connect_allowed(websocket):
-        await websocket.close(code=4029)
-        return
-    # Accept token from cookie (same-origin) or query param (cross-origin)
-    token = websocket.cookies.get("garuda_session") or token
-    session = get_session(token)
-    if not session:
-        await websocket.close(code=4001)
-        return
-    await websocket.accept()
-    _ws_clients[websocket] = {"username": session["username"], "role": session["role"]}
-    try:
-        # Keep the connection alive; broadcaster pushes state.
-        # Drain any client messages; the frontend does not send data, so we
-        # just wait indefinitely — WebSocketDisconnect fires on close/error.
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
-    finally:
-        _ws_clients.pop(websocket, None)
+fastapi_app.include_router(build_sockets_router(sys.modules[__name__]))
 
 ##############################################################################
 # SYSTEM: HEALTH, READINESS, DIAGNOSTICS
