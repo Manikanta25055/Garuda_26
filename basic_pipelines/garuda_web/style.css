@@ -3304,6 +3304,8 @@ input:-webkit-autofill:focus {
   .status-pulse-ring { grid-column: 2; grid-row: 1 / span 2; width: 44px; height: 44px; }
   .status-label { font-size: 19px; }
   .status-desc { margin-top: 0; }
+  /* "<device> is home" sits under the description, on the left with it. */
+  .status-state .owner-badge { grid-column: 1 / -1; margin: 6px 0 0; font-size: 12px; }
   .status-foot { justify-content: space-between; margin-top: 12px; }
   .status-card.alert {
     background: rgba(255,69,58,0.07);
