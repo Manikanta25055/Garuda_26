@@ -225,6 +225,7 @@ try:
     from .garuda_core import logging_setup as _core_logging
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
+    from .garuda_core import mailer as _mailer
     from .garuda_core.system_api import build_system_router
     from .garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
@@ -241,6 +242,7 @@ except ImportError:
     from basic_pipelines.garuda_core import logging_setup as _core_logging
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
+    from basic_pipelines.garuda_core import mailer as _mailer
     from basic_pipelines.garuda_core.system_api import build_system_router
     from basic_pipelines.garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
@@ -1055,16 +1057,16 @@ def stop_app():
 # OTP / EMAIL
 ##############################################################################
 
+def _send_mail(subject, body, to=None):
+    """One email from the configured sender; to the alert recipients unless
+    `to` names someone else. Raises on failure (see garuda_core.mailer)."""
+    _mailer.send(subject, body, sender=EMAIL_SENDER, password=EMAIL_SENDER_PASS,
+                 to=EMAIL_RECIPIENTS if to is None else to)
+
 def send_otp_via_email(email, otp_code):
     body = f"Hello,\n\nYour OTP code is: {otp_code}\n\nUse this to complete your login."
-    msg = MIMEText(body)
-    msg['Subject'] = "Your Garuda OTP Code"
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = email
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-            server.send_message(msg)
+        _send_mail("Your Garuda OTP Code", body, to=email)
         log_system_update(f"OTP email sent to {email}")
         return True, None
     except smtplib.SMTPAuthenticationError:
@@ -1273,14 +1275,8 @@ def send_email_alert():
     elif night:
         subject = "HIGH PRIORITY: " + subject
     body = f"Danger object detected at {now_str}.\nObject(s): {label_str}\nCheck your environment for safety.\n"
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-            server.send_message(msg)
+        _send_mail(subject, body)
         log_system_update("Email alert sent.")
     except Exception as e:
         log_system_update(f"Failed sending email alert: {e}")
@@ -1303,18 +1299,13 @@ def _send_tamper_email():
         return
     _last_tamper_email = now
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    msg = MIMEText(
+    body = (
         f"CRITICAL: Camera tamper detected at {now_str}.\n"
         "The camera lens appears to be covered or the feed has gone blank.\n"
         "Immediate physical inspection required."
     )
-    msg['Subject'] = "CRITICAL TAMPER ALERT — Garuda Camera Covered"
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-            server.send_message(msg)
+        _send_mail("CRITICAL TAMPER ALERT — Garuda Camera Covered", body)
         log_system_update("[TAMPER] Alert email sent.")
     except Exception as e:
         log_system_update(f"[TAMPER] Email failed: {e}")
@@ -2346,13 +2337,7 @@ def _deadman_monitor():
                 body = (f"Garuda dead man's switch triggered.\n"
                         f"No heartbeat received in {int(elapsed)} seconds.\n"
                         f"Possible system tampering or network failure.")
-                msg = MIMEText(body)
-                msg['Subject'] = "TAMPER ALERT: Garuda heartbeat missed"
-                msg['From'] = EMAIL_SENDER
-                msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-                with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-                    server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-                    server.send_message(msg)
+                _send_mail("TAMPER ALERT: Garuda heartbeat missed", body)
             except Exception as e:
                 log_system_update(f"[TAMPER] Failed to send alert email: {e}")
 
@@ -2694,13 +2679,7 @@ def _home_email(subject, body):
     """Home notices go to the alert recipients, unless email alerts are off."""
     if MODE_EMAIL_OFF or not (EMAIL_SENDER and EMAIL_SENDER_PASS and EMAIL_RECIPIENTS):
         return
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-        server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-        server.send_message(msg)
+    _send_mail(subject, body)
 
 
 def _home_modes():
