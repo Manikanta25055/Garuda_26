@@ -243,12 +243,19 @@ class HomeServices:
             self.notices.insert(0, item)
             del self.notices[MAX_NOTICES:]
         if email and self.notify_fn is not None:
-            try:
-                self.notify_fn(f"Garuda Home: {text[:60]}", text)
-            except Exception as exc:
-                log.warning("notice email failed: %s", exc)
+            # On its own thread: this is called from the one-second home loop,
+            # and a mail server that takes ten seconds to answer held up every
+            # schedule and timer due in the meantime.
+            threading.Thread(target=self._send_notice_email, args=(text,),
+                             daemon=True, name="home-notice").start()
         self._changed()
         return item
+
+    def _send_notice_email(self, text):
+        try:
+            self.notify_fn(f"Garuda Home: {text[:60]}", text)
+        except Exception as exc:
+            log.warning("notice email failed: %s", exc)
 
     def dismiss_notice(self, notice_id):
         with self._lock:

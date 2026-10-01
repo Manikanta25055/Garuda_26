@@ -9,6 +9,7 @@ the lamp on at 19:40 when it comes back: late automation surprises more than
 missing automation. The exception is a timer only a few minutes late, which is
 still what the person asked for.
 """
+import math
 import re
 import threading
 import time
@@ -66,7 +67,10 @@ class ScheduleStore:
 
     def add_once(self, target, at, label="", created_by=""):
         now = self._clock()
-        if isinstance(at, bool) or not isinstance(at, (int, float)) or at <= now:
+        # NaN compares false with everything, so it slipped past both checks
+        # below and left a timer that could never run or be cleaned up.
+        if (isinstance(at, bool) or not isinstance(at, (int, float))
+                or not math.isfinite(at) or at <= now):
             return False, "a timer must be in the future", None
         if at - now > 7 * 86400:
             return False, "a timer can be at most a week away", None

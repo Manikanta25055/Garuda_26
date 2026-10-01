@@ -32,16 +32,62 @@ class MqttBank:
         self._client = None
         if client_factory is not None:
             self._client = client_factory()
+            self._wire(self._client)
         elif MQTT_AVAILABLE:
-            self._client = paho.Client()
             try:
-                self._client.connect(broker_host, broker_port, keepalive=60)
+                # paho-mqtt 2.x wants the callback API named; 1.x has no such
+                # argument. Built inside the try: a constructor that raised
+                # here took the whole web service down at import.
+                version = getattr(paho, "CallbackAPIVersion", None)
+                self._client = paho.Client(version.VERSION1) if version else paho.Client()
+                self._wire(self._client)
+                # Non-blocking, with paho's own retry loop: a broker that is
+                # down at start-up is picked up when it comes back instead of
+                # leaving MQTT devices dead until the service is restarted.
+                self._client.connect_async(broker_host, broker_port, keepalive=60)
                 self._client.loop_start()
             except Exception as exc:
                 log.warning("MQTT connect failed: %s", exc)
                 self._client = None
         else:
             log.warning("paho-mqtt unavailable -- MQTT devices will be unreachable")
+
+    def _wire(self, client):
+        """Hear what devices report, and ask again after every reconnect.
+
+        Topics were subscribed but nothing was listening, so on_state() was
+        never called: an MQTT device stayed "unavailable" for ever, which also
+        kept it out of "all off" and the vacation lights. Subscriptions do not
+        survive a reconnect either, so they are renewed in on_connect.
+        """
+        try:
+            client.on_message = self._on_message
+            client.on_connect = self._on_connect
+        except Exception:
+            pass
+
+    def _on_connect(self, client, userdata, flags, rc, *extra):
+        for topic in list(self._topics.values()):
+            try:
+                client.subscribe(f"{topic}/state")
+            except Exception as exc:
+                log.warning("MQTT subscribe failed for %s: %s", topic, exc)
+
+    def _on_message(self, client, userdata, message):
+        try:
+            topic = str(message.topic)
+            payload = message.payload.decode("utf-8", "replace").strip().lower()[:64]
+        except Exception:
+            return
+        for device_id, base in list(self._topics.items()):
+            if topic == f"{base}/state":
+                value = payload
+                try:
+                    value = float(payload)        # a sensor reading
+                except ValueError:
+                    pass
+                self.on_state(device_id, value)
+                return
 
     def bind(self, registry):
         self._topics = {d["id"]: d["transport"]["topic_base"]
@@ -68,6 +114,11 @@ class MqttBank:
     def set(self, device_id, action):
         topic = self._topics.get(device_id)
         if topic is None or self._client is None:
+            return False
+        # A command sent while the broker is away goes nowhere; say so rather
+        # than record the device as switched.
+        connected = getattr(self._client, "is_connected", None)
+        if callable(connected) and not connected():
             return False
         try:
             self._client.publish(f"{topic}/set", action)

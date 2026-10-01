@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=68"/>
+  <link rel="stylesheet" href="/static/style.css?v=69"/>
 </head>
 <body>
 <div id="app">
@@ -40,7 +40,7 @@
         <!-- Backend row — web Configure style, macOS font/position -->
         <div class="backend-row">
           <div class="bk-dot" id="bk-dot"></div>
-          <span id="bk-label" class="bk-host">No backend</span>
+          <span id="bk-label" class="bk-host">Checking connection…</span>
           <button class="btn-text-mono" onclick="G.openBackendConfig()">Configure</button>
         </div>
 
@@ -344,10 +344,10 @@
                 <div class="cam-tab-right">
                   <span id="cam-status-txt" class="cam-status-txt">Offline</span>
                   <button class="cam-action-btn" id="cam-snapshot-btn" onclick="G.takeSnapshot()" title="Save snapshot" style="display:none" aria-label="Download snapshot">
-                    &#x1F4F7;
+                    <span class="gi gi-snapshot" aria-hidden="true"></span>
                   </button>
                   <button class="cam-action-btn" id="cam-record-btn" onclick="G.toggleClip()" title="Record clip" style="display:none" aria-label="Record 60-second clip">
-                    &#x23FA;
+                    <span class="gi gi-record" aria-hidden="true"></span>
                   </button>
                   <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()" aria-label="Connect camera feed">
                     <span class="cam-live-dot" id="cam-live-dot"></span><span id="cam-btn-label">Connect</span>
@@ -1037,6 +1037,18 @@
   </div>
 </div>
 
+<!-- One sheet for every "are you sure?" (sign out, emergency stop, deletes) -->
+<div id="m-confirm" class="modal-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="m-confirm-title">
+  <div class="modal modal-confirm">
+    <h2 id="m-confirm-title">Are you sure?</h2>
+    <p id="m-confirm-body" class="modal-confirm-body"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="m-confirm-cancel" onclick="G._confirmAnswer(false)">Cancel</button>
+      <button class="btn btn-danger" id="m-confirm-ok" onclick="G._confirmAnswer(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <div id="m-backend" class="modal-overlay hidden">
   <div class="modal">
     <h2>Connect to Backend</h2>
@@ -1265,7 +1277,7 @@
 
 <script src="/static/narada.js?v=5"></script>
 <script src="/static/island.js?v=3"></script>
-<script src="/static/app.js?v=64"></script>
-<script src="/static/home.js?v=7"></script>
+<script src="/static/app.js?v=65"></script>
+<script src="/static/home.js?v=8"></script>
 </body>
 </html>

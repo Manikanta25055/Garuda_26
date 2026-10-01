@@ -57041,3 +57041,17 @@ NIM z-ai/glm-5.3-flash failed: ReadTimeout
 [18:27:27.724325176] [1395283] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:1483 [0mSensor: /base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a - Selected sensor format: 1536x864-SBGGR10_1X10/RAW - Selected CFE format: 1536x864-PC1B/RAW
 /usr/lib/python3/dist-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from lgpio: 'can not open gpiochip'
   warnings.warn(
+NIM nvidia/nemotron-3-super-120b-a12b failed: ConnectionError
+NIM z-ai/glm-5.3-flash failed: ReadTimeout
+NIM nvidia/nemotron-3-super-120b-a12b failed: ConnectionError
+[26:14:14.123600116] [1824994] [1;32m INFO [1;37mCamera [1;34mcamera_manager.cpp:330 [0mlibcamera v0.5.2+99-bfd68f78
+[26:14:14.130164225] [1824997] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:720 [0mlibpisp version v1.2.1 981977ff21f3 29-04-2025 (14:13:50)
+[26:14:14.132989668] [1824997] [1;32m INFO [1;37mIPAProxy [1;34mipa_proxy.cpp:180 [0mUsing tuning file /usr/share/libcamera/ipa/rpi/pisp/imx708.json
+[26:14:14.139895943] [1824997] [1;32m INFO [1;37mCamera [1;34mcamera_manager.cpp:220 [0mAdding camera '/base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a' for pipeline handler rpi/pisp
+[26:14:14.139927165] [1824997] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:1179 [0mRegistered camera /base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a to CFE device /dev/media0 and ISP device /dev/media2 using PiSP variant BCM2712_D0
+[26:14:14.142843553] [1824994] [1;32m INFO [1;37mCamera [1;34mcamera.cpp:1215 [0mconfiguring streams: (0) 1280x720-BGR888/Rec709/Rec709/None/Full (1) 1536x864-BGGR_PISP_COMP1/RAW
+[26:14:14.142948664] [1824997] [1;32m INFO [1;37mRPI [1;34mpisp.cpp:1483 [0mSensor: /base/axi/pcie@1000120000/rp1/i2c@88000/imx708@1a - Selected sensor format: 1536x864-SBGGR10_1X10/RAW - Selected CFE format: 1536x864-PC1B/RAW
+/usr/lib/python3/dist-packages/gpiozero/devices.py:300: PinFactoryFallback: Falling back from lgpio: 'can not open gpiochip'
+  warnings.warn(
+NIM nvidia/nemotron-3-super-120b-a12b failed: ConnectionError
+NIM z-ai/glm-5.3-flash failed: ReadTimeout

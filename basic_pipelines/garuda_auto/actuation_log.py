@@ -11,6 +11,9 @@ import os
 import time
 
 MAX_LINES = 20_000
+# The file itself had no limit: only the read was capped, and every read
+# loaded all of it. Past this size the oldest lines are dropped.
+MAX_BYTES = 4 * 1024 * 1024
 
 
 def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.time,
@@ -35,6 +38,21 @@ def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.
     os.makedirs(directory, exist_ok=True)
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry) + "\n")
+    _trim(path)
+
+
+def _trim(path):
+    try:
+        if os.path.getsize(path) <= MAX_BYTES:
+            return
+        with open(path, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()[-MAX_LINES // 2:]
+        tmp = f"{path}.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.writelines(lines)
+        os.replace(tmp, path)
+    except OSError:
+        pass
 
 
 def _read(path):

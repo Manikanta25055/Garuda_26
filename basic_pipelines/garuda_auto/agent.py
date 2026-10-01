@@ -312,7 +312,11 @@ class HomeAgent:
         if scene is None:
             return {"error": f"no scene {args.get('scene')!r}"}
         ok, reason, _ = self.home.run_scene(scene["id"], actor=user)
-        return {"ok": ok, "reason": reason, "result": f"Scene {scene['name']}", "_action": True}
+        # Reported as done only when it was: a scene whose steps all failed
+        # used to be listed among the actions Narada had carried out.
+        return {"ok": ok, "reason": reason,
+                "result": f"Scene {scene['name']}" if ok else f"Scene {scene['name']} failed: {reason}",
+                "_action": ok}
 
     def _tool_create_scene(self, args, user, role):
         if role != "admin":

@@ -64429,3 +64429,316 @@
 [2026-10-02 01:59:42] [PRESENCE] Match — 9 active ARP entries
 [2026-10-02 01:59:59] [WATCH] Person (0.83)
 [2026-10-02 02:00:14] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:00:29] [WATCH] Person (0.82)
+[2026-10-02 02:00:46] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:01:03] [WATCH] Person (0.83)
+[2026-10-02 02:01:18] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:01:34] [WATCH] Person (0.87)
+[2026-10-02 02:01:50] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:02:04] [WATCH] Person (0.84)
+[2026-10-02 02:02:22] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:02:35] [WATCH] Person (0.82)
+[2026-10-02 02:02:54] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:03:06] [WATCH] Person (0.85)
+[2026-10-02 02:03:26] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:03:38] [WATCH] Person (0.89)
+[2026-10-02 02:03:58] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:04:09] [WATCH] Person (0.86)
+[2026-10-02 02:04:30] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:04:39] [WATCH] Person (0.88)
+[2026-10-02 02:05:02] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:05:10] [WATCH] Person (0.89)
+[2026-10-02 02:05:34] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:05:40] [WATCH] Person (0.87)
+[2026-10-02 02:05:42] Master key login.
+[2026-10-02 02:06:04] Mode night set to False by admin
+[2026-10-02 02:06:04] Mode night set to True by admin
+[2026-10-02 02:06:06] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:06:12] [WATCH] Person (0.83)
+[2026-10-02 02:06:38] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:06:42] [WATCH] Person (0.84)
+[2026-10-02 02:07:10] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:07:14] [WATCH] Person (0.84)
+[2026-10-02 02:07:42] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:07:45] [WATCH] Person (0.89)
+[2026-10-02 02:08:14] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:08:15] [WATCH] Person (0.83)
+[2026-10-02 02:08:46] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:08:46] [WATCH] Person (0.86)
+[2026-10-02 02:09:17] [WATCH] Person (0.91)
+[2026-10-02 02:09:18] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:09:50] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:09:50] [WATCH] Person (0.83)
+[2026-10-02 02:10:22] [WATCH] Person (0.84)
+[2026-10-02 02:10:22] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:10:53] [WATCH] Person (0.87)
+[2026-10-02 02:10:54] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:11:25] [WATCH] Person (0.82)
+[2026-10-02 02:11:26] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:11:56] [WATCH] Person (0.82)
+[2026-10-02 02:11:58] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:12:28] [WATCH] Person (0.85)
+[2026-10-02 02:12:30] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:12:58] [WATCH] Person (0.83)
+[2026-10-02 02:13:02] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:13:29] [WATCH] Person (0.89)
+[2026-10-02 02:13:34] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:14:00] [WATCH] Person (0.83)
+[2026-10-02 02:14:06] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:14:33] [WATCH] Person (0.87)
+[2026-10-02 02:14:38] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:15:04] [WATCH] Person (0.82)
+[2026-10-02 02:15:10] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:15:35] [WATCH] Person (0.87)
+[2026-10-02 02:15:42] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:16:05] [WATCH] Person (0.83)
+[2026-10-02 02:16:14] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:16:37] [WATCH] Person (0.84)
+[2026-10-02 02:16:42] Master key login.
+[2026-10-02 02:16:46] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:17:07] [WATCH] Person (0.85)
+[2026-10-02 02:17:18] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:17:38] [WATCH] Person (0.84)
+[2026-10-02 02:17:50] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:18:14] [WATCH] Person (0.83)
+[2026-10-02 02:18:22] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:18:45] [WATCH] Person (0.83)
+[2026-10-02 02:18:54] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:19:17] [WATCH] Person (0.83)
+[2026-10-02 02:19:26] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:19:47] [WATCH] Person (0.83)
+[2026-10-02 02:19:58] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:20:19] [WATCH] Person (0.84)
+[2026-10-02 02:20:30] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:20:36] Master key login.
+[2026-10-02 02:20:49] [WATCH] Person (0.85)
+[2026-10-02 02:21:02] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:21:04] Master key login.
+[2026-10-02 02:21:19] [WATCH] Person (0.83)
+[2026-10-02 02:21:19] Master key login.
+[2026-10-02 02:21:21] Master key login.
+[2026-10-02 02:21:34] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:21:50] Mode privacy set to False by admin
+[2026-10-02 02:21:52] [WATCH] Person (0.89)
+[2026-10-02 02:21:52] Mode privacy set to True by admin
+[2026-10-02 02:21:54] Mode night set to False by admin
+[2026-10-02 02:21:55] Mode night set to True by admin
+[2026-10-02 02:22:06] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:22:24] [WATCH] Person (0.84)
+[2026-10-02 02:22:38] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:22:54] [WATCH] Person (0.83)
+[2026-10-02 02:23:05] Login: user
+[2026-10-02 02:23:10] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:23:26] [WATCH] Person (0.89)
+[2026-10-02 02:23:27] Mode privacy set to False by user
+[2026-10-02 02:23:28] Mode privacy set to True by user
+[2026-10-02 02:23:32] Mode privacy set to False by user
+[2026-10-02 02:23:34] Mode privacy set to True by user
+[2026-10-02 02:23:42] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:23:59] [WATCH] Person (0.82)
+[2026-10-02 02:24:14] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:24:29] [WATCH] Person (0.84)
+[2026-10-02 02:24:46] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:24:59] [WATCH] Person (0.86)
+[2026-10-02 02:25:18] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:25:31] [WATCH] Person (0.87)
+[2026-10-02 02:25:49] Master key login.
+[2026-10-02 02:25:50] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:26:03] [WATCH] Person (0.83)
+[2026-10-02 02:26:22] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:26:35] [WATCH] Person (0.82)
+[2026-10-02 02:26:54] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:27:08] [WATCH] Person (0.84)
+[2026-10-02 02:27:26] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:27:40] [WATCH] Person (0.83)
+[2026-10-02 02:27:57] Master key login.
+[2026-10-02 02:27:58] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:28:12] [WATCH] Person (0.90)
+[2026-10-02 02:28:30] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:28:43] [WATCH] Person (0.86)
+[2026-10-02 02:29:02] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:29:14] [WATCH] Person (0.83)
+[2026-10-02 02:29:34] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:29:44] [WATCH] Person (0.84)
+[2026-10-02 02:30:06] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:30:15] [WATCH] Person (0.83)
+[2026-10-02 02:30:38] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:30:41] OTP email sent to mgonugondlamanikanta@gmail.com
+[2026-10-02 02:30:45] OTP email sent to mgonugondlamanikanta@gmail.com
+[2026-10-02 02:30:46] [WATCH] Person (0.84)
+[2026-10-02 02:31:10] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:31:11] Admin login: admin
+[2026-10-02 02:31:17] [WATCH] Person (0.83)
+[2026-10-02 02:31:42] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:31:48] [WATCH] Person (0.84)
+[2026-10-02 02:32:14] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:32:21] [WATCH] Person (0.85)
+[2026-10-02 02:32:46] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:32:53] [WATCH] Person (0.87)
+[2026-10-02 02:33:18] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:33:23] [WATCH] Person (0.89)
+[2026-10-02 02:33:50] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:33:54] [WATCH] Person (0.87)
+[2026-10-02 02:34:22] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:34:24] [WATCH] Person (0.89)
+[2026-10-02 02:34:54] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:34:56] [WATCH] Person (0.89)
+[2026-10-02 02:35:26] [WATCH] Person (0.84)
+[2026-10-02 02:35:26] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:35:58] [WATCH] Person (0.83)
+[2026-10-02 02:35:58] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:36:28] [WATCH] Person (0.87)
+[2026-10-02 02:36:30] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:36:59] [WATCH] Person (0.88)
+[2026-10-02 02:37:02] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:37:31] [WATCH] Person (0.88)
+[2026-10-02 02:37:35] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:38:01] [WATCH] Person (0.89)
+[2026-10-02 02:38:07] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:38:32] [WATCH] Person (0.83)
+[2026-10-02 02:38:39] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:39:02] [WATCH] Person (0.83)
+[2026-10-02 02:39:06] Master key login.
+[2026-10-02 02:39:11] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:39:34] [WATCH] Person (0.82)
+[2026-10-02 02:39:43] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:39:52] Master key login.
+[2026-10-02 02:40:04] [WATCH] Person (0.84)
+[2026-10-02 02:40:15] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:40:35] [WATCH] Person (0.82)
+[2026-10-02 02:40:47] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:41:07] [WATCH] Person (0.84)
+[2026-10-02 02:41:19] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:41:37] [WATCH] Person (0.83)
+[2026-10-02 02:41:51] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:42:08] [WATCH] Person (0.87)
+[2026-10-02 02:42:23] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:42:41] [WATCH] Person (0.83)
+[2026-10-02 02:42:55] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:43:15] [WATCH] Person (0.82)
+[2026-10-02 02:43:27] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:43:47] [WATCH] Person (0.86)
+[2026-10-02 02:43:59] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:44:19] [WATCH] Person (0.87)
+[2026-10-02 02:44:31] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:44:49] [WATCH] Person (0.90)
+[2026-10-02 02:45:03] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:45:21] [WATCH] Person (0.85)
+[2026-10-02 02:45:35] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:45:57] [WATCH] Person (0.86)
+[2026-10-02 02:46:07] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:46:27] [WATCH] Person (0.88)
+[2026-10-02 02:46:39] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:46:58] [WATCH] Person (0.82)
+[2026-10-02 02:47:11] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:47:28] [WATCH] Person (0.83)
+[2026-10-02 02:47:43] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:47:59] [WATCH] Person (0.85)
+[2026-10-02 02:48:15] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:48:29] [WATCH] Person (0.87)
+[2026-10-02 02:48:47] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:48:59] [WATCH] Person (0.83)
+[2026-10-02 02:49:19] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:49:30] [WATCH] Person (0.84)
+[2026-10-02 02:49:51] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:50:01] [WATCH] Person (0.86)
+[2026-10-02 02:50:23] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:50:31] [WATCH] Person (0.87)
+[2026-10-02 02:50:55] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:51:02] [WATCH] Person (0.83)
+[2026-10-02 02:51:27] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:51:32] [WATCH] Person (0.83)
+[2026-10-02 02:51:59] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:52:03] [WATCH] Person (0.88)
+[2026-10-02 02:52:31] [PRESENCE] Match — 11 active ARP entries
+[2026-10-02 02:52:34] [WATCH] Person (0.89)
+[2026-10-02 02:53:03] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:53:08] [WATCH] Person (0.83)
+[2026-10-02 02:53:35] [PRESENCE] Match — 10 active ARP entries
+[2026-10-02 02:53:42] [WATCH] Person (0.90)
+[2026-10-02 02:54:07] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:54:14] [WATCH] Person (0.87)
+[2026-10-02 02:54:39] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:54:46] [WATCH] Person (0.84)
+[2026-10-02 02:55:11] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:55:20] [WATCH] Person (0.83)
+[2026-10-02 02:55:43] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:55:50] [WATCH] Person (0.87)
+[2026-10-02 02:56:15] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:56:20] [WATCH] Person (0.86)
+[2026-10-02 02:56:47] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:56:51] [WATCH] Person (0.85)
+[2026-10-02 02:57:19] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:57:22] [WATCH] Person (0.83)
+[2026-10-02 02:57:51] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:57:54] [WATCH] Person (0.86)
+[2026-10-02 02:58:23] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:58:24] [WATCH] Person (0.83)
+[2026-10-02 02:58:55] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:58:56] [WATCH] Person (0.85)
+[2026-10-02 02:59:27] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 02:59:36] [WATCH] Person (0.84)
+[2026-10-02 02:59:59] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:00:07] [WATCH] Person (0.83)
+[2026-10-02 03:00:31] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:00:37] [WATCH] Person (0.84)
+[2026-10-02 03:01:03] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:01:07] [WATCH] Person (0.83)
+[2026-10-02 03:01:35] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:02:07] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:02:27] [WATCH] Person (0.83)
+[2026-10-02 03:02:39] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:03:11] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:03:43] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:04:15] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:04:47] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:05:19] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:05:51] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:06:23] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:06:55] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:07:27] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:07:59] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:08:31] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:08:54] [WATCH] Person (0.83)
+[2026-10-02 03:09:03] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:09:35] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:10:07] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:10:39] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:11:11] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:11:43] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:12:13] [CAMERA] No USB camera found → using Pi camera (rpi/libcamera)
+[2026-10-02 03:12:13] [CAMERA] Input resolved to: rpi
+[2026-10-02 03:12:13] [MODEL] Auto-selected best_v5.hef + best_labels.json
+[2026-10-02 03:12:13] [DRISHTI] rule loop started — 0 rules, 2 devices
+[2026-10-02 03:12:13] [TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).
+[2026-10-02 03:12:13] Pipeline started.
+[2026-10-02 03:12:15] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:12:15] [OWNER] Device (192.168.1.1) arrived — device detected on network.
+[2026-10-02 03:12:39] Master key login.
+[2026-10-02 03:12:47] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:13:19] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:13:51] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:14:23] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:14:36] Master key login.
+[2026-10-02 03:14:55] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:15:17] Master key login.
+[2026-10-02 03:15:27] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:15:59] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:16:31] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:17:03] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:17:35] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:17:51] Login: user
+[2026-10-02 03:18:07] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:18:39] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:19:11] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:19:43] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:19:46] Clip recording started by user.
+[2026-10-02 03:19:53] Clip saved: /home/manikanta/Projects/Garuda_26/basic_pipelines/system_logs/clip_1790891386.mp4
+[2026-10-02 03:20:15] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:20:47] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:21:19] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:21:51] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:22:23] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:22:55] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:23:27] [PRESENCE] Match — 9 active ARP entries
+[2026-10-02 03:24:00] [PRESENCE] Match — 9 active ARP entries

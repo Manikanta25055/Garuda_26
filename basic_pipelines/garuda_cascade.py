@@ -325,6 +325,23 @@ class DepthNetwork:
 
 
 # ─── Thread workers ───────────────────────────────────────────────────────────
+def _guarded(fn, stop):
+    """Run a pipeline stage; if it dies, stop the whole pipeline.
+
+    A stage that raised used to end only its own thread: the others kept
+    waiting on queues nobody was filling or draining, and the pipeline sat
+    there looking alive.
+    """
+    def run(*args, **kwargs):
+        try:
+            fn(*args, **kwargs)
+        except Exception:
+            log.exception("Cascade stage %s failed; stopping the pipeline", fn.__name__)
+            stop.set()
+    run.__name__ = fn.__name__
+    return run
+
+
 def camera_thread(cap, frame_queue, stop, loop=False):
     """OpenCV-based capture thread for USB cameras and video files."""
     pin_thread(0)
@@ -522,6 +539,8 @@ def postprocess_thread(result_queue, stop):
             }
             print(json.dumps(entry), flush=True)
             session_entries.append(entry)
+            if len(session_entries) > 20000:      # a long run must not grow without limit
+                del session_entries[:-10000]
 
             for cb in _event_callbacks:
                 try:
@@ -667,18 +686,18 @@ def _pipeline_entry(input_src, hef_dir, loop, stop):
         result_q = queue.Queue(maxsize=16)
 
         if use_gst:
-            cam_t = threading.Thread(target=gst_camera_thread,
+            cam_t = threading.Thread(target=_guarded(gst_camera_thread, stop),
                                      args=(frame_q, stop), name="cam", daemon=True)
         else:
-            cam_t = threading.Thread(target=camera_thread,
+            cam_t = threading.Thread(target=_guarded(camera_thread, stop),
                                      args=(cap, frame_q, stop, loop), name="cam", daemon=True)
 
         threads = [
             cam_t,
-            threading.Thread(target=inference_thread,
+            threading.Thread(target=_guarded(inference_thread, stop),
                              args=(frame_q, result_q, yolo, classifier, depth_net, stop),
                              name="infer",   daemon=True),
-            threading.Thread(target=postprocess_thread,
+            threading.Thread(target=_guarded(postprocess_thread, stop),
                              args=(result_q, stop),         name="postproc", daemon=True),
         ]
         for t in threads:

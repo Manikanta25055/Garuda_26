@@ -24,6 +24,10 @@ def save(path, data):
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             json.dump(data, fh, indent=2)
+            # Without this the rename can reach the disk before the data: a
+            # power cut then leaves an empty file where the old one was.
+            fh.flush()
+            os.fsync(fh.fileno())
         os.replace(tmp, path)
     except BaseException:
         if os.path.exists(tmp):

@@ -1,6 +1,43 @@
 /* ============================================================
    Garuda — SPA logic
    ============================================================ */
+// Tag the page with what it runs on, before anything paints (style.css,
+// "Every browser, every device"). Apple's own browsers keep the full glass.
+(function () {
+  try {
+    const ua = navigator.userAgent || '';
+    const apple = /iPhone|iPad|iPod/.test(ua)
+      || (/Macintosh/.test(ua) && /Safari\//.test(ua))            // Safari, Chrome and Edge on a Mac
+      || (navigator.platform === 'MacIntel');
+    const root = document.documentElement;
+    if (!apple) root.classList.add('plat-other');
+    const slowHint = (navigator.deviceMemory && navigator.deviceMemory <= 2)
+      || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)
+      || (window.matchMedia && window.matchMedia('(prefers-reduced-transparency: reduce)').matches);
+    if (slowHint) root.classList.add('perf-lite');
+  } catch (_) {}
+})();
+
+// Measure real frame times once the app is on screen; a device that cannot
+// hold ~25 fps drops the blur and decoration for this visit. Apple devices
+// are left alone (Low Power Mode halves their frame rate on purpose).
+function _garudaProbeFrames() {
+  const root = document.documentElement;
+  if (!root.classList.contains('plat-other') || root.classList.contains('perf-lite')) return;
+  if (document.hidden || !window.requestAnimationFrame) return;
+  const gaps = [];
+  let last = 0;
+  function step(t) {
+    if (document.hidden) return;                    // a hidden tab is throttled, not slow
+    if (last) gaps.push(t - last);
+    last = t;
+    if (gaps.length < 90) { requestAnimationFrame(step); return; }
+    gaps.sort((a, b) => a - b);
+    if (gaps[gaps.length >> 1] > 40) root.classList.add('perf-lite');
+  }
+  requestAnimationFrame(step);
+}
+
 const G = (() => {
 
   // ── State ────────────────────────────────────────────────
@@ -20,6 +57,7 @@ const G = (() => {
   let _uptimeReceivedAt = 0;    // Date.now() when received
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
+  let _wsRetryTimer = null; // the one pending reconnect, if any
   // Garuda (home security) and Drishti (home automation) are one app; the
   // server tags the page with the product for the address it was opened on.
   const _PRODUCT = document.documentElement.dataset.product === 'security' ? 'security' : 'home';
@@ -32,6 +70,12 @@ const G = (() => {
   let _audioCtx       = null; // shared AudioContext — unlocked once during login user gesture
   let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
   let _clipRecording = false;  // true while a server-side clip is being recorded
+
+  // localStorage throws in private windows and when site data is blocked;
+  // the app must still start there.
+  function _lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+  function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function _lsDel(k) { try { localStorage.removeItem(k); } catch (_) {} }
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -188,22 +232,42 @@ const G = (() => {
   ];
 
   // ── Backend URL config ───────────────────────────────────
+  // True when the page itself is served by the Pi (LAN address or one of the
+  // tunnel hostnames): the backend is this origin and needs no configuring.
+  function _servedByPi() {
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1'
+        || h.startsWith('192.168.') || h.startsWith('10.')
+        || /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+        || /(^|\.)veeramanikanta\.in$/.test(h);
+  }
+
+  // AbortSignal.timeout() is missing in browsers older than 2022; without
+  // this the status check threw there and always read as "not connected".
+  function _timeoutSignal(ms) {
+    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+    if (typeof AbortController === 'undefined') return undefined;
+    const c = new AbortController();
+    setTimeout(() => c.abort(), ms);
+    return c.signal;
+  }
+
   function getBackend() {
     const h = location.hostname;
     const isLocal = h === 'localhost' || h === '127.0.0.1'
                  || h.startsWith('192.168.') || h.startsWith('10.')
-                 || h.startsWith('172.');
+                 || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (isLocal) return '';
     // garuda., drishti. and api. are all served by the Pi through the one
     // Cloudflare tunnel, so the page's own origin is the backend.
     if (/(^|\.)veeramanikanta\.in$/.test(h)) return '';
     // The Vercel copy is only the static front end; it talks to the Pi's API.
-    if (h.endsWith('.vercel.app')) return localStorage.getItem('garuda_backend') || 'https://api.veeramanikanta.in';
-    return localStorage.getItem('garuda_backend') || '';
+    if (h.endsWith('.vercel.app')) return _lsGet('garuda_backend') || 'https://api.veeramanikanta.in';
+    return _lsGet('garuda_backend') || '';
   }
 
   function openBackendConfig() {
-    $('m-bk-url').value = localStorage.getItem('garuda_backend') || '';
+    $('m-bk-url').value = _lsGet('garuda_backend') || '';
     $('m-bk-msg').classList.add('hidden');
     show('m-backend');
   }
@@ -214,9 +278,9 @@ const G = (() => {
     if (!/^https?:\/\//.test(url)) url = 'http://' + url;
     showEl('m-bk-msg', 'Testing connection…', true);
     try {
-      const r = await fetch(url + '/api/users-public', { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(url + '/api/users-public', { signal: _timeoutSignal(5000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      localStorage.setItem('garuda_backend', url);
+      _lsSet('garuda_backend', url);
       updateBackendStatus(url);
       closeModal('m-backend');
     } catch(e) {
@@ -228,19 +292,26 @@ const G = (() => {
     const dot = $('bk-dot');
     const lbl = $('bk-label');
     if (!dot || !lbl) return;
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    // No URL on a page the Pi serves means "this origin", not "no backend".
     const displayHost = url
       ? (() => { try { return new URL(url).hostname; } catch(_){ return url; } })()
-      : (isLocal ? 'localhost' : 'No backend');
-    lbl.textContent = displayHost;
+      : (_servedByPi() ? location.hostname : 'No backend');
+    const row = dot.closest('.backend-row');
+    const cfgBtn = row && row.querySelector('button');
+    if (cfgBtn) cfgBtn.classList.toggle('hidden', !url && _servedByPi());
+    if (!url && !_servedByPi()) { lbl.textContent = displayHost; dot.className = 'bk-dot'; return; }
+    lbl.textContent = displayHost + ' · checking…';
     dot.className = 'bk-dot';
     const pingUrl = (url || '') + '/api/users-public';
-    try {
-      const r = await fetch(pingUrl, { method:'GET', credentials:'omit', signal: AbortSignal.timeout(5000) });
-      dot.className = 'bk-dot' + (r.ok ? ' ok' : '');
-    } catch(_) {
-      dot.className = 'bk-dot';
+    // One retry: the first request through a cold tunnel can time out.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(pingUrl, { method:'GET', credentials:'omit', cache:'no-store', signal: _timeoutSignal(8000) });
+        if (r.ok) { dot.className = 'bk-dot ok'; lbl.textContent = displayHost; return; }
+      } catch(_) {}
     }
+    dot.className = 'bk-dot fail';
+    lbl.textContent = displayHost + ' · unreachable';
   }
 
   // ── Boot ─────────────────────────────────────────────────
@@ -255,7 +326,7 @@ const G = (() => {
   async function init() {
     _applyBrand();
     // Theme: apply saved preference before rendering (light is HTML default)
-    const savedTheme = localStorage.getItem('garuda_theme') || 'light';
+    const savedTheme = _lsGet('garuda_theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     const tBtn = document.getElementById('theme-toggle-btn');
     if (tBtn) tBtn.classList.toggle('is-dark', savedTheme === 'dark');
@@ -268,11 +339,12 @@ const G = (() => {
     buildSwatches('m-swatches');
     const backend = getBackend();
     updateBackendStatus(backend);
-    const isLocal = ['localhost','127.0.0.1'].includes(location.hostname);
-    if (backend) _token = localStorage.getItem('garuda_token') || null;
+    const samePi = _servedByPi();
+    if (backend) _token = _lsGet('garuda_token');
 
-    // Try to restore session from previous visit (cookie / garuda_token)
-    const canRestore = isLocal || !!_token;
+    // Try to restore session from previous visit (cookie / garuda_token).
+    // On a page the Pi serves the session cookie is enough, so always ask.
+    const canRestore = samePi || !!_token;
     if (canRestore) {
       try {
         const session = await api('GET', '/api/session');
@@ -280,17 +352,26 @@ const G = (() => {
         afterLogin();
         return;
       } catch(e) {
-        localStorage.removeItem('garuda_token');
+        _lsDel('garuda_token');
         _token = null;
       }
     }
 
-    if (!backend && !isLocal) openBackendConfig();
+    // Only a copy hosted elsewhere with no address saved needs configuring.
+    if (!backend && !samePi) openBackendConfig();
     showLoginView('lv-main');
     renderHeatmap({});  // render empty heatmap; real data arrives via WS after login
   }
 
   // ── Login view switcher ───────────────────────────────────
+  // A front end on another site (the Vercel copy) cannot use the Pi's
+  // cookies, so it keeps the tokens itself and sends them as headers.
+  function _storeAuth(res) {
+    if (!getBackend()) return;
+    if (res.token) { _token = res.token; _lsSet('garuda_token', _token); }
+    if (res.refresh_token) _lsSet('garuda_refresh', res.refresh_token);
+  }
+
   function showLoginView(viewId) {
     ['lv-main','lv-admin-1','lv-admin-2','lv-forgot','lv-masterkey'].forEach(id => {
       const el = $(id);
@@ -340,10 +421,7 @@ const G = (() => {
       const res = await api('POST', '/api/admin/verify-otp',
                             { username: _pendingAdmin.username, otp });
       _session = res;
-      if (res.token && getBackend()) {
-        _token = res.token;
-        localStorage.setItem('garuda_token', _token);
-      }
+      _storeAuth(res);
       _pendingAdmin = null;
       afterLogin();
     } catch(e) {
@@ -363,10 +441,7 @@ const G = (() => {
     try {
       const res = await api('POST', '/api/master_key/login', { key });
       _session = res;
-      if (res.token && getBackend()) {
-        _token = res.token;
-        localStorage.setItem('garuda_token', _token);
-      }
+      _storeAuth(res);
       afterLogin();
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -383,10 +458,7 @@ const G = (() => {
     try {
       const res = await api('POST', '/api/login', { username: un, password: pw, remember_me: remember });
       _session = res;
-      if (res.token && getBackend()) {
-        _token = res.token;
-        localStorage.setItem('garuda_token', _token);
-      }
+      _storeAuth(res);
       // remember_me → 7-day refresh token issued server-side via httpOnly cookie
       afterLogin();
     } catch(e) {
@@ -422,10 +494,11 @@ const G = (() => {
       const today = new Date().toISOString().split('T')[0];
       datePicker.value = today;
       datePicker.max = today;
-      datePicker.addEventListener('change', _renderTimeline);
+      datePicker.onchange = _renderTimeline;
     }
     _wsAllowed = true;
     connectWS();
+    setTimeout(_garudaProbeFrames, 2500);   // after the first paint and state push have settled
     // Haptic feedback on Dynamic Island tap
     const hudEl = document.getElementById('top-hud');
     if (hudEl && !hudEl._hapticBound) {
@@ -453,13 +526,57 @@ const G = (() => {
     const current = document.documentElement.getAttribute('data-theme') || 'light';
     const next = current === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('garuda_theme', next);
+    _lsSet('garuda_theme', next);
     // Sync both toggle buttons (HUD + login page)
     document.getElementById('theme-toggle-btn')?.classList.toggle('is-dark', next === 'dark');
     document.getElementById('login-theme-toggle')?.classList.toggle('is-dark', next === 'dark');
   }
 
+  // Ask before doing something that cannot be taken back. Resolves true only
+  // on the confirm button; Escape, the backdrop and Cancel all mean no.
+  let _confirmDone = null;
+  function confirmAction(opts) {
+    const o = opts || {};
+    const ov = $('m-confirm');
+    if (!ov) return Promise.resolve(window.confirm(o.title || 'Are you sure?'));
+    if (_confirmDone) _confirmDone(false);
+    setText('m-confirm-title', o.title || 'Are you sure?');
+    const body = $('m-confirm-body');
+    body.textContent = o.body || '';
+    body.classList.toggle('hidden', !o.body);
+    const ok = $('m-confirm-ok');
+    ok.textContent = o.confirmLabel || 'Confirm';
+    ok.className = 'btn ' + (o.danger === false ? 'btn-primary' : 'btn-danger');
+    setText('m-confirm-cancel', o.cancelLabel || 'Cancel');
+    ov.classList.remove('hidden');
+    setTimeout(() => $('m-confirm-cancel')?.focus(), 30);
+    return new Promise(resolve => {
+      _confirmDone = result => {
+        _confirmDone = null;
+        ov.classList.add('hidden');
+        resolve(!!result);
+      };
+    });
+  }
+  function _confirmAnswer(result) { if (_confirmDone) _confirmDone(result); }
+
   async function logout() {
+    const ok = await confirmAction({
+      title: 'Sign out?',
+      body: 'You will need to sign in again to see the camera and control the house.',
+      confirmLabel: 'Sign out',
+    });
+    if (ok) await _doLogout();
+  }
+
+  let _loggingOut = false;
+  async function _doLogout() {
+    if (_loggingOut) return;
+    _loggingOut = true;
+    try { await _doLogoutInner(); } finally { _loggingOut = false; }
+  }
+
+  async function _doLogoutInner() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
     if (window.N) N.stopVoice();
     // Clear uptime interval before resetting state
@@ -469,9 +586,13 @@ const G = (() => {
     if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastAlertState = false; _lastDetInfo = '';
-    localStorage.removeItem('garuda_token');
-    localStorage.removeItem('garuda_remember');
-    if (_ws) { _ws.close(); _ws = null; }
+    _timelineSig = '';
+    _lsDel('garuda_token');
+    _lsDel('garuda_refresh');
+    _lsDel('garuda_remember');
+    if (_wsRetryTimer) { clearTimeout(_wsRetryTimer); _wsRetryTimer = null; }
+    _tickPending = null;
+    if (_ws) { const old = _ws; _ws = null; try { old.close(); } catch (_) {} }
     $('app').classList.remove('logged-in');
     _syncFeedbackVisibility();
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
@@ -715,18 +836,23 @@ const G = (() => {
     } catch(e) { showToast('Snapshot failed.', 'error'); }
   }
 
+  const _REC_ICON = {
+    rec:  '<span class="gi gi-record" aria-hidden="true"></span>',
+    stop: '<span class="gi gi-stop" aria-hidden="true"></span>',
+  };
+
   async function toggleClip() {
     const btn = $('cam-record-btn');
     try {
       if (!_clipRecording) {
         await api('POST', '/api/clip/start');
         _clipRecording = true;
-        if (btn) { btn.textContent = '\u23F9'; btn.classList.add('recording'); }
+        if (btn) { btn.innerHTML = _REC_ICON.stop; btn.classList.add('recording'); }
         showToast('Recording started — auto-stops at 60 s.', 'success');
       } else {
         const r = await api('POST', '/api/clip/stop');
         _clipRecording = false;
-        if (btn) { btn.textContent = '\u23FA'; btn.classList.remove('recording'); }
+        if (btn) { btn.innerHTML = _REC_ICON.rec; btn.classList.remove('recording'); }
         showToast('Clip saved: ' + ((r.path || '').split('/').pop() || 'done'), 'success');
       }
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
@@ -1242,26 +1368,71 @@ const G = (() => {
   // ── WebSocket ─────────────────────────────────────────────
   function connectWS() {
     if (!_wsAllowed) return;   // don't reconnect after logout
-    if (_ws) _ws.close();
+    if (_wsRetryTimer) { clearTimeout(_wsRetryTimer); _wsRetryTimer = null; }
+    if (_ws) { const old = _ws; _ws = null; try { old.close(); } catch (_) {} }
     const base = getBackend();
-    const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const tok = _token || (base ? _lsGet('garuda_token') : null);
     let wsUrl;
     if (base) {
-      wsUrl = base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws' + (tok ? `?token=${tok}` : '');
+      wsUrl = base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws' + (tok ? `?token=${encodeURIComponent(tok)}` : '');
     } else {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       wsUrl = `${proto}://${location.host}/ws`;
     }
-    _ws = new WebSocket(wsUrl);
-    _ws.onopen = () => { _wsRetryDelay = 3000; _syncPendingEvents(); };
-    _ws.onmessage = e => { try { tick(JSON.parse(e.data)); } catch(err) { console.warn('[Garuda] WS parse error', err); } };
-    _ws.onerror = () => {};
-    _ws.onclose   = () => {
-      const delay = _wsRetryDelay;
-      _wsRetryDelay = Math.min(_wsRetryDelay * 1.5, 30000);
-      setTimeout(connectWS, delay);
+    let ws;
+    try { ws = new WebSocket(wsUrl); } catch (_) { _scheduleWsRetry(); return; }
+    _ws = ws;
+    ws.onopen = () => { _wsRetryDelay = 3000; _syncPendingEvents(); };
+    ws.onmessage = e => {
+      let state;
+      try { state = JSON.parse(e.data); } catch(err) { console.warn('[Garuda] WS parse error', err); return; }
+      _queueTick(state);
+    };
+    ws.onerror = () => {};
+    ws.onclose = ev => {
+      // A socket this function replaced must not start a second retry loop:
+      // each loop closed the other's socket, reconnecting forever.
+      if (_ws !== ws) return;
+      _ws = null;
+      // 4001: the server no longer knows this session. Ask once; api() then
+      // refreshes the token or signs out instead of retrying for ever.
+      if (ev && ev.code === 4001) {
+        api('GET', '/api/session').then(() => _scheduleWsRetry()).catch(() => {});
+        return;
+      }
+      _scheduleWsRetry();
     };
   }
+
+  function _scheduleWsRetry() {
+    if (!_wsAllowed || _wsRetryTimer) return;
+    const delay = _wsRetryDelay;
+    _wsRetryDelay = Math.min(_wsRetryDelay * 1.5, 30000);
+    _wsRetryTimer = setTimeout(() => { _wsRetryTimer = null; connectWS(); }, delay);
+  }
+
+  // State pushes are applied once per frame, and not at all while the tab is
+  // hidden: a burst of detections used to redraw the whole dashboard for each.
+  let _tickPending = null, _tickRaf = 0;
+  function _queueTick(state) {
+    _tickPending = state;
+    if (document.hidden) {
+      // Alerts must still ring and notify from a background tab.
+      if (state && !!state.alert_active !== !!_lastAlertState) _flushTick();
+      return;
+    }
+    if (!_tickRaf) _tickRaf = requestAnimationFrame(_flushTick);
+  }
+  function _flushTick() {
+    _tickRaf = 0;
+    const state = _tickPending;
+    _tickPending = null;
+    if (!state) return;
+    try { tick(state); } catch (err) { console.warn('[Garuda] state render error', err); }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && _tickPending && !_tickRaf) _tickRaf = requestAnimationFrame(_flushTick);
+  });
 
   // ── Offline event sync on reconnect ─────────────────────
   async function _syncPendingEvents() {
@@ -1289,8 +1460,14 @@ const G = (() => {
   // ── Activity Timeline ─────────────────────────────────────
   let _timelineItems = [];
 
+  let _timelineSig = '';
+  function _logSig(log) { return log.length + '|' + (log.length ? log[log.length - 1] : ''); }
+
   function _updateTimeline(s) {
     const log = s.system_log || [];
+    const sig = _logSig(log);
+    if (sig === _timelineSig) return;         // nothing new: leave the list alone
+    _timelineSig = sig;
     _timelineItems = log.map(entry => {
       const timeMatch = entry.match(/^\[([\d\-: ]+)\]/);
       const time = timeMatch ? timeMatch[1].trim() : '';
@@ -1327,6 +1504,23 @@ const G = (() => {
     ).join('');
   }
 
+  // Android Chrome refuses `new Notification()` on a page (it throws) and
+  // some browsers have no Notification at all; either used to abort the rest
+  // of the state push, so an alert never reached the screen there.
+  function _notifyAlert(body) {
+    try {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      const opts = { body, icon: '/static/icon-192.png', tag: 'garuda-alert' };
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready
+          .then(reg => reg.showNotification('Garuda Alert', opts))
+          .catch(() => { try { new Notification('Garuda Alert', opts); } catch (_) {} });
+      } else {
+        new Notification('Garuda Alert', opts);
+      }
+    } catch (_) {}
+  }
+
   function tick(s) {
     if (window.DI) DI.onState(s);
     if (!s || typeof s !== 'object') return;
@@ -1361,9 +1555,7 @@ const G = (() => {
 
     // Push notification + alarm on new alert
     if (s.alert_active && !_lastAlertState) {
-      if (Notification.permission === 'granted') {
-        new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/icon-192.png' });
-      }
+      _notifyAlert(s.danger_info || 'Danger detected \u2014 check camera feed');
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       _startAlarm();
       // On mobile, scroll status card into view so alert is visible
@@ -1380,7 +1572,7 @@ const G = (() => {
     if (typeof s.clip_recording === 'boolean' && _clipRecording && !s.clip_recording) {
       _clipRecording = false;
       const recBtn = $('cam-record-btn');
-      if (recBtn) { recBtn.textContent = '\u23FA'; recBtn.classList.remove('recording'); }
+      if (recBtn) { recBtn.innerHTML = _REC_ICON.rec; recBtn.classList.remove('recording'); }
     }
 
     // Modes
@@ -1441,9 +1633,11 @@ const G = (() => {
 
     // System console — admin dashboard only
     if (_session && _session.role === 'admin') {
-      const logText = (s.system_log || []).join('\n');
       const con = $('sys-console');
-      if (con) {
+      const conSig = _logSig(s.system_log || []);
+      if (con && con.dataset.sig !== conSig) {
+        con.dataset.sig = conSig;
+        const logText = (s.system_log || []).join('\n');
         const atBot = con.scrollTop + con.clientHeight >= con.scrollHeight - 8;
         con.textContent = logText;
         if (atBot) con.scrollTop = con.scrollHeight;
@@ -1457,14 +1651,10 @@ const G = (() => {
     _updateTimeline(s);
 
     // Log badge counts
-    const lcSys = document.getElementById('log-count-system');
-    if (lcSys) lcSys.textContent = (s.system_log || []).length || 0;
-    const lcDet = document.getElementById('log-count-detection');
-    if (lcDet) lcDet.textContent = s.detection_log_count || 0;
-    const lcPres = document.getElementById('log-count-presence');
-    if (lcPres) lcPres.textContent = s.presence_log_count || 0;
-    const lcVoice = document.getElementById('log-count-voice');
-    if (lcVoice) lcVoice.textContent = ((s.voice_log || []).length + (s.voice_responses || []).length) || 0;
+    setText('log-count-system', (s.system_log || []).length || 0);
+    setText('log-count-detection', s.detection_log_count || 0);
+    setText('log-count-presence', s.presence_log_count || 0);
+    setText('log-count-voice', ((s.voice_log || []).length + (s.voice_responses || []).length) || 0);
 
 
     // Security health panel
@@ -1567,7 +1757,9 @@ const G = (() => {
     if (!row) return;
     const icon = row.querySelector('.sec-health-icon');
     const descEl = row.querySelector('.sec-health-desc');
-    if (icon) {
+    const mark = String(status);
+    if (icon && icon.dataset.s !== mark) {
+      icon.dataset.s = mark;
       if (status === true) {
         icon.className = 'sec-health-icon ok';
         icon.innerHTML = '&#10003;';
@@ -1579,11 +1771,12 @@ const G = (() => {
         icon.innerHTML = '&#10007;';
       }
     }
-    if (descEl) descEl.textContent = desc;
+    if (descEl && descEl.textContent !== desc) descEl.textContent = desc;
   }
 
   // ── Narada conversation feed ──────────────────────────────
   function renderModes(modes) {
+    modes = modes || {};
     const grid   = $('modes-pills');
     const hpills = $('header-pills');
     if (!grid) return;
@@ -1615,7 +1808,9 @@ const G = (() => {
     });
 
     // Header pills — only active modes
-    if (hpills) {
+    const pillKey = MODE_CFG.filter(m => modes[m.key]).map(m => m.key).join(',');
+    if (hpills && hpills.dataset.key !== pillKey) {
+      hpills.dataset.key = pillKey;
       hpills.innerHTML = '';
       MODE_CFG.filter(m => modes[m.key]).forEach(m => {
         const p = mk('span', 'mode-pill active');
@@ -1815,20 +2010,20 @@ const G = (() => {
 
   async function downloadFullLog() {
     const base = getBackend();
-    const tok  = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const tok  = _token || (base ? _lsGet('garuda_token') : null);
     const url  = (base ? base.replace(/\/$/, '') : '') + '/api/logs/download';
     const headers = {};
     if (tok) headers['X-Garuda-Token'] = tok;
     try {
       const r = await fetch(url, { method: 'GET', headers, credentials: base ? 'omit' : 'include' });
-      if (!r.ok) { alert('Download failed — make sure logs are unlocked.'); return; }
+      if (!r.ok) { showToast('Download failed \u2014 make sure logs are unlocked.', 'error'); return; }
       const blob = await r.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `garuda-full-log-${new Date().toISOString().slice(0,10)}.txt`;
       a.click();
     } catch(e) {
-      alert('Download error: ' + (e.message || e));
+      showToast('Download error: ' + (e.message || e), 'error');
     }
   }
 
@@ -1925,10 +2120,11 @@ const G = (() => {
   }
 
   async function deleteDevice(mac) {
+    if (!await confirmAction({ title: 'Remove this device?', body: `${mac} will no longer count as the owner being home.`, confirmLabel: 'Remove' })) return;
     try {
       await api('POST', '/api/devices/delete', { mac });
       loadDevices();
-    } catch(e) {}
+    } catch(e) { showToast(extractError(e), 'error'); }
   }
 
   async function scanNetwork() {
@@ -2095,6 +2291,7 @@ const G = (() => {
   }
 
   async function deleteMasterKey(idx) {
+    if (!await confirmAction({ title: 'Delete this master key?', body: 'Anyone using it loses admin access and the logs unlock.', confirmLabel: 'Delete' })) return;
     try {
       await api('POST', '/api/master_key/delete', { index: idx });
       loadMasterKeys();
@@ -2138,23 +2335,29 @@ const G = (() => {
   async function addCmd() {
     const phrase = val('m-phrase').toLowerCase();
     const resp = val('m-resp');
-    if (!phrase || !resp) { alert('Enter both fields.'); return; }
+    if (!phrase || !resp) { showToast('Enter both fields.', 'error'); return; }
     try {
       await api('POST', '/api/config/command/add', { phrase, response: resp });
       closeModal('m-add-cmd'); loadCmds();
-    } catch(e) { alert(e.detail || 'Failed.'); }
+    } catch(e) { showToast(extractError(e), 'error'); }
   }
 
   async function _delCmd(phrase) {
-    if (!confirm(`Delete "${phrase}"?`)) return;
+    if (!await confirmAction({ title: 'Delete this command?', body: `"${phrase}"`, confirmLabel: 'Delete' })) return;
     try { await api('POST', '/api/config/command/delete', { phrase }); loadCmds(); }
-    catch(e) { alert(e.detail || 'Failed.'); }
+    catch(e) { showToast(extractError(e), 'error'); }
   }
 
   // ── Emergency Stop ────────────────────────────────────────
   async function emergencyStop() {
-    if (!confirm('Stop the entire Garuda system now?')) return;
-    await api('POST', '/api/emergency-stop', {});
+    const ok = await confirmAction({
+      title: 'Emergency stop?',
+      body: 'This shuts the whole system down: camera, detection and alerts stop until it is started again on the Pi.',
+      confirmLabel: 'Stop system',
+    });
+    if (!ok) return;
+    try { await api('POST', '/api/emergency-stop', {}); }
+    catch(e) { showToast(extractError(e), 'error'); }
   }
 
   // ── Color swatches ────────────────────────────────────────
@@ -2171,7 +2374,7 @@ const G = (() => {
   // ── Utils ─────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
   const val = id => ($(id)?.value || '').trim();
-  const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+  const setText = (id, v) => { const e = $(id); if (e && e.textContent !== String(v)) e.textContent = v; };
   const setWidth = (id, pct) => { const e = $(id); if (e) e.style.width = Math.min(100, Math.max(0, pct)) + '%'; };
   const show = id => $(id)?.classList.remove('hidden');
   const hide = id => $(id)?.classList.add('hidden');
@@ -2216,8 +2419,10 @@ const G = (() => {
     const base = getBackend();
     const fullUrl = base ? base.replace(/\/$/, '') + url : url;
     const headers = { 'Content-Type': 'application/json' };
-    const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const tok = _token || (base ? _lsGet('garuda_token') : null);
     if (tok) headers['X-Garuda-Token'] = tok;
+    // Sign-out names the refresh token too, so the server can revoke it.
+    if (url === '/api/logout' && base && _lsGet('garuda_refresh')) headers['X-Garuda-Refresh'] = _lsGet('garuda_refresh');
     const opts = { method, headers, credentials: base ? 'omit' : 'include' };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const r = await fetch(fullUrl, opts);
@@ -2225,18 +2430,23 @@ const G = (() => {
     try { d = await r.json(); } catch(_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
     if (!r.ok) {
       // On 401, attempt one silent token refresh before giving up
-      if (r.status === 401 && !_isRetry && url !== '/api/refresh' && url !== '/api/login') {
+      if (r.status === 401 && !_isRetry && !_loggingOut && !['/api/refresh', '/api/login', '/api/logout'].includes(url)) {
         try {
           const refreshUrl = base ? base.replace(/\/$/, '') + '/api/refresh' : '/api/refresh';
-          const rr = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
+          const stored = base ? _lsGet('garuda_refresh') : null;
+          const rr = await fetch(refreshUrl, {
+            method: 'POST', credentials: 'include',
+            headers: stored ? { 'X-Garuda-Refresh': stored } : {},
+          });
           if (rr.ok) {
             const rd = await rr.json();
-            if (rd.token) { _token = rd.token; localStorage.setItem('garuda_token', _token); }
+            if (rd.token) { _token = rd.token; _lsSet('garuda_token', _token); }
             return api(method, url, body, true);   // retry once with new access token
           }
         } catch (_) {}
-        // Refresh failed — session is gone, force re-login
-        await logout();
+        // Refresh failed — session is gone, force re-login (no question
+        // asked: there is nothing left to stay signed in to).
+        if (_session) await _doLogout();
       }
       throw d;
     }
@@ -2246,7 +2456,7 @@ const G = (() => {
   // ── Public API ────────────────────────────────────────────
   return {
     init,
-    submitLogin, logout,
+    submitLogin, logout, confirmAction, _confirmAnswer,
     goAdminFlow, backToMain, backToAdminStep1, sendAdminOTP, verifyAdminOTP,
     goMasterKey, submitMasterKeyLogin, unlockLogs,
     goForgot, sendForgotOTP, doReset,
@@ -2572,8 +2782,17 @@ window.addEventListener('error', e => {
 
 // Close modal on overlay click
 document.addEventListener('click', e => {
-  if (e.target.classList.contains('modal-overlay')) e.target.classList.add('hidden');
+  if (!e.target.classList || !e.target.classList.contains('modal-overlay')) return;
+  if (e.target.id === 'm-confirm') G._confirmAnswer(false);   // also settles the pending question
+  else e.target.classList.add('hidden');
 });
+document.addEventListener('keydown', e => {
+  const ov = document.getElementById('m-confirm');
+  if (!ov || ov.classList.contains('hidden')) return;
+  if (e.key === 'Escape') { e.preventDefault(); G._confirmAnswer(false); }
+  // Enter must not fall through to the login / logs-gate shortcuts below.
+  if (e.key === 'Enter') e.stopImmediatePropagation();
+}, true);
 
 // Enter key shortcuts — logs-gate works while logged in; login views only before login
 document.addEventListener('keydown', e => {

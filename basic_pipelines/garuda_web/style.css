@@ -4667,3 +4667,95 @@ body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-a
 
 /* Mode rows on the dashboard: drawn icons, in ink. */
 .mode-row-icon .gi { width: 19px; height: 19px; }
+
+/* ── Connection row states ─────────────────────────────────── */
+.bk-dot.fail { background: var(--danger); }
+
+/* ── Confirm sheet (sign out, emergency stop, deletes) ─────── */
+#m-confirm { z-index: 1200; }
+.modal-confirm { width: 360px; gap: 12px; text-align: center; }
+.modal-confirm-body { color: var(--t3); font-size: 13.5px; line-height: 1.45; }
+.modal-confirm .modal-actions { margin-top: 10px; }
+.modal-confirm .btn { min-height: 42px; justify-content: center; }
+.cam-action-btn { display: inline-flex; align-items: center; justify-content: center; }
+.cam-action-btn .gi { width: 17px; height: 17px; }
+
+/* ── Every browser, every device ───────────────────────────────
+   app.js tags <html> with what it finds:
+     plat-other   not Safari on an Apple device (Android, Windows, Linux,
+                  ChromeOS): these composite backdrop blur on the CPU or a
+                  weak GPU, and have no rubber-band scroll of their own
+     perf-lite    the page measured itself running under ~25 frames a second
+   Apple devices keep the full glass exactly as it was. */
+
+/* The fixed grid behind the app gets its own layer, so scrolling the page
+   moves pixels instead of repainting the grid every frame. */
+body::before { will-change: transform; }
+
+/* Tall viewports on phones change height as the address bar hides. */
+@supports (height: 100dvh) {
+  #app { height: 100dvh; }
+  @media (max-width: 768px) { #app { height: auto; min-height: 100dvh; } }
+}
+
+/* Touch: the page answers the finger. `contain` keeps Android's own
+   edge stretch/glow (which `none` removed) and still blocks
+   pull-to-refresh from reloading the app mid-scroll. */
+@media (hover: none) and (pointer: coarse) {
+  html.plat-other, html.plat-other body { overscroll-behavior-y: contain; }
+  html.plat-other .sidebar-left, html.plat-other .sidebar-right, html.plat-other .timeline-list,
+  html.plat-other .admin-page, html.plat-other .console, html.plat-other .nx-log,
+  html.plat-other .docs-body, html.plat-other .modal { overscroll-behavior-y: contain; }
+  /* A press shows at once; without :hover there was no response at all. */
+  html.plat-other .btn:active, html.plat-other .ios-item:active, html.plat-other .more-tile:active,
+  html.plat-other .more-row:active, html.plat-other .mode-row:active, html.plat-other .top-act:active,
+  html.plat-other .cam-toggle-btn:active, html.plat-other .cam-action-btn:active,
+  html.plat-other .cam-tab-btn:active, html.plat-other .lc-signin:active, html.plat-other .lc-link:active,
+  html.plat-other .log-tab:active, html.plat-other .docs-tab:active, html.plat-other .ha-scene-run:active,
+  html.plat-other .toggle:active, html.plat-other .di-chip:active, html.plat-other .di-act:active {
+    opacity: 0.62; transition-duration: 0s;
+  }
+  html.plat-other button, html.plat-other [onclick], html.plat-other .mode-row, html.plat-other .toggle {
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Mouse and trackpad off the Mac: a thin scrollbar that shows where you
+   are. They were hidden everywhere, which only works with macOS overlays. */
+@media (hover: hover) and (pointer: fine) {
+  html.plat-other #main, html.plat-other .admin-page, html.plat-other .sidebar-left,
+  html.plat-other .sidebar-right, html.plat-other .timeline-list, html.plat-other .console,
+  html.plat-other .nx-log, html.plat-other .docs-body, html.plat-other .modal,
+  html.plat-other .fb-inbox-list, html.plat-other .det-timeline {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--t3) 45%, transparent) transparent;
+  }
+}
+
+/* Cheaper glass off Apple hardware: small blurs stay on the small, always
+   visible chrome; the full-screen blurs (the most expensive thing on the
+   page) become a plain scrim. */
+html.plat-other #ios-nav,
+html.plat-other .top-act, html.plat-other .hud-user-lbl,
+html.plat-other .more-panel, html.plat-other .fb-panel, html.plat-other .glass,
+html.plat-other .toast, html.plat-other[data-theme="dark"] .login-card {
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+html.plat-other .modal-overlay, html.plat-other .logs-gate-overlay, html.plat-other .camera-overlay {
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+html.plat-other .modal-overlay { background: rgba(0,0,0,0.66); }
+html.plat-other .logs-gate-overlay { background: rgba(0,0,0,0.86); }
+
+/* Measured slow: no blur at all, solid surfaces, no endless decoration. */
+html.perf-lite *, html.perf-lite *::before, html.perf-lite *::after {
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+}
+html.perf-lite #ios-nav, html.perf-lite .top-act, html.perf-lite .hud-user-lbl,
+html.perf-lite .more-panel, html.perf-lite .fb-panel, html.perf-lite .glass,
+html.perf-lite .login-card { background: var(--surface); }
+html.perf-lite .toast { background-color: var(--surface); }
+html.perf-lite #top-hud, html.perf-lite #top-hud.di-open { filter: none; }
+html.perf-lite #top-hud.di-alert { animation: none; }
+html.perf-lite .dg *, html.perf-lite .status-pulse-ring, html.perf-lite .cam-live-pulse { animation: none !important; }
+html.perf-lite .card, html.perf-lite .settings-card { box-shadow: none; }

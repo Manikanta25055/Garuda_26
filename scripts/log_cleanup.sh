@@ -3,7 +3,9 @@
 # Rotates large perm_*.txt files and trims old presence_log entries.
 set -euo pipefail
 
-LOG_DIR="/home/manikanta/Projects/hailo-rpi5-examples/system_logs"
+# Was a path from the project this one grew out of; nothing was ever cleaned.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$(dirname "$SCRIPT_DIR")/basic_pipelines/system_logs"
 MAX_SIZE=$((5 * 1024 * 1024))  # 5 MB
 KEEP_BACKUPS=3
 

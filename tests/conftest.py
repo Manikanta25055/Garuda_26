@@ -213,6 +213,11 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw, 'FEEDBACK_FILE',       str(tmp_data / 'system_logs/feedback.json'))
     monkeypatch.setattr(gw, 'FEEDBACK_BACKUP_FILE', str(tmp_data / 'system_logs/feedback.backup.json'))
     monkeypatch.setattr(gw, 'EVENTS_DB',           str(tmp_data / 'system_logs/garuda_events.db'))
+    # Secrets saved from the settings pages go to .env; never the real one.
+    monkeypatch.setattr(gw, 'HOME_ENV_PATH',       str(tmp_data / '.env'))
+    monkeypatch.setattr(gw, '_refresh_tokens',     {})
+    monkeypatch.setattr(gw, '_login_failures',     {})
+    monkeypatch.setattr(gw, '_forgot_otp_store',   {})
     monkeypatch.setattr(gw, 'PERM_SYSTEM_LOG',     str(tmp_data / 'system_logs/perm_system_log.txt'))
     monkeypatch.setattr(gw, 'PERM_VOICE_LOG',      str(tmp_data / 'system_logs/perm_voice_log.txt'))
     monkeypatch.setattr(gw, 'PERM_DETECTION_LOG',  str(tmp_data / 'system_logs/perm_detection_log.txt'))

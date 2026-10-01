@@ -225,7 +225,7 @@ const H = (() => {
   }
 
   async function allOff() {
-    if (!confirm('Turn off every device?')) return;
+    if (!await G.confirmAction({ title: 'Turn everything off?', body: 'Every device in the house is switched off.', confirmLabel: 'All off' })) return;
     try {
       const r = await api('POST', '/api/home/all-off', {});
       G.showToast(r.turned_off.length ? `Turned off ${r.turned_off.join(', ')}` : 'Everything was already off', r.failed.length ? 'warning' : 'success');
@@ -242,7 +242,7 @@ const H = (() => {
   }
 
   async function deleteScene(id) {
-    if (!confirm('Delete this scene?')) return;
+    if (!await G.confirmAction({ title: 'Delete this scene?', confirmLabel: 'Delete' })) return;
     try { await api('DELETE', `/api/home/scenes/${encodeURIComponent(id)}`); } catch (e) { G.showToast(errText(e), 'error'); }
     loadOverview();
   }
@@ -448,7 +448,7 @@ const H = (() => {
   }
 
   async function deleteDevice(id, name) {
-    if (!confirm(`Remove ${name}? Rules that use it are kept but paused.`)) return;
+    if (!await G.confirmAction({ title: `Remove ${name}?`, body: 'Rules that use it are kept but paused.', confirmLabel: 'Remove' })) return;
     try {
       const r = await api('DELETE', `/api/home/devices/${encodeURIComponent(id)}`);
       if (r.orphaned) G.showToast(`${r.orphaned} rule(s) paused because they used ${name}`, 'warning');
@@ -566,7 +566,7 @@ const H = (() => {
   const discardProposal = id => reloadAuto(api('DELETE', `/api/home/proposals/${encodeURIComponent(id)}`));
   const flip = sw => { if (sw) { sw.classList.toggle('on'); sw.closest('.ha-row')?.classList.toggle('off'); } };
   const toggleRule = (id, sw) => { flip(sw); return reloadAuto(settle(api('POST', `/api/home/rules/${encodeURIComponent(id)}/toggle`))); };
-  const deleteRule = id => confirm('Delete this rule?') && reloadAuto(api('DELETE', `/api/home/rules/${encodeURIComponent(id)}`));
+  const deleteRule = async id => (await G.confirmAction({ title: 'Delete this rule?', confirmLabel: 'Delete' })) && reloadAuto(api('DELETE', `/api/home/rules/${encodeURIComponent(id)}`));
   const toggleSchedule = (id, sw) => { flip(sw); return reloadAuto(settle(api('POST', `/api/home/schedules/${encodeURIComponent(id)}/toggle`))); };
   const deleteSchedule = id => reloadAuto(api('DELETE', `/api/home/schedules/${encodeURIComponent(id)}`));
   const acceptSuggestion = id => reloadAuto(api('POST', `/api/home/suggestions/${encodeURIComponent(id)}/accept`)

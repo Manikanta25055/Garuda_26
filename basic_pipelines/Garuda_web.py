@@ -41,6 +41,8 @@ import threading
 import traceback
 import hashlib
 import hmac
+import math
+import signal
 import tempfile
 import re
 import anyio.to_thread
@@ -92,7 +94,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 import uvicorn
 
@@ -323,9 +325,18 @@ def _verify_password(pw: str, stored: str) -> bool:
         if len(parts) != 5:
             return False
         _, algo, iters, salt_hex, dk_hex = parts
-        dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
+        try:
+            dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
+        except (ValueError, TypeError):
+            return False      # a damaged record must fail closed, not raise a 500
         return hmac.compare_digest(dk.hex(), dk_hex)
-    return hmac.compare_digest(pw, stored)  # plaintext fallback for migration
+    # Plaintext fallback for migration. Compared as bytes: compare_digest on
+    # str raises TypeError for any non-ASCII character.
+    return hmac.compare_digest(pw.encode(), str(stored).encode())
+
+# Verified against when the username does not exist, so an unknown account
+# costs the same time as a wrong password and cannot be told apart by timing.
+_DUMMY_PASSWORD_HASH = _hash_password(secrets.token_hex(16))
 
 def _validate_password_strength(pw: str) -> str | None:
     """Return an error string if password fails requirements, else None."""
@@ -344,14 +355,22 @@ def _validate_password_strength(pw: str) -> str | None:
         return "Password must contain at least one digit."
     return None
 
-def _invalidate_user_sessions(username: str, except_token: str | None = None) -> int:
-    """Remove all active sessions for a user. Returns count removed."""
+def _invalidate_user_sessions(username: str, except_token: str | None = None,
+                              except_refresh: str | None = None) -> int:
+    """Remove all active sessions for a user. Returns count removed.
+
+    Refresh tokens go too: a password change that left them alive let anyone
+    holding an old refresh cookie keep minting sessions for another week.
+    """
     to_delete = [
-        t for t, s in _sessions.items()
+        t for t, s in list(_sessions.items())
         if s.get("username") == username and t != except_token
     ]
     for t in to_delete:
-        del _sessions[t]
+        _sessions.pop(t, None)
+    for t in [t for t, s in list(_refresh_tokens.items())
+              if s.get("username") == username and t != except_refresh]:
+        _refresh_tokens.pop(t, None)
     return len(to_delete)
 
 # ── Atomic JSON write ────────────────────────────────────
@@ -395,11 +414,20 @@ _LOGIN_MAX_ATTEMPTS = 5
 _LOGIN_LOCKOUT_SECONDS = 300  # 5 minutes
 
 def _get_client_ip(request) -> str:
-    """Return the real client IP, trusting X-Forwarded-For only from local proxies."""
+    """Return the real client IP, trusting proxy headers only from local proxies.
+
+    Works for a Request or a WebSocket. Cloudflare sets CF-Connecting-IP itself
+    and overwrites whatever the caller sent. X-Forwarded-For is appended to, so
+    its first entry is whatever the caller typed: taking that one let anyone
+    dodge the rate limit and the login lockout with a made-up header. The last
+    entry is the one the proxy added.
+    """
     client = request.client.host if request.client else "unknown"
     if client in ("127.0.0.1", "::1", "localhost"):
-        # Request arrived from a local proxy (nginx/cloudflared) — trust forwarded header
-        fwd = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        cf = request.headers.get("CF-Connecting-IP", "").strip()
+        if cf:
+            return cf
+        fwd = request.headers.get("X-Forwarded-For", "").split(",")[-1].strip()
         return fwd or client
     return client
 
@@ -414,6 +442,24 @@ def _check_rate_limit(request, bucket: str = "", limit: Optional[int] = None) ->
         return False
     stamps.append(now)
     return True
+
+def _prune_rate_state():
+    """Drop rate-limit and lockout records nobody is using any more.
+
+    Both tables are keyed by client address and only ever grew: a scanner
+    walking addresses left one entry behind for each, for the life of the
+    process.
+    """
+    now = time.time()
+    for key in list(_rate_store.keys()):
+        stamps = _rate_store.get(key)
+        if not stamps or now - max(stamps) > 3600:
+            _rate_store.pop(key, None)
+    for ip in list(_login_failures.keys()):
+        entry = _login_failures.get(ip) or {}
+        until = entry.get("lockout_until", 0.0)
+        if (until and now >= until) or (not until and now - entry.get("last", now) > 3600):
+            _login_failures.pop(ip, None)
 
 def _is_login_locked(ip: str) -> bool:
     """Return True if the IP is currently locked out from login attempts."""
@@ -433,6 +479,7 @@ def _record_login_failure(ip: str):
     """Increment failure count; trigger lockout after _LOGIN_MAX_ATTEMPTS."""
     entry = _login_failures.setdefault(ip, {"count": 0, "lockout_until": 0.0})
     entry["count"] += 1
+    entry["last"] = time.time()
     if entry["count"] >= _LOGIN_MAX_ATTEMPTS:
         entry["lockout_until"] = time.time() + _LOGIN_LOCKOUT_SECONDS
         log_system_update(
@@ -560,6 +607,7 @@ _secondary_thread.start()
 
 # WebRTC peer connections
 _pc_set: set = set()
+_MAX_PEER_CONNECTIONS = 4
 
 # Event-driven WS broadcaster
 _event_loop  = None        # asyncio loop ref (set in lifespan)
@@ -569,8 +617,8 @@ _ws_broadcaster_task = None
 # Session store: token → {username, role, expires}
 _sessions = {}
 
-# WebSocket clients (all connected devices)
-_ws_clients: set = set()
+# WebSocket clients (all connected devices): socket -> {username, role}
+_ws_clients: dict = {}
 
 # EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
 _cpu_ema       = 0.0
@@ -587,7 +635,11 @@ _voice_stop_event = threading.Event()
 ##############################################################################
 def load_users():
     global USERS
-    for path in [USERS_FILE, "system_logs/users_data.json"]:
+    # The legacy file holds plaintext passwords from before hashing. It is read
+    # only on a machine that has never had a users.json; a users.json that is
+    # there but unreadable must not quietly bring those old passwords back.
+    candidates = [USERS_FILE] if os.path.exists(USERS_FILE) else [USERS_FILE, "system_logs/users_data.json"]
+    for path in candidates:
         if os.path.exists(path):
             try:
                 with open(path) as f:
@@ -688,12 +740,26 @@ def _record_alert_activity():
     except Exception:
         pass
 
+_PRESENCE_LOG_MAX = 5000
+_USER_HISTORY_MAX = 200
+
+def _remember_user_activity(user_name, kind, entry):
+    """Append to a user's history list, keeping only the recent entries."""
+    user = USERS.get(user_name) if user_name else None
+    if not isinstance(user, dict):
+        return
+    items = user.setdefault("history", {}).setdefault(kind, [])
+    items.append(entry)
+    if len(items) > _USER_HISTORY_MAX:
+        del items[:-_USER_HISTORY_MAX]
+
 def _load_presence_log():
     global _presence_log
     try:
         if os.path.exists(PRESENCE_LOG_FILE):
             with open(PRESENCE_LOG_FILE) as f:
-                _presence_log = json.load(f)
+                data = json.load(f)
+            _presence_log = data[-_PRESENCE_LOG_MAX:] if isinstance(data, list) else []
     except Exception:
         _presence_log = []
 
@@ -706,6 +772,10 @@ def _append_presence_log(event: str, device: str, mac: str):
         "device": device,
         "mac":    mac,
     })
+    # The whole list is rewritten on every event; without a cap that write
+    # (and the file) grew for ever.
+    if len(_presence_log) > _PRESENCE_LOG_MAX:
+        _presence_log[:] = _presence_log[-_PRESENCE_LOG_MAX:]
     try:
         _atomic_json_write(PRESENCE_LOG_FILE, _presence_log)
     except Exception:
@@ -874,21 +944,26 @@ def append_voice_log(message, user_name=None):
     if len(voice_assistant_log) > 500:
         voice_assistant_log[:] = voice_assistant_log[-500:]
     _perm_write(PERM_VOICE_LOG, entry)
-    if user_name and user_name in USERS:
-        USERS[user_name]["history"]["narada_activity"].append(entry)
+    _remember_user_activity(user_name, "narada_activity", entry)
 
 def append_voice_response(message, user_name=None):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     voice_responses.append(entry)
+    if len(voice_responses) > 500:
+        voice_responses[:] = voice_responses[-500:]
     _perm_write(PERM_VOICE_LOG, "→ " + entry)
-    if user_name and user_name in USERS:
-        USERS[user_name]["history"]["narada_activity"].append(entry)
+    _remember_user_activity(user_name, "narada_activity", entry)
 
 ##############################################################################
 # OFFLINE EVENT QUEUE (SQLite)
 ##############################################################################
-EVENTS_DB = "system_logs/garuda_events.db"
+# Anchored to the repository, not to whatever directory the process happened
+# to be started from (same file the service has always used from its unit's
+# WorkingDirectory).
+EVENTS_DB = str(_BASE.parent / "system_logs" / "garuda_events.db")
+_EVENTS_KEEP_DAYS = 30
+_pending_cache = {"at": 0.0, "count": 0}
 _eq_lock = threading.Lock()
 _net_online = True          # tracked by connectivity monitor
 
@@ -923,6 +998,7 @@ def queue_event(event_type: str, label: str = "", confidence: float = 0.0, info:
                 (stamp, event_type, label, confidence, info))
             conn.commit()
             conn.close()
+            _pending_cache["at"] = 0.0
         except Exception as e:
             log_system_update(f"[QUEUE] DB write error: {e}")
 
@@ -945,16 +1021,56 @@ def get_events_since(since_ts: str = "", limit: int = 500) -> list:
         except Exception:
             return []
 
-def get_pending_count() -> int:
-    """Return count of unsynced events."""
+def get_unsynced_events(limit: int = 1000) -> list:
+    """Unsynced events, oldest first.
+
+    The pending endpoint used to take the oldest 1000 rows of the whole table
+    and filter them: once 1000 synced rows existed, nothing newer was ever
+    returned or marked, and the pending count only went up.
+    """
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM events WHERE synced = 0 ORDER BY id ASC LIMIT ?",
+                (max(1, int(limit)),)).fetchall()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception:
+            return []
+
+def prune_synced_events(days: int = _EVENTS_KEEP_DAYS) -> int:
+    """Delete synced events older than `days`; the table had no upper bound."""
+    cutoff = (datetime.datetime.now() - datetime.timedelta(days=days)).isoformat()
+    with _eq_lock:
+        try:
+            conn = sqlite3.connect(EVENTS_DB, timeout=5)
+            cur = conn.execute("DELETE FROM events WHERE synced = 1 AND timestamp < ?", (cutoff,))
+            conn.commit()
+            conn.close()
+            return cur.rowcount or 0
+        except Exception:
+            return 0
+
+def get_pending_count(max_age: float = 0.0) -> int:
+    """Return count of unsynced events.
+
+    `max_age` lets the state broadcaster reuse a recent answer instead of
+    opening the database on every two-second tick.
+    """
+    now = time.time()
+    if max_age and now - _pending_cache["at"] < max_age:
+        return _pending_cache["count"]
     with _eq_lock:
         try:
             conn = sqlite3.connect(EVENTS_DB, timeout=5)
             count = conn.execute("SELECT COUNT(*) FROM events WHERE synced = 0").fetchone()[0]
             conn.close()
-            return count
         except Exception:
             return 0
+    _pending_cache["at"], _pending_cache["count"] = now, count
+    return count
 
 def mark_events_synced(up_to_id: int):
     """Mark all events up to and including the given ID as synced."""
@@ -964,6 +1080,7 @@ def mark_events_synced(up_to_id: int):
             conn.execute("UPDATE events SET synced = 1 WHERE id <= ?", (up_to_id,))
             conn.commit()
             conn.close()
+            _pending_cache["at"] = 0.0
         except Exception:
             pass
 
@@ -1004,7 +1121,11 @@ def stop_app():
             app_gst.pipeline.set_state(Gst.State.NULL)
         except Exception:
             pass
-    sys.exit(0)
+    # This runs on a worker thread, where sys.exit() only ended that thread:
+    # the camera stopped but the server stayed up, half alive. SIGTERM lets
+    # uvicorn shut down in order (the lifespan flushes logs); the unit is
+    # Restart=on-failure, so a clean exit stays stopped.
+    os.kill(os.getpid(), signal.SIGTERM)
 
 ##############################################################################
 # OTP / EMAIL
@@ -1097,13 +1218,34 @@ def _probe_subnet_for_arp(subnet: str):
     except Exception:
         pass
 
+def _device_mac(device) -> str:
+    return str((device or {}).get("mac") or "").strip().lower()
+
+def _mac_online(mac: str) -> bool:
+    """True when `mac` is in the last ARP read as a complete (0x2) entry.
+
+    A substring test over the raw table also matched stale and incomplete
+    rows, and an empty MAC matched everything, which read as "owner is home".
+    """
+    if not mac:
+        return False
+    for line in _last_arp_cache.splitlines():
+        parts = line.split()
+        if len(parts) >= 4 and parts[2] == "0x2" and parts[3] == mac:
+            return True
+    return False
+
+def _present_device():
+    """The first registered device seen on the network, or None."""
+    return next((d for d in KNOWN_DEVICES if _mac_online(_device_mac(d))), None)
+
 def _check_device_presence() -> bool:
     """Return True if any registered device MAC appears in the kernel ARP table."""
     global _last_arp_cache
     try:
         with open('/proc/net/arp') as f:
             _last_arp_cache = f.read().lower()
-        return any(d.get('mac', '').lower() in _last_arp_cache for d in KNOWN_DEVICES)
+        return _present_device() is not None
     except Exception:
         return False
 
@@ -1123,32 +1265,37 @@ def _presence_poller():
         first = False
         if not KNOWN_DEVICES:
             continue
-        # Discover subnet once (lazy) and reprobe each cycle
-        if not _subnet:
-            _subnet = _get_local_subnet()
-        if _subnet:
-            _probe_subnet_for_arp(_subnet)
-            time.sleep(2)   # allow ARP responses to arrive
-        found = _check_device_presence()
-        log_system_update(
-            f"[PRESENCE] {'Match' if found else 'No match'} — "
-            f"{len([l for l in _last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
-        )
-        if found:
-            _owner_last_seen = time.time()
-            if not _owner_present:
-                _owner_present = True
-                dev  = next((d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "Unknown")
-                mac  = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
-                _append_presence_log("arrived", dev, mac)
-                log_system_update(f"[OWNER] {dev} arrived — device detected on network.")
+        # One bad cycle (a malformed device entry, a failed probe) must not end
+        # the thread: presence would then stay frozen until the next restart.
+        try:
+            # Discover subnet once (lazy) and reprobe each cycle
+            if not _subnet:
+                _subnet = _get_local_subnet()
+            if _subnet:
+                _probe_subnet_for_arp(_subnet)
+                time.sleep(2)   # allow ARP responses to arrive
+            found = _check_device_presence()
+            log_system_update(
+                f"[PRESENCE] {'Match' if found else 'No match'} — "
+                f"{len([l for l in _last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
+            )
+            if found:
+                _owner_last_seen = time.time()
+                if not _owner_present:
+                    _owner_present = True
+                    seen = _present_device() or {}
+                    dev, mac = seen.get("name", "Unknown"), _device_mac(seen)
+                    _append_presence_log("arrived", dev, mac)
+                    log_system_update(f"[OWNER] {dev} arrived — device detected on network.")
+                    push_urgent_ws()
+            elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
+                _owner_present = False
+                dev = next((d.get("name", "Unknown") for d in KNOWN_DEVICES), "Unknown")
+                _append_presence_log("left", dev, "")
+                log_system_update(f"[OWNER] {dev} away — device not seen for {OWNER_AWAY_GRACE}s.")
                 push_urgent_ws()
-        elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
-            _owner_present = False
-            dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
-            _append_presence_log("left", dev, "")
-            log_system_update(f"[OWNER] {dev} away — device not seen for {OWNER_AWAY_GRACE}s.")
-            push_urgent_ws()
+        except Exception as exc:
+            log_system_update(f"[PRESENCE] poll failed: {type(exc).__name__}: {exc}")
 
 ##############################################################################
 # ALERTS
@@ -1352,6 +1499,15 @@ class user_app_callback_class(app_callback_class):
             return self._frame
 
 
+try:
+    import zoneinfo as _zoneinfo
+    _IST = _zoneinfo.ZoneInfo("Asia/Kolkata")
+except Exception:
+    _IST = None   # no timezone data: fall back to the system clock
+
+_np_last_check = 0.0
+
+
 def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
     global _night_presence_alert_active, _night_presence_alert_end_time
@@ -1359,11 +1515,7 @@ def _check_night_presence():
         win = dict(NIGHT_PRESENCE_WINDOW)   # snapshot — avoids race with config update
     if not win.get("enabled", True):
         return
-    try:
-        import zoneinfo
-        now_ist = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Kolkata"))
-    except Exception:
-        now_ist = datetime.datetime.now()  # fallback: no timezone lib
+    now_ist = datetime.datetime.now(_IST) if _IST is not None else datetime.datetime.now()
     now_hm = now_ist.strftime("%H:%M")
     start, end = win.get("start", "01:30"), win.get("end", "05:00")
     # Handle window that wraps midnight (e.g. 23:00 → 05:00)
@@ -1401,7 +1553,9 @@ def app_callback(pad, info, user_data):
     # Camera blindness detection — flag if camera is covered/blocked
     global _blind_frame_count, _blind_alert_sent
     if frame is not None:
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        # Every 4th pixel each way: a covered lens is uniform at any scale, and
+        # this runs on every frame of a 60 fps pipeline.
+        gray = cv2.cvtColor(np.ascontiguousarray(frame[::4, ::4]), cv2.COLOR_RGB2GRAY)
         variance = float(np.var(gray))
         if variance < 50:   # nearly uniform → blocked/covered
             _blind_frame_count += 1
@@ -1495,7 +1649,15 @@ def app_callback(pad, info, user_data):
                     _watch_last_logged[_danger_key] = _now
                     log_scissors_detection(lbl)
                     _append_detection_perm("DANGER", lbl, conf, "alert triggered")
-        threading.Thread(target=_danger_work, daemon=True).start()
+        with _alert_lock:
+            _already_alerting = _alert_active
+        if _already_alerting and not _is_rising_edge:
+            # The alert is up: keeping it up is two lock grabs, done here. A
+            # new thread for each of the 60 frames a second a knife stays in
+            # view was the single largest cost of an alert.
+            trigger_software_alert()
+        else:
+            threading.Thread(target=_danger_work, daemon=True).start()
     elif not _triggered_labels:
         # Only reset when NO danger labels are seen at all this frame.
         # Avoids false reset during the 2-frame ramp-up period.
@@ -1527,7 +1689,16 @@ def app_callback(pad, info, user_data):
 
     user_data.person_detected = any(d.get_label().lower() == "person" for d in detections)
     if user_data.person_detected:
-        threading.Thread(target=_check_night_presence, daemon=True).start()
+        # Cheap and thread-safe, so it runs here; once a second is plenty for
+        # a banner that stays up ten seconds (it used to start a thread on
+        # every frame with a person in it).
+        global _np_last_check
+        if _now - _np_last_check >= 1.0:
+            _np_last_check = _now
+            try:
+                _check_night_presence()
+            except Exception as exc:
+                log_system_update(f"[NIGHT] presence check failed: {exc}")
         # Async cascade: push frame to secondary queue for MobileNet + MiDaS.
         # Non-blocking — if queue full, drop and record metric. Primary never waits.
         if frame is not None:
@@ -1888,12 +2059,70 @@ def create_refresh_token(username: str) -> str:
     }
     return token
 
+def _prune_expired_refresh_tokens():
+    now = time.time()
+    for t in [t for t, s in list(_refresh_tokens.items()) if s.get("expires", 0) <= now]:
+        _refresh_tokens.pop(t, None)
+
+def _user_signed_in(username: str) -> bool:
+    """True while `username` still holds a live session or refresh token.
+
+    Long-lived connections (the state socket, the camera streams) are checked
+    against this, not against the token they opened with: access tokens rotate
+    every 15 minutes, but sign-out, a password change and deleting the account
+    all leave the user with nothing, and the connection must end with it.
+    """
+    now = time.time()
+    if any(s.get("username") == username and s.get("expires", 0) > now
+           for s in list(_sessions.values())):
+        return True
+    return any(s.get("username") == username and s.get("expires", 0) > now
+               for s in list(_refresh_tokens.values()))
+
+def _is_cross_site(request) -> bool:
+    """True when the page calling the API lives on another site (the Vercel copy).
+
+    Such a page never gets our SameSite cookies back, so it is handed the
+    refresh token in the body and returns it in X-Garuda-Refresh.
+    """
+    origin = request.headers.get("origin") or ""
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if not origin or not host:
+        return False
+    origin_host = origin.split("://", 1)[-1].split("/", 1)[0].split(":")[0].lower()
+    return origin_host != host
+
+def _cookie_secure(request) -> bool:
+    """Secure cookies whenever the visitor reached us over HTTPS.
+
+    SECURE_COOKIES in .env forces it; otherwise the proxy says which scheme the
+    browser used, so a forgotten setting cannot send session cookies in clear.
+    """
+    if _COOKIE_SECURE:
+        return True
+    proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    return proto == "https" or '"scheme":"https"' in request.headers.get("cf-visitor", "").replace(" ", "")
+
+def _set_session_cookies(request, response, access_token, refresh_token=None, persistent=True):
+    """Set the session cookie and, when given, the refresh cookie.
+
+    `persistent=False` is "Remember me" left unticked: the refresh cookie is
+    then a browser-session cookie and goes when the browser closes.
+    """
+    secure = _cookie_secure(request)
+    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
+                        secure=secure, max_age=_ACCESS_DURATION)
+    if refresh_token:
+        response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
+                            secure=secure, path="/api/refresh",
+                            max_age=_REFRESH_DURATION if persistent else None)
+
 def get_refresh_token(token: str) -> dict | None:
     s = _refresh_tokens.get(token)
     if not s:
         return None
     if s["expires"] <= time.time():
-        del _refresh_tokens[token]
+        _refresh_tokens.pop(token, None)
         return None
     return s
 
@@ -1934,17 +2163,18 @@ def get_session(token):
         return None
     now = time.time()
     if s["expires"] <= now or now >= s.get("max_lifetime", now + 1):
-        del _sessions[token]
+        _sessions.pop(token, None)   # pop: another thread may have pruned it already
         return None
     return s
 
 def _prune_expired_sessions():
     """Remove sessions that have expired or exceeded their absolute lifetime."""
     now = time.time()
-    dead = [t for t, s in _sessions.items()
+    dead = [t for t, s in list(_sessions.items())
             if s["expires"] <= now or now >= s.get("max_lifetime", now + 1)]
     for t in dead:
-        del _sessions[t]
+        _sessions.pop(t, None)
+    _prune_expired_refresh_tokens()
 
 def require_session(request: Request):
     # X-Garuda-Token header takes priority (cross-origin API); cookie is browser fallback
@@ -1979,6 +2209,11 @@ def _home_state_summary():
         return HOME.summary()
     except Exception as exc:
         return {"error": type(exc).__name__}
+
+
+def _recent_alert_history(days: int = 120) -> dict:
+    cutoff = (datetime.date.today() - datetime.timedelta(days=days)).isoformat()
+    return {day: n for day, n in _alert_history.items() if str(day) >= cutoff}
 
 
 def get_state_dict():
@@ -2114,15 +2349,15 @@ def get_state_dict():
         "inference_fps": inference_fps,
         "owner_present": _owner_present,
         "home": _home_state_summary(),
-        "owner_name": next(
-            (d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), None
-        ),
+        "owner_name": (_present_device() or {}).get("name"),
         "known_devices": [
-            {"name": d["name"], "mac": d["mac"],
-             "online": d["mac"].lower() in _last_arp_cache}
+            {"name": d.get("name", ""), "mac": _device_mac(d),
+             "online": _mac_online(_device_mac(d))}
             for d in KNOWN_DEVICES
         ],
-        "alert_history": _alert_history,
+        # The heatmap shows 13 weeks; the full history (one key per day, for
+        # ever) was being sent to every client every two seconds.
+        "alert_history": _recent_alert_history(),
         # Security health
         "watchdog_ok": watchdog_ok,
         "camera_blind": camera_blind,
@@ -2138,7 +2373,7 @@ def get_state_dict():
         "presence_log_count": len(_presence_log),
         # Offline queue
         "net_online": _net_online,
-        "pending_sync": get_pending_count(),
+        "pending_sync": get_pending_count(max_age=10.0),
         # Clip recording state (lets JS reset button when server auto-stops)
         "clip_recording": _clip_writer is not None,
     }
@@ -2205,24 +2440,42 @@ def _schedule_monitor():
         "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
         "idle": "MODE_IDLE", "night": "MODE_NIGHT",
     }
+    # What each schedule last asked for. A mode is only written when that
+    # changes (the window opens or closes, or the schedule is edited): writing
+    # it on every pass undid, within 30 s, any switch a person flipped by hand
+    # inside the window.
+    applied: dict = {}
     while True:
-        sched_snap = dict(MODE_SCHEDULE)   # snapshot outside lock — avoids racing with update_config
-        if sched_snap:
-            now_str = datetime.datetime.now().strftime("%H:%M")
-            changed = False
-            with _mode_lock:
-                for mode_name, sched in sched_snap.items():
-                    start = sched.get("start", "")
-                    end   = sched.get("end", "")
-                    if not start or not end or mode_name not in mode_map:
-                        continue
-                    in_range = _time_in_range(start, end, now_str)
-                    gkey = mode_map[mode_name]
-                    if globals().get(gkey) != in_range:
-                        globals()[gkey] = in_range
-                        changed = True
-            if changed:
-                push_urgent_ws()
+        try:
+            sched_snap = dict(MODE_SCHEDULE)   # snapshot outside lock — avoids racing with update_config
+            for gone in [m for m in applied if m not in sched_snap]:
+                applied.pop(gone, None)
+            if sched_snap:
+                now_str = datetime.datetime.now().strftime("%H:%M")
+                changed = False
+                with _mode_lock:
+                    for mode_name, sched in sched_snap.items():
+                        if not isinstance(sched, dict):
+                            continue
+                        start = sched.get("start", "")
+                        end   = sched.get("end", "")
+                        if not start or not end or mode_name not in mode_map:
+                            continue
+                        in_range = _time_in_range(start, end, now_str)
+                        key = (start, end, in_range)
+                        if applied.get(mode_name) == key:
+                            continue
+                        applied[mode_name] = key
+                        gkey = mode_map[mode_name]
+                        if globals().get(gkey) != in_range:
+                            globals()[gkey] = in_range
+                            changed = True
+                            log_system_update(
+                                f"[MODE] {mode_name} {'on' if in_range else 'off'} by schedule ({start}-{end})")
+                if changed:
+                    push_urgent_ws()
+        except Exception as exc:
+            log_system_update(f"[MODE] schedule check failed: {type(exc).__name__}: {exc}")
         time.sleep(30)   # sleep AFTER check so first run is immediate; 30 s ≤ worst-case lag
 
 ##############################################################################
@@ -2233,7 +2486,7 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def _lifespan(app):
     global _event_loop, _ws_trigger, _ws_broadcaster_task
-    _event_loop = asyncio.get_event_loop()
+    _event_loop = asyncio.get_running_loop()
     _ws_trigger = asyncio.Event()
     _init_event_db()
     _load_alert_history()
@@ -2271,6 +2524,8 @@ async def _lifespan(app):
 
 fastapi_app = FastAPI(title="Garuda Security System", lifespan=_lifespan)
 
+_VERCEL_PROJECT_RE = re.escape(os.environ.get("GARUDA_VERCEL_PROJECT", "garuda-26").strip().lower() or "garuda-26")
+
 # CORS — restrict to known origins
 fastapi_app.add_middleware(
     CORSMiddleware,
@@ -2279,13 +2534,18 @@ fastapi_app.add_middleware(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ],
-    allow_origin_regex=r"^https://([a-z0-9-]+\.)*veeramanikanta\.in$|^https://[a-z0-9-]+\.vercel\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    # Credentials are allowed, so the Vercel rule names this project's own
+    # deployments (garuda-26, garuda-26-git-<branch>-..., garuda-26-<hash>-...)
+    # rather than every site anyone hosts on vercel.app.
+    allow_origin_regex=(r"^https://([a-z0-9-]+\.)*veeramanikanta\.in$"
+                        r"|^https://" + _VERCEL_PROJECT_RE + r"(-[a-z0-9-]+)?\.vercel\.app$"
+                        r"|^http://(localhost|127\.0\.0\.1)(:\d+)?$"),
     allow_credentials=True,
     # PATCH and DELETE are used by /api/home (devices, scenes, schedules,
     # rules). The Vercel front end is cross-origin, so without them the
     # browser's preflight fails and those buttons silently do nothing.
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
-    allow_headers=["Content-Type", "X-Garuda-Token"],
+    allow_headers=["Content-Type", "X-Garuda-Token", "X-Garuda-Refresh"],
 )
 
 # Global rate-limit middleware — applied to all API endpoints
@@ -2298,7 +2558,7 @@ async def global_rate_limit(request: Request, call_next):
     path = request.url.path
     _eval_tok = os.environ.get("GARUDA_EVAL_TOKEN", "")
     _tok_hdr = request.headers.get("X-Eval-Token", "")
-    _eval_bypass = bool(_eval_tok) and _tok_hdr == _eval_tok
+    _eval_bypass = bool(_eval_tok) and hmac.compare_digest(_tok_hdr.encode(), _eval_tok.encode())
     if not _eval_bypass and not any(path.startswith(p) for p in _RATE_EXEMPT_PREFIXES):
         token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
         signed_in = bool(token) and get_session(token) is not None
@@ -2338,6 +2598,10 @@ async def security_headers(request: Request, call_next):
         "connect-src 'self' wss: ws: https://*.elevenlabs.io; "
         "frame-ancestors 'none'"
     )
+    # Answers from the API describe this moment and this user; nothing between
+    # the Pi and the browser should keep a copy.
+    if request.url.path.startswith("/api/") and "cache-control" not in response.headers:
+        response.headers["Cache-Control"] = "no-store"
     return response
 
 # Serve static files from garuda_web/
@@ -2503,6 +2767,8 @@ def _home_set_mode(mode, value, actor):
     global MODE_DND
     names = {"dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF", "idle": "MODE_IDLE",
              "night": "MODE_NIGHT", "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY"}
+    if mode not in names:
+        raise ValueError(f"unknown mode: {mode!r}")
     with _mode_lock:
         globals()[names[mode]] = bool(value)
         if mode == "emergency" and value:
@@ -2683,7 +2949,7 @@ class WebRTCOfferRequest(BaseModel):
     type: str
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(max_length=2000)
 
 # ── Routes ───────────────────────────────────────────────────────────────────
 
@@ -2702,7 +2968,9 @@ async def index(request: Request):
             f'<html lang="en" data-theme="light" data-product="{product}">', 1)
         if product == "home":
             html = html.replace("<title>Garuda</title>", "<title>Drishti</title>", 1)
-        return HTMLResponse(html)
+        # Always revalidated: the page names the versioned scripts, so a stale
+        # copy of it pins a browser to an old build.
+        return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
     return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
 
 @fastapi_app.get("/favicon.ico", include_in_schema=False)
@@ -2719,7 +2987,7 @@ async def pwa_manifest():
 async def service_worker():
     p = _static_dir / "sw.js"
     return FileResponse(str(p), media_type="application/javascript",
-                        headers={"Service-Worker-Allowed": "/"}) if p.exists() else Response("", media_type="application/javascript")
+                        headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"}) if p.exists() else Response("", media_type="application/javascript")
 
 @fastapi_app.get("/api/users-public")
 async def users_public():
@@ -2741,9 +3009,21 @@ async def login(data: LoginRequest, request: Request, response: Response):
         raise HTTPException(429, "Too many failed attempts. Try again later.")
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    u = data.username.strip()
-    p = data.password.strip()
-    if u in USERS and USERS[u].get("role") == "admin":
+    u = data.username.strip()[:64]
+    p = data.password.strip()[:256]
+    user = USERS.get(u)
+    # PBKDF2 at 600k rounds takes a noticeable fraction of a second on the Pi;
+    # on the event loop it froze the state socket and every camera stream for
+    # that long. The same work is done for an unknown name, so the answer
+    # takes as long either way.
+    stored = user["password"] if user else _DUMMY_PASSWORD_HASH
+    password_ok = await asyncio.to_thread(_verify_password, p, stored)
+    if user is None or not password_ok:
+        _record_login_failure(ip)
+        raise HTTPException(401, "Invalid username or password.")
+    if user.get("role") == "admin":
+        # Only said once the password has been proved: before, any name could
+        # be tested for "is this an admin?" without knowing anything.
         # Test-only bypass for the P1-4 evaluation harness. Set GARUDA_EVAL_OTP_BYPASS=1
         # in the environment before starting the server to allow a named service admin
         # (GARUDA_EVAL_SERVICE_ADMIN) to sign in via /api/login without the email OTP.
@@ -2751,31 +3031,27 @@ async def login(data: LoginRequest, request: Request, response: Response):
         _allowed = os.environ.get("GARUDA_EVAL_SERVICE_ADMIN", "")
         if not (_bypass and _allowed and u == _allowed):
             raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
-    if u in USERS and _verify_password(p, USERS[u]["password"]):
-        # Auto-migrate plaintext passwords to hashed
-        if not USERS[u]["password"].startswith("pbkdf2:"):
-            USERS[u]["password"] = _hash_password(p)
-            save_users()
-        _clear_login_failure(ip)
-        access_token = create_session(u)
-        refresh_token = create_refresh_token(u)
-        response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
-                            secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
-        response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
-                            secure=_COOKIE_SECURE, max_age=_REFRESH_DURATION, path="/api/refresh")
-        log_system_update(f"Login: {u}")
-        USERS[u]["history"]["logins"].append(
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        save_users()
-        return {
-            "role": USERS[u]["role"],
-            "username": u,
-            "display_name": USERS[u].get("display_name", u),
-            "box_color": USERS[u].get("box_color", "#1565c0"),
-            "token": access_token,   # for cross-origin clients that can't use cookies
-        }
-    _record_login_failure(ip)
-    raise HTTPException(401, "Invalid username or password.")
+    # Auto-migrate plaintext passwords to hashed
+    if not user["password"].startswith("pbkdf2:"):
+        user["password"] = await asyncio.to_thread(_hash_password, p)
+    _clear_login_failure(ip)
+    access_token = create_session(u)
+    refresh_token = create_refresh_token(u)
+    _set_session_cookies(request, response, access_token, refresh_token,
+                         persistent=bool(data.remember_me))
+    log_system_update(f"Login: {u}")
+    _remember_user_activity(u, "logins", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    await asyncio.to_thread(save_users)
+    body = {
+        "role": user["role"],
+        "username": u,
+        "display_name": user.get("display_name", u),
+        "box_color": user.get("box_color", "#1565c0"),
+        "token": access_token,   # for cross-origin clients that can't use cookies
+    }
+    if _is_cross_site(request):
+        body["refresh_token"] = refresh_token
+    return body
 
 @fastapi_app.get("/api/session")
 async def session_info(session=Depends(require_session)):
@@ -2792,12 +3068,12 @@ async def session_info(session=Depends(require_session)):
 @fastapi_app.post("/api/logout")
 async def logout(request: Request, response: Response):
     token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-    if token and token in _sessions:
-        del _sessions[token]
+    if token:
+        _sessions.pop(token, None)
     # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
-    refresh = request.cookies.get("garuda_refresh")
-    if refresh and refresh in _refresh_tokens:
-        del _refresh_tokens[refresh]
+    for refresh in (request.cookies.get("garuda_refresh"), request.headers.get("X-Garuda-Refresh")):
+        if refresh:
+            _refresh_tokens.pop(refresh, None)
     response.delete_cookie("garuda_session")
     response.delete_cookie("garuda_refresh", path="/api/refresh")
     return {"ok": True}
@@ -2805,7 +3081,10 @@ async def logout(request: Request, response: Response):
 @fastapi_app.post("/api/refresh")
 async def refresh_session(request: Request, response: Response):
     """Exchange a valid refresh token for a new 15-minute access token."""
-    refresh = request.cookies.get("garuda_refresh")
+    # The header is for a front end hosted on another site (Vercel): its
+    # browser never sends our SameSite cookie back, so it was signed out every
+    # 15 minutes when the access token ran out.
+    refresh = request.cookies.get("garuda_refresh") or request.headers.get("X-Garuda-Refresh")
     if not refresh:
         raise HTTPException(401, "No refresh token.")
     rs = get_refresh_token(refresh)
@@ -2813,11 +3092,10 @@ async def refresh_session(request: Request, response: Response):
         raise HTTPException(401, "Refresh token expired or invalid. Please log in again.")
     u = rs["username"]
     if u not in USERS:
-        del _refresh_tokens[refresh]
+        _refresh_tokens.pop(refresh, None)
         raise HTTPException(401, "User no longer exists.")
     access_token = create_session(u)
-    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
-                        secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
+    _set_session_cookies(request, response, access_token)
     return {
         "token": access_token,
         "role": USERS[u]["role"],
@@ -2832,21 +3110,26 @@ async def admin_send_otp(data: OTPRequest, request: Request, response: Response)
         raise HTTPException(429, "Too many failed attempts. Try again later.")
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts
-    u = data.username.strip()
-    p = data.password.strip()
-    if u not in USERS or not _verify_password(p, USERS[u]["password"]) or USERS[u]["role"] != "admin":
+    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts, _admin_otp_attempts
+    u = data.username.strip()[:64]
+    p = data.password.strip()[:256]
+    user = USERS.get(u)
+    stored = user["password"] if user else _DUMMY_PASSWORD_HASH
+    password_ok = await asyncio.to_thread(_verify_password, p, stored)
+    if user is None or not password_ok or user.get("role") != "admin":
         _record_login_failure(ip)
         raise HTTPException(401, "Invalid admin credentials.")
     # Auto-migrate plaintext passwords to hashed
-    if not USERS[u]["password"].startswith("pbkdf2:"):
-        USERS[u]["password"] = _hash_password(p)
-        save_users()
+    if not user["password"].startswith("pbkdf2:"):
+        user["password"] = await asyncio.to_thread(_hash_password, p)
+        await asyncio.to_thread(save_users)
     ADMIN_OTP = generate_otp_code(6)
     _admin_otp_user = u          # store server-side so step 2 cannot be hijacked
     _admin_otp_ts = time.time()  # for expiry check
+    _admin_otp_attempts = 0      # a new code gets its own three tries
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, ADMIN_OTP)
+    # SMTP can take ten seconds; off the event loop so nothing else waits on it.
+    ok, err = await asyncio.to_thread(send_otp_via_email, dest, ADMIN_OTP)
     if not ok:
         return {"ok": False, "error": err}
     return {"ok": True}
@@ -2865,7 +3148,7 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     if _admin_otp_attempts >= 3:
         ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
         raise HTTPException(401, "Too many incorrect attempts. Please restart login.")
-    if not hmac.compare_digest(data.otp.strip(), ADMIN_OTP):
+    if not hmac.compare_digest(data.otp.strip().encode(), str(ADMIN_OTP).encode()):
         _admin_otp_attempts += 1
         raise HTTPException(401, "Invalid OTP.")
     u = _admin_otp_user   # use server-stored username, not client-supplied
@@ -2876,17 +3159,17 @@ async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: R
     _clear_login_failure(ip)
     access_token = create_session(u)
     refresh_token = create_refresh_token(u)
-    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
-                        secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
-    response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
-                        secure=_COOKIE_SECURE, max_age=_REFRESH_DURATION, path="/api/refresh")
+    _set_session_cookies(request, response, access_token, refresh_token)
     log_system_update(f"Admin login: {u}")
-    return {
+    body = {
         "role": "admin",
         "username": u,
         "display_name": USERS[u].get("display_name", u),
         "token": access_token,   # for cross-origin clients
     }
+    if _is_cross_site(request):
+        body["refresh_token"] = refresh_token
+    return body
 
 @fastapi_app.post("/api/forgot/send-otp")
 async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
@@ -2901,7 +3184,7 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
     global USER_FORGOT_OTP; USER_FORGOT_OTP = otp   # test-facing alias
     # Send to the user's own email if stored, else fall back to admin recipient
     dest = USERS[u].get("email") or (EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER)
-    ok, err = send_otp_via_email(dest, otp)
+    ok, err = await asyncio.to_thread(send_otp_via_email, dest, otp)
     if not ok:
         _forgot_otp_store.pop(u, None)
         return {"ok": False, "error": err}
@@ -2910,15 +3193,23 @@ async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
 @fastapi_app.post("/api/forgot/reset")
 async def forgot_reset(data: ForgotPasswordRequest, request: Request):
     global USER_FORGOT_OTP
+    ip = _get_client_ip(request)
+    if _is_login_locked(ip):
+        raise HTTPException(429, "Too many failed attempts. Try again later.")
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
     # username optional: if omitted, find user by matching OTP across store
     if data.username:
         u = data.username.strip()
     else:
-        u = next((k for k, v in _forgot_otp_store.items()
-                  if v.get("otp") == data.otp.strip()), None)
+        guess = data.otp.strip()
+        u = next((k for k, v in list(_forgot_otp_store.items())
+                  if hmac.compare_digest(str(v.get("otp", "")).encode(), guess.encode())), None)
         if not u:
+            # A guess with no username used to cost nothing: no attempt was
+            # counted against anyone. It now counts against the caller.
+            if _forgot_otp_store:
+                _record_login_failure(ip)
             raise HTTPException(401, "No OTP pending.")
     state = _forgot_otp_store.get(u)
     if not state:
@@ -2932,8 +3223,9 @@ async def forgot_reset(data: ForgotPasswordRequest, request: Request):
         _forgot_otp_store.pop(u, None)
         USER_FORGOT_OTP = None
         raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
-    if not hmac.compare_digest(data.otp.strip(), state["otp"]):
+    if not hmac.compare_digest(data.otp.strip().encode(), str(state["otp"]).encode()):
         state["attempts"] += 1
+        _record_login_failure(ip)
         if state["attempts"] >= 3:
             _forgot_otp_store.pop(u, None)
             USER_FORGOT_OTP = None
@@ -2943,9 +3235,9 @@ async def forgot_reset(data: ForgotPasswordRequest, request: Request):
         raise HTTPException(400, err)
     if u not in USERS:
         raise HTTPException(404, "User not found.")
-    USERS[u]["password"] = _hash_password(data.new_password.strip())
+    USERS[u]["password"] = await asyncio.to_thread(_hash_password, data.new_password.strip())
     _invalidate_user_sessions(u)
-    save_users()
+    await asyncio.to_thread(save_users)
     log_system_update(f"Password reset for {u}.")
     _forgot_otp_store.pop(u, None)
     USER_FORGOT_OTP = None
@@ -2953,7 +3245,8 @@ async def forgot_reset(data: ForgotPasswordRequest, request: Request):
 
 @fastapi_app.get("/api/state")
 async def get_state(session=Depends(require_session)):
-    return get_state_dict()
+    payload = await asyncio.to_thread(get_state_dict)
+    return _state_for_role(payload, session["role"])
 
 @fastapi_app.get("/api/cascade_metrics")
 async def get_cascade_metrics(session=Depends(require_session)):
@@ -2965,7 +3258,7 @@ def _require_eval_token(request: Request):
     if not expected:
         raise HTTPException(404, "Not found")
     got = request.headers.get("X-Eval-Token", "")
-    if got != expected:
+    if not hmac.compare_digest(got.encode(), expected.encode()):
         raise HTTPException(403, "Bad eval token")
 
 class EvalInjectRequest(BaseModel):
@@ -2982,7 +3275,7 @@ async def eval_inject_danger(data: EvalInjectRequest, request: Request):
     trigger_software_alert()
     if data.email:
         try:
-            send_email_alert()
+            await asyncio.to_thread(send_email_alert)
         except Exception as e:
             log_system_update(f"[EVAL_INJECT] email failed: {e}")
     return {"ok": True, "t_request": t_req, "t_alert": time.time(),
@@ -3115,6 +3408,8 @@ async def set_mode(data: ModeRequest, session=Depends(require_session)):
     push_urgent_ws()
     return {"ok": True, "modes": get_state_dict()["modes"]}
 
+_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
 @fastapi_app.get("/api/users")
 async def list_users(session=Depends(require_admin)):
     result = {}
@@ -3140,14 +3435,16 @@ async def add_user(data: AddUserRequest, session=Depends(require_admin)):
     err = _validate_password_strength(data.password)
     if err:
         raise HTTPException(400, err)
+    if not _COLOR_RE.match(data.box_color or ""):
+        raise HTTPException(400, "Colour must look like #1565c0.")
     USERS[un] = {
-        "password": _hash_password(data.password.strip()),
+        "password": await asyncio.to_thread(_hash_password, data.password.strip()),
         "role": "user",
-        "display_name": data.display_name or un.capitalize(),
+        "display_name": (data.display_name or un.capitalize()).strip()[:64],
         "box_color": data.box_color,
         "history": {"logins": [], "narada_activity": []},
     }
-    save_users()
+    await asyncio.to_thread(save_users)
     log_system_update(f"User added: {un}")
     return {"ok": True}
 
@@ -3157,27 +3454,41 @@ async def delete_user(data: DeleteUserRequest, session=Depends(require_admin)):
         raise HTTPException(400, "Cannot delete the admin account.")
     if data.username not in USERS:
         raise HTTPException(404, "User not found.")
+    if USERS[data.username].get("role") == "admin":
+        # Includes the caller: an admin deleting the last admin (or themselves)
+        # would leave the master key as the only way back in.
+        raise HTTPException(400, "Admin accounts cannot be deleted here.")
     del USERS[data.username]
-    save_users()
+    # The account is gone; so are its sessions, refresh tokens and any reset
+    # code in flight. They used to stay valid until they expired by themselves.
+    _invalidate_user_sessions(data.username)
+    _forgot_otp_store.pop(data.username, None)
+    await asyncio.to_thread(save_users)
     log_system_update(f"User deleted: {data.username}")
     return {"ok": True}
 
 @fastapi_app.post("/api/users/update")
-async def update_user(data: UpdateUserRequest, session=Depends(require_admin)):
+async def update_user(data: UpdateUserRequest, request: Request, session=Depends(require_admin)):
     if data.username not in USERS:
         raise HTTPException(404, "User not found.")
+    if data.box_color is not None and not _COLOR_RE.match(data.box_color):
+        raise HTTPException(400, "Colour must look like #1565c0.")
     if data.new_password:
         err = _validate_password_strength(data.new_password)
         if err:
             raise HTTPException(400, err)
-        USERS[data.username]["password"] = _hash_password(data.new_password.strip())
+        USERS[data.username]["password"] = await asyncio.to_thread(_hash_password, data.new_password.strip())
         current_token = session.get("token")
-        _invalidate_user_sessions(data.username, except_token=current_token)
+        # The admin doing the change keeps their own way back in; every other
+        # session and refresh token of that account is revoked.
+        own_refresh = request.cookies.get("garuda_refresh") or request.headers.get("X-Garuda-Refresh")
+        _invalidate_user_sessions(data.username, except_token=current_token,
+                                  except_refresh=own_refresh)
     if data.display_name is not None:
-        USERS[data.username]["display_name"] = data.display_name
+        USERS[data.username]["display_name"] = data.display_name.strip()[:64]
     if data.box_color is not None:
         USERS[data.username]["box_color"] = data.box_color
-    save_users()
+    await asyncio.to_thread(save_users)
     log_system_update(f"User updated: {data.username}")
     return {"ok": True}
 
@@ -3197,6 +3508,17 @@ async def get_config(session=Depends(require_admin)):
         "night_presence_window": NIGHT_PRESENCE_WINDOW,
     }
 
+# A real time of day: "\d{2}:\d{2}" also accepted 99:99, which then never matched.
+_HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+def _clean_labels(labels, limit: int = 50) -> list:
+    out = []
+    for label in labels or []:
+        label = str(label).strip()[:64]
+        if label and label not in out:
+            out.append(label)
+    return out[:limit]
+
 @fastapi_app.post("/api/config")
 async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
     global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
@@ -3205,9 +3527,23 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
     if data.detection_threshold is not None:
         DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
     if data.email_sender is not None:
-        EMAIL_SENDER = data.email_sender
+        sender = data.email_sender.strip()
+        if sender and not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', sender):
+            raise HTTPException(400, f"Invalid sender address: {sender}")
+        EMAIL_SENDER = sender
     if data.email_sender_pass is not None:
-        EMAIL_SENDER_PASS = data.email_sender_pass
+        new_pass = data.email_sender_pass.strip()
+        if len(new_pass) > 128 or any(c in new_pass for c in "\r\n\x00"):
+            raise HTTPException(400, "Invalid app password.")
+        EMAIL_SENDER_PASS = new_pass
+        # Kept out of config.json on purpose, which meant a password typed
+        # into the Email page worked until the next restart and then silently
+        # reverted. It goes to .env (0600), next to the other secrets.
+        try:
+            await asyncio.to_thread(_set_env_vars, HOME_ENV_PATH, {"EMAIL_SENDER_PASS": new_pass})
+            os.environ["EMAIL_SENDER_PASS"] = new_pass
+        except (OSError, ValueError) as exc:
+            log_system_update(f"Email password applied but not saved: {exc}")
     if data.email_recipients is not None:
         if len(data.email_recipients) > 10:
             raise HTTPException(400, "Maximum 10 email recipients allowed.")
@@ -3224,18 +3560,22 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
             MODE_PRIVACY = data.privacy
     # Accept danger_labels (list) or legacy danger_label (single)
     if data.danger_labels is not None:
-        DANGER_LABELS = [l.strip() for l in data.danger_labels if l.strip()]
+        cleaned = _clean_labels(data.danger_labels)
+        if not cleaned:
+            # An empty list would switch every alert off without saying so.
+            raise HTTPException(400, "At least one danger label is required.")
+        DANGER_LABELS = cleaned
         if app_gst and hasattr(app_gst, 'user_data'):
             app_gst.user_data.danger_labels = list(DANGER_LABELS)
     elif data.danger_label is not None:
-        new_lbl = data.danger_label.strip()
+        new_lbl = data.danger_label.strip()[:64]
         if new_lbl:
             DANGER_LABELS = [new_lbl]
             if app_gst and hasattr(app_gst, 'user_data'):
                 app_gst.user_data.danger_labels = list(DANGER_LABELS)
     if data.watch_labels is not None:
         global WATCH_LABELS
-        WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
+        WATCH_LABELS = _clean_labels(data.watch_labels)
     if data.mode_schedule is not None:
         global MODE_SCHEDULE
         # Validate structure: {mode: {start: HH:MM, end: HH:MM}}
@@ -3245,17 +3585,17 @@ async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin
             if k in valid_modes and isinstance(v, dict):
                 s = v.get("start", "")
                 e = v.get("end", "")
-                if re.match(r'^\d{2}:\d{2}$', s) and re.match(r'^\d{2}:\d{2}$', e):
+                if isinstance(s, str) and isinstance(e, str) and _HHMM_RE.match(s) and _HHMM_RE.match(e):
                     clean[k] = {"start": s, "end": e}
         MODE_SCHEDULE = clean
     # Night presence window
     if data.night_presence_start is not None or data.night_presence_end is not None or data.night_presence_enabled is not None:
         with _np_lock:
             if data.night_presence_start is not None:
-                if re.match(r'^\d{2}:\d{2}$', data.night_presence_start):
+                if _HHMM_RE.match(data.night_presence_start):
                     NIGHT_PRESENCE_WINDOW["start"] = data.night_presence_start
             if data.night_presence_end is not None:
-                if re.match(r'^\d{2}:\d{2}$', data.night_presence_end):
+                if _HHMM_RE.match(data.night_presence_end):
                     NIGHT_PRESENCE_WINDOW["end"] = data.night_presence_end
             if data.night_presence_enabled is not None:
                 NIGHT_PRESENCE_WINDOW["enabled"] = data.night_presence_enabled
@@ -3300,7 +3640,7 @@ async def get_arp_table(session=Depends(require_admin)):
                     entries.append({"ip": parts[0], "mac": parts[3]})
     except Exception as e:
         raise HTTPException(500, str(e))
-    registered_macs = {d["mac"].lower() for d in KNOWN_DEVICES}
+    registered_macs = {_device_mac(d) for d in KNOWN_DEVICES}
     for e in entries:
         e["registered"] = e["mac"].lower() in registered_macs
     return {"entries": entries}
@@ -3317,13 +3657,13 @@ def _do_presence_check():
         _owner_last_seen = time.time()
         if not _owner_present:
             _owner_present = True
-            dev = next((d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "Unknown")
-            mac = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
+            seen = _present_device() or {}
+            dev, mac = seen.get("name", "Unknown"), _device_mac(seen)
             _append_presence_log("arrived", dev, mac)
             log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
     elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
         _owner_present = False
-        dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
+        dev = next((d.get("name", "Unknown") for d in KNOWN_DEVICES), "Unknown")
         _append_presence_log("left", dev, "")
         log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
 
@@ -3340,18 +3680,23 @@ async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
     mac = data.mac.strip().lower()
     if not re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
         raise HTTPException(400, "Invalid MAC address format (use aa:bb:cc:dd:ee:ff)")
-    if any(d['mac'].lower() == mac for d in KNOWN_DEVICES):
+    if any(_device_mac(d) == mac for d in KNOWN_DEVICES):
         raise HTTPException(400, "Device with this MAC already registered")
-    KNOWN_DEVICES.append({"name": data.name.strip(), "mac": mac})
+    name = data.name.strip()[:64]
+    if not name:
+        raise HTTPException(400, "Device name is required.")
+    if len(KNOWN_DEVICES) >= 32:
+        raise HTTPException(400, "Maximum 32 known devices.")
+    KNOWN_DEVICES.append({"name": name, "mac": mac})
     await _async_save_config()
-    log_system_update(f"Known device added: {data.name.strip()} ({mac})")
+    log_system_update(f"Known device added: {name} ({mac})")
     return {"ok": True, "devices": KNOWN_DEVICES}
 
 @fastapi_app.post("/api/devices/delete")
 async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin)):
     mac = data.mac.strip().lower()
     before = len(KNOWN_DEVICES)
-    KNOWN_DEVICES[:] = [d for d in KNOWN_DEVICES if d['mac'].lower() != mac]
+    KNOWN_DEVICES[:] = [d for d in KNOWN_DEVICES if _device_mac(d) != mac]
     if len(KNOWN_DEVICES) == before:
         raise HTTPException(404, "Device not found")
     await _async_save_config()
@@ -3361,7 +3706,7 @@ async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin
 @fastapi_app.post("/api/email/test")
 async def test_email(session=Depends(require_admin)):
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, "TEST-123")
+    ok, err = await asyncio.to_thread(send_otp_via_email, dest, "TEST-123")
     if not ok:
         return {"ok": False, "error": err}
     return {"ok": True}
@@ -3379,6 +3724,18 @@ async def get_logs(session=Depends(require_logs)):
 @fastapi_app.get("/api/logs/download")
 async def download_logs(session=Depends(require_logs)):
     """Return all permanent logs as a single combined text file for download."""
+    # Up to 30 MB of files are read here: on a worker thread, not the loop.
+    content = await asyncio.to_thread(_combined_log_text)
+    fname = f"garuda-full-log-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
+    return Response(
+        content=content,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
+
+
+def _combined_log_text() -> str:
+    _do_flush_logs()   # include lines still waiting in the write buffer
     parts = []
     stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     parts.append(f"# Garuda Security System — Full Log Export")
@@ -3406,7 +3763,7 @@ async def download_logs(session=Depends(require_logs)):
                     parts.append("(no entries)")
             else:
                 if os.path.exists(filepath):
-                    with open(filepath, encoding="utf-8") as f:
+                    with open(filepath, encoding="utf-8", errors="replace") as f:
                         content = f.read().strip()
                     parts.append(content if content else "(no entries)")
                 else:
@@ -3415,34 +3772,51 @@ async def download_logs(session=Depends(require_logs)):
             parts.append(f"(error reading log: {ex})")
         parts.append("")
 
-    content = "\n".join(parts)
-    fname = f"garuda-full-log-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
-    return Response(
-        content=content,
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
-    )
+    return "\n".join(parts)
 
 ##############################################################################
 # MASTER KEY ENDPOINTS
 ##############################################################################
+def _master_key_matches(key: str, valid_keys) -> bool:
+    """Constant-time check of `key` against every valid key (bytes: no TypeError on non-ASCII)."""
+    if not key:
+        return False
+    probe = key.encode()
+    hit = False
+    for candidate in valid_keys:
+        if hmac.compare_digest(probe, str(candidate).encode()):
+            hit = True
+    return hit
+
+_MASTER_OTP_TTL = 300
+_master_otp_ts = 0.0
+_master_otp_attempts = 0
+
 @fastapi_app.post("/api/master_key/login")
 async def master_key_login(data: dict, request: Request, response: Response):
     """Log in with only a master key — issues an admin session with logs unlocked."""
+    ip = _get_client_ip(request)
+    if _is_login_locked(ip):
+        raise HTTPException(429, "Too many failed attempts. Try again later.")
     if not _check_rate_limit(request):
         raise HTTPException(429, "Too many requests. Try again later.")
-    key = (data.get("key") or "").strip()
+    key = str(data.get("key") or "").strip()
     # Also accept the bootstrap env var key in case keys file hasn't been written yet
     _env_key = os.environ.get("MASTER_KEY", "").strip()
     valid_keys = list(MASTER_KEYS) + ([_env_key] if _env_key else [])
-    if not key or not any(hmac.compare_digest(key, k) for k in valid_keys):
+    if not _master_key_matches(key, valid_keys):
+        # Same five-strikes lockout as a password: this key is a full admin
+        # sign-in, and before it could be guessed at 30 tries a minute for ever.
+        _record_login_failure(ip)
         raise HTTPException(401, "Invalid master key.")
+    _clear_login_failure(ip)
     # Persist env key to file so future restarts find it
     if key not in MASTER_KEYS:
         MASTER_KEYS.append(key)
         save_master_keys()
     token = create_master_session()
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=3600)
+    response.set_cookie("garuda_session", token, httponly=True, samesite="lax",
+                        secure=_cookie_secure(request), max_age=3600)
     log_system_update("Master key login.")
     return {
         "role": "admin",
@@ -3455,10 +3829,16 @@ async def master_key_login(data: dict, request: Request, response: Response):
 @fastapi_app.post("/api/master_key/verify")
 async def master_key_verify(data: dict, request: Request, session=Depends(require_admin)):
     """Unlock logs on an existing admin session by verifying a master key."""
-    key = (data.get("key") or "").strip()
-    if not key or not any(hmac.compare_digest(key, k) for k in MASTER_KEYS):
+    ip = _get_client_ip(request)
+    if _is_login_locked(ip):
+        raise HTTPException(429, "Too many failed attempts. Try again later.")
+    key = str(data.get("key") or "").strip()
+    if not _master_key_matches(key, MASTER_KEYS):
+        _record_login_failure(ip)
         raise HTTPException(401, "Invalid master key.")
-    token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token")
+    # The session the request was authenticated with (header first, as in
+    # require_session); the cookie-first lookup here could unlock a different one.
+    token = session.get("token")
     if token and token in _sessions:
         _sessions[token]["logs_unlocked"] = True
     return {"ok": True, "logs_unlocked": True}
@@ -3477,13 +3857,15 @@ async def list_master_keys(session=Depends(require_admin)):
 @fastapi_app.post("/api/master_key/request_otp")
 async def master_key_request_otp(data: dict, session=Depends(require_admin)):
     """Step 1 of adding a master key: verify an existing key, then email OTP."""
-    global MASTER_KEY_OTP
-    current = (data.get("current_key") or "").strip()
-    if not current or not any(hmac.compare_digest(current, k) for k in MASTER_KEYS):
+    global MASTER_KEY_OTP, _master_otp_ts, _master_otp_attempts
+    current = str(data.get("current_key") or "").strip()
+    if not _master_key_matches(current, MASTER_KEYS):
         raise HTTPException(401, "Current master key is incorrect.")
     MASTER_KEY_OTP = generate_otp_code(6)
+    _master_otp_ts = time.time()
+    _master_otp_attempts = 0
     dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, MASTER_KEY_OTP)
+    ok, err = await asyncio.to_thread(send_otp_via_email, dest, MASTER_KEY_OTP)
     if not ok:
         return {"ok": False, "error": err}
     return {"ok": True}
@@ -3491,11 +3873,24 @@ async def master_key_request_otp(data: dict, session=Depends(require_admin)):
 @fastapi_app.post("/api/master_key/add")
 async def master_key_add(data: dict, session=Depends(require_admin)):
     """Step 2: verify OTP and persist new master key."""
-    global MASTER_KEY_OTP
-    otp = (data.get("otp") or "").strip()
-    new_key = (data.get("new_key") or "").strip()
-    if not otp or not MASTER_KEY_OTP or not hmac.compare_digest(otp, MASTER_KEY_OTP):
+    global MASTER_KEY_OTP, _master_otp_attempts
+    otp = str(data.get("otp") or "").strip()
+    new_key = str(data.get("new_key") or "").strip()
+    if not MASTER_KEY_OTP:
         raise HTTPException(401, "Invalid OTP.")
+    # The code had no expiry and no limit on guesses: six digits, a million
+    # tries, as long as the server stayed up. Now five minutes and three tries.
+    if _master_otp_ts and time.time() - _master_otp_ts > _MASTER_OTP_TTL:
+        MASTER_KEY_OTP = None
+        raise HTTPException(401, "OTP expired. Request a new one.")
+    if not otp or not hmac.compare_digest(otp.encode(), str(MASTER_KEY_OTP).encode()):
+        _master_otp_attempts += 1
+        if _master_otp_attempts >= 3:
+            MASTER_KEY_OTP = None
+            _master_otp_attempts = 0
+        raise HTTPException(401, "Invalid OTP.")
+    if len(new_key) > 128:
+        raise HTTPException(400, "Key must be at most 128 characters.")
     if not new_key or len(new_key) < 12:
         raise HTTPException(400, "Key must be at least 12 characters.")
     if not re.search(r'[A-Z]', new_key):
@@ -3527,7 +3922,7 @@ async def master_key_add(data: dict, session=Depends(require_admin)):
 async def master_key_delete(data: dict, session=Depends(require_admin)):
     """Delete a master key by index — cannot delete the last key."""
     idx = data.get("index")
-    if idx is None or not isinstance(idx, int):
+    if idx is None or isinstance(idx, bool) or not isinstance(idx, int):
         raise HTTPException(400, "index required.")
     if len(MASTER_KEYS) <= 1:
         raise HTTPException(400, "Cannot delete the last master key.")
@@ -3549,7 +3944,7 @@ async def heartbeat(request: Request, key: Optional[str] = None):
     _HEARTBEAT_KEY = os.environ.get("HEARTBEAT_KEY", "")
     provided = key or request.headers.get("X-Heartbeat-Key", "")
     # Only reset dead-man's switch if key matches (or no key configured)
-    if not _HEARTBEAT_KEY or provided == _HEARTBEAT_KEY:
+    if not _HEARTBEAT_KEY or hmac.compare_digest(str(provided).encode(), _HEARTBEAT_KEY.encode()):
         _last_heartbeat = time.time()
         _deadman_alert_sent = False
         _heartbeat_ever = True
@@ -3565,15 +3960,14 @@ async def emergency_stop(session=Depends(require_admin)):
 @fastapi_app.get("/api/events/since")
 async def events_since(since: str = "", limit: int = 500, session=Depends(require_session)):
     """Return events after the given ISO timestamp, oldest-first."""
-    limit = min(limit, 500)
-    events = get_events_since(since, limit)
+    limit = max(1, min(limit, 500))   # SQLite reads LIMIT -1 as "no limit"
+    events = get_events_since(since[:40], limit)
     return {"events": events, "count": len(events)}
 
 @fastapi_app.get("/api/events/pending")
 async def events_pending(session=Depends(require_session)):
     """Return all unsynced events and mark them as synced."""
-    events = get_events_since("", 1000)
-    unsynced = [e for e in events if not e.get("synced")]
+    unsynced = get_unsynced_events(1000)
     if unsynced:
         max_id = max(e["id"] for e in unsynced)
         mark_events_synced(max_id)
@@ -3595,6 +3989,7 @@ async def events_stats(session=Depends(require_session)):
 
 # ── Feedback ─────────────────────────────────────────────────────────────────
 _feedback_lock = threading.Lock()
+_FEEDBACK_MAX = 2000
 
 def _load_feedback() -> list:
     entries = _safe_json_load(FEEDBACK_FILE, None)
@@ -3636,7 +4031,7 @@ async def submit_feedback(data: FeedbackRequest, request: Request):
     if len(msg) > 1000:
         raise HTTPException(400, "Message too long (max 1000 chars).")
     rating = max(0, min(5, int(data.rating)))
-    category = data.category.strip().lower()
+    category = data.category.strip().lower()[:16]
     if category not in ("bug", "feature", "general", "other"):
         category = "general"
     name = data.name.strip()[:64] if data.name else ""
@@ -3655,6 +4050,7 @@ async def submit_feedback(data: FeedbackRequest, request: Request):
         with _feedback_lock:
             entries = _load_feedback()
             entries.append(entry)
+            del entries[:-_FEEDBACK_MAX]    # an open endpoint must not grow a file for ever
             _save_feedback(entries)
 
     await asyncio.to_thread(_write_entry)
@@ -3664,43 +4060,46 @@ async def submit_feedback(data: FeedbackRequest, request: Request):
 @fastapi_app.get("/api/feedback")
 async def get_feedback(session=Depends(require_admin)):
     """Admin-only — returns all stored feedback entries."""
-    with _feedback_lock:
-        entries = _load_feedback()
+    def _read():
+        with _feedback_lock:
+            return _load_feedback()
+    entries = await asyncio.to_thread(_read)
     return {"feedback": entries, "count": len(entries)}
 
 # ── MJPEG stream ─────────────────────────────────────────────────────────────
 # Uses _frame_seq to detect new frames only — avoids re-sending duplicate
 # frames and keeps per-client CPU near zero when the pipeline is idle.
+_STREAM_RECHECK_S = 5.0
+
+
 async def mjpeg_frames(request: Request):
     """The MJPEG body, shared by Garuda's /stream and Drishti's.
 
     Authentication is the caller's job — the two endpoints check different
     cookies. This only produces frames.
     """
+    # The pipeline already encodes each published frame once (FramePublisher).
+    # This used to encode the raw frame again, per viewer, on the event loop:
+    # 15 JPEG encodes a second for every open camera view, each one stalling
+    # the state socket and every other request while it ran.
     last_seq = -1
-    last_sent = 0.0
+    still_valid = getattr(request.state, "stream_valid", None)
+    next_check = time.time() + _STREAM_RECHECK_S
     while True:
         if await request.is_disconnected():
             break
-        now = time.time()
+        if still_valid is not None and time.time() >= next_check:
+            if not still_valid():
+                break                      # signed out, or the account is gone
+            next_check = time.time() + _STREAM_RECHECK_S
         with _frame_lock:
             seq = _frame_seq
-            raw = _frame_raw if seq != last_seq else None
-        if raw is not None and (now - last_sent) >= 0.033:
-            # Adaptive quality: reduce JPEG quality under CPU pressure
-            _q = 75
-            if psutil:
-                _cpu = psutil.cpu_percent(interval=None)
-                if _cpu > 80:
-                    _q = 45
-                elif _cpu > 65:
-                    _q = 60
-            _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, _q])
+            jpeg = _frame_buffer if seq != last_seq else None
+        if jpeg is not None:
             last_seq = seq
-            last_sent = now
-            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
+            yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
         else:
-            await asyncio.sleep(0.005)
+            await asyncio.sleep(0.02)
 
 
 DRISHTI_CTX.frame_source = mjpeg_frames
@@ -3710,11 +4109,17 @@ DRISHTI_CTX.frame_source = mjpeg_frames
 async def mjpeg_stream(request: Request, token: Optional[str] = None):
     # Authenticate via cookie or ?token= query param
     session_token = request.cookies.get("garuda_session") or token
-    if not get_session(session_token):
+    session = get_session(session_token)
+    if not session:
         raise HTTPException(401, "Not authenticated")
+    # The stream outlives the 15-minute token it opened with; it ends when the
+    # person has no live session left (signed out, password changed, deleted).
+    username = session["username"]
+    request.state.stream_valid = lambda: _user_signed_in(username)
     return StreamingResponse(
         mjpeg_frames(request),
-        media_type="multipart/x-mixed-replace; boundary=frame"
+        media_type="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
     )
 
 # ── Snapshot ──────────────────────────────────────────────────────────────────
@@ -3727,7 +4132,9 @@ async def snapshot(request: Request, token: Optional[str] = None):
         raw = _frame_raw
     if raw is None:
         raise HTTPException(503, "No frame available yet")
-    _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    ok, jpeg = await asyncio.to_thread(cv2.imencode, '.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 95])
+    if not ok:
+        raise HTTPException(500, "Could not encode the frame")
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     return Response(
         content=jpeg.tobytes(), media_type="image/jpeg",
@@ -3735,6 +4142,17 @@ async def snapshot(request: Request, token: Optional[str] = None):
     )
 
 # ── Clip recording ────────────────────────────────────────────────────────────
+_CLIPS_KEEP = 50
+
+def _prune_old_clips(keep: int = _CLIPS_KEEP):
+    """Keep the newest `keep` clips; nothing ever removed them before."""
+    try:
+        clips = sorted((_BASE / "system_logs").glob("clip_*.mp4*"), key=lambda p: p.stat().st_mtime)
+        for old in clips[:-keep]:
+            old.unlink(missing_ok=True)
+    except Exception as exc:
+        log_system_update(f"Clip cleanup failed: {exc}")
+
 @fastapi_app.post("/api/clip/start")
 async def clip_start(session=Depends(require_session)):
     global _clip_writer, _clip_start_time, _clip_path
@@ -3751,7 +4169,11 @@ async def clip_start(session=Depends(require_session)):
     ts = int(time.time())
     new_path = str(_BASE / "system_logs" / f"clip_{ts}.mp4")
     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(new_path, fourcc, 15.0, (w, h))
+    writer = await asyncio.to_thread(cv2.VideoWriter, new_path, fourcc, 15.0, (w, h))
+    if not writer.isOpened():
+        writer.release()
+        raise HTTPException(500, "Could not start recording (disk full or codec missing).")
+    await asyncio.to_thread(_prune_old_clips)
     # Assign atomically — re-check in case a concurrent request beat us
     with _clip_lock:
         if _clip_writer is not None:
@@ -3781,6 +4203,12 @@ async def clip_stop(session=Depends(require_session)):
 async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session)):
     if not _WEBRTC_AVAILABLE:
         raise HTTPException(501, "aiortc not installed")
+    if data.type != "offer" or len(data.sdp) > 20000:
+        raise HTTPException(400, "Invalid offer")
+    # Each connection runs its own H.264 encoder; without a ceiling a signed-in
+    # client could open them until the Pi had nothing left for detection.
+    if len(_pc_set) >= _MAX_PEER_CONNECTIONS:
+        raise HTTPException(503, "Too many live video connections. Close one and try again.")
     pc = RTCPeerConnection()
     _pc_set.add(pc)
 
@@ -3790,15 +4218,30 @@ async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session
             await pc.close()
             _pc_set.discard(pc)
 
-    pc.addTrack(GarudaVideoTrack())
-    offer = RTCSessionDescription(sdp=data.sdp, type=data.type)
-    await pc.setRemoteDescription(offer)
-    answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
+    try:
+        pc.addTrack(GarudaVideoTrack())
+        offer = RTCSessionDescription(sdp=data.sdp, type=data.type)
+        await pc.setRemoteDescription(offer)
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
 
-    # Wait for ICE gathering to complete
-    while pc.iceGatheringState != "complete":
-        await asyncio.sleep(0.1)
+        # Wait for ICE gathering to complete, but not for ever: with no route
+        # out this loop never ended and the request (and the connection) hung.
+        deadline = time.time() + 10
+        while pc.iceGatheringState != "complete":
+            if time.time() > deadline:
+                raise HTTPException(504, "WebRTC negotiation timed out")
+            await asyncio.sleep(0.1)
+    except Exception as exc:
+        # A bad offer used to leave the half-built connection in _pc_set for good.
+        _pc_set.discard(pc)
+        try:
+            await pc.close()
+        except Exception:
+            pass
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(400, f"Could not negotiate video: {type(exc).__name__}")
 
     return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
 
@@ -3841,28 +4284,51 @@ async def narada_voice_ws(websocket: WebSocket):
         pass
 
 
+_WS_CONNECT_LIMIT = 60   # socket opens per client address per rate window
+
+def _ws_connect_allowed(websocket) -> bool:
+    """Per-client limit on opening sockets.
+
+    This used websocket.client.host, which behind the tunnel is 127.0.0.1 for
+    everybody, and the same 30-a-minute bucket as anonymous HTTP: every
+    phone and laptop in the house shared one small allowance, and a browser
+    reconnecting in a loop could lock all of them out (close code 4029).
+    """
+    ip = _get_client_ip(websocket)
+    now = time.time()
+    stamps = _rate_store[f"ws:{ip}"]
+    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
+    if len(stamps) >= _WS_CONNECT_LIMIT:
+        return False
+    stamps.append(now)
+    return True
+
+
 # ── WebSocket binary JPEG stream (CF Tunnel fallback) ────────────────────────
 @fastapi_app.websocket("/ws/stream")
 async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
     """Streams JPEG frames as binary WebSocket messages (~same as MJPEG but WS).
     Works through Cloudflare Tunnel (unlike raw UDP WebRTC)."""
     # Rate-limit WebSocket connections per IP (re-use the global _rate_store)
-    ws_ip = websocket.client.host if websocket.client else "unknown"
-    now = time.time()
-    stamps = _rate_store[ws_ip]
-    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
-    if len(stamps) >= _RATE_LIMIT:
+    if not _ws_connect_allowed(websocket):
         await websocket.close(code=4029)
         return
-    stamps.append(now)
     token = websocket.cookies.get("garuda_session") or token
-    if not get_session(token):
+    session = get_session(token)
+    if not session:
         await websocket.close(code=4001)
         return
+    username = session["username"]
     await websocket.accept()
     last_seq = -1
+    next_check = time.time() + _STREAM_RECHECK_S
     try:
         while True:
+            if time.time() >= next_check:
+                if not _user_signed_in(username):
+                    await websocket.close(code=4001)
+                    return
+                next_check = time.time() + _STREAM_RECHECK_S
             with _frame_lock:
                 seq   = _frame_seq
                 frame = _frame_buffer if seq != last_seq else None
@@ -3870,7 +4336,7 @@ async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
                 last_seq = seq
                 await websocket.send_bytes(frame)
             else:
-                await asyncio.sleep(0.005)
+                await asyncio.sleep(0.02)
     except WebSocketDisconnect:
         pass
     except Exception as e:
@@ -3881,52 +4347,103 @@ async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
 # push_urgent_ws() sets the event from any thread → immediate broadcast.
 # Compute state ONCE per tick and fan-out via asyncio.gather — O(1) in CPU.
 
+# What a non-admin does not need pushed to their browser every two seconds.
+_ADMIN_ONLY_STATE = ("known_devices", "cpu_cores", "voice_log", "voice_responses")
+_ADMIN_ONLY_LOG_TAGS = ("[SECURITY]", "Login", "login", "Master key", "master key",
+                        "Password", "User added", "User deleted", "User updated")
+
+def _state_for_role(payload: dict, role: str) -> dict:
+    """The state push, trimmed for a non-admin viewer.
+
+    Everyone got the admin's view: registered phone MAC addresses, who signed
+    in from where, lockout notices with client addresses. The dashboard for a
+    'user' shows none of that, so it is not sent.
+    """
+    if role == "admin":
+        return payload
+    slim = {k: v for k, v in payload.items() if k not in _ADMIN_ONLY_STATE}
+    slim["system_log"] = [line for line in payload.get("system_log", [])
+                          if not any(tag in line for tag in _ADMIN_ONLY_LOG_TAGS)]
+    return slim
+
+
+async def _ws_send(ws, payload):
+    # One stalled phone must not hold the push to everyone else.
+    await asyncio.wait_for(ws.send_json(payload), timeout=5.0)
+
+
 async def _ws_broadcaster():
     """Background task: push state immediately on events, or every 2s as heartbeat."""
     _prune_counter = 0
+    _maintenance_counter = 0
     while True:
         try:
             await asyncio.wait_for(_ws_trigger.wait(), timeout=2.0)
         except asyncio.TimeoutError:
             pass
         _ws_trigger.clear()
-        # Prune expired sessions every ~5 minutes (150 ticks × 2s)
-        _prune_counter += 1
-        if _prune_counter >= 150:
-            _prune_expired_sessions()
-            _prune_counter = 0
-        payload = get_state_dict()   # always run — handles alert expiry even without clients
-        if not _ws_clients:
-            continue
-        dead: set = set()
-        results = await asyncio.gather(
-            *[ws.send_json(payload) for ws in list(_ws_clients)],
-            return_exceptions=True
-        )
-        for ws, result in zip(list(_ws_clients), results):
-            if isinstance(result, Exception):
-                dead.add(ws)
-        _ws_clients.difference_update(dead)
+        # Anything raised in here used to end this task for good: no client
+        # got another update until the service was restarted. One bad tick is
+        # now logged and the next one runs.
+        try:
+            # Prune expired sessions every ~5 minutes (150 ticks × 2s)
+            _prune_counter += 1
+            if _prune_counter >= 150:
+                _prune_counter = 0
+                _prune_expired_sessions()
+                _prune_rate_state()
+                _maintenance_counter += 1
+                if _maintenance_counter >= 12:        # about hourly
+                    _maintenance_counter = 0
+                    await asyncio.to_thread(prune_synced_events)
+            # psutil, the event database and the home summary all touch the
+            # disk: built on a worker thread so the loop keeps serving.
+            payload = await asyncio.to_thread(get_state_dict)   # always run — handles alert expiry even without clients
+            if not _ws_clients:
+                continue
+            clients = list(_ws_clients.items())
+            # Connections whose owner has signed out everywhere are closed.
+            stale = [ws for ws, meta in clients if not _user_signed_in(meta["username"])]
+            for ws in stale:
+                _ws_clients.pop(ws, None)
+                try:
+                    await ws.close(code=4001)
+                except Exception:
+                    pass
+            clients = [(ws, meta) for ws, meta in clients if ws not in stale]
+            user_payload = None
+            sends = []
+            for ws, meta in clients:
+                if meta["role"] == "admin":
+                    sends.append(_ws_send(ws, payload))
+                else:
+                    if user_payload is None:
+                        user_payload = _state_for_role(payload, "user")
+                    sends.append(_ws_send(ws, user_payload))
+            results = await asyncio.gather(*sends, return_exceptions=True)
+            for (ws, _meta), result in zip(clients, results):
+                if isinstance(result, Exception):
+                    _ws_clients.pop(ws, None)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:
+            log_system_update(f"[WS] broadcast failed: {type(exc).__name__}: {exc}")
 
 
 @fastapi_app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     # Rate-limit WebSocket connections per IP
-    ws_ip = websocket.client.host if websocket.client else "unknown"
-    now = time.time()
-    stamps = _rate_store[ws_ip]
-    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
-    if len(stamps) >= _RATE_LIMIT:
+    if not _ws_connect_allowed(websocket):
         await websocket.close(code=4029)
         return
-    stamps.append(now)
     # Accept token from cookie (same-origin) or query param (cross-origin)
     token = websocket.cookies.get("garuda_session") or token
-    if not get_session(token):
+    session = get_session(token)
+    if not session:
         await websocket.close(code=4001)
         return
     await websocket.accept()
-    _ws_clients.add(websocket)
+    _ws_clients[websocket] = {"username": session["username"], "role": session["role"]}
     try:
         # Keep the connection alive; broadcaster pushes state.
         # Drain any client messages; the frontend does not send data, so we
@@ -3938,7 +4455,7 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
     except Exception:
         pass
     finally:
-        _ws_clients.discard(websocket)
+        _ws_clients.pop(websocket, None)
 
 ##############################################################################
 # CAMERA AUTO-DETECT

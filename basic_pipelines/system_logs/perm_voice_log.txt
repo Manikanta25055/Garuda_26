@@ -1794,3 +1794,18 @@
 → [2026-10-01 18:49:56] Sure! I can turn lights or fans on or off, set schedules, create scenes, or adjust security modes. For example, I could switch on the study lamp or set a timer to turn off the fan in 30 minutes. What would you like to try?
 [2026-10-01 18:55:01] Error accessing microphone: No Default Input Device Available
 [2026-10-01 19:25:27] Error accessing microphone: No Default Input Device Available
+[2026-10-02 02:07:07] You said: Can you introduce yourself to my friend?
+→ [2026-10-02 02:07:07] Hey! I’m Narada, the home assistant for this place. I handle the lights, fans, security modes, and can set up automations or schedules if you need. I’m here to help keep things running smoothly. Nice to meet you!
+[2026-10-02 02:24:04] You said: Hello. Mic testing, one, two, three.
+→ [2026-10-02 02:24:04] Hey, mic's working fine. What's up?
+[2026-10-02 02:24:15] You said: ...
+→ [2026-10-02 02:24:15] You there? I heard the mic test. Need something?
+[2026-10-02 03:12:13] Error accessing microphone: No Default Input Device Available
+[2026-10-02 03:13:25] You said: Okay. Uh, resume your introduction, please.
+→ [2026-10-02 03:13:25] Hey there, I'm Narada, your home assistant. I see the house is quiet, night mode's on, and privacy is active. How can I help you tonight?
+[2026-10-02 03:20:48] You said: Okay, listen to me carefully, okay?
+→ [2026-10-02 03:20:48] Okay, I'm listening. What do you need?
+[2026-10-02 03:20:50] You said: Okay, listen to me carefully, okay?
+→ [2026-10-02 03:20:50] Okay, I'm listening. What do you need?
+[2026-10-02 03:20:51] You said: Okay, listen to me carefully, okay?
+→ [2026-10-02 03:20:51] Okay, I'm listening. What do you need?
