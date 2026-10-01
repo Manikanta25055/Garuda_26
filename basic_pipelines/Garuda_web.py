@@ -221,6 +221,7 @@ try:
     from .garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
     from .garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
     from .garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
+    from .garuda_routes.logs import build_logs_router
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -244,6 +245,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
     from basic_pipelines.garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
     from basic_pipelines.garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.logs import build_logs_router
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -3335,28 +3337,7 @@ def _do_presence_check():
 
 fastapi_app.include_router(build_presence_router(sys.modules[__name__]))
 
-@fastapi_app.get("/api/logs")
-async def get_logs(session=Depends(require_logs)):
-    return {
-        "system_log": system_updates_log,
-        "voice_log": voice_assistant_log,
-        "voice_responses": voice_responses,
-        "presence_log": _presence_log[-200:],
-        "detection_log": _detection_log[-200:],
-    }
-
-@fastapi_app.get("/api/logs/download")
-async def download_logs(session=Depends(require_logs)):
-    """Return all permanent logs as a single combined text file for download."""
-    # Up to 30 MB of files are read here: on a worker thread, not the loop.
-    content = await asyncio.to_thread(_combined_log_text)
-    fname = f"garuda-full-log-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
-    return Response(
-        content=content,
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
-    )
-
+fastapi_app.include_router(build_logs_router(sys.modules[__name__]))
 
 def _combined_log_text() -> str:
     _do_flush_logs()   # include lines still waiting in the write buffer
