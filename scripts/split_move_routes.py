@@ -117,6 +117,11 @@ def rewrite(block, gw_names):
         if not isinstance(top, (ast.FunctionDef, ast.AsyncFunctionDef)):
             raise SystemExit(f"only functions can be moved; found {type(top).__name__} "
                              f"at line {top.lineno} of the block")
+        if not top.decorator_list:
+            # A helper would become a local of the router builder and vanish
+            # from Garuda_web, where other code and the tests still call it.
+            raise SystemExit(f"{top.name}() is not a route handler (no decorator). Move it out of "
+                             f"the block first; helpers stay in Garuda_web.")
         functions.append(top.name)
         local = function_locals(top)
         for node in ast.walk(top):

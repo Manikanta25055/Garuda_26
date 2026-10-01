@@ -220,6 +220,7 @@ try:
     from .garuda_routes.master_keys import build_master_keys_router
     from .garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
     from .garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
+    from .garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -242,6 +243,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.master_keys import build_master_keys_router
     from basic_pipelines.garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
     from basic_pipelines.garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2814,13 +2816,6 @@ class ModeRequest(BaseModel):
     mode: str   # "dnd","email_off","idle","night","emergency","privacy"
     value: bool
 
-class DeviceAddRequest(BaseModel):
-    name: str
-    mac: str
-
-class DeviceDeleteRequest(BaseModel):
-    mac: str
-
 class OTPRequest(BaseModel):
     username: str
     password: str
@@ -3316,27 +3311,6 @@ fastapi_app.include_router(build_users_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_config_router(sys.modules[__name__]))
 
-@fastapi_app.get("/api/devices")
-async def get_devices(session=Depends(require_admin)):
-    return {"devices": KNOWN_DEVICES, "owner_present": _owner_present}
-
-@fastapi_app.get("/api/arp")
-async def get_arp_table(session=Depends(require_admin)):
-    """Return all active ARP entries so admin can identify device MACs."""
-    entries = []
-    try:
-        with open('/proc/net/arp') as f:
-            for line in f.readlines()[1:]:   # skip header
-                parts = line.split()
-                if len(parts) >= 4 and parts[2] == '0x2':  # 0x2 = complete entry
-                    entries.append({"ip": parts[0], "mac": parts[3]})
-    except Exception as e:
-        raise HTTPException(500, str(e))
-    registered_macs = {_device_mac(d) for d in KNOWN_DEVICES}
-    for e in entries:
-        e["registered"] = e["mac"].lower() in registered_macs
-    return {"entries": entries}
-
 def _do_presence_check():
     """Blocking presence check — run in thread executor from async endpoints."""
     global _owner_present, _owner_last_seen
@@ -3359,49 +3333,7 @@ def _do_presence_check():
         _append_presence_log("left", dev, "")
         log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
 
-@fastapi_app.post("/api/presence_refresh")
-async def presence_refresh(session=Depends(require_admin)):
-    """Trigger an immediate ARP presence check without waiting for the 30s poller."""
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _do_presence_check)
-    push_urgent_ws()
-    return {"owner_present": _owner_present}
-
-@fastapi_app.post("/api/devices/add")
-async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
-    mac = data.mac.strip().lower()
-    if not re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
-        raise HTTPException(400, "Invalid MAC address format (use aa:bb:cc:dd:ee:ff)")
-    if any(_device_mac(d) == mac for d in KNOWN_DEVICES):
-        raise HTTPException(400, "Device with this MAC already registered")
-    name = data.name.strip()[:64]
-    if not name:
-        raise HTTPException(400, "Device name is required.")
-    if len(KNOWN_DEVICES) >= 32:
-        raise HTTPException(400, "Maximum 32 known devices.")
-    KNOWN_DEVICES.append({"name": name, "mac": mac})
-    await _async_save_config()
-    log_system_update(f"Known device added: {name} ({mac})")
-    return {"ok": True, "devices": KNOWN_DEVICES}
-
-@fastapi_app.post("/api/devices/delete")
-async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin)):
-    mac = data.mac.strip().lower()
-    before = len(KNOWN_DEVICES)
-    KNOWN_DEVICES[:] = [d for d in KNOWN_DEVICES if _device_mac(d) != mac]
-    if len(KNOWN_DEVICES) == before:
-        raise HTTPException(404, "Device not found")
-    await _async_save_config()
-    log_system_update(f"Known device removed: {mac}")
-    return {"ok": True, "devices": KNOWN_DEVICES}
-
-@fastapi_app.post("/api/email/test")
-async def test_email(session=Depends(require_admin)):
-    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = await asyncio.to_thread(send_otp_via_email, dest, "TEST-123")
-    if not ok:
-        return {"ok": False, "error": err}
-    return {"ok": True}
+fastapi_app.include_router(build_presence_router(sys.modules[__name__]))
 
 @fastapi_app.get("/api/logs")
 async def get_logs(session=Depends(require_logs)):
