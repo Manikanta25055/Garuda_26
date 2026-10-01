@@ -187,11 +187,14 @@ def main():
         raise SystemExit("--start must come before --end")
     block = source[a:b].rstrip() + "\n"
     gw_tree = ast.parse(source)
-    gw_names = module_names(gw_tree) - set(OWN_IMPORTS)
+    model_names = [m.strip() for m in args.models.split(",") if m.strip()]
+    # A model that moves with its routes is local to the new module: the
+    # handlers name it directly, not through `core`.
+    gw_names = module_names(gw_tree) - set(OWN_IMPORTS) - set(model_names)
 
     body, used_own, functions = rewrite(block, gw_names)
 
-    models_src, model_names = [], [m.strip() for m in args.models.split(",") if m.strip()]
+    models_src = []
     model_ranges = []
     for name in model_names:
         node = next((n for n in gw_tree.body if isinstance(n, ast.ClassDef) and n.name == name), None)
