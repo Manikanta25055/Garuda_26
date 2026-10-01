@@ -224,6 +224,7 @@ try:
     from .garuda_routes.logs import build_logs_router
     from .garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
     from .garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
+    from .garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -250,6 +251,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.logs import build_logs_router
     from basic_pipelines.garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
     from basic_pipelines.garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2817,9 +2819,6 @@ class ModeRequest(BaseModel):
     mode: str   # "dnd","email_off","idle","night","emergency","privacy"
     value: bool
 
-class ChatRequest(BaseModel):
-    message: str = Field(max_length=2000)
-
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @fastapi_app.get("/", response_class=HTMLResponse)
@@ -2931,19 +2930,6 @@ async def eval_fps_probe(request: Request):
         "alert_active": _alert_active,
     }
 
-@fastapi_app.post("/api/chat")
-async def chat(data: ChatRequest, request: Request, session=Depends(require_session)):
-    msg = data.message.strip()
-    if not msg:
-        raise HTTPException(400, "Empty message")
-    scope = _product_for_host(request.headers.get("host"))
-    result = await anyio.to_thread.run_sync(
-        lambda: _assistant_reply(msg, session["username"], session["role"], scope))
-    return {"response": result["reply"], "lane": result.get("lane"),
-            "actions": result.get("actions", []), "proposal": result.get("proposal"),
-            "route": result.get("route"), "model": result.get("model")}
-
-
 def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
     """Narada's one brain for chat and voice.
 
@@ -2958,53 +2944,7 @@ def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
     return AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice)
 
 
-@fastapi_app.post("/api/chat/stream")
-async def chat_stream(data: ChatRequest, request: Request, session=Depends(require_session)):
-    """SSE chat: the NIM agent's reply, replayed word by word."""
-    msg = data.message.strip()
-    if not msg:
-        raise HTTPException(400, "Empty message")
-
-    loop  = asyncio.get_event_loop()
-    queue: asyncio.Queue = asyncio.Queue()
-    user, role = session["username"], session["role"]
-    scope = _product_for_host(request.headers.get("host"))
-
-    def _agent_worker():
-        # The agent answers in one piece after its tool calls, so the reply is
-        # replayed word by word to keep the chat's typing feel.
-        try:
-            result = _assistant_reply(msg, user, role, scope)
-        except Exception as exc:
-            result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
-        meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "model")}
-        loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
-        for word in re.findall(r"\S+\s*", result["reply"]):
-            loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
-        loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
-
-    threading.Thread(target=_agent_worker, daemon=True).start()
-
-    async def generate():
-        yield f"data: {json.dumps({'type': 'start'})}\n\n"
-        while True:
-            try:
-                kind, payload_val = await asyncio.wait_for(queue.get(), timeout=90)
-            except asyncio.TimeoutError:
-                break
-            if kind == "done":
-                yield f"data: {json.dumps({'type': 'done'})}\n\n"
-                break
-            if kind == "meta":
-                yield f"data: {json.dumps({'type': 'meta', **payload_val})}\n\n"
-                continue
-            yield f"data: {json.dumps({'type': 'token', 'text': payload_val})}\n\n"
-
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+fastapi_app.include_router(build_narada_router(sys.modules[__name__]))
 
 ADMIN_ONLY_MODES = frozenset({"idle", "email_off"})
 
@@ -3223,31 +3163,6 @@ def _prune_old_clips(keep: int = _CLIPS_KEEP):
 fastapi_app.include_router(build_camera_router(sys.modules[__name__]))
 
 # ── Narada voice (ElevenLabs Speech Engine) ──────────────────────────────────
-@fastapi_app.post("/api/narada/voice/token")
-async def narada_voice_token(request: Request, session=Depends(require_session)):
-    """A one-conversation token for the browser; binds it to this user."""
-    if not NARADA_VOICE.configured:
-        raise HTTPException(503, "Voice is not set up yet: an admin needs to run "
-                                 "scripts/setup_narada_voice.py.")
-    scope = _product_for_host(request.headers.get("host"))
-    try:
-        return await anyio.to_thread.run_sync(
-            lambda: NARADA_VOICE.issue_token(session["username"], session["role"], scope))
-    except Exception as exc:
-        log_system_update(f"Narada voice token failed: {type(exc).__name__}")
-        raise HTTPException(502, "Could not reach the voice service. Try again in a moment.")
-
-
-@fastapi_app.get("/api/narada/info")
-async def narada_info(session=Depends(require_session)):
-    """What the "i" panel on the Narada page shows: models and usage."""
-    nim = NIM_CHAT.status()
-    voice = await anyio.to_thread.run_sync(NARADA_VOICE.info)
-    return {"nim": {k: nim.get(k) for k in ("configured", "models", "last_model",
-                                            "last_latency_s", "calls", "tokens_used")},
-            "voice": voice}
-
-
 @fastapi_app.websocket("/ws/narada-voice")
 async def narada_voice_ws(websocket: WebSocket):
     """ElevenLabs connects here with each conversation's transcripts."""

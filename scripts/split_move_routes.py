@@ -40,7 +40,7 @@ ROUTES = ROOT / "basic_pipelines" / "garuda_routes"
 OWN_IMPORTS = {
     "asyncio": "import asyncio", "datetime": "import datetime", "hmac": "import hmac",
     "json": "import json", "os": "import os", "re": "import re", "time": "import time",
-    "threading": "import threading", "cv2": "import cv2", "secrets": "import secrets", "sqlite3": "import sqlite3",
+    "threading": "import threading", "cv2": "import cv2", "anyio": "import anyio.to_thread", "secrets": "import secrets", "sqlite3": "import sqlite3",
     "Optional": "from typing import Optional", "List": "from typing import List",
     "APIRouter": "from fastapi import APIRouter", "Depends": "from fastapi import Depends",
     "HTTPException": "from fastapi import HTTPException", "Request": "from fastapi import Request",
