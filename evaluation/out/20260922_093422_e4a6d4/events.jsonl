@@ -1,0 +1,46 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8936b290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.6899388}
+{"kind": "login", "ok": false, "t": 1790049862.69018}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f89374c90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.71047}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f89372e90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.7108152}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f89370e10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.7111726}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f893765d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.7138138}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f89377890>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.7183506}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f89385090>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1790049862.7253997}
+{"kind": "sys_log", "ts": 1790049865.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1790049926.2453632}
+{"kind": "sys_log", "ts": 1790049865.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1790049926.2455225}
+{"kind": "sys_log", "ts": 1790049865.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1790049926.2455745}
+{"kind": "sys_log", "ts": 1790049865.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1790049926.2456183}
+{"kind": "sys_log", "ts": 1790049865.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1790049926.2456584}
+{"kind": "sys_log", "ts": 1790049865.0, "msg": "Pipeline started.", "t": 1790049926.245806}
+{"kind": "sys_log", "ts": 1790049895.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1790049926.2458503}
+{"kind": "sys_log", "ts": 1790049988.0, "msg": "[NETWORK] Internet restored \u2014 7563 queued events ready to sync", "t": 1790050236.349845}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 13.92, "resp": {"ok": true, "t_request": 1790053653.2209024, "t_alert": 1790053653.2279325, "latency_ms": 7.03, "label": "Knife", "confidence": 0.9}, "t": 1790053653.2319565}
+{"kind": "sys_log", "ts": 1790053653.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790053656.6133926}
+{"kind": "sys_log", "ts": 1790053653.0, "msg": "Alert triggered.", "t": 1790053656.6137288}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 13.34, "resp": {"ok": true, "t_request": 1790057253.2345788, "t_alert": 1790057253.2410958, "latency_ms": 6.52, "label": "scissors", "confidence": 0.9}, "t": 1790057253.245668}
+{"kind": "sys_log", "ts": 1790057253.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790057256.5748432}
+{"kind": "sys_log", "ts": 1790057253.0, "msg": "Alert triggered.", "t": 1790057256.575213}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 9.47, "resp": {"ok": true, "t_request": 1790060853.2491665, "t_alert": 1790060853.2516813, "latency_ms": 2.52, "label": "Hammer", "confidence": 0.9}, "t": 1790060853.2554753}
+{"kind": "sys_log", "ts": 1790060853.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790060856.6888318}
+{"kind": "sys_log", "ts": 1790060853.0, "msg": "Alert triggered.", "t": 1790060856.6889963}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 15.56, "resp": {"ok": true, "t_request": 1790064453.260782, "t_alert": 1790064453.2663186, "latency_ms": 5.54, "label": "Knife", "confidence": 0.9}, "t": 1790064453.2716143}
+{"kind": "sys_log", "ts": 1790064453.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790064456.614791}
+{"kind": "sys_log", "ts": 1790064453.0, "msg": "Alert triggered.", "t": 1790064456.6163888}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 13.11, "resp": {"ok": true, "t_request": 1790068053.2750013, "t_alert": 1790068053.2783365, "latency_ms": 3.34, "label": "scissors", "confidence": 0.9}, "t": 1790068053.2849584}
+{"kind": "sys_log", "ts": 1790068053.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790068056.9355495}
+{"kind": "sys_log", "ts": 1790068053.0, "msg": "Alert triggered.", "t": 1790068056.935733}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 14.23, "resp": {"ok": true, "t_request": 1790071653.287335, "t_alert": 1790071653.293216, "latency_ms": 5.88, "label": "Hammer", "confidence": 0.9}, "t": 1790071653.2994657}
+{"kind": "sys_log", "ts": 1790071653.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790071656.5625079}
+{"kind": "sys_log", "ts": 1790071653.0, "msg": "Alert triggered.", "t": 1790071656.5626693}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 13.45, "resp": {"ok": true, "t_request": 1790075253.3019698, "t_alert": 1790075253.3086512, "latency_ms": 6.68, "label": "Knife", "confidence": 0.9}, "t": 1790075253.3131745}
+{"kind": "sys_log", "ts": 1790075253.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790075256.6195788}
+{"kind": "sys_log", "ts": 1790075253.0, "msg": "Alert triggered.", "t": 1790075256.620478}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 11.36, "resp": {"ok": true, "t_request": 1790078853.3169954, "t_alert": 1790078853.3195324, "latency_ms": 2.54, "label": "scissors", "confidence": 0.9}, "t": 1790078853.324805}
+{"kind": "sys_log", "ts": 1790078853.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790078856.5736842}
+{"kind": "sys_log", "ts": 1790078853.0, "msg": "Alert triggered.", "t": 1790078856.5738714}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 12.51, "resp": {"ok": true, "t_request": 1790082453.3270004, "t_alert": 1790082453.3337393, "latency_ms": 6.74, "label": "Hammer", "confidence": 0.9}, "t": 1790082453.337586}
+{"kind": "sys_log", "ts": 1790082453.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790082456.574783}
+{"kind": "sys_log", "ts": 1790082453.0, "msg": "Alert triggered.", "t": 1790082456.575157}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 14.06, "resp": {"ok": true, "t_request": 1790086053.342752, "t_alert": 1790086053.3472817, "latency_ms": 4.53, "label": "Knife", "confidence": 0.9}, "t": 1790086053.35254}
+{"kind": "sys_log", "ts": 1790086053.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790086057.0633178}
+{"kind": "sys_log", "ts": 1790086053.0, "msg": "Alert triggered.", "t": 1790086057.0639143}

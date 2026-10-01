@@ -1,0 +1,127 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f92a36a50>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.5166879}
+{"kind": "login", "ok": false, "t": 1786937099.516927}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f928b4cd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.5305843}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f928b0cd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.535559}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f928b2fd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.5357237}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f928b5f90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.5377553}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f928b7650>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.5406044}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f928c0e90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786937099.5434465}
+{"kind": "sys_log", "ts": 1786937103.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1786937163.571975}
+{"kind": "sys_log", "ts": 1786937103.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1786937163.5742338}
+{"kind": "sys_log", "ts": 1786937103.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1786937163.5744095}
+{"kind": "sys_log", "ts": 1786937103.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1786937163.574468}
+{"kind": "sys_log", "ts": 1786937103.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1786937163.5745103}
+{"kind": "sys_log", "ts": 1786937103.0, "msg": "Pipeline started.", "t": 1786937163.5746107}
+{"kind": "sys_log", "ts": 1786937104.0, "msg": "Alert triggered.", "t": 1786937163.5746517}
+{"kind": "sys_log", "ts": 1786937104.0, "msg": "Failed sending email alert: [Errno -3] Temporary failure in name resolution", "t": 1786937163.5746908}
+{"kind": "sys_log", "ts": 1786937104.0, "msg": "[WATCH] Person (0.82)", "t": 1786937163.5748985}
+{"kind": "sys_log", "ts": 1786937133.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1786937163.5749435}
+{"kind": "sys_log", "ts": 1786937136.0, "msg": "[WATCH] Person (0.87)", "t": 1786937163.574981}
+{"kind": "sys_log", "ts": 1786937188.0, "msg": "[WATCH] Person (0.87)", "t": 1786937223.6348286}
+{"kind": "sys_log", "ts": 1786937221.0, "msg": "[WATCH] Person (0.86)", "t": 1786937223.6350403}
+{"kind": "sys_log", "ts": 1786937334.0, "msg": "[WATCH] Person (0.89)", "t": 1786937366.0116994}
+{"kind": "sys_log", "ts": 1786937335.0, "msg": "Email alert sent.", "t": 1786937366.0119007}
+{"kind": "sys_log", "ts": 1786937341.0, "msg": "[NETWORK] Internet restored \u2014 3599 queued events ready to sync", "t": 1786937366.01203}
+{"kind": "sys_log", "ts": 1786937366.0, "msg": "[WATCH] Person (0.88)", "t": 1786937426.0537353}
+{"kind": "sys_log", "ts": 1786937396.0, "msg": "[WATCH] Person (0.85)", "t": 1786937426.054529}
+{"kind": "sys_log", "ts": 1786937427.0, "msg": "[WATCH] Person (0.86)", "t": 1786937486.1154528}
+{"kind": "sys_log", "ts": 1786937458.0, "msg": "[WATCH] Person (0.86)", "t": 1786937486.115831}
+{"kind": "sys_log", "ts": 1786937464.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1786937486.115894}
+{"kind": "sys_log", "ts": 1786937490.0, "msg": "[WATCH] Person (0.83)", "t": 1786937546.1549468}
+{"kind": "sys_log", "ts": 1786937512.0, "msg": "Failed sending email alert: [Errno -3] Temporary failure in name resolution", "t": 1786937546.1551087}
+{"kind": "sys_log", "ts": 1786937524.0, "msg": "[WATCH] Person (0.88)", "t": 1786937546.1551569}
+{"kind": "sys_log", "ts": 1786937554.0, "msg": "[NETWORK] Internet restored \u2014 3608 queued events ready to sync", "t": 1786937606.2000551}
+{"kind": "sys_log", "ts": 1786937554.0, "msg": "[WATCH] Person (0.89)", "t": 1786937606.2003696}
+{"kind": "sys_log", "ts": 1786937583.0, "msg": "Alert triggered.", "t": 1786937606.2004323}
+{"kind": "sys_log", "ts": 1786937603.0, "msg": "Alert triggered.", "t": 1786937606.200474}
+{"kind": "sys_log", "ts": 1786937615.0, "msg": "[WATCH] Person (0.83)", "t": 1786937666.227524}
+{"kind": "sys_log", "ts": 1786937648.0, "msg": "[WATCH] Person (0.85)", "t": 1786937666.2277133}
+{"kind": "sys_log", "ts": 1786937652.0, "msg": "Alert triggered.", "t": 1786937666.2277722}
+{"kind": "sys_log", "ts": 1786937679.0, "msg": "[WATCH] Person (0.82)", "t": 1786937726.2626567}
+{"kind": "sys_log", "ts": 1786937696.0, "msg": "Email alert sent.", "t": 1786937726.262968}
+{"kind": "sys_log", "ts": 1786937702.0, "msg": "Alert triggered.", "t": 1786937726.2630942}
+{"kind": "sys_log", "ts": 1786937709.0, "msg": "[WATCH] Person (0.83)", "t": 1786937726.2631373}
+{"kind": "sys_log", "ts": 1786937714.0, "msg": "Alert triggered.", "t": 1786937726.2631755}
+{"kind": "sys_log", "ts": 1786937722.0, "msg": "Alert triggered.", "t": 1786937726.2632146}
+{"kind": "sys_log", "ts": 1786937733.0, "msg": "Alert triggered.", "t": 1786937786.309459}
+{"kind": "sys_log", "ts": 1786937740.0, "msg": "[WATCH] Person (0.82)", "t": 1786937786.3095381}
+{"kind": "sys_log", "ts": 1786937743.0, "msg": "Alert triggered.", "t": 1786937786.309583}
+{"kind": "sys_log", "ts": 1786937747.0, "msg": "Alert triggered.", "t": 1786937786.3096201}
+{"kind": "sys_log", "ts": 1786937751.0, "msg": "Alert triggered.", "t": 1786937786.309656}
+{"kind": "sys_log", "ts": 1786937760.0, "msg": "Alert triggered.", "t": 1786937786.30969}
+{"kind": "sys_log", "ts": 1786937764.0, "msg": "Alert triggered.", "t": 1786937786.3097239}
+{"kind": "sys_log", "ts": 1786937770.0, "msg": "[WATCH] Person (0.87)", "t": 1786937786.3097572}
+{"kind": "sys_log", "ts": 1786937778.0, "msg": "Alert triggered.", "t": 1786937786.30979}
+{"kind": "sys_log", "ts": 1786937787.0, "msg": "Alert triggered.", "t": 1786937846.3503652}
+{"kind": "sys_log", "ts": 1786937797.0, "msg": "Alert triggered.", "t": 1786937846.3504634}
+{"kind": "sys_log", "ts": 1786937800.0, "msg": "[WATCH] Person (0.86)", "t": 1786937846.3505101}
+{"kind": "sys_log", "ts": 1786937814.0, "msg": "Alert triggered.", "t": 1786937846.3505495}
+{"kind": "sys_log", "ts": 1786937823.0, "msg": "Alert triggered.", "t": 1786937846.3505857}
+{"kind": "sys_log", "ts": 1786937830.0, "msg": "[WATCH] Person (0.82)", "t": 1786937846.3506207}
+{"kind": "sys_log", "ts": 1786937839.0, "msg": "Alert triggered.", "t": 1786937846.350656}
+{"kind": "sys_log", "ts": 1786937850.0, "msg": "Alert triggered.", "t": 1786937905.9000523}
+{"kind": "sys_log", "ts": 1786937863.0, "msg": "[WATCH] Person (0.83)", "t": 1786937905.9001403}
+{"kind": "sys_log", "ts": 1786937867.0, "msg": "Alert triggered.", "t": 1786937905.9001799}
+{"kind": "sys_log", "ts": 1786937884.0, "msg": "Alert triggered.", "t": 1786937905.9002502}
+{"kind": "sys_log", "ts": 1786937887.0, "msg": "Email alert sent.", "t": 1786937905.9002874}
+{"kind": "sys_log", "ts": 1786937894.0, "msg": "[WATCH] Person (0.85)", "t": 1786937905.9003782}
+{"kind": "sys_log", "ts": 1786937907.0, "msg": "Alert triggered.", "t": 1786937965.930933}
+{"kind": "sys_log", "ts": 1786937930.0, "msg": "[WATCH] Person (0.82)", "t": 1786937965.931373}
+{"kind": "sys_log", "ts": 1786937948.0, "msg": "Alert triggered.", "t": 1786937965.931472}
+{"kind": "sys_log", "ts": 1786937953.0, "msg": "Alert triggered.", "t": 1786937965.931519}
+{"kind": "sys_log", "ts": 1786937962.0, "msg": "[WATCH] Person (0.88)", "t": 1786937965.9315577}
+{"kind": "sys_log", "ts": 1786937962.0, "msg": "Alert triggered.", "t": 1786937965.931597}
+{"kind": "sys_log", "ts": 1786937972.0, "msg": "Alert triggered.", "t": 1786938025.9831114}
+{"kind": "sys_log", "ts": 1786937987.0, "msg": "Alert triggered.", "t": 1786938025.9835193}
+{"kind": "sys_log", "ts": 1786937993.0, "msg": "[WATCH] Person (0.83)", "t": 1786938025.9835799}
+{"kind": "sys_log", "ts": 1786938011.0, "msg": "Alert triggered.", "t": 1786938025.983621}
+{"kind": "sys_log", "ts": 1786938017.0, "msg": "Alert triggered.", "t": 1786938025.983662}
+{"kind": "sys_log", "ts": 1786938024.0, "msg": "[WATCH] Person (0.85)", "t": 1786938025.9836977}
+{"kind": "sys_log", "ts": 1786938036.0, "msg": "Alert triggered.", "t": 1786938086.0285697}
+{"kind": "sys_log", "ts": 1786938043.0, "msg": "Alert triggered.", "t": 1786938086.0287702}
+{"kind": "sys_log", "ts": 1786938057.0, "msg": "[WATCH] Person (0.84)", "t": 1786938086.0288165}
+{"kind": "sys_log", "ts": 1786938077.0, "msg": "Alert triggered.", "t": 1786938086.0288546}
+{"kind": "sys_log", "ts": 1786938081.0, "msg": "Email alert sent.", "t": 1786938086.0288901}
+{"kind": "sys_log", "ts": 1786938082.0, "msg": "Alert triggered.", "t": 1786938086.028969}
+{"kind": "sys_log", "ts": 1786938088.0, "msg": "[WATCH] Person (0.87)", "t": 1786938146.082687}
+{"kind": "sys_log", "ts": 1786938121.0, "msg": "[WATCH] Person (0.84)", "t": 1786938146.0830438}
+{"kind": "sys_log", "ts": 1786938126.0, "msg": "Alert triggered.", "t": 1786938146.0831017}
+{"kind": "sys_log", "ts": 1786938131.0, "msg": "Alert triggered.", "t": 1786938146.083145}
+{"kind": "sys_log", "ts": 1786938153.0, "msg": "[WATCH] Person (0.82)", "t": 1786938206.1424675}
+{"kind": "sys_log", "ts": 1786938177.0, "msg": "Alert triggered.", "t": 1786938206.1426675}
+{"kind": "sys_log", "ts": 1786938184.0, "msg": "[WATCH] Person (0.82)", "t": 1786938206.1427147}
+{"kind": "sys_log", "ts": 1786938198.0, "msg": "Alert triggered.", "t": 1786938206.1427534}
+{"kind": "sys_log", "ts": 1786938202.0, "msg": "Alert triggered.", "t": 1786938206.1427882}
+{"kind": "sys_log", "ts": 1786938230.0, "msg": "[WATCH] Person (0.85)", "t": 1786938266.177403}
+{"kind": "sys_log", "ts": 1786938300.0, "msg": "[WATCH] Person (0.85)", "t": 1786938326.225944}
+{"kind": "sys_log", "ts": 1786938348.0, "msg": "[WATCH] Person (0.88)", "t": 1786938386.2790523}
+{"kind": "sys_log", "ts": 1786938375.0, "msg": "Alert triggered.", "t": 1786938386.279211}
+{"kind": "sys_log", "ts": 1786938379.0, "msg": "Email alert sent.", "t": 1786938386.2792594}
+{"kind": "sys_log", "ts": 1786938388.0, "msg": "[WATCH] Person (0.82)", "t": 1786938446.322797}
+{"kind": "sys_log", "ts": 1786938422.0, "msg": "[WATCH] Person (0.86)", "t": 1786938446.3229878}
+{"kind": "sys_log", "ts": 1786938447.0, "msg": "Alert triggered.", "t": 1786938506.3652723}
+{"kind": "sys_log", "ts": 1786938464.0, "msg": "[WATCH] Person (0.84)", "t": 1786938506.3655977}
+{"kind": "sys_log", "ts": 1786938528.0, "msg": "[WATCH] Person (0.83)", "t": 1786938565.898732}
+{"kind": "sys_log", "ts": 1786938580.0, "msg": "[WATCH] Person (0.82)", "t": 1786938625.9497359}
+{"kind": "sys_log", "ts": 1786938617.0, "msg": "[WATCH] Person (0.86)", "t": 1786938625.9503012}
+{"kind": "sys_log", "ts": 1786938650.0, "msg": "[WATCH] Person (0.85)", "t": 1786938686.0074542}
+{"kind": "sys_log", "ts": 1786938700.0, "msg": "[WATCH] Person (0.82)", "t": 1786938746.0505905}
+{"kind": "sys_log", "ts": 1786938749.0, "msg": "[WATCH] Person (0.82)", "t": 1786938806.113408}
+{"kind": "sys_log", "ts": 1786938782.0, "msg": "[WATCH] Person (0.83)", "t": 1786938806.1136067}
+{"kind": "sys_log", "ts": 1786938823.0, "msg": "[WATCH] Person (0.82)", "t": 1786938866.1521513}
+{"kind": "sys_log", "ts": 1786938859.0, "msg": "Alert triggered.", "t": 1786938866.152273}
+{"kind": "sys_log", "ts": 1786938862.0, "msg": "Email alert sent.", "t": 1786938866.152326}
+{"kind": "sys_log", "ts": 1786938865.0, "msg": "[WATCH] Person (0.84)", "t": 1786938866.152424}
+{"kind": "sys_log", "ts": 1786938900.0, "msg": "[WATCH] Person (0.82)", "t": 1786938926.1994245}
+{"kind": "sys_log", "ts": 1786938930.0, "msg": "[WATCH] Person (0.84)", "t": 1786938986.256152}
+{"kind": "sys_log", "ts": 1786938953.0, "msg": "Alert triggered.", "t": 1786938986.2563906}
+{"kind": "sys_log", "ts": 1786938965.0, "msg": "Alert triggered.", "t": 1786938986.2564409}
+{"kind": "sys_log", "ts": 1786938971.0, "msg": "Alert triggered.", "t": 1786938986.2564795}
+{"kind": "sys_log", "ts": 1786938983.0, "msg": "[WATCH] Person (0.87)", "t": 1786938986.2565167}
+{"kind": "sys_log", "ts": 1786938990.0, "msg": "Alert triggered.", "t": 1786939046.3007166}
+{"kind": "sys_log", "ts": 1786938995.0, "msg": "Alert triggered.", "t": 1786939046.3009892}
+{"kind": "sys_log", "ts": 1786939051.0, "msg": "[WATCH] Person (0.82)", "t": 1786939106.335457}
+{"kind": "sys_log", "ts": 1786939074.0, "msg": "Alert triggered.", "t": 1786939106.3356426}
+{"kind": "sys_log", "ts": 1786939077.0, "msg": "Email alert sent.", "t": 1786939106.335691}
+{"kind": "sys_log", "ts": 1786939080.0, "msg": "Alert triggered.", "t": 1786939106.3357728}
+{"kind": "sys_log", "ts": 1786939082.0, "msg": "[WATCH] Person (0.83)", "t": 1786939106.3358085}

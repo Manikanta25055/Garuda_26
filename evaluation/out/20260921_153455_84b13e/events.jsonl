@@ -1,0 +1,78 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d32efd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9033313}
+{"kind": "login", "ok": false, "t": 1789985095.903579}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d140e10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9166539}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d148590>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9351544}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d142b90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9366717}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d14a210>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9444146}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d14b810>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9461122}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8d155050>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789985095.9478602}
+{"kind": "sys_log", "ts": 1789985098.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1789985159.4787784}
+{"kind": "sys_log", "ts": 1789985098.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1789985159.478912}
+{"kind": "sys_log", "ts": 1789985098.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1789985159.4789624}
+{"kind": "sys_log", "ts": 1789985099.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1789985159.479006}
+{"kind": "sys_log", "ts": 1789985099.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1789985159.4790456}
+{"kind": "sys_log", "ts": 1789985099.0, "msg": "Pipeline started.", "t": 1789985159.4791803}
+{"kind": "sys_log", "ts": 1789985129.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1789985159.4792264}
+{"kind": "sys_log", "ts": 1789985356.0, "msg": "[NETWORK] Internet restored \u2014 7555 queued events ready to sync", "t": 1789985413.4863143}
+{"kind": "sys_log", "ts": 1789985566.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1789985593.125327}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 20.44, "resp": {"ok": true, "t_request": 1789988829.8804958, "t_alert": 1789988829.8878286, "latency_ms": 7.33, "label": "Knife", "confidence": 0.9}, "t": 1789988829.8959923}
+{"kind": "sys_log", "ts": 1789988829.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1789988833.3870885}
+{"kind": "sys_log", "ts": 1789988829.0, "msg": "Alert triggered.", "t": 1789988833.3872564}
+{"kind": "sys_log", "ts": 1789989254.0, "msg": "[WATCH] Person (0.84)", "t": 1789989313.191144}
+{"kind": "sys_log", "ts": 1789989805.0, "msg": "[WATCH] Person (0.83)", "t": 1789989853.518509}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 14.73, "resp": {"ok": true, "t_request": 1789992429.8990846, "t_alert": 1789992429.9051871, "latency_ms": 6.1, "label": "scissors", "confidence": 0.9}, "t": 1789992429.9110682}
+{"kind": "sys_log", "ts": 1789992429.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1789992433.4043806}
+{"kind": "sys_log", "ts": 1789992429.0, "msg": "Alert triggered.", "t": 1789992433.404563}
+{"kind": "sys_log", "ts": 1789994073.0, "msg": "[WATCH] Person (0.85)", "t": 1789994113.13935}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 12.16, "resp": {"ok": true, "t_request": 1789996029.9135976, "t_alert": 1789996029.917291, "latency_ms": 3.69, "label": "Hammer", "confidence": 0.9}, "t": 1789996029.9235175}
+{"kind": "sys_log", "ts": 1789996029.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1789996033.399248}
+{"kind": "sys_log", "ts": 1789996029.0, "msg": "Alert triggered.", "t": 1789996033.3994086}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 11.83, "resp": {"ok": true, "t_request": 1789999629.9277947, "t_alert": 1789999629.9324524, "latency_ms": 4.66, "label": "Knife", "confidence": 0.9}, "t": 1789999629.9357922}
+{"kind": "sys_log", "ts": 1789999629.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1789999633.2957146}
+{"kind": "sys_log", "ts": 1789999629.0, "msg": "Alert triggered.", "t": 1789999633.2960634}
+{"kind": "sys_log", "ts": 1790000002.0, "msg": "[WATCH] Person (0.83)", "t": 1790000053.5683808}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 11.56, "resp": {"ok": true, "t_request": 1790003229.942549, "t_alert": 1790003229.94597, "latency_ms": 3.42, "label": "scissors", "confidence": 0.9}, "t": 1790003229.9502149}
+{"kind": "sys_log", "ts": 1790003229.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790003233.2737885}
+{"kind": "sys_log", "ts": 1790003229.0, "msg": "Alert triggered.", "t": 1790003233.2740057}
+{"kind": "sys_log", "ts": 1790004795.0, "msg": "[WATCH] Person (0.83)", "t": 1790004853.3790362}
+{"kind": "sys_log", "ts": 1790005064.0, "msg": "[WATCH] Person (0.86)", "t": 1790005093.532987}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 12.07, "resp": {"ok": true, "t_request": 1790006829.9527333, "t_alert": 1790006829.9552104, "latency_ms": 2.48, "label": "Hammer", "confidence": 0.9}, "t": 1790006829.9625525}
+{"kind": "sys_log", "ts": 1790006829.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790006833.2998083}
+{"kind": "sys_log", "ts": 1790006829.0, "msg": "Alert triggered.", "t": 1790006833.3002088}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 16.13, "resp": {"ok": true, "t_request": 1790010429.9652753, "t_alert": 1790010429.9732523, "latency_ms": 7.98, "label": "Knife", "confidence": 0.9}, "t": 1790010429.9789646}
+{"kind": "sys_log", "ts": 1790010429.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790010433.238066}
+{"kind": "sys_log", "ts": 1790010429.0, "msg": "Alert triggered.", "t": 1790010433.2382543}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 9.16, "resp": {"ok": true, "t_request": 1790014029.9816327, "t_alert": 1790014029.9842896, "latency_ms": 2.66, "label": "scissors", "confidence": 0.9}, "t": 1790014029.9884405}
+{"kind": "sys_log", "ts": 1790014029.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790014033.3256328}
+{"kind": "sys_log", "ts": 1790014029.0, "msg": "Alert triggered.", "t": 1790014033.3257935}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 14.41, "resp": {"ok": true, "t_request": 1790017629.9915583, "t_alert": 1790017629.9956818, "latency_ms": 4.12, "label": "Hammer", "confidence": 0.9}, "t": 1790017630.003435}
+{"kind": "sys_log", "ts": 1790017629.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790017633.3776486}
+{"kind": "sys_log", "ts": 1790017629.0, "msg": "Alert triggered.", "t": 1790017633.3793457}
+{"kind": "sys_log", "ts": 1790020083.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1790020093.618516}
+{"kind": "sys_log", "ts": 1790020083.0, "msg": "[TAMPER] Email failed: [Errno -3] Temporary failure in name resolution", "t": 1790020093.6187708}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 10.65, "resp": {"ok": true, "t_request": 1790021230.0060184, "t_alert": 1790021230.0090027, "latency_ms": 2.98, "label": "Knife", "confidence": 0.9}, "t": 1790021230.0144086}
+{"kind": "sys_log", "ts": 1790021230.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790021233.3642006}
+{"kind": "sys_log", "ts": 1790021230.0, "msg": "Alert triggered.", "t": 1790021233.3644018}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 8.8, "resp": {"ok": true, "t_request": 1790024830.0168176, "t_alert": 1790024830.0194898, "latency_ms": 2.67, "label": "scissors", "confidence": 0.9}, "t": 1790024830.0234914}
+{"kind": "sys_log", "ts": 1790024830.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790024833.689415}
+{"kind": "sys_log", "ts": 1790024830.0, "msg": "Alert triggered.", "t": 1790024833.6896133}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 11.04, "resp": {"ok": true, "t_request": 1790028430.0276256, "t_alert": 1790028430.0302103, "latency_ms": 2.59, "label": "Hammer", "confidence": 0.9}, "t": 1790028430.0351117}
+{"kind": "sys_log", "ts": 1790028430.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790028433.7551072}
+{"kind": "sys_log", "ts": 1790028430.0, "msg": "Alert triggered.", "t": 1790028433.7552679}
+{"kind": "sys_log", "ts": 1790030204.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1790030233.5659645}
+{"kind": "sys_log", "ts": 1790030204.0, "msg": "[TAMPER] Email failed: [Errno -3] Temporary failure in name resolution", "t": 1790030233.5661902}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 21.79, "resp": {"ok": true, "t_request": 1790032030.0437043, "t_alert": 1790032030.0494668, "latency_ms": 5.76, "label": "Knife", "confidence": 0.9}, "t": 1790032030.057692}
+{"kind": "sys_log", "ts": 1790032030.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790032033.7215536}
+{"kind": "sys_log", "ts": 1790032030.0, "msg": "Alert triggered.", "t": 1790032033.7220078}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 16.77, "resp": {"ok": true, "t_request": 1790035630.0603623, "t_alert": 1790035630.0668015, "latency_ms": 6.44, "label": "scissors", "confidence": 0.9}, "t": 1790035630.074774}
+{"kind": "sys_log", "ts": 1790035630.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790035633.7313693}
+{"kind": "sys_log", "ts": 1790035630.0, "msg": "Alert triggered.", "t": 1790035633.732002}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 15.74, "resp": {"ok": true, "t_request": 1790039230.0772462, "t_alert": 1790039230.0868359, "latency_ms": 9.59, "label": "Hammer", "confidence": 0.9}, "t": 1790039230.0907822}
+{"kind": "sys_log", "ts": 1790039230.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1790039233.7304618}
+{"kind": "sys_log", "ts": 1790039230.0, "msg": "Alert triggered.", "t": 1790039233.7306828}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 14.06, "resp": {"ok": true, "t_request": 1790042830.0960002, "t_alert": 1790042830.100898, "latency_ms": 4.9, "label": "Knife", "confidence": 0.9}, "t": 1790042830.1057496}
+{"kind": "sys_log", "ts": 1790042830.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1790042833.7271426}
+{"kind": "sys_log", "ts": 1790042830.0, "msg": "Alert triggered.", "t": 1790042833.7274792}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 14.72, "resp": {"ok": true, "t_request": 1790046430.1124866, "t_alert": 1790046430.1153133, "latency_ms": 2.83, "label": "scissors", "confidence": 0.9}, "t": 1790046430.1208255}
+{"kind": "sys_log", "ts": 1790046430.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1790046433.9836142}
+{"kind": "sys_log", "ts": 1790046430.0, "msg": "Alert triggered.", "t": 1790046433.9842517}

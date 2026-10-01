@@ -1,0 +1,17 @@
+{"kind": "login", "ok": true, "t": 1787062605.0269525}
+{"kind": "sys_log", "ts": 1787062577.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787062638.0522723}
+{"kind": "sys_log", "ts": 1787062577.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787062638.0524082}
+{"kind": "sys_log", "ts": 1787062577.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787062638.0524647}
+{"kind": "sys_log", "ts": 1787062577.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787062638.05251}
+{"kind": "sys_log", "ts": 1787062577.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787062638.052553}
+{"kind": "sys_log", "ts": 1787062577.0, "msg": "Pipeline started.", "t": 1787062638.0526707}
+{"kind": "sys_log", "ts": 1787062605.0, "msg": "Login: svc_eval", "t": 1787062638.0527177}
+{"kind": "sys_log", "ts": 1787062611.0, "msg": "OTP email sent to mgonugondlamanikanta@gmail.com", "t": 1787062638.0527582}
+{"kind": "sys_log", "ts": 1787063086.0, "msg": "[WATCH] Person (0.86)", "t": 1787063117.918875}
+{"kind": "sys_log", "ts": 1787063205.0, "msg": "[WATCH] Person (0.85)", "t": 1787063238.0198636}
+{"kind": "sys_log", "ts": 1787063358.0, "msg": "[WATCH] Person (0.82)", "t": 1787063418.146914}
+{"kind": "reauth", "ok": true, "t": 1787063505.959928}
+{"kind": "sys_log", "ts": 1787063505.0, "msg": "Login: svc_eval", "t": 1787063538.246868}
+{"kind": "sys_log", "ts": 1787063770.0, "msg": "[WATCH] Person (0.88)", "t": 1787063777.941282}
+{"kind": "sys_log", "ts": 1787063802.0, "msg": "[WATCH] Person (0.88)", "t": 1787063837.9879029}
+{"kind": "sys_log", "ts": 1787063832.0, "msg": "[WATCH] Person (0.88)", "t": 1787063837.9880655}

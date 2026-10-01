@@ -1,0 +1,8 @@
+{"kind": "test_begin", "ts": 1786534566.3641567, "t": 1786534566.3641596}
+{"kind": "tamper", "ts": 1786478032.0, "expected": false, "t": 1786534591.8659492}
+{"kind": "test_end", "ts": 1786534806.3643599, "t": 1786534806.3643627}
+{"kind": "tamper", "ts": 1786536842.0, "expected": false, "t": 1786536903.1938076}
+{"kind": "tamper", "ts": 1786546037.0, "expected": false, "t": 1786546097.4396217}
+{"kind": "tamper", "ts": 1786546149.0, "expected": false, "t": 1786546209.5716264}
+{"kind": "tamper", "ts": 1786546850.0, "expected": false, "t": 1786546910.4149678}
+{"kind": "tamper", "ts": 1786547609.0, "expected": false, "t": 1786547669.3007555}

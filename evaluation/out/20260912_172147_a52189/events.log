@@ -1,0 +1,5 @@
+[17:21:47] evaluation running; deadline in 24.0 h
+[05:21:53] deadman test: suppressing heartbeat for 240 s
+[05:25:53] deadman test: heartbeat resumed
+[17:21:48] finalising
+[17:21:48] summary written to /home/manikanta/Projects/Garuda_26/evaluation/out/20260912_172147_a52189/summary.json

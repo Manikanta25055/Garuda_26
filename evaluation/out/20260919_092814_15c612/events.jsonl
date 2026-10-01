@@ -1,0 +1,21 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9244b290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.4648025}
+{"kind": "login", "ok": false, "t": 1789790294.465006}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f924512d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.477812}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f924539d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.4782465}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f92454e10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.4783916}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f92456250>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.4844542}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f92457890>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.4889328}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f924650d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1789790294.4901106}
+{"kind": "sys_log", "ts": 1789790297.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1789790358.0327687}
+{"kind": "sys_log", "ts": 1789790297.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1789790358.0329475}
+{"kind": "sys_log", "ts": 1789790297.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1789790358.032995}
+{"kind": "sys_log", "ts": 1789790297.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1789790358.0330374}
+{"kind": "sys_log", "ts": 1789790297.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1789790358.0330794}
+{"kind": "sys_log", "ts": 1789790297.0, "msg": "Pipeline started.", "t": 1789790358.033228}
+{"kind": "sys_log", "ts": 1789790327.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1789790358.033273}
+{"kind": "sys_log", "ts": 1789790420.0, "msg": "[NETWORK] Internet restored \u2014 7521 queued events ready to sync", "t": 1789790653.8473828}
+{"kind": "sys_log", "ts": 1789790749.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1789790773.9465997}
+{"kind": "sys_log", "ts": 1789790809.0, "msg": "[NETWORK] Internet restored \u2014 7521 queued events ready to sync", "t": 1789790833.9785697}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 14.12, "resp": {"ok": true, "t_request": 1789794070.6892617, "t_alert": 1789794070.6933537, "latency_ms": 4.09, "label": "Knife", "confidence": 0.9}, "t": 1789794070.6967926}
+{"kind": "sys_log", "ts": 1789794070.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1789794073.9999187}
+{"kind": "sys_log", "ts": 1789794070.0, "msg": "Alert triggered.", "t": 1789794074.0001287}

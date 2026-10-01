@@ -1,0 +1,23 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa355b290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6373887}
+{"kind": "login", "ok": false, "t": 1787152698.6376076}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa3560fd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6421702}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa3562c90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6425538}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa35649d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6430047}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa35654d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6461744}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa3567850>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6476798}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa3575090>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787152698.6496143}
+{"kind": "sys_log", "ts": 1787152701.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787152762.1886022}
+{"kind": "sys_log", "ts": 1787152701.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787152762.1888175}
+{"kind": "sys_log", "ts": 1787152701.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787152762.1888707}
+{"kind": "sys_log", "ts": 1787152701.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787152762.1889133}
+{"kind": "sys_log", "ts": 1787152701.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787152762.1889565}
+{"kind": "sys_log", "ts": 1787152702.0, "msg": "Pipeline started.", "t": 1787152762.1891289}
+{"kind": "sys_log", "ts": 1787152722.0, "msg": "[WATCH] Person (0.89)", "t": 1787152762.189174}
+{"kind": "sys_log", "ts": 1787152731.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787152762.189213}
+{"kind": "sys_log", "ts": 1787152869.0, "msg": "[NETWORK] Internet restored \u2014 4973 queued events ready to sync", "t": 1787152926.6006536}
+{"kind": "sys_log", "ts": 1787152916.0, "msg": "[WATCH] Person (0.85)", "t": 1787152926.6008234}
+{"kind": "sys_log", "ts": 1787152969.0, "msg": "[WATCH] Person (0.82)", "t": 1787152986.6534483}
+{"kind": "sys_log", "ts": 1787153023.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787153046.6831625}
+{"kind": "sys_log", "ts": 1787153113.0, "msg": "[NETWORK] Internet restored \u2014 4975 queued events ready to sync", "t": 1787153166.2821448}
+{"kind": "sys_log", "ts": 1787153483.0, "msg": "[WATCH] Person (0.83)", "t": 1787153526.5239248}
+{"kind": "sys_log", "ts": 1787154170.0, "msg": "[WATCH] Person (0.83)", "t": 1787154186.537447}

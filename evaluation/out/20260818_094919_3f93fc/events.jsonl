@@ -1,0 +1,236 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b87b250>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.4158168}
+{"kind": "login", "ok": false, "t": 1787026759.416558}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b880e50>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.4326684}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b884c90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.4338758}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b882e50>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.4362469}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b8862d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.441048}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b8878d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.4529505}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b891090>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787026759.455291}
+{"kind": "sys_log", "ts": 1787026763.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787026823.5032287}
+{"kind": "sys_log", "ts": 1787026763.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787026823.503405}
+{"kind": "sys_log", "ts": 1787026763.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787026823.5034554}
+{"kind": "sys_log", "ts": 1787026763.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787026823.503499}
+{"kind": "sys_log", "ts": 1787026763.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787026823.503543}
+{"kind": "sys_log", "ts": 1787026763.0, "msg": "Pipeline started.", "t": 1787026823.5037029}
+{"kind": "sys_log", "ts": 1787026793.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787026823.5037503}
+{"kind": "sys_log", "ts": 1787026989.0, "msg": "[NETWORK] Internet restored \u2014 4549 queued events ready to sync", "t": 1787027046.1927528}
+{"kind": "sys_log", "ts": 1787027142.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787027166.277393}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b892d90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787027212.2540913}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b89c7d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787027212.2813425}
+{"kind": "sys_log", "ts": 1787027214.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787027274.8656}
+{"kind": "sys_log", "ts": 1787027214.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787027274.8658555}
+{"kind": "sys_log", "ts": 1787027214.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787027274.8660526}
+{"kind": "sys_log", "ts": 1787027214.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787027274.866645}
+{"kind": "sys_log", "ts": 1787027214.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787027274.8672216}
+{"kind": "sys_log", "ts": 1787027214.0, "msg": "Pipeline started.", "t": 1787027274.8677826}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 13.42, "resp": {"ok": true, "t_request": 1787030462.0472825, "t_alert": 1787030462.0530837, "latency_ms": 5.8, "label": "Knife", "confidence": 0.9}, "t": 1787030462.0568914}
+{"kind": "sys_log", "ts": 1787030462.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787030515.0760586}
+{"kind": "sys_log", "ts": 1787030462.0, "msg": "Alert triggered.", "t": 1787030515.0762863}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 14.33, "resp": {"ok": true, "t_request": 1787034062.064127, "t_alert": 1787034062.0670624, "latency_ms": 2.94, "label": "scissors", "confidence": 0.9}, "t": 1787034062.0717192}
+{"kind": "sys_log", "ts": 1787034062.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787034114.6273844}
+{"kind": "sys_log", "ts": 1787034062.0, "msg": "Alert triggered.", "t": 1787034114.6275582}
+{"kind": "sys_log", "ts": 1787037553.0, "msg": "[WATCH] Person (0.83)", "t": 1787037594.703624}
+{"kind": "sys_log", "ts": 1787037577.0, "msg": "Alert triggered.", "t": 1787037594.7037542}
+{"kind": "sys_log", "ts": 1787037580.0, "msg": "Email alert sent.", "t": 1787037594.7038035}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 10.3, "resp": {"ok": true, "t_request": 1787037662.0746677, "t_alert": 1787037662.077698, "latency_ms": 3.03, "label": "Hammer", "confidence": 0.9}, "t": 1787037662.082452}
+{"kind": "sys_log", "ts": 1787037662.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1787037714.7915256}
+{"kind": "sys_log", "ts": 1787037662.0, "msg": "Alert triggered.", "t": 1787037714.7917}
+{"kind": "sys_log", "ts": 1787038411.0, "msg": "[WATCH] Person (0.85)", "t": 1787038434.7153058}
+{"kind": "sys_log", "ts": 1787039590.0, "msg": "[WATCH] Person (0.82)", "t": 1787039635.1391764}
+{"kind": "sys_log", "ts": 1787039637.0, "msg": "[WATCH] Person (0.82)", "t": 1787039694.6915386}
+{"kind": "sys_log", "ts": 1787039709.0, "msg": "[WATCH] Person (0.82)", "t": 1787039754.7365856}
+{"kind": "sys_log", "ts": 1787039766.0, "msg": "[WATCH] Person (0.86)", "t": 1787039814.7981544}
+{"kind": "sys_log", "ts": 1787039844.0, "msg": "[WATCH] Person (0.85)", "t": 1787039874.8479912}
+{"kind": "sys_log", "ts": 1787040119.0, "msg": "[WATCH] Person (0.82)", "t": 1787040175.063228}
+{"kind": "sys_log", "ts": 1787040308.0, "msg": "[WATCH] Person (0.83)", "t": 1787040354.6920938}
+{"kind": "sys_log", "ts": 1787040381.0, "msg": "[WATCH] Person (0.86)", "t": 1787040414.746902}
+{"kind": "sys_log", "ts": 1787040500.0, "msg": "[WATCH] Person (0.83)", "t": 1787040534.845333}
+{"kind": "sys_log", "ts": 1787040530.0, "msg": "[WATCH] Person (0.87)", "t": 1787040534.8455732}
+{"kind": "sys_log", "ts": 1787040560.0, "msg": "[WATCH] Person (0.83)", "t": 1787040594.8859298}
+{"kind": "sys_log", "ts": 1787040590.0, "msg": "[WATCH] Person (0.86)", "t": 1787040594.8861141}
+{"kind": "sys_log", "ts": 1787040620.0, "msg": "[WATCH] Person (0.84)", "t": 1787040654.925203}
+{"kind": "sys_log", "ts": 1787040650.0, "msg": "[WATCH] Person (0.84)", "t": 1787040654.9254065}
+{"kind": "sys_log", "ts": 1787040680.0, "msg": "[WATCH] Person (0.82)", "t": 1787040714.963782}
+{"kind": "sys_log", "ts": 1787040710.0, "msg": "[WATCH] Person (0.86)", "t": 1787040714.9639714}
+{"kind": "sys_log", "ts": 1787040740.0, "msg": "[WATCH] Person (0.86)", "t": 1787040775.0154119}
+{"kind": "sys_log", "ts": 1787040770.0, "msg": "[WATCH] Person (0.85)", "t": 1787040775.0156002}
+{"kind": "sys_log", "ts": 1787040800.0, "msg": "[WATCH] Person (0.85)", "t": 1787040835.0479448}
+{"kind": "sys_log", "ts": 1787040830.0, "msg": "[WATCH] Person (0.86)", "t": 1787040835.0487542}
+{"kind": "sys_log", "ts": 1787040860.0, "msg": "[WATCH] Person (0.88)", "t": 1787040895.089814}
+{"kind": "sys_log", "ts": 1787040890.0, "msg": "[WATCH] Person (0.85)", "t": 1787040895.0901601}
+{"kind": "sys_log", "ts": 1787040920.0, "msg": "[WATCH] Person (0.84)", "t": 1787040955.1313014}
+{"kind": "sys_log", "ts": 1787040951.0, "msg": "[WATCH] Person (0.85)", "t": 1787040955.1314738}
+{"kind": "sys_log", "ts": 1787040981.0, "msg": "[WATCH] Person (0.84)", "t": 1787041015.170583}
+{"kind": "sys_log", "ts": 1787041011.0, "msg": "[WATCH] Person (0.82)", "t": 1787041015.170783}
+{"kind": "sys_log", "ts": 1787041041.0, "msg": "[WATCH] Person (0.87)", "t": 1787041074.7470162}
+{"kind": "sys_log", "ts": 1787041071.0, "msg": "[WATCH] Person (0.87)", "t": 1787041074.7472687}
+{"kind": "sys_log", "ts": 1787041101.0, "msg": "[WATCH] Person (0.82)", "t": 1787041134.7869837}
+{"kind": "sys_log", "ts": 1787041131.0, "msg": "[WATCH] Person (0.85)", "t": 1787041134.7871516}
+{"kind": "sys_log", "ts": 1787041161.0, "msg": "[WATCH] Person (0.86)", "t": 1787041194.830085}
+{"kind": "sys_log", "ts": 1787041191.0, "msg": "[WATCH] Person (0.83)", "t": 1787041194.8302758}
+{"kind": "sys_log", "ts": 1787041221.0, "msg": "[WATCH] Person (0.88)", "t": 1787041254.8596585}
+{"kind": "sys_log", "ts": 1787041251.0, "msg": "[WATCH] Person (0.82)", "t": 1787041254.8598254}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 10.08, "resp": {"ok": true, "t_request": 1787041262.0857387, "t_alert": 1787041262.088157, "latency_ms": 2.42, "label": "Knife", "confidence": 0.9}, "t": 1787041262.0930603}
+{"kind": "sys_log", "ts": 1787041262.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787041314.9071171}
+{"kind": "sys_log", "ts": 1787041262.0, "msg": "Alert triggered.", "t": 1787041314.9073088}
+{"kind": "sys_log", "ts": 1787041281.0, "msg": "[WATCH] Person (0.85)", "t": 1787041314.9073575}
+{"kind": "sys_log", "ts": 1787041311.0, "msg": "[WATCH] Person (0.83)", "t": 1787041314.9073958}
+{"kind": "sys_log", "ts": 1787041341.0, "msg": "[WATCH] Person (0.85)", "t": 1787041374.9542122}
+{"kind": "sys_log", "ts": 1787041371.0, "msg": "[WATCH] Person (0.88)", "t": 1787041374.9544585}
+{"kind": "sys_log", "ts": 1787041401.0, "msg": "[WATCH] Person (0.83)", "t": 1787041434.9928079}
+{"kind": "sys_log", "ts": 1787041431.0, "msg": "[WATCH] Person (0.88)", "t": 1787041434.9929922}
+{"kind": "sys_log", "ts": 1787041461.0, "msg": "[WATCH] Person (0.88)", "t": 1787041495.0371096}
+{"kind": "sys_log", "ts": 1787041491.0, "msg": "[WATCH] Person (0.86)", "t": 1787041495.0372777}
+{"kind": "sys_log", "ts": 1787041521.0, "msg": "[WATCH] Person (0.83)", "t": 1787041555.0786936}
+{"kind": "sys_log", "ts": 1787041551.0, "msg": "[WATCH] Person (0.86)", "t": 1787041555.0788848}
+{"kind": "sys_log", "ts": 1787041582.0, "msg": "[WATCH] Person (0.85)", "t": 1787041615.1190035}
+{"kind": "sys_log", "ts": 1787041612.0, "msg": "[WATCH] Person (0.84)", "t": 1787041615.1193774}
+{"kind": "sys_log", "ts": 1787041643.0, "msg": "[WATCH] Person (0.86)", "t": 1787041675.1820142}
+{"kind": "sys_log", "ts": 1787041673.0, "msg": "[WATCH] Person (0.86)", "t": 1787041675.182835}
+{"kind": "sys_log", "ts": 1787041703.0, "msg": "[WATCH] Person (0.88)", "t": 1787041734.7203882}
+{"kind": "sys_log", "ts": 1787041733.0, "msg": "[WATCH] Person (0.82)", "t": 1787041734.720598}
+{"kind": "sys_log", "ts": 1787041763.0, "msg": "[WATCH] Person (0.84)", "t": 1787041794.7698011}
+{"kind": "sys_log", "ts": 1787041793.0, "msg": "[WATCH] Person (0.82)", "t": 1787041794.76997}
+{"kind": "sys_log", "ts": 1787041824.0, "msg": "[WATCH] Person (0.85)", "t": 1787041854.796321}
+{"kind": "sys_log", "ts": 1787041854.0, "msg": "[WATCH] Person (0.85)", "t": 1787041854.7965117}
+{"kind": "sys_log", "ts": 1787041884.0, "msg": "[WATCH] Person (0.85)", "t": 1787041914.8400896}
+{"kind": "sys_log", "ts": 1787041914.0, "msg": "[WATCH] Person (0.85)", "t": 1787041914.8402627}
+{"kind": "sys_log", "ts": 1787041944.0, "msg": "[WATCH] Person (0.82)", "t": 1787041974.887086}
+{"kind": "sys_log", "ts": 1787041974.0, "msg": "[WATCH] Person (0.85)", "t": 1787041974.8874302}
+{"kind": "sys_log", "ts": 1787042005.0, "msg": "[WATCH] Person (0.86)", "t": 1787042034.9273884}
+{"kind": "sys_log", "ts": 1787042035.0, "msg": "[WATCH] Person (0.87)", "t": 1787042094.967474}
+{"kind": "sys_log", "ts": 1787042065.0, "msg": "[WATCH] Person (0.86)", "t": 1787042094.967702}
+{"kind": "sys_log", "ts": 1787042096.0, "msg": "[WATCH] Person (0.82)", "t": 1787042154.9961107}
+{"kind": "sys_log", "ts": 1787042126.0, "msg": "[WATCH] Person (0.85)", "t": 1787042154.9962778}
+{"kind": "sys_log", "ts": 1787042156.0, "msg": "[WATCH] Person (0.85)", "t": 1787042215.0353127}
+{"kind": "sys_log", "ts": 1787042186.0, "msg": "[WATCH] Person (0.84)", "t": 1787042215.0355723}
+{"kind": "sys_log", "ts": 1787042217.0, "msg": "[WATCH] Person (0.86)", "t": 1787042275.0829437}
+{"kind": "sys_log", "ts": 1787042247.0, "msg": "[WATCH] Person (0.85)", "t": 1787042275.0831306}
+{"kind": "sys_log", "ts": 1787042277.0, "msg": "[WATCH] Person (0.83)", "t": 1787042335.1553705}
+{"kind": "sys_log", "ts": 1787042307.0, "msg": "[WATCH] Person (0.86)", "t": 1787042335.1555536}
+{"kind": "sys_log", "ts": 1787042337.0, "msg": "[WATCH] Person (0.88)", "t": 1787042395.1988683}
+{"kind": "sys_log", "ts": 1787042367.0, "msg": "[WATCH] Person (0.87)", "t": 1787042395.1990411}
+{"kind": "sys_log", "ts": 1787042397.0, "msg": "[WATCH] Person (0.82)", "t": 1787042454.7377353}
+{"kind": "sys_log", "ts": 1787042428.0, "msg": "[WATCH] Person (0.85)", "t": 1787042454.7379909}
+{"kind": "sys_log", "ts": 1787042458.0, "msg": "[WATCH] Person (0.88)", "t": 1787042514.7711244}
+{"kind": "sys_log", "ts": 1787042488.0, "msg": "[WATCH] Person (0.84)", "t": 1787042514.7713344}
+{"kind": "sys_log", "ts": 1787042518.0, "msg": "[WATCH] Person (0.82)", "t": 1787042574.8069947}
+{"kind": "sys_log", "ts": 1787042548.0, "msg": "[WATCH] Person (0.87)", "t": 1787042574.8071704}
+{"kind": "sys_log", "ts": 1787042578.0, "msg": "[WATCH] Person (0.82)", "t": 1787042634.8672094}
+{"kind": "sys_log", "ts": 1787042608.0, "msg": "[WATCH] Person (0.89)", "t": 1787042634.8673792}
+{"kind": "sys_log", "ts": 1787042639.0, "msg": "[WATCH] Person (0.85)", "t": 1787042694.9149358}
+{"kind": "sys_log", "ts": 1787042669.0, "msg": "[WATCH] Person (0.82)", "t": 1787042694.9153078}
+{"kind": "sys_log", "ts": 1787042699.0, "msg": "[WATCH] Person (0.82)", "t": 1787042754.959214}
+{"kind": "sys_log", "ts": 1787042729.0, "msg": "[WATCH] Person (0.83)", "t": 1787042754.9594169}
+{"kind": "sys_log", "ts": 1787042759.0, "msg": "[WATCH] Person (0.86)", "t": 1787042815.0102317}
+{"kind": "sys_log", "ts": 1787042789.0, "msg": "[WATCH] Person (0.82)", "t": 1787042815.010396}
+{"kind": "sys_log", "ts": 1787042819.0, "msg": "[WATCH] Person (0.87)", "t": 1787042875.0583432}
+{"kind": "sys_log", "ts": 1787042849.0, "msg": "[WATCH] Person (0.83)", "t": 1787042875.0587652}
+{"kind": "sys_log", "ts": 1787042879.0, "msg": "[WATCH] Person (0.82)", "t": 1787042935.1040487}
+{"kind": "sys_log", "ts": 1787042910.0, "msg": "[WATCH] Person (0.85)", "t": 1787042935.104232}
+{"kind": "sys_log", "ts": 1787042940.0, "msg": "[WATCH] Person (0.82)", "t": 1787042995.1513944}
+{"kind": "sys_log", "ts": 1787042970.0, "msg": "[WATCH] Person (0.83)", "t": 1787042995.1515682}
+{"kind": "sys_log", "ts": 1787043000.0, "msg": "[WATCH] Person (0.84)", "t": 1787043055.1823866}
+{"kind": "sys_log", "ts": 1787043030.0, "msg": "[WATCH] Person (0.82)", "t": 1787043055.1825502}
+{"kind": "sys_log", "ts": 1787043060.0, "msg": "[WATCH] Person (0.83)", "t": 1787043114.7296138}
+{"kind": "sys_log", "ts": 1787043091.0, "msg": "[WATCH] Person (0.83)", "t": 1787043114.7298007}
+{"kind": "sys_log", "ts": 1787043121.0, "msg": "[WATCH] Person (0.83)", "t": 1787043174.7730558}
+{"kind": "sys_log", "ts": 1787043151.0, "msg": "[WATCH] Person (0.82)", "t": 1787043174.7732415}
+{"kind": "sys_log", "ts": 1787043181.0, "msg": "[WATCH] Person (0.86)", "t": 1787043234.804405}
+{"kind": "sys_log", "ts": 1787043211.0, "msg": "[WATCH] Person (0.86)", "t": 1787043234.804577}
+{"kind": "sys_log", "ts": 1787043241.0, "msg": "[WATCH] Person (0.82)", "t": 1787043294.852087}
+{"kind": "sys_log", "ts": 1787043271.0, "msg": "[WATCH] Person (0.82)", "t": 1787043294.852282}
+{"kind": "sys_log", "ts": 1787043301.0, "msg": "[WATCH] Person (0.86)", "t": 1787043354.8882153}
+{"kind": "sys_log", "ts": 1787043331.0, "msg": "[WATCH] Person (0.84)", "t": 1787043354.8885515}
+{"kind": "sys_log", "ts": 1787043361.0, "msg": "[WATCH] Person (0.82)", "t": 1787043414.9547622}
+{"kind": "sys_log", "ts": 1787043391.0, "msg": "[WATCH] Person (0.86)", "t": 1787043414.9549396}
+{"kind": "sys_log", "ts": 1787043579.0, "msg": "[WATCH] Person (0.82)", "t": 1787043595.0953486}
+{"kind": "sys_log", "ts": 1787044378.0, "msg": "[WATCH] Person (0.82)", "t": 1787044435.175214}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 10.16, "resp": {"ok": true, "t_request": 1787044862.096832, "t_alert": 1787044862.0996797, "latency_ms": 2.85, "label": "scissors", "confidence": 0.9}, "t": 1787044862.1035354}
+{"kind": "sys_log", "ts": 1787044862.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787044915.040109}
+{"kind": "sys_log", "ts": 1787044862.0, "msg": "Alert triggered.", "t": 1787044915.040594}
+{"kind": "sys_log", "ts": 1787047107.0, "msg": "[WATCH] Person (0.90)", "t": 1787047135.1107764}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 9.56, "resp": {"ok": true, "t_request": 1787048462.1064878, "t_alert": 1787048462.1103091, "latency_ms": 3.82, "label": "Hammer", "confidence": 0.9}, "t": 1787048462.1134088}
+{"kind": "sys_log", "ts": 1787048462.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1787048515.0831501}
+{"kind": "sys_log", "ts": 1787048462.0, "msg": "Alert triggered.", "t": 1787048515.0833747}
+{"kind": "sys_log", "ts": 1787048840.0, "msg": "[WATCH] Person (0.83)", "t": 1787048874.8746405}
+{"kind": "sys_log", "ts": 1787050641.0, "msg": "[WATCH] Person (0.84)", "t": 1787050674.8517115}
+{"kind": "sys_log", "ts": 1787050930.0, "msg": "[WATCH] Person (0.83)", "t": 1787050975.0748005}
+{"kind": "sys_log", "ts": 1787051370.0, "msg": "[WATCH] Person (0.83)", "t": 1787051394.8343549}
+{"kind": "sys_log", "ts": 1787051564.0, "msg": "[WATCH] Person (0.84)", "t": 1787051574.9792075}
+{"kind": "sys_log", "ts": 1787051649.0, "msg": "[WATCH] Person (0.85)", "t": 1787051695.0909522}
+{"kind": "sys_log", "ts": 1787051687.0, "msg": "[WATCH] Person (0.92)", "t": 1787051695.0911357}
+{"kind": "sys_log", "ts": 1787052034.0, "msg": "[WATCH] Person (0.87)", "t": 1787052054.8853505}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 15.28, "resp": {"ok": true, "t_request": 1787052062.1157324, "t_alert": 1787052062.125019, "latency_ms": 9.29, "label": "Knife", "confidence": 0.9}, "t": 1787052062.1289277}
+{"kind": "sys_log", "ts": 1787052062.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787052114.9344854}
+{"kind": "sys_log", "ts": 1787052062.0, "msg": "Alert triggered.", "t": 1787052114.934898}
+{"kind": "sys_log", "ts": 1787052165.0, "msg": "[WATCH] Person (0.89)", "t": 1787052174.9729114}
+{"kind": "sys_log", "ts": 1787053601.0, "msg": "[WATCH] Person (0.86)", "t": 1787053615.132565}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b886210>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787053977.389147}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b89fb90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787053977.4205725}
+{"kind": "sys_log", "ts": 1787053985.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787054045.9631352}
+{"kind": "sys_log", "ts": 1787053985.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787054045.9633167}
+{"kind": "sys_log", "ts": 1787053985.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787054045.9633672}
+{"kind": "sys_log", "ts": 1787053985.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787054045.9634087}
+{"kind": "sys_log", "ts": 1787053985.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787054045.9634469}
+{"kind": "sys_log", "ts": 1787053985.0, "msg": "Pipeline started.", "t": 1787054045.9635115}
+{"kind": "sys_log", "ts": 1787054479.0, "msg": "[WATCH] Person (0.92)", "t": 1787054526.295247}
+{"kind": "sys_log", "ts": 1787054611.0, "msg": "[WATCH] Person (0.84)", "t": 1787054645.891195}
+{"kind": "sys_log", "ts": 1787054641.0, "msg": "[WATCH] Person (0.88)", "t": 1787054645.8913765}
+{"kind": "sys_log", "ts": 1787054891.0, "msg": "[WATCH] Person (0.86)", "t": 1787054946.1810899}
+{"kind": "sys_log", "ts": 1787054939.0, "msg": "[WATCH] Person (0.82)", "t": 1787054946.1812818}
+{"kind": "sys_log", "ts": 1787054969.0, "msg": "[WATCH] Person (0.91)", "t": 1787055006.2197833}
+{"kind": "sys_log", "ts": 1787054999.0, "msg": "[WATCH] Person (0.82)", "t": 1787055006.2199671}
+{"kind": "sys_log", "ts": 1787055030.0, "msg": "[WATCH] Person (0.84)", "t": 1787055066.2594454}
+{"kind": "sys_log", "ts": 1787055060.0, "msg": "[WATCH] Person (0.88)", "t": 1787055066.2596838}
+{"kind": "sys_log", "ts": 1787055090.0, "msg": "[WATCH] Person (0.88)", "t": 1787055126.3047216}
+{"kind": "sys_log", "ts": 1787055131.0, "msg": "[WATCH] Person (0.88)", "t": 1787055186.3388522}
+{"kind": "sys_log", "ts": 1787055167.0, "msg": "[WATCH] Person (0.84)", "t": 1787055186.339052}
+{"kind": "sys_log", "ts": 1787055266.0, "msg": "[WATCH] Person (0.88)", "t": 1787055305.9274178}
+{"kind": "sys_log", "ts": 1787055297.0, "msg": "[WATCH] Person (0.85)", "t": 1787055305.9276314}
+{"kind": "sys_log", "ts": 1787055373.0, "msg": "[WATCH] Person (0.84)", "t": 1787055426.007169}
+{"kind": "sys_log", "ts": 1787055403.0, "msg": "[WATCH] Person (0.85)", "t": 1787055426.0073357}
+{"kind": "sys_log", "ts": 1787055440.0, "msg": "[WATCH] Person (0.89)", "t": 1787055486.075297}
+{"kind": "sys_log", "ts": 1787055470.0, "msg": "[WATCH] Person (0.82)", "t": 1787055486.0757725}
+{"kind": "sys_log", "ts": 1787055540.0, "msg": "[WATCH] Person (0.86)", "t": 1787055546.1153202}
+{"kind": "sys_log", "ts": 1787055570.0, "msg": "[WATCH] Person (0.87)", "t": 1787055606.1543639}
+{"kind": "sys_log", "ts": 1787055601.0, "msg": "[WATCH] Person (0.84)", "t": 1787055606.1545355}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 14.31, "resp": {"ok": true, "t_request": 1787055662.1365497, "t_alert": 1787055662.1395824, "latency_ms": 3.03, "label": "scissors", "confidence": 0.9}, "t": 1787055662.1434684}
+{"kind": "sys_log", "ts": 1787055662.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787055666.210947}
+{"kind": "sys_log", "ts": 1787055662.0, "msg": "Alert triggered.", "t": 1787055666.2110994}
+{"kind": "sys_log", "ts": 1787055678.0, "msg": "[WATCH] Person (0.91)", "t": 1787055726.2604342}
+{"kind": "sys_log", "ts": 1787055712.0, "msg": "[WATCH] Person (0.86)", "t": 1787055726.2606146}
+{"kind": "sys_log", "ts": 1787055756.0, "msg": "[WATCH] Person (0.86)", "t": 1787055786.300428}
+{"kind": "sys_log", "ts": 1787055852.0, "msg": "[WATCH] Person (0.83)", "t": 1787055906.393448}
+{"kind": "sys_log", "ts": 1787056054.0, "msg": "[WATCH] Person (0.83)", "t": 1787056086.0310512}
+{"kind": "sys_log", "ts": 1787056258.0, "msg": "[WATCH] Person (0.84)", "t": 1787056266.1779284}
+{"kind": "sys_log", "ts": 1787056293.0, "msg": "[WATCH] Person (0.83)", "t": 1787056326.2188616}
+{"kind": "sys_log", "ts": 1787056346.0, "msg": "[WATCH] Person (0.88)", "t": 1787056386.2612107}
+{"kind": "sys_log", "ts": 1787056395.0, "msg": "[WATCH] Person (0.88)", "t": 1787056446.2925096}
+{"kind": "sys_log", "ts": 1787056790.0, "msg": "[WATCH] Person (0.83)", "t": 1787056806.0323339}
+{"kind": "sys_log", "ts": 1787057060.0, "msg": "[WATCH] Person (0.83)", "t": 1787057106.227361}
+{"kind": "sys_log", "ts": 1787057090.0, "msg": "[WATCH] Person (0.87)", "t": 1787057106.2275264}
+{"kind": "sys_log", "ts": 1787057955.0, "msg": "[WATCH] Person (0.87)", "t": 1787058006.3658738}
+{"kind": "sys_log", "ts": 1787058257.0, "msg": "[WATCH] Person (0.89)", "t": 1787058306.0666094}
+{"kind": "sys_log", "ts": 1787058424.0, "msg": "[WATCH] Person (0.82)", "t": 1787058426.1393}
+{"kind": "sys_log", "ts": 1787058484.0, "msg": "[WATCH] Person (0.83)", "t": 1787058486.1735792}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 18.17, "resp": {"ok": true, "t_request": 1787059262.146522, "t_alert": 1787059262.1562858, "latency_ms": 9.76, "label": "Hammer", "confidence": 0.9}, "t": 1787059262.161926}
+{"kind": "sys_log", "ts": 1787059262.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1787059266.223879}
+{"kind": "sys_log", "ts": 1787059262.0, "msg": "Alert triggered.", "t": 1787059266.2240574}
+{"kind": "sys_log", "ts": 1787059835.0, "msg": "[WATCH] Person (0.89)", "t": 1787059866.1727114}
+{"kind": "sys_log", "ts": 1787059867.0, "msg": "[WATCH] Person (0.84)", "t": 1787059926.2262897}
+{"kind": "sys_log", "ts": 1787059897.0, "msg": "[WATCH] Person (0.82)", "t": 1787059926.2270706}
+{"kind": "sys_log", "ts": 1787060380.0, "msg": "[WATCH] Person (0.83)", "t": 1787060406.0862865}
+{"kind": "sys_log", "ts": 1787060410.0, "msg": "[WATCH] Person (0.88)", "t": 1787060466.1291215}
+{"kind": "sys_log", "ts": 1787060441.0, "msg": "[WATCH] Person (0.84)", "t": 1787060466.1292822}
+{"kind": "sys_log", "ts": 1787060481.0, "msg": "[WATCH] Person (0.83)", "t": 1787060526.1785626}
+{"kind": "sys_log", "ts": 1787060527.0, "msg": "[WATCH] Person (0.82)", "t": 1787060586.23515}
+{"kind": "sys_log", "ts": 1787060570.0, "msg": "[WATCH] Person (0.84)", "t": 1787060586.235911}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b8ac150>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787061251.3221316}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8b89c0d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787061251.342996}
+{"kind": "sys_log", "ts": 1787061260.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787061320.4103093}
+{"kind": "sys_log", "ts": 1787061260.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787061320.4107375}
+{"kind": "sys_log", "ts": 1787061260.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787061320.4108167}
+{"kind": "sys_log", "ts": 1787061260.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787061320.4108655}
+{"kind": "sys_log", "ts": 1787061260.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787061320.4109068}
+{"kind": "sys_log", "ts": 1787061260.0, "msg": "Pipeline started.", "t": 1787061320.4109821}

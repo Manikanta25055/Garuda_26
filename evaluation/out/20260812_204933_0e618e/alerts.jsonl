@@ -1,0 +1,3 @@
+{"kind": "danger", "ts": 1786608731.0, "label": "scissors", "conf": 0.89, "t": 1786608777.6913884}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1786608731.0, "label": "scissors", "conf": 0.89, "t": 1786608777.6913884}, "email_ts": 1786608731.0, "latency_s": 0.0, "t": 1786608777.7515209}
+{"kind": "danger", "ts": 1786609506.0, "label": "scissors", "conf": 0.85, "t": 1786609523.0961237}

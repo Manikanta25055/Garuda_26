@@ -1,0 +1,25 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3b9b290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.354123}
+{"kind": "login", "ok": false, "t": 1787502904.3547897}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3ba1650>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.3812072}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3ba4b10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.3825612}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3ba3010>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.3830488}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3ba6290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.3846061}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3ba7890>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.3857229}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fb3bb50d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787502904.3869312}
+{"kind": "sys_log", "ts": 1787502907.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787502967.9232368}
+{"kind": "sys_log", "ts": 1787502907.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787502967.923413}
+{"kind": "sys_log", "ts": 1787502907.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787502967.9234657}
+{"kind": "sys_log", "ts": 1787502907.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787502967.9235106}
+{"kind": "sys_log", "ts": 1787502907.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787502967.9235525}
+{"kind": "sys_log", "ts": 1787502907.0, "msg": "Pipeline started.", "t": 1787502967.923739}
+{"kind": "sys_log", "ts": 1787502937.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787502967.9237878}
+{"kind": "sys_log", "ts": 1787503062.0, "msg": "[NETWORK] Internet restored \u2014 5383 queued events ready to sync", "t": 1787503122.9309416}
+{"kind": "sys_log", "ts": 1787503214.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787503243.0046299}
+{"kind": "sys_log", "ts": 1787503244.0, "msg": "[NETWORK] Internet restored \u2014 5383 queued events ready to sync", "t": 1787503303.0416634}
+{"kind": "sys_log", "ts": 1787503304.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787503362.5815809}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 15.35, "resp": {"ok": true, "t_request": 1787506539.2893975, "t_alert": 1787506539.2969527, "latency_ms": 7.56, "label": "Knife", "confidence": 0.9}, "t": 1787506539.301481}
+{"kind": "sys_log", "ts": 1787506539.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787506542.649512}
+{"kind": "sys_log", "ts": 1787506539.0, "msg": "Alert triggered.", "t": 1787506542.6496866}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 10.29, "resp": {"ok": true, "t_request": 1787510139.304479, "t_alert": 1787510139.308306, "latency_ms": 3.83, "label": "scissors", "confidence": 0.9}, "t": 1787510139.3120666}
+{"kind": "sys_log", "ts": 1787510139.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787510142.6341565}
+{"kind": "sys_log", "ts": 1787510139.0, "msg": "Alert triggered.", "t": 1787510142.6343355}

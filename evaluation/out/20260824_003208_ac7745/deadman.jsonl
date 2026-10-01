@@ -1,0 +1,13 @@
+{"kind": "tamper", "ts": 1787511731.0, "expected": false, "t": 1787511791.9081597}
+{"kind": "tamper", "ts": 1787517791.0, "expected": false, "t": 1787517808.1126986}
+{"kind": "tamper", "ts": 1787517796.0, "expected": false, "t": 1787517808.11279}
+{"kind": "tamper", "ts": 1787522470.0, "expected": false, "t": 1787522488.4213138}
+{"kind": "tamper", "ts": 1787522474.0, "expected": false, "t": 1787522488.4214377}
+{"kind": "tamper", "ts": 1787533306.0, "expected": false, "t": 1787533348.6447234}
+{"kind": "tamper", "ts": 1787533310.0, "expected": false, "t": 1787533348.644847}
+{"kind": "tamper", "ts": 1787533897.0, "expected": false, "t": 1787533948.5274212}
+{"kind": "tamper", "ts": 1787534200.0, "expected": false, "t": 1787534248.2087579}
+{"kind": "tamper", "ts": 1787534421.0, "expected": false, "t": 1787534428.30469}
+{"kind": "tamper", "ts": 1787536603.0, "expected": false, "t": 1787536648.492967}
+{"kind": "test_begin", "ts": 1787554935.2308354, "t": 1787554935.2308452}
+{"kind": "test_end", "ts": 1787555175.2310998, "t": 1787555175.2311027}

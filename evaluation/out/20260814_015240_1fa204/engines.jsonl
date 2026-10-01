@@ -1,0 +1,57 @@
+{"engine": "presence", "ok": false, "t": 1786652560.5395415}
+{"engine": "snapshot", "ok": false, "t": 1786652560.5431027}
+{"engine": "email", "ok": false, "t": 1786652560.544708}
+{"engine": "chat", "ok": false, "latency_s": 0.001728057861328125, "body": "", "t": 1786652560.5465338}
+{"engine": "presence", "ok": false, "t": 1786654370.2215183}
+{"engine": "presence", "ok": false, "t": 1786656170.3091428}
+{"engine": "snapshot", "ok": false, "t": 1786656170.312905}
+{"engine": "chat", "ok": false, "latency_s": 0.005172252655029297, "body": "", "t": 1786656170.3183444}
+{"engine": "presence", "ok": false, "t": 1786657970.420262}
+{"engine": "presence", "ok": false, "t": 1786659770.4939744}
+{"engine": "snapshot", "ok": false, "t": 1786659770.4968653}
+{"engine": "chat", "ok": false, "latency_s": 0.004185676574707031, "body": "", "t": 1786659770.5012372}
+{"engine": "presence", "ok": false, "t": 1786661570.564716}
+{"engine": "presence", "ok": false, "t": 1786663370.633374}
+{"engine": "snapshot", "ok": false, "t": 1786663370.6352205}
+{"engine": "chat", "ok": false, "latency_s": 0.009880304336547852, "body": "", "t": 1786663370.6452372}
+{"engine": "presence", "ok": false, "t": 1786665170.7428248}
+{"engine": "email", "ok": false, "t": 1786666960.8408027}
+{"engine": "presence", "ok": false, "t": 1786666970.8463593}
+{"engine": "snapshot", "ok": false, "t": 1786666970.8482823}
+{"engine": "chat", "ok": false, "latency_s": 0.00213623046875, "body": "", "t": 1786666970.850589}
+{"engine": "presence", "ok": false, "t": 1786668770.9542472}
+{"engine": "presence", "ok": false, "t": 1786670571.0175416}
+{"engine": "snapshot", "ok": false, "t": 1786670571.0233293}
+{"engine": "chat", "ok": false, "latency_s": 0.002954721450805664, "body": "", "t": 1786670571.026451}
+{"engine": "presence", "ok": false, "t": 1786672371.097663}
+{"engine": "clip", "ok": false, "start": false, "stop": false, "t": 1786674169.1726477}
+{"engine": "presence", "ok": false, "t": 1786674179.177607}
+{"engine": "snapshot", "ok": false, "t": 1786674179.1799517}
+{"engine": "chat", "ok": false, "latency_s": 0.007128715515136719, "body": "", "t": 1786674179.1882744}
+{"engine": "presence", "ok": false, "t": 1786675979.2666292}
+{"engine": "presence", "ok": false, "t": 1786677779.3560188}
+{"engine": "snapshot", "ok": false, "t": 1786677779.3578544}
+{"engine": "chat", "ok": false, "latency_s": 0.0030126571655273438, "body": "", "t": 1786677779.361062}
+{"engine": "presence", "ok": false, "t": 1786679579.4724543}
+{"engine": "email", "ok": false, "t": 1786681369.5582576}
+{"engine": "presence", "ok": false, "t": 1786681379.561587}
+{"engine": "snapshot", "ok": false, "t": 1786681379.568985}
+{"engine": "chat", "ok": false, "latency_s": 0.003232240676879883, "body": "", "t": 1786681379.5724409}
+{"engine": "presence", "ok": false, "t": 1786683179.6540308}
+{"engine": "presence", "ok": false, "t": 1786684979.7348006}
+{"engine": "snapshot", "ok": false, "t": 1786684979.7366672}
+{"engine": "chat", "ok": false, "latency_s": 0.009683847427368164, "body": "", "t": 1786684979.7465045}
+{"engine": "presence", "ok": false, "t": 1786686779.8332043}
+{"engine": "presence", "ok": false, "t": 1786688579.9066904}
+{"engine": "snapshot", "ok": false, "t": 1786688579.9118392}
+{"engine": "chat", "ok": false, "latency_s": 0.005133390426635742, "body": "", "t": 1786688579.9175029}
+{"engine": "presence", "ok": false, "t": 1786690380.0056763}
+{"engine": "presence", "ok": false, "t": 1786692180.0853138}
+{"engine": "snapshot", "ok": false, "t": 1786692180.087116}
+{"engine": "chat", "ok": false, "latency_s": 0.0028014183044433594, "body": "", "t": 1786692180.0900466}
+{"engine": "presence", "ok": false, "t": 1786693980.1739128}
+{"engine": "email", "ok": false, "t": 1786695770.2712889}
+{"engine": "presence", "ok": false, "t": 1786696020.2765272}
+{"engine": "snapshot", "ok": false, "t": 1786696020.2811003}
+{"engine": "chat", "ok": false, "latency_s": 0.003996133804321289, "body": "", "t": 1786696020.2852948}
+{"engine": "presence", "ok": false, "t": 1786697820.3676288}

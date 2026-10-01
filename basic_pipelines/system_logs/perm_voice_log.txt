@@ -1572,3 +1572,225 @@
 [2026-08-11 12:20:56] Error accessing microphone: No Default Input Device Available
 [2026-08-11 14:51:52] Error accessing microphone: No Default Input Device Available
 [2026-08-11 21:01:01] Error accessing microphone: No Default Input Device Available
+[2026-08-11 22:07:39] Error accessing microphone: No Default Input Device Available
+[2026-08-11 22:21:08] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:38:11] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:42:02] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:43:32] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:45:49] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:51:01] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:53:38] Error accessing microphone: No Default Input Device Available
+[2026-08-11 23:55:03] Error accessing microphone: No Default Input Device Available
+[2026-08-12 00:34:26] Error accessing microphone: No Default Input Device Available
+[2026-08-12 01:23:52] Error accessing microphone: No Default Input Device Available
+[2026-08-12 17:44:02] Error accessing microphone: No Default Input Device Available
+[2026-08-12 20:17:17] Error accessing microphone: No Default Input Device Available
+[2026-08-12 20:19:09] Error accessing microphone: No Default Input Device Available
+[2026-08-12 20:30:50] Error accessing microphone: No Default Input Device Available
+[2026-08-12 20:43:29] Error accessing microphone: No Default Input Device Available
+[2026-08-12 20:49:37] Error accessing microphone: No Default Input Device Available
+[2026-08-13 03:18:54] Error accessing microphone: No Default Input Device Available
+[2026-08-13 03:53:33] Error accessing microphone: No Default Input Device Available
+[2026-08-13 05:24:03] Error accessing microphone: No Default Input Device Available
+[2026-08-13 05:46:41] Error accessing microphone: No Default Input Device Available
+[2026-08-13 05:48:03] Error accessing microphone: No Default Input Device Available
+[2026-08-13 06:18:46] Error accessing microphone: No Default Input Device Available
+[2026-08-13 08:24:00] Error accessing microphone: No Default Input Device Available
+[2026-08-13 11:35:05] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:04:47] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:08:40] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:12:29] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:19:54] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:30:02] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:33:28] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:37:08] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:39:57] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:45:01] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:46:58] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:48:13] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:54:22] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:55:40] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:56:56] Error accessing microphone: No Default Input Device Available
+[2026-08-13 13:59:38] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:02:58] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:11:00] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:12:55] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:16:01] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:18:55] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:19:46] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:24:27] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:29:36] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:34:02] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:35:46] Error accessing microphone: No Default Input Device Available
+[2026-08-13 14:36:10] Error accessing microphone: No Default Input Device Available
+[2026-08-13 15:19:01] Error accessing microphone: No Default Input Device Available
+[2026-08-13 15:42:35] Error accessing microphone: No Default Input Device Available
+[2026-08-13 16:26:08] Error accessing microphone: No Default Input Device Available
+[2026-08-13 17:14:25] Error accessing microphone: No Default Input Device Available
+[2026-08-13 18:01:18] Error accessing microphone: No Default Input Device Available
+[2026-08-13 18:21:55] Error accessing microphone: No Default Input Device Available
+[2026-08-13 19:11:16] Error accessing microphone: No Default Input Device Available
+[2026-08-13 19:26:13] Error accessing microphone: No Default Input Device Available
+[2026-08-13 19:27:43] Error accessing microphone: No Default Input Device Available
+[2026-08-13 19:27:54] Error accessing microphone: No Default Input Device Available
+[2026-08-13 19:47:40] Error accessing microphone: No Default Input Device Available
+[2026-08-13 19:52:27] Error accessing microphone: No Default Input Device Available
+[2026-08-13 20:00:20] Error accessing microphone: No Default Input Device Available
+[2026-08-13 20:14:45] Error accessing microphone: No Default Input Device Available
+[2026-08-13 20:19:45] Error accessing microphone: No Default Input Device Available
+[2026-08-13 20:21:01] Error accessing microphone: No Default Input Device Available
+[2026-08-13 20:23:03] Error accessing microphone: No Default Input Device Available
+[2026-08-13 20:23:20] Error accessing microphone: No Default Input Device Available
+[2026-08-13 21:04:08] Error accessing microphone: No Default Input Device Available
+[2026-08-13 21:11:12] Error accessing microphone: No Default Input Device Available
+[2026-08-14 01:52:44] Error accessing microphone: No Default Input Device Available
+[2026-08-14 14:29:05] Error accessing microphone: No Default Input Device Available
+[2026-08-14 18:30:03] Error accessing microphone: No Default Input Device Available
+[2026-08-15 00:20:07] Error accessing microphone: No Default Input Device Available
+[2026-08-17 01:47:29] Error accessing microphone: No Default Input Device Available
+[2026-08-17 08:50:08] Error accessing microphone: No Default Input Device Available
+[2026-08-17 08:55:03] Error accessing microphone: No Default Input Device Available
+[2026-08-17 09:28:15] Error accessing microphone: No Default Input Device Available
+[2026-08-17 09:48:00] Error accessing microphone: No Default Input Device Available
+[2026-08-17 09:58:38] Error accessing microphone: No Default Input Device Available
+[2026-08-17 11:28:48] Error accessing microphone: No Default Input Device Available
+[2026-08-17 11:59:23] Error accessing microphone: No Default Input Device Available
+[2026-08-17 18:23:27] Error accessing microphone: No Default Input Device Available
+[2026-08-17 18:32:47] Error accessing microphone: No Default Input Device Available
+[2026-08-18 09:49:23] Error accessing microphone: No Default Input Device Available
+[2026-08-18 09:56:54] Error accessing microphone: No Default Input Device Available
+[2026-08-18 17:23:05] Error accessing microphone: No Default Input Device Available
+[2026-08-18 19:24:20] Error accessing microphone: No Default Input Device Available
+[2026-08-18 19:46:17] Error accessing microphone: No Default Input Device Available
+[2026-08-18 20:08:04] Error accessing microphone: No Default Input Device Available
+[2026-08-19 06:57:06] Error accessing microphone: No Default Input Device Available
+[2026-08-19 13:32:33] Error accessing microphone: No Default Input Device Available
+[2026-08-19 14:07:59] Error accessing microphone: No Default Input Device Available
+[2026-08-19 15:05:52] Error accessing microphone: No Default Input Device Available
+[2026-08-19 15:13:34] Error accessing microphone: No Default Input Device Available
+[2026-08-19 15:30:28] Error accessing microphone: No Default Input Device Available
+[2026-08-19 16:14:46] Error accessing microphone: No Default Input Device Available
+[2026-08-19 16:56:09] Error accessing microphone: No Default Input Device Available
+[2026-08-19 19:24:20] Error accessing microphone: No Default Input Device Available
+[2026-08-19 19:59:18] Error accessing microphone: No Default Input Device Available
+[2026-08-19 20:14:18] Error accessing microphone: No Default Input Device Available
+[2026-08-19 20:25:22] Error accessing microphone: No Default Input Device Available
+[2026-08-19 20:48:21] Error accessing microphone: No Default Input Device Available
+[2026-08-19 21:19:08] Error accessing microphone: No Default Input Device Available
+[2026-08-19 23:24:41] Error accessing microphone: No Default Input Device Available
+[2026-08-20 23:09:31] Error accessing microphone: No Default Input Device Available
+[2026-08-21 07:55:53] Error accessing microphone: No Default Input Device Available
+[2026-08-21 10:54:12] Error accessing microphone: No Default Input Device Available
+[2026-08-23 18:20:33] Error accessing microphone: No Default Input Device Available
+[2026-08-23 21:58:43] Error accessing microphone: No Default Input Device Available
+[2026-08-23 22:05:07] Error accessing microphone: No Default Input Device Available
+[2026-08-24 00:32:11] Error accessing microphone: No Default Input Device Available
+[2026-08-24 15:53:08] Error accessing microphone: No Default Input Device Available
+[2026-08-24 20:32:23] Error accessing microphone: No Default Input Device Available
+[2026-08-24 21:13:06] Error accessing microphone: No Default Input Device Available
+[2026-08-27 18:50:18] Error accessing microphone: No Default Input Device Available
+[2026-08-30 20:00:14] Error accessing microphone: No Default Input Device Available
+[2026-09-01 23:21:51] Error accessing microphone: No Default Input Device Available
+[2026-09-02 02:44:11] Error accessing microphone: No Default Input Device Available
+[2026-09-03 07:34:53] Error accessing microphone: No Default Input Device Available
+[2026-09-03 07:36:53] Error accessing microphone: No Default Input Device Available
+[2026-09-11 19:55:11] Error accessing microphone: No Default Input Device Available
+[2026-09-11 20:10:42] Error accessing microphone: No Default Input Device Available
+[2026-09-11 20:15:53] Error accessing microphone: No Default Input Device Available
+[2026-09-12 15:05:01] Error accessing microphone: No Default Input Device Available
+[2026-09-12 15:15:34] Error accessing microphone: No Default Input Device Available
+[2026-09-12 17:21:51] Error accessing microphone: No Default Input Device Available
+[2026-09-14 04:22:35] Error accessing microphone: No Default Input Device Available
+[2026-09-14 04:53:06] Error accessing microphone: No Default Input Device Available
+[2026-09-17 05:39:31] Error accessing microphone: No Default Input Device Available
+[2026-09-17 09:59:28] Error accessing microphone: No Default Input Device Available
+[2026-09-17 20:21:49] Error accessing microphone: No Default Input Device Available
+[2026-09-18 09:28:46] Error accessing microphone: No Default Input Device Available
+[2026-09-19 04:19:43] Error accessing microphone: No Default Input Device Available
+[2026-09-19 09:28:17] Error accessing microphone: No Default Input Device Available
+[2026-09-19 10:40:01] Error accessing microphone: No Default Input Device Available
+[2026-09-19 14:38:56] Error accessing microphone: No Default Input Device Available
+[2026-09-21 15:22:43] Error accessing microphone: No Default Input Device Available
+[2026-09-21 15:34:59] Error accessing microphone: No Default Input Device Available
+[2026-09-22 09:34:25] Error accessing microphone: No Default Input Device Available
+[2026-09-22 19:47:34] Error accessing microphone: No Default Input Device Available
+[2026-09-22 23:27:12] Error accessing microphone: No Default Input Device Available
+[2026-09-22 23:30:06] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:02:22] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:19:40] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:21:51] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:28:39] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:30:26] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:39:56] Error accessing microphone: No Default Input Device Available
+[2026-09-23 00:48:55] Error accessing microphone: No Default Input Device Available
+[2026-09-23 01:16:21] Error accessing microphone: No Default Input Device Available
+[2026-09-23 01:55:52] Error accessing microphone: No Default Input Device Available
+[2026-09-23 15:21:12] Error accessing microphone: No Default Input Device Available
+[2026-09-23 15:33:53] Error accessing microphone: No Default Input Device Available
+[2026-09-24 08:35:31] Error accessing microphone: No Default Input Device Available
+[2026-09-24 08:44:40] Error accessing microphone: No Default Input Device Available
+[2026-09-24 11:56:07] Error accessing microphone: No Default Input Device Available
+[2026-09-24 12:00:30] Error accessing microphone: No Default Input Device Available
+[2026-09-24 12:16:05] Error accessing microphone: No Default Input Device Available
+[2026-09-24 12:43:22] Error accessing microphone: No Default Input Device Available
+[2026-09-24 17:17:08] Error accessing microphone: No Default Input Device Available
+[2026-10-01 03:27:56] Error accessing microphone: No Default Input Device Available
+[2026-10-01 03:46:12] Error accessing microphone: No Default Input Device Available
+[2026-10-01 04:02:26] Error accessing microphone: No Default Input Device Available
+[2026-10-01 04:06:13] Error accessing microphone: No Default Input Device Available
+[2026-10-01 04:16:50] You said: Hello, mic testing.
+→ [2026-10-01 04:16:50] Mic test received. How can I help you?
+[2026-10-01 04:25:02] Error accessing microphone: No Default Input Device Available
+[2026-10-01 04:28:47] Error accessing microphone: No Default Input Device Available
+[2026-10-01 04:29:12] You said: What is your main functionality?
+→ [2026-10-01 04:29:12] I help you control lights, locks, cameras, and more—set schedules, create automations, and switch security modes. Want to try something specific?
+[2026-10-01 04:31:42] Error accessing microphone: No Default Input Device Available
+[2026-10-01 04:32:59] You said: Can you tell me your functionality?
+→ [2026-10-01 04:32:59] I'm Narada, your home assistant. I can control lights, appliances, and security; run scenes; set schedules; create automations from your words; check security modes; and monitor energy use. What would you like to do?
+[2026-10-01 04:33:02] You said: Hello?
+→ [2026-10-01 04:33:02] Hey there! How can I help you today?
+[2026-10-01 04:33:47] You said: Who are you?
+→ [2026-10-01 04:33:47] I’m Narada, the assistant for Garuda—your home security and automation system running on a Raspberry Pi 5. I help you control devices, set schedules, create automations, and manage security modes. How can I assist you today?
+[2026-10-01 04:34:19] You said: Okay, I want you to meet my panel members and explain them who you are more clearly.
+→ [2026-10-01 04:34:19] Sure thing! I’m ready to meet your panel members and introduce myself. Whenever you’re set, just bring them in and I’ll tell them exactly what I do for Garuda.
+[2026-10-01 04:34:43] You said: They’re already here. Please introduce yourself.
+→ [2026-10-01 04:34:43] I’m Narada, the assistant for Garuda—your home security and automation system on a Raspberry Pi 5. I can switch devices, run scenes, set schedules, create automations from your words, and manage security modes. How can I help you and the panel today?
+[2026-10-01 04:34:55] You said: They’re already here.
+→ [2026-10-01 04:34:55] I’m Narada, Garuda’s assistant on your Pi 5—I control devices, run scenes, set schedules, build automations from your words, and manage security modes. What would you like me to show the panel?
+[2026-10-01 10:21:21] Error accessing microphone: No Default Input Device Available
+[2026-10-01 11:50:25] You said: Hi, there. How are you?
+→ [2026-10-01 11:50:25] I'm doing great, thanks! The house is quiet and secure. How can I help you today?
+[2026-10-01 12:32:48] Error accessing microphone: No Default Input Device Available
+[2026-10-01 12:32:50] Error accessing microphone: No Default Input Device Available
+[2026-10-01 13:02:35] You said: Go ahead.
+→ [2026-10-01 13:02:35] Sure, what would you like me to do?
+[2026-10-01 13:02:37] You said: Good.
+→ [2026-10-01 13:02:37] Alright, just let me know when you need something.
+[2026-10-01 13:02:37] You said: Okay, tell me your functionalities, please.
+→ [2026-10-01 13:02:37] I can control lights, fans, and other devices, set schedules, create scenes, adjust security modes, and set up automations based on your routines. Just tell me what you need.
+[2026-10-01 13:02:39] You said: Good.
+→ [2026-10-01 13:02:39] Let me know when you'd like to use any of those.
+[2026-10-01 13:02:56] You said: Yeah, what is your specialty over other home security systems?
+→ [2026-10-01 13:02:56] I’m built right into your Raspberry Pi, so everything runs locally—no cloud, no subscriptions. You get full control, privacy, and automation without relying on outside servers. It’s yours, completely.
+[2026-10-01 13:10:52] You said: Scan for the previous logs and tell me if there are any detections in the last two hours.
+→ [2026-10-01 13:10:52] In the last two hours, there are no detections—just the lamp and fan being turned off at 11:54 by me (assistant). Everything else is manual toggling from earlier today or last night. No motion, door, or security alerts in that window.
+[2026-10-01 18:10:45] You said: Hi, there. Hello.
+→ [2026-10-01 18:10:45] Hello! How can I help you today?
+[2026-10-01 18:10:54] You said: I want you to introduce yourselves.
+→ [2026-10-01 18:10:54] I’m Narada, the assistant for Garuda, your home security and automation system on this Raspberry Pi 5. I control lights, fans, security modes, and more—just let me know what you need.
+[2026-10-01 18:11:12] You said: Okay, shut down.
+→ [2026-10-01 18:11:12] Nothing was on to shut down—everything’s already off. Let me know if you’d like anything else.
+[2026-10-01 18:11:25] You said: Okay then.
+→ [2026-10-01 18:11:25] You’re all set. If anything comes up, just call.
+[2026-10-01 18:11:26] You said: Okay then. Bye-bye.
+→ [2026-10-01 18:11:26] Bye-bye! Stay safe.
+[2026-10-01 18:49:38] You said: Hello.
+→ [2026-10-01 18:49:38] Hello! What can I do for you?
+[2026-10-01 18:49:41] You said: Hello. How are you?
+→ [2026-10-01 18:49:41] Hey! I’m doing well, thanks. How can I help you today?
+[2026-10-01 18:49:43] You said: Hello.
+→ [2026-10-01 18:49:43] Hello! What would you like to do?
+[2026-10-01 18:49:56] You said: Okay. Just give me an example on how can you help me today?
+→ [2026-10-01 18:49:56] Sure! I can turn lights or fans on or off, set schedules, create scenes, or adjust security modes. For example, I could switch on the study lamp or set a timer to turn off the fan in 30 minutes. What would you like to try?
+[2026-10-01 18:55:01] Error accessing microphone: No Default Input Device Available
+[2026-10-01 19:25:27] Error accessing microphone: No Default Input Device Available

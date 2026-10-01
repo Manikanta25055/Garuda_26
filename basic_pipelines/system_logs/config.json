@@ -7,7 +7,12 @@
   "email_cooldown": 180,
   "email_sender": "mgonugondlamanikanta@gmail.com",
   "detection_threshold": 0.82,
-  "known_devices": [],
+  "known_devices": [
+    {
+      "name": "Device (192.168.1.1)",
+      "mac": "0c:36:23:33:78:60"
+    }
+  ],
   "watch_labels": [
     "person",
     "backpack",
@@ -25,11 +30,11 @@
   },
   "modes": {
     "dnd": false,
-    "email_off": false,
+    "email_off": true,
     "idle": false,
     "night": true,
     "emergency": false,
-    "privacy": false
+    "privacy": true
   },
   "mode_schedule": {}
 }
