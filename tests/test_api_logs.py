@@ -74,4 +74,6 @@ def test_master_key_add_new_key(app_client, admin_headers, monkeypatch):
                         json={'otp': otp, 'new_key': 'Xy7!Pk2@Qr9#Mn5'},
                         headers=admin_headers)
     assert r.status_code == 200, r.text
-    assert 'Xy7!Pk2@Qr9#Mn5' in gw.MASTER_KEYS
+    # Stored hashed, never as typed.
+    assert 'Xy7!Pk2@Qr9#Mn5' not in gw.MASTER_KEYS
+    assert gw._master_key_matches('Xy7!Pk2@Qr9#Mn5', gw.MASTER_KEYS)

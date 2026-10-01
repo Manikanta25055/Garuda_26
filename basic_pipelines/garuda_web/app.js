@@ -1841,8 +1841,7 @@ const G = (() => {
         const toggle = row.querySelector('.mode-toggle');
         if (toggle) toggle.classList.toggle('on', currentOn);
       }
-      const detail = e?.detail || e?.message || JSON.stringify(e);
-      showToast(`Mode error: ${detail}`, 'error');
+      showToast(extractError(e), 'error');
     } finally {
       if (row) delete row.dataset.pending;
     }

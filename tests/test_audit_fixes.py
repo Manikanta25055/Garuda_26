@@ -248,3 +248,31 @@ def test_voice_responses_are_bounded(monkeypatch):
 def test_api_answers_are_not_cacheable(app_client):
     assert app_client.get('/api/users-public').headers.get('cache-control') == 'no-store'
     assert app_client.get('/').headers.get('cache-control') == 'no-cache'
+
+
+# ── master keys at rest, and who may silence the alarm ───────────────────────
+
+def test_master_keys_file_is_migrated_to_hashes(tmp_path, monkeypatch):
+    import json
+    path = tmp_path / 'master_keys.json'
+    path.write_text(json.dumps({"keys": ["Plain-Key-9876!"]}))
+    monkeypatch.setattr(gw, 'MASTER_KEYS_FILE', str(path))
+    monkeypatch.setattr(gw, 'MASTER_KEYS', [])
+    gw.load_master_keys()
+    on_disk = json.loads(path.read_text())["keys"]
+    assert all(k.startswith('mk1$') for k in on_disk) and 'Plain-Key-9876!' not in path.read_text()
+    assert gw._master_key_matches('Plain-Key-9876!', gw.MASTER_KEYS)
+    assert gw._mk_mask(on_disk[0]).endswith('876!')
+
+
+def test_only_an_admin_can_switch_on_a_mode_that_silences_alerts(app_client, user_headers, admin_headers):
+    for mode in ('idle', 'email_off'):
+        r = app_client.post('/api/modes', json={'mode': mode, 'value': True}, headers=user_headers)
+        assert r.status_code == 403
+        r = app_client.post('/api/modes', json={'mode': mode, 'value': True}, headers=admin_headers)
+        assert r.status_code == 200
+        # Switching it back off is the safe direction: anyone may.
+        r = app_client.post('/api/modes', json={'mode': mode, 'value': False}, headers=user_headers)
+        assert r.status_code == 200
+    r = app_client.post('/api/modes', json={'mode': 'dnd', 'value': True}, headers=user_headers)
+    assert r.status_code == 200

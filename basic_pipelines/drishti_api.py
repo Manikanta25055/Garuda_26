@@ -6,6 +6,9 @@ temporary directory with no hardware present.
 """
 import hashlib
 import os
+import time
+
+import anyio.to_thread
 from dataclasses import dataclass, field
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
@@ -125,13 +128,35 @@ _render = render_rule
 def build_router(ctx):
     router = APIRouter(prefix="/api/drishti")
 
+    # Five wrong passwords from one address lock it out for five minutes. This
+    # router had no limit of its own; it is off by default, but a route that
+    # checks passwords should not depend on that.
+    failures = {}
+
+    def _client(request):
+        peer = request.client.host if request.client else "unknown"
+        if peer in ("127.0.0.1", "::1"):
+            return (request.headers.get("CF-Connecting-IP", "").strip()
+                    or request.headers.get("X-Forwarded-For", "").split(",")[-1].strip() or peer)
+        return peer
+
     @router.post("/login")
-    async def login(data: LoginRequest, response: Response):
+    async def login(data: LoginRequest, request: Request, response: Response):
+        ip, now = _client(request), time.time()
+        count, until = failures.get(ip, (0, 0.0))
+        if until > now:
+            raise HTTPException(status_code=429, detail="too many failed attempts; try again later")
         role = None
         if ctx.authenticate is not None:
-            role = ctx.authenticate(data.username, data.password)
+            # Password hashing is slow by design; keep it off the event loop.
+            role = await anyio.to_thread.run_sync(ctx.authenticate, data.username, data.password)
         if not role:
+            count += 1
+            failures[ip] = (0, now + 300) if count >= 5 else (count, 0.0)
+            if len(failures) > 2000:
+                failures.clear()
             raise HTTPException(status_code=401, detail="invalid credentials")
+        failures.pop(ip, None)
         token = create_session(data.username, role)
         response.set_cookie(COOKIE_NAME, token, httponly=True,
                             samesite="lax", secure=True, path="/")
@@ -272,7 +297,7 @@ def build_router(ctx):
                               for p in ctx.pending.all()]}
 
     @router.post("/proposals/{proposal_id}/confirm")
-    async def confirm(proposal_id: str, session=Depends(require_drishti_session)):
+    async def confirm(proposal_id: str, session=Depends(require_drishti_admin)):
         item = ctx.pending.get(proposal_id)
         if item is None:
             raise HTTPException(status_code=404, detail="no such proposal")
@@ -311,6 +336,6 @@ def build_router(ctx):
 
     @router.get("/activity")
     async def activity(limit: int = 200, session=Depends(require_drishti_session)):
-        return {"entries": actuation_log.recent(ctx.log_path, limit=min(limit, 500))}
+        return {"entries": actuation_log.recent(ctx.log_path, limit=max(1, min(limit, 500)))}
 
     return router

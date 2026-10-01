@@ -782,6 +782,44 @@ def _append_presence_log(event: str, device: str, mac: str):
         pass
     queue_event("PRESENCE", device, 0.0, f"{event} (mac={mac})")
 
+# A master key is a full admin sign-in, and the file held them as typed. They
+# are now kept as salted hashes ("mk1$salt$hash$last4"): the last four
+# characters stay so the settings page can still tell the keys apart. Keys are
+# long and random by rule (12+ characters, four classes), so 120k PBKDF2
+# rounds is ample and keeps a check with several keys quick on the Pi.
+_MK_PREFIX = "mk1$"
+_MK_ITERS = 120_000
+
+def _mk_is_hashed(entry) -> bool:
+    return isinstance(entry, str) and entry.startswith(_MK_PREFIX)
+
+def _mk_hash(key: str) -> str:
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac("sha256", key.encode(), salt, _MK_ITERS)
+    tail = key[-4:] if len(key) > 4 else ""
+    return f"{_MK_PREFIX}{salt.hex()}${dk.hex()}${tail}"
+
+def _mk_check(key: str, entry) -> bool:
+    """True when `key` is the master key stored as `entry` (hashed or legacy plaintext)."""
+    if not key or not isinstance(entry, str):
+        return False
+    if not _mk_is_hashed(entry):
+        return hmac.compare_digest(key.encode(), entry.encode())
+    try:
+        _, salt_hex, dk_hex, _tail = entry.split("$", 3)
+        dk = hashlib.pbkdf2_hmac("sha256", key.encode(), bytes.fromhex(salt_hex), _MK_ITERS)
+    except (ValueError, TypeError):
+        return False
+    return hmac.compare_digest(dk.hex(), dk_hex)
+
+def _mk_mask(entry) -> str:
+    dots = "\u2022" * 8
+    if _mk_is_hashed(entry):
+        tail = entry.split("$", 3)[3] if entry.count("$") >= 3 else ""
+        return dots + tail
+    entry = str(entry)
+    return ("\u2022" * (len(entry) - 4) + entry[-4:]) if len(entry) > 4 else "\u2022" * 4
+
 def load_master_keys():
     global MASTER_KEYS
     try:
@@ -789,21 +827,34 @@ def load_master_keys():
             with open(MASTER_KEYS_FILE) as f:
                 data = json.load(f)
             if isinstance(data.get("keys"), list) and data["keys"]:
-                MASTER_KEYS[:] = data["keys"]
+                keys = [k for k in data["keys"] if isinstance(k, str) and k]
+                if any(not _mk_is_hashed(k) for k in keys):
+                    # One-time migration of a file written before hashing.
+                    keys = [k if _mk_is_hashed(k) else _mk_hash(k) for k in keys]
+                    MASTER_KEYS[:] = keys
+                    save_master_keys()
+                else:
+                    MASTER_KEYS[:] = keys
                 return
     except Exception:
         pass
     # If no key file, seed from MASTER_KEY env var (set in .env)
     bootstrap = os.environ.get("MASTER_KEY", "").strip()
     if bootstrap:
-        MASTER_KEYS[:] = [bootstrap]
+        MASTER_KEYS[:] = [_mk_hash(bootstrap)]
         save_master_keys()  # persist to file for future runs
 
 def save_master_keys():
     try:
+        # Never write a key as typed, whatever put it in the list.
+        MASTER_KEYS[:] = [k if _mk_is_hashed(k) else _mk_hash(k) for k in MASTER_KEYS]
         _atomic_json_write(MASTER_KEYS_FILE, {"keys": MASTER_KEYS})
-    except Exception:
-        pass
+        try:
+            os.chmod(MASTER_KEYS_FILE, 0o600)
+        except OSError:
+            pass
+    except Exception as exc:
+        log_system_update(f"Failed to save master keys: {type(exc).__name__}")
 
 async def _async_save_config():
     """Run save_config in a thread so it never blocks the async event loop (fsync is slow on RPi SD)."""
@@ -2769,6 +2820,8 @@ def _home_set_mode(mode, value, actor):
              "night": "MODE_NIGHT", "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY"}
     if mode not in names:
         raise ValueError(f"unknown mode: {mode!r}")
+    if mode in ADMIN_ONLY_MODES and value and USERS.get(actor, {}).get("role") != "admin":
+        raise PermissionError("only an admin can turn this mode on: it silences alerts")
     with _mode_lock:
         globals()[names[mode]] = bool(value)
         if mode == "emergency" and value:
@@ -3389,6 +3442,8 @@ async def chat_stream(data: ChatRequest, request: Request, session=Depends(requi
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
 
+ADMIN_ONLY_MODES = frozenset({"idle", "email_off"})
+
 @fastapi_app.post("/api/modes")
 async def set_mode(data: ModeRequest, session=Depends(require_session)):
     global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
@@ -3399,6 +3454,11 @@ async def set_mode(data: ModeRequest, session=Depends(require_session)):
     }
     if data.mode not in mode_map:
         raise HTTPException(400, f"Unknown mode: {data.mode}")
+    if data.mode in ADMIN_ONLY_MODES and data.value and session["role"] != "admin":
+        # Idle and Email Off stop the system telling anyone about a threat.
+        # Any signed-in profile could switch them on; switching them back off
+        # (the safe direction) stays open to everyone.
+        raise HTTPException(403, "Only an admin can turn this mode on: it silences alerts.")
     with _mode_lock:
         globals()[mode_map[data.mode]] = data.value
         if data.mode == "emergency" and data.value:
@@ -3779,12 +3839,11 @@ def _combined_log_text() -> str:
 ##############################################################################
 def _master_key_matches(key: str, valid_keys) -> bool:
     """Constant-time check of `key` against every valid key (bytes: no TypeError on non-ASCII)."""
-    if not key:
+    if not key or len(key) > 256:
         return False
-    probe = key.encode()
     hit = False
-    for candidate in valid_keys:
-        if hmac.compare_digest(probe, str(candidate).encode()):
+    for candidate in list(valid_keys):
+        if _mk_check(key, candidate):
             hit = True
     return hit
 
@@ -3804,15 +3863,15 @@ async def master_key_login(data: dict, request: Request, response: Response):
     # Also accept the bootstrap env var key in case keys file hasn't been written yet
     _env_key = os.environ.get("MASTER_KEY", "").strip()
     valid_keys = list(MASTER_KEYS) + ([_env_key] if _env_key else [])
-    if not _master_key_matches(key, valid_keys):
+    if not await asyncio.to_thread(_master_key_matches, key, valid_keys):
         # Same five-strikes lockout as a password: this key is a full admin
         # sign-in, and before it could be guessed at 30 tries a minute for ever.
         _record_login_failure(ip)
         raise HTTPException(401, "Invalid master key.")
     _clear_login_failure(ip)
     # Persist env key to file so future restarts find it
-    if key not in MASTER_KEYS:
-        MASTER_KEYS.append(key)
+    if not await asyncio.to_thread(_master_key_matches, key, MASTER_KEYS):
+        MASTER_KEYS.append(_mk_hash(key))
         save_master_keys()
     token = create_master_session()
     response.set_cookie("garuda_session", token, httponly=True, samesite="lax",
@@ -3833,7 +3892,7 @@ async def master_key_verify(data: dict, request: Request, session=Depends(requir
     if _is_login_locked(ip):
         raise HTTPException(429, "Too many failed attempts. Try again later.")
     key = str(data.get("key") or "").strip()
-    if not _master_key_matches(key, MASTER_KEYS):
+    if not await asyncio.to_thread(_master_key_matches, key, MASTER_KEYS):
         _record_login_failure(ip)
         raise HTTPException(401, "Invalid master key.")
     # The session the request was authenticated with (header first, as in
@@ -3846,12 +3905,7 @@ async def master_key_verify(data: dict, request: Request, session=Depends(requir
 @fastapi_app.get("/api/master_keys")
 async def list_master_keys(session=Depends(require_admin)):
     """Return master keys with all but last 4 chars masked."""
-    masked = []
-    for k in MASTER_KEYS:
-        if len(k) > 4:
-            masked.append("\u2022" * (len(k) - 4) + k[-4:])
-        else:
-            masked.append("\u2022\u2022\u2022\u2022")
+    masked = [_mk_mask(k) for k in MASTER_KEYS]
     return {"keys": masked, "count": len(MASTER_KEYS)}
 
 @fastapi_app.post("/api/master_key/request_otp")
@@ -3859,7 +3913,7 @@ async def master_key_request_otp(data: dict, session=Depends(require_admin)):
     """Step 1 of adding a master key: verify an existing key, then email OTP."""
     global MASTER_KEY_OTP, _master_otp_ts, _master_otp_attempts
     current = str(data.get("current_key") or "").strip()
-    if not _master_key_matches(current, MASTER_KEYS):
+    if not await asyncio.to_thread(_master_key_matches, current, MASTER_KEYS):
         raise HTTPException(401, "Current master key is incorrect.")
     MASTER_KEY_OTP = generate_otp_code(6)
     _master_otp_ts = time.time()
@@ -3905,15 +3959,19 @@ async def master_key_add(data: dict, session=Depends(require_admin)):
                    'zxcvbn','123456','letmein','welcome','login','access']
     if any(w in new_key.lower() for w in _MK_COMMON):
         raise HTTPException(400, "Key contains a common word or sequence — choose something more random.")
-    if new_key in MASTER_KEYS:
+    if await asyncio.to_thread(_master_key_matches, new_key, MASTER_KEYS):
         raise HTTPException(400, "Key already exists.")
-    # Reject keys too similar to existing ones (shared 6-char substring)
+    # Reject keys too similar to existing ones (shared 6-char substring). Only
+    # possible against a key still held as typed; a hashed key cannot be
+    # compared this way, which is the point of hashing it.
     for existing in MASTER_KEYS:
+        if _mk_is_hashed(existing):
+            continue
         for i in range(len(existing) - 5):
             if existing[i:i+6] in new_key:
                 raise HTTPException(400, "Key is too similar to an existing master key.")
-    MASTER_KEYS.append(new_key)
-    save_master_keys()
+    MASTER_KEYS.append(_mk_hash(new_key))
+    await asyncio.to_thread(save_master_keys)
     MASTER_KEY_OTP = None
     log_system_update("New master key added.")
     return {"ok": True}

@@ -100,7 +100,9 @@ def test_master_key_delete_removes_requested_index(app_client, admin_headers):
     gw.MASTER_KEYS[:] = ['First-Key-123!', 'Second-Key-456!']
     r = app_client.post('/api/master_key/delete', json={'index': 0}, headers=admin_headers)
     assert r.status_code == 200
-    assert gw.MASTER_KEYS == ['Second-Key-456!']
+    assert len(gw.MASTER_KEYS) == 1
+    assert gw._master_key_matches('Second-Key-456!', gw.MASTER_KEYS)
+    assert not gw._master_key_matches('First-Key-123!', gw.MASTER_KEYS)
 
 
 def test_stream_requires_authenticated_session(app_client):

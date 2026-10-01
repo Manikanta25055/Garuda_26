@@ -88,3 +88,11 @@ basic_pipelines/drishti_dist/
 # Secrets dropped in the repo root
 nvidia_nim_api.txt
 .env.bak-*
+
+# Runtime state and service logs: household activity, addresses, accounts.
+# These were tracked and pushed until 2026-10; they stay on the Pi only.
+basic_pipelines/system_logs/
+basic_pipelines/danger_sightings.txt
+basic_pipelines/night_mode_findings.txt
+evaluation/out/*.log
+evaluation/out/_boot/
