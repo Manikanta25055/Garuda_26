@@ -40,7 +40,7 @@ ROUTES = ROOT / "basic_pipelines" / "garuda_routes"
 OWN_IMPORTS = {
     "asyncio": "import asyncio", "datetime": "import datetime", "hmac": "import hmac",
     "json": "import json", "os": "import os", "re": "import re", "time": "import time",
-    "threading": "import threading", "secrets": "import secrets", "sqlite3": "import sqlite3",
+    "threading": "import threading", "cv2": "import cv2", "secrets": "import secrets", "sqlite3": "import sqlite3",
     "Optional": "from typing import Optional", "List": "from typing import List",
     "APIRouter": "from fastapi import APIRouter", "Depends": "from fastapi import Depends",
     "HTTPException": "from fastapi import HTTPException", "Request": "from fastapi import Request",
@@ -103,6 +103,25 @@ def function_locals(fn):
             for alias in node.names:
                 local.add((alias.asname or alias.name).split(".")[0])
     return local - declared_global
+
+
+def free_names(tree):
+    """Names read somewhere in a module that are not local to the function
+    reading them: the ones that must exist at module level."""
+    out = set()
+    in_function = set()
+    for fn in ast.walk(tree):
+        if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            local = function_locals(fn)
+            for node in ast.walk(fn):
+                if isinstance(node, ast.Name):
+                    in_function.add(id(node))
+                    if isinstance(node.ctx, ast.Load) and node.id not in local:
+                        out.add(node.id)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and id(node) not in in_function and isinstance(node.ctx, ast.Load):
+            out.add(node.id)
+    return out
 
 
 def rewrite(block, gw_names):
@@ -262,7 +281,7 @@ def main():
     compile(new_source, "Garuda_web.py", "exec")
     # A moved handler is no longer a name in Garuda_web. Anything left there
     # that still refers to it would fail only when that line runs.
-    remaining = {n.id for n in ast.walk(ast.parse(new_source)) if isinstance(n, ast.Name)}
+    remaining = free_names(ast.parse(new_source))
     dangling = sorted(set(functions) & remaining)
     if dangling:
         raise SystemExit(f"Garuda_web.py still refers to moved handlers: {dangling}")

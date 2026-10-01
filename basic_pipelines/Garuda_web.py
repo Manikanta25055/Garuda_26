@@ -223,6 +223,7 @@ try:
     from .garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from .garuda_routes.logs import build_logs_router
     from .garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
+    from .garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_core import API_VERSION, BUILD
@@ -248,6 +249,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from basic_pipelines.garuda_routes.logs import build_logs_router
     from basic_pipelines.garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_core import API_VERSION, BUILD
@@ -2815,10 +2817,6 @@ class ModeRequest(BaseModel):
     mode: str   # "dnd","email_off","idle","night","emergency","privacy"
     value: bool
 
-class WebRTCOfferRequest(BaseModel):
-    sdp: str
-    type: str
-
 class ChatRequest(BaseModel):
     message: str = Field(max_length=2000)
 
@@ -3210,42 +3208,6 @@ async def mjpeg_frames(request: Request):
 DRISHTI_CTX.frame_source = mjpeg_frames
 
 
-@fastapi_app.get("/stream")
-async def mjpeg_stream(request: Request, token: Optional[str] = None):
-    # Authenticate via cookie or ?token= query param
-    session_token = request.cookies.get("garuda_session") or token
-    session = get_session(session_token)
-    if not session:
-        raise HTTPException(401, "Not authenticated")
-    # The stream outlives the 15-minute token it opened with; it ends when the
-    # person has no live session left (signed out, password changed, deleted).
-    username = session["username"]
-    request.state.stream_valid = lambda: _user_signed_in(username)
-    return StreamingResponse(
-        mjpeg_frames(request),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
-    )
-
-# ── Snapshot ──────────────────────────────────────────────────────────────────
-@fastapi_app.get("/api/snapshot")
-async def snapshot(request: Request, token: Optional[str] = None):
-    session_token = request.cookies.get("garuda_session") or token
-    if not get_session(session_token):
-        raise HTTPException(401, "Not authenticated")
-    with _frame_lock:
-        raw = _frame_raw
-    if raw is None:
-        raise HTTPException(503, "No frame available yet")
-    ok, jpeg = await asyncio.to_thread(cv2.imencode, '.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    if not ok:
-        raise HTTPException(500, "Could not encode the frame")
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    return Response(
-        content=jpeg.tobytes(), media_type="image/jpeg",
-        headers={"Content-Disposition": f'attachment; filename="garuda_{ts}.jpg"'}
-    )
-
 # ── Clip recording ────────────────────────────────────────────────────────────
 _CLIPS_KEEP = 50
 
@@ -3258,97 +3220,7 @@ def _prune_old_clips(keep: int = _CLIPS_KEEP):
     except Exception as exc:
         log_system_update(f"Clip cleanup failed: {exc}")
 
-@fastapi_app.post("/api/clip/start")
-async def clip_start(session=Depends(require_session)):
-    global _clip_writer, _clip_start_time, _clip_path
-    # Fast check — avoid I/O if already recording
-    with _clip_lock:
-        if _clip_writer is not None:
-            return {"ok": True, "already_recording": True, "path": _clip_path}
-    # Read frame dims and create VideoWriter OUTSIDE the lock (file I/O must not block event loop)
-    with _frame_lock:
-        raw = _frame_raw
-    if raw is None:
-        raise HTTPException(503, "No frame available yet")
-    h, w = raw.shape[:2]
-    ts = int(time.time())
-    new_path = str(_BASE / "system_logs" / f"clip_{ts}.mp4")
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = await asyncio.to_thread(cv2.VideoWriter, new_path, fourcc, 15.0, (w, h))
-    if not writer.isOpened():
-        writer.release()
-        raise HTTPException(500, "Could not start recording (disk full or codec missing).")
-    await asyncio.to_thread(_prune_old_clips)
-    # Assign atomically — re-check in case a concurrent request beat us
-    with _clip_lock:
-        if _clip_writer is not None:
-            writer.release()
-            return {"ok": True, "already_recording": True, "path": _clip_path}
-        _clip_writer = writer
-        _clip_path = new_path
-        _clip_start_time = time.time()
-    log_system_update(f"Clip recording started by {session['username']}.")
-    return {"ok": True, "path": _clip_path}
-
-@fastapi_app.post("/api/clip/stop")
-async def clip_stop(session=Depends(require_session)):
-    global _clip_writer, _clip_path
-    with _clip_lock:
-        if _clip_writer is None:
-            return {"ok": True, "was_recording": False}
-        _clip_writer.release()
-        _clip_writer = None
-        path = _clip_path
-    log_system_update(f"Clip saved: {path}")
-    threading.Thread(target=exfiltrate_clip, args=(path,), daemon=True).start()
-    return {"ok": True, "path": path}
-
-# ── WebRTC offer/answer ───────────────────────────────────────────────────────
-@fastapi_app.post("/webrtc/offer")
-async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session)):
-    if not _WEBRTC_AVAILABLE:
-        raise HTTPException(501, "aiortc not installed")
-    if data.type != "offer" or len(data.sdp) > 20000:
-        raise HTTPException(400, "Invalid offer")
-    # Each connection runs its own H.264 encoder; without a ceiling a signed-in
-    # client could open them until the Pi had nothing left for detection.
-    if len(_pc_set) >= _MAX_PEER_CONNECTIONS:
-        raise HTTPException(503, "Too many live video connections. Close one and try again.")
-    pc = RTCPeerConnection()
-    _pc_set.add(pc)
-
-    @pc.on("connectionstatechange")
-    async def _on_state():
-        if pc.connectionState in ("failed", "closed", "disconnected"):
-            await pc.close()
-            _pc_set.discard(pc)
-
-    try:
-        pc.addTrack(GarudaVideoTrack())
-        offer = RTCSessionDescription(sdp=data.sdp, type=data.type)
-        await pc.setRemoteDescription(offer)
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-
-        # Wait for ICE gathering to complete, but not for ever: with no route
-        # out this loop never ended and the request (and the connection) hung.
-        deadline = time.time() + 10
-        while pc.iceGatheringState != "complete":
-            if time.time() > deadline:
-                raise HTTPException(504, "WebRTC negotiation timed out")
-            await asyncio.sleep(0.1)
-    except Exception as exc:
-        # A bad offer used to leave the half-built connection in _pc_set for good.
-        _pc_set.discard(pc)
-        try:
-            await pc.close()
-        except Exception:
-            pass
-        if isinstance(exc, HTTPException):
-            raise
-        raise HTTPException(400, f"Could not negotiate video: {type(exc).__name__}")
-
-    return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+fastapi_app.include_router(build_camera_router(sys.modules[__name__]))
 
 # ── Narada voice (ElevenLabs Speech Engine) ──────────────────────────────────
 @fastapi_app.post("/api/narada/voice/token")
