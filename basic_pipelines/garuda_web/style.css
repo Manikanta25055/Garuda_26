@@ -4285,8 +4285,20 @@ body:has(#page-narada.active) .fb-wrap { display: none !important; }
 /* Toasts clear the Narada bar on desktop (phones show them at the top). */
 body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-area-inset-bottom)); }
 @media (max-width: 768px) {
-  .nx-info-btn { right: 14px; bottom: calc(150px + env(safe-area-inset-bottom)); width: 36px; height: 36px; }
-  .nx-info { left: 12px; right: 12px; width: auto; bottom: calc(196px + env(safe-area-inset-bottom)); }
+  /* Sits clear above the dock whatever its height (narada.js keeps
+     --nx-dock-h current: the bar alone, or the bar plus the peek line). */
+  .nx-info-btn {
+    right: 14px; width: 36px; height: 36px;
+    bottom: calc(88px + env(safe-area-inset-bottom) + var(--nx-dock-h, 52px) + 14px);
+  }
+  .nx-info {
+    left: 12px; right: 12px; width: auto;
+    bottom: calc(88px + env(safe-area-inset-bottom) + var(--nx-dock-h, 52px) + 60px);
+  }
+  /* The status pill would run under the button on a narrow screen. */
+  .nx-status { left: 12px; transform: none; }
+  /* No Dynamic Island on phones. */
+  #app.logged-in #top-hud { display: none; }
   .nx-dock { bottom: calc(88px + env(safe-area-inset-bottom)); border-radius: 26px; }
   .nx-dock, .nx-dock.focus, .nx-dock.open { width: calc(100vw - 24px); }
   .nx-bar { height: 52px; }

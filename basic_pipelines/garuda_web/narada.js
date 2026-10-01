@@ -381,6 +381,14 @@ const N = (() => {
     scrollLog();
   }
 
+  // The "i" button on phones sits just above the dock; tell CSS how tall
+  // the minimised dock is (the open sheet hides the button instead).
+  function measureDock() {
+    const dock = $('nx-dock'), page = $('page-narada');
+    if (!dock || !page || sheetOpen || !dock.offsetHeight) return;
+    page.style.setProperty('--nx-dock-h', dock.offsetHeight + 'px');
+  }
+
   function syncDock() {
     const dock = $('nx-dock'), peek = $('nx-peek'), exp = $('nx-expand');
     if (!dock) return;
@@ -389,6 +397,7 @@ const N = (() => {
     dock.classList.toggle('open', sheetOpen);
     dock.classList.toggle('has-peek', !!last && last.who !== 'you');
     if (peek) peek.textContent = last ? last.text : '';
+    measureDock();
     if (exp) {
       exp.setAttribute('aria-expanded', String(sheetOpen));
       exp.setAttribute('aria-label', sheetOpen ? 'Minimise conversation' : 'Open conversation');
@@ -623,7 +632,7 @@ const N = (() => {
   }
 
   function onNav(pageId) {
-    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); }); }
+    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); }
     else stop();                               // a live conversation keeps going in the island
   }
 
