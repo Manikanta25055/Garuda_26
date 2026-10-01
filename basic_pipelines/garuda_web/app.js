@@ -197,6 +197,8 @@ const G = (() => {
     // garuda., drishti. and api. are all served by the Pi through the one
     // Cloudflare tunnel, so the page's own origin is the backend.
     if (/(^|\.)veeramanikanta\.in$/.test(h)) return '';
+    // The Vercel copy is only the static front end; it talks to the Pi's API.
+    if (h.endsWith('.vercel.app')) return localStorage.getItem('garuda_backend') || 'https://api.veeramanikanta.in';
     return localStorage.getItem('garuda_backend') || '';
   }
 

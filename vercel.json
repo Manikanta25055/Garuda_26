@@ -1,4 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "git": { "deploymentEnabled": false }
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
+  "outputDirectory": "basic_pipelines/garuda_web",
+  "cleanUrls": false,
+  "rewrites": [
+    { "source": "/static/:path*", "destination": "/:path*" }
+  ]
 }
