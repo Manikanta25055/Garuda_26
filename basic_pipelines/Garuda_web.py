@@ -223,6 +223,7 @@ try:
     from .garuda_core.backup import BackupManager
     from .garuda_core import http as _core_http
     from .garuda_core import logging_setup as _core_logging
+    from .garuda_core import evidence as _evidence
     from .garuda_core.system_api import build_system_router
     from .garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
@@ -237,6 +238,7 @@ except ImportError:
     from basic_pipelines.garuda_core.backup import BackupManager
     from basic_pipelines.garuda_core import http as _core_http
     from basic_pipelines.garuda_core import logging_setup as _core_logging
+    from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core.system_api import build_system_router
     from basic_pipelines.garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
@@ -1425,62 +1427,16 @@ def _send_tamper_email():
 ##############################################################################
 def _encrypt_clip_aes256(src_path: str) -> str | None:
     """AES-256-GCM encrypt src_path → src_path.enc. Returns encrypted path or None on failure."""
-    if _EXFIL_AES_KEY is None:
-        log_system_update("[EXFIL] AES key not set — skipping encryption.")
-        return None
-    if len(_EXFIL_AES_KEY) != 32:
-        log_system_update("[EXFIL] EXFIL_AES_KEY must be exactly 32 bytes (64 hex chars).")
-        return None
-    enc_path = src_path + ".enc"
-    try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-        nonce = os.urandom(12)   # 96-bit nonce (recommended for GCM)
-        with open(src_path, "rb") as f:
-            plaintext = f.read()
-        ciphertext = AESGCM(_EXFIL_AES_KEY).encrypt(nonce, plaintext, None)
-        # Layout: [12-byte nonce][ciphertext+16-byte GCM tag]
-        with open(enc_path, "wb") as f:
-            f.write(nonce + ciphertext)
-        return enc_path
-    except ImportError:
-        log_system_update("[EXFIL] cryptography package not installed — run: pip install cryptography")
-        return None
-    except Exception as e:
-        log_system_update(f"[EXFIL] Encryption failed: {e}")
-        return None
+    # The work is in garuda_core.evidence; the key and the logger are read
+    # here, at call time, so a changed (or test-patched) value is honoured.
+    return _evidence.encrypt_file(src_path, _EXFIL_AES_KEY, log_system_update)
 
 def _ssh_upload(local_path: str, remote_filename: str) -> bool:
     """SFTP-upload local_path to the configured SSH server. Returns True on success."""
-    if not _EXFIL_HOST or not _EXFIL_USER:
-        return False
-    try:
-        import paramiko
-    except ImportError:
-        log_system_update("[EXFIL] paramiko not installed — run: pip install paramiko")
-        return False
-    try:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        kwargs: dict = {"hostname": _EXFIL_HOST, "port": _EXFIL_PORT,
-                        "username": _EXFIL_USER, "timeout": 30}
-        if _EXFIL_KEY_PATH and os.path.exists(_EXFIL_KEY_PATH):
-            kwargs["key_filename"] = _EXFIL_KEY_PATH
-        elif _EXFIL_PASSWORD:
-            kwargs["password"] = _EXFIL_PASSWORD
-        ssh.connect(**kwargs)
-        sftp = ssh.open_sftp()
-        remote_dir = _EXFIL_REMOTE.rstrip("/")
-        try:
-            sftp.mkdir(remote_dir)
-        except IOError:
-            pass   # already exists
-        sftp.put(local_path, remote_dir + "/" + remote_filename)
-        sftp.close()
-        ssh.close()
-        return True
-    except Exception as e:
-        log_system_update(f"[EXFIL] SSH upload failed: {e}")
-        return False
+    return _evidence.sftp_upload(
+        local_path, remote_filename, host=_EXFIL_HOST, port=_EXFIL_PORT, user=_EXFIL_USER,
+        key_path=_EXFIL_KEY_PATH, password=_EXFIL_PASSWORD, remote_dir=_EXFIL_REMOTE,
+        log=log_system_update)
 
 def exfiltrate_clip(clip_path: str):
     """Encrypt a clip and upload the ciphertext off-device via SSH. Runs in a daemon thread."""
