@@ -1090,7 +1090,7 @@ const G = (() => {
     'dashboard':   _BRAND,
     'narada':      'Narada',
     'devices':     'Devices',
-    'auto':        'Automations',
+    'auto':        'Automate',
     'insights':    'Insights',
     'a-email':     'Email',
     'a-settings':  'Settings',

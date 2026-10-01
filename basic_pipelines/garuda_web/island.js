@@ -86,7 +86,10 @@ const DI = (() => {
   for (let i = 0; i <= STEPS; i++) { const t = i / STEPS * Math.PI / 2; COS.push(Math.cos(t)); SIN.push(Math.sin(t)); }
   function outline(x, w, h, r) {
     r = Math.max(1, Math.min(r, w / 2, h / 2));
-    const rx = Math.min(1.53 * r, w / 2), ry = Math.min(1.53 * r, h / 2);
+    // The resting pill is all but a capsule, as on the iPhone: its ends reach
+    // only 1.2 radii along the width, enough for the curve to ease in.
+    const ry = Math.min(1.53 * r, h / 2);
+    const rx = Math.min(Math.max(1.2 * r, ry), 1.53 * r, w / 2);
     const e = 2 / (2 + 1.27 * ((rx + ry) / r - 2) / 1.06);
     const dx = [], dy = [], f = v => v.toFixed(2);
     for (let i = 0; i <= STEPS; i++) { dx.push(rx * (1 - Math.pow(COS[i], e))); dy.push(ry * (1 - Math.pow(SIN[i], e))); }
@@ -100,7 +103,7 @@ const DI = (() => {
 
   const PILL_H = 37, PILL_R = 18.5, OPEN_R = 30, SLACK = 24;   // SLACK: room in the shell for the spring to overshoot
   const cur = { w: 126, h: PILL_H, r: PILL_R }, vel = { w: 0, h: 0, r: 0 }, to = { w: 126, h: PILL_H, r: PILL_R };
-  let raf = 0, lastT = 0, stiff = 260, damp = 21, shellW = 400;
+  let raf = 0, lastT = 0, stiff = 260, damp = 21, shellW = 0;
   let closing = false;              // true from a close until the shape has come to rest
   const still = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -145,8 +148,6 @@ const DI = (() => {
   function measure() {
     if (!shell.offsetWidth) return;                 // not on screen (signed out, or a phone)
     shellW = shell.offsetWidth;
-    const w = rest.scrollWidth;
-    if (w) hud.style.setProperty('--di-rest-w', Math.max(96, 2 * Math.ceil((w + 34) / 2)) + 'px');
     retarget();
   }
 
@@ -296,7 +297,6 @@ const DI = (() => {
     const cfg = PAGES[page];
     hud.dataset.page = page;
     $('di-glyph').innerHTML = cfg.glyph;
-    setText($('di-val'), cfg.val && last ? cfg.val(last) : '');
     if (panel) {
       $('di-p-glyph').innerHTML = cfg.glyph;
       setText($('di-p-page'), $('hud-brand').textContent);
@@ -371,9 +371,7 @@ const DI = (() => {
     hud.classList.toggle('di-rec', rec);
     wasRecording = rec;
 
-    // The page's live figure ("3 on"); the pill is re-measured when it changes.
-    const cfg = PAGES[page], val = $('di-val'), text = cfg.val ? cfg.val(last) : '';
-    if (val.textContent !== text || !hud.style.getPropertyValue('--di-rest-w')) { val.textContent = text; measure(); }
+    if (!shellW || shell.offsetWidth !== shellW) measure();
 
     if (open) render();
   }
