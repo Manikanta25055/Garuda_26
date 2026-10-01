@@ -1,0 +1,620 @@
+[
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/admin/send-otp",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/admin/verify-otp",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/arp",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/cascade_metrics",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/chat",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/chat/stream",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/clip/start",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/clip/stop",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/config",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/config",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/config/command/add",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/config/command/delete",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/devices",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/devices/add",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/devices/delete",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/email/test",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/emergency-stop",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/eval/fps_probe",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/eval/inject_danger",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/eval/tag",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/events/pending",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/events/since",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/events/stats",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/feedback",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/feedback",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/forgot/reset",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/forgot/send-otp",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/health",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/heartbeat",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/activity",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/ai",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/ai",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/ai/test",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/all-off",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/automations",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/device-types",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/devices",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/home/devices/{device_id}",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "PATCH",
+  "path": "/api/home/devices/{device_id}",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/devices/{device_id}/set",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/digest",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/insights",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/instruct",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/notices/{notice_id}/dismiss",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/overview",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/home/proposals/{proposal_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/proposals/{proposal_id}/confirm",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/rules",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/home/rules/{rule_id}",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/rules/{rule_id}/toggle",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/scenes",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/home/scenes/{scene_id}",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/scenes/{scene_id}/run",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/schedules",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/schedules",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/home/schedules/{schedule_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/schedules/{schedule_id}/toggle",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/settings",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/settings",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/suggestions",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/suggestions/{suggestion_id}/accept",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/suggestions/{suggestion_id}/dismiss",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/usage",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/login",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/logout",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/logs",
+  "guard": "require_logs"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/logs/download",
+  "guard": "require_logs"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/master_key/add",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/master_key/delete",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/master_key/login",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/master_key/request_otp",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/master_key/verify",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/master_keys",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/meta",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/modes",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/narada/info",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/voice/token",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/openapi.json",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/presence_refresh",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/ready",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/refresh",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/session",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/set-mode",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/snapshot",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/state",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/system/backups",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/system/backups",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/system/info",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/users",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/users-public",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/users/add",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/users/delete",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/users/update",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/favicon.ico",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/manifest.json",
+  "guard": "none"
+ },
+ {
+  "kind": "mount",
+  "method": "-",
+  "path": "/static",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/stream",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/sw.js",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/webrtc/offer",
+  "guard": "require_session"
+ },
+ {
+  "kind": "websocket",
+  "method": "WS",
+  "path": "/ws",
+  "guard": "none"
+ },
+ {
+  "kind": "websocket",
+  "method": "WS",
+  "path": "/ws/narada-voice",
+  "guard": "none"
+ },
+ {
+  "kind": "websocket",
+  "method": "WS",
+  "path": "/ws/stream",
+  "guard": "none"
+ }
+]

@@ -224,6 +224,12 @@ try:
     from .garuda_core import http as _core_http
     from .garuda_core import logging_setup as _core_logging
     from .garuda_core.system_api import build_system_router
+    from .garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
+    from .garuda_core.storage import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _atomic_json_write)
+    from .garuda_core.validation import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 except ImportError:
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
@@ -232,6 +238,12 @@ except ImportError:
     from basic_pipelines.garuda_core import http as _core_http
     from basic_pipelines.garuda_core import logging_setup as _core_logging
     from basic_pipelines.garuda_core.system_api import build_system_router
+    from basic_pipelines.garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
+    from basic_pipelines.garuda_core.storage import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _atomic_json_write)
+    from basic_pipelines.garuda_core.validation import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 import logging
 SETTINGS = Settings.load()
@@ -337,48 +349,6 @@ _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_
 WATCH_LABELS: list = ['Person', 'person']   # human — log silently, no alert
 
 # ── Password hashing (PBKDF2-SHA256) ────────────────────
-_PBKDF2_ITERS = 600000  # OWASP 2024 recommendation for PBKDF2-SHA256
-
-def _hash_password(pw: str) -> str:
-    salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, _PBKDF2_ITERS)
-    return f"pbkdf2:sha256:{_PBKDF2_ITERS}:{salt.hex()}:{dk.hex()}"
-
-def _verify_password(pw: str, stored: str) -> bool:
-    if stored.startswith("pbkdf2:"):
-        parts = stored.split(":")
-        if len(parts) != 5:
-            return False
-        _, algo, iters, salt_hex, dk_hex = parts
-        try:
-            dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
-        except (ValueError, TypeError):
-            return False      # a damaged record must fail closed, not raise a 500
-        return hmac.compare_digest(dk.hex(), dk_hex)
-    # Plaintext fallback for migration. Compared as bytes: compare_digest on
-    # str raises TypeError for any non-ASCII character.
-    return hmac.compare_digest(pw.encode(), str(stored).encode())
-
-# Verified against when the username does not exist, so an unknown account
-# costs the same time as a wrong password and cannot be told apart by timing.
-_DUMMY_PASSWORD_HASH = _hash_password(secrets.token_hex(16))
-
-def _validate_password_strength(pw: str) -> str | None:
-    """Return an error string if password fails requirements, else None."""
-    if not pw or not pw.strip():
-        return "Password cannot be empty."
-    p = pw.strip()
-    if len(p) < 8:
-        return "Password must be at least 8 characters."
-    if len(p) > 256:
-        return "Password must be at most 256 characters."
-    if not any(c.isupper() for c in p):
-        return "Password must contain at least one uppercase letter."
-    if not any(c.islower() for c in p):
-        return "Password must contain at least one lowercase letter."
-    if not any(c.isdigit() for c in p):
-        return "Password must contain at least one digit."
-    return None
 
 def _invalidate_user_sessions(username: str, except_token: str | None = None,
                               except_refresh: str | None = None) -> int:
@@ -406,21 +376,6 @@ def _invalidate_user_sessions(username: str, except_token: str | None = None,
     return len(to_delete)
 
 # ── Atomic JSON write ────────────────────────────────────
-def _atomic_json_write(filepath: str, data):
-    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(filepath) or ".", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, filepath)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
 
 def _safe_json_load(filepath: str, default):
     try:
@@ -814,44 +769,6 @@ def _append_presence_log(event: str, device: str, mac: str):
         pass
     queue_event("PRESENCE", device, 0.0, f"{event} (mac={mac})")
 
-# A master key is a full admin sign-in, and the file held them as typed. They
-# are now kept as salted hashes ("mk1$salt$hash$last4"): the last four
-# characters stay so the settings page can still tell the keys apart. Keys are
-# long and random by rule (12+ characters, four classes), so 120k PBKDF2
-# rounds is ample and keeps a check with several keys quick on the Pi.
-_MK_PREFIX = "mk1$"
-_MK_ITERS = 120_000
-
-def _mk_is_hashed(entry) -> bool:
-    return isinstance(entry, str) and entry.startswith(_MK_PREFIX)
-
-def _mk_hash(key: str) -> str:
-    salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac("sha256", key.encode(), salt, _MK_ITERS)
-    tail = key[-4:] if len(key) > 4 else ""
-    return f"{_MK_PREFIX}{salt.hex()}${dk.hex()}${tail}"
-
-def _mk_check(key: str, entry) -> bool:
-    """True when `key` is the master key stored as `entry` (hashed or legacy plaintext)."""
-    if not key or not isinstance(entry, str):
-        return False
-    if not _mk_is_hashed(entry):
-        return hmac.compare_digest(key.encode(), entry.encode())
-    try:
-        _, salt_hex, dk_hex, _tail = entry.split("$", 3)
-        dk = hashlib.pbkdf2_hmac("sha256", key.encode(), bytes.fromhex(salt_hex), _MK_ITERS)
-    except (ValueError, TypeError):
-        return False
-    return hmac.compare_digest(dk.hex(), dk_hex)
-
-def _mk_mask(entry) -> str:
-    dots = "\u2022" * 8
-    if _mk_is_hashed(entry):
-        tail = entry.split("$", 3)[3] if entry.count("$") >= 3 else ""
-        return dots + tail
-    entry = str(entry)
-    return ("\u2022" * (len(entry) - 4) + entry[-4:]) if len(entry) > 4 else "\u2022" * 4
-
 def load_master_keys():
     global MASTER_KEYS
     try:
@@ -1238,8 +1155,6 @@ def stop_app():
 ##############################################################################
 # OTP / EMAIL
 ##############################################################################
-def generate_otp_code(length=6):
-    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
 def send_otp_via_email(email, otp_code):
     body = f"Hello,\n\nYour OTP code is: {otp_code}\n\nUse this to complete your login."
@@ -2164,9 +2079,6 @@ REFRESH_TOKENS_FILE = str(_BASE / "system_logs" / "refresh_tokens.json")
 _persisted_refresh: dict = {}      # sha256(token) → record, loaded at start-up
 _refresh_dirty = False
 
-def _rt_digest(token: str) -> str:
-    return hashlib.sha256(str(token).encode()).hexdigest()
-
 def _load_refresh_tokens():
     global _persisted_refresh
     data = {}
@@ -2594,11 +2506,6 @@ def _deadman_monitor():
 ##############################################################################
 # SCHEDULED MODES
 ##############################################################################
-def _time_in_range(start: str, end: str, current: str) -> bool:
-    """Return True if current (HH:MM) is in [start, end] — handles midnight wrap."""
-    if start <= end:
-        return start <= current <= end
-    return current >= start or current <= end
 
 def _schedule_monitor():
     """Background thread: enforce scheduled mode transitions.
@@ -3603,8 +3510,6 @@ async def set_mode(data: ModeRequest, session=Depends(require_session)):
     push_urgent_ws()
     return {"ok": True, "modes": get_state_dict()["modes"]}
 
-_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
-
 # The native (Swift) app posts to /api/set-mode, which never existed here: its
 # mode switches failed with 404. Same handler, both names.
 fastapi_app.post("/api/set-mode", include_in_schema=False)(set_mode)
@@ -3706,17 +3611,6 @@ async def get_config(session=Depends(require_admin)):
         "mode_schedule": MODE_SCHEDULE,
         "night_presence_window": NIGHT_PRESENCE_WINDOW,
     }
-
-# A real time of day: "\d{2}:\d{2}" also accepted 99:99, which then never matched.
-_HHMM_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
-
-def _clean_labels(labels, limit: int = 50) -> list:
-    out = []
-    for label in labels or []:
-        label = str(label).strip()[:64]
-        if label and label not in out:
-            out.append(label)
-    return out[:limit]
 
 @fastapi_app.post("/api/config")
 async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
@@ -3976,15 +3870,6 @@ def _combined_log_text() -> str:
 ##############################################################################
 # MASTER KEY ENDPOINTS
 ##############################################################################
-def _master_key_matches(key: str, valid_keys) -> bool:
-    """Constant-time check of `key` against every valid key (bytes: no TypeError on non-ASCII)."""
-    if not key or len(key) > 256:
-        return False
-    hit = False
-    for candidate in list(valid_keys):
-        if _mk_check(key, candidate):
-            hit = True
-    return hit
 
 _MASTER_OTP_TTL = 300
 _master_otp_ts = 0.0
