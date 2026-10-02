@@ -774,7 +774,8 @@ if DRISHTI_APP_ENABLED:
 try:
     from .garuda_auto.llm import NimChat, NimUnavailable, parse_models
     from .garuda_auto.home import HomeServices
-    from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend, LayaBackend
+    from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from .garuda_auto.router import RouterBackend
     from .garuda_auto.agent import HomeAgent
     from .narada_brain import Brain
     from .garuda_auto.digest import Digest
@@ -784,7 +785,8 @@ try:
 except ImportError:
     from basic_pipelines.garuda_auto.llm import NimChat, NimUnavailable, parse_models
     from basic_pipelines.garuda_auto.home import HomeServices
-    from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend, LayaBackend
+    from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from basic_pipelines.garuda_auto.router import RouterBackend
     from basic_pipelines.garuda_auto.agent import HomeAgent
     from basic_pipelines.narada_brain import Brain
     from basic_pipelines.garuda_auto.digest import Digest
@@ -814,12 +816,12 @@ HOME.on_change = lambda: push_urgent_ws()
 DECISION = DecisionEngine(
     LocalBackend(lambda: [d for d in DRISHTI_CTX.registry.devices if d.get("enabled", True)],
                  lambda: HOME.scenes.scenes),
-    # An experiment, off unless LAYA_URL names a laya-serve on this network
-    # (scripts/laya_experiment.py measures what it costs and how it scores).
-    LayaBackend(os.environ["LAYA_URL"]) if os.environ.get("LAYA_URL") else
     JevBackend(os.environ.get("JEV_API_KEY", ""),
                os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai")),
     threshold=float(os.environ.get("DECISION_THRESHOLD", "0.85")),
+    # The routing model trained for this house's kind of sentence (router.py).
+    # Without its file or onnxruntime it is simply absent and the matcher answers.
+    router=RouterBackend(os.environ.get("NARADA_ROUTER_DIR") or None),
 )
 # Who Narada is and what it carries between turns: the persona, and the
 # conversation saved beside the rest of the house's data.

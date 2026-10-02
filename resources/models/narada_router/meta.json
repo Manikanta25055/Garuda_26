@@ -1,0 +1,227 @@
+{
+ "base": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+ "intents": [
+  "device_control",
+  "all_off",
+  "scene",
+  "timer",
+  "state_query",
+  "automation_rule",
+  "mode_change",
+  "explain",
+  "other"
+ ],
+ "actions": [
+  "on",
+  "off",
+  "none"
+ ],
+ "cls_id": 0,
+ "sep_id": 2,
+ "temperature": {
+  "intent": 0.85,
+  "device": 1.85,
+  "action": 1.15,
+  "scene": 0.5
+ },
+ "trained_on": 90000,
+ "epochs": 4,
+ "floor": {
+  "routing_cases": 47,
+  "routing_written (test half)": 587
+ },
+ "results": {
+  "routing_cases": {
+   "whole": 49,
+   "of": 50,
+   "sure": 50,
+   "sure_wrong": 0,
+   "kinds": {
+    "plain": [
+     29,
+     29
+    ],
+    "paraphrase": [
+     6,
+     7
+    ],
+    "negation": [
+     4,
+     4
+    ],
+    "offtopic": [
+     4,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     4,
+     4
+    ]
+   }
+  },
+  "routing_written (test half)": {
+   "whole": 589,
+   "of": 658,
+   "sure": 650,
+   "sure_wrong": 13,
+   "kinds": {
+    "plain": [
+     275,
+     288
+    ],
+    "mixed-language": [
+     119,
+     121
+    ],
+    "paraphrase": [
+     128,
+     173
+    ],
+    "offtopic": [
+     30,
+     33
+    ],
+    "negation": [
+     33,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ]
+   }
+  },
+  "routing_cases, onnx": {
+   "whole": 49,
+   "of": 50,
+   "sure": 50,
+   "sure_wrong": 0,
+   "kinds": {
+    "plain": [
+     29,
+     29
+    ],
+    "paraphrase": [
+     6,
+     7
+    ],
+    "negation": [
+     4,
+     4
+    ],
+    "offtopic": [
+     4,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     4,
+     4
+    ]
+   }
+  },
+  "routing_written (test half), onnx": {
+   "whole": 589,
+   "of": 658,
+   "sure": 650,
+   "sure_wrong": 13,
+   "kinds": {
+    "plain": [
+     275,
+     288
+    ],
+    "mixed-language": [
+     119,
+     121
+    ],
+    "paraphrase": [
+     128,
+     173
+    ],
+    "offtopic": [
+     30,
+     33
+    ],
+    "negation": [
+     33,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ]
+   }
+  },
+  "routing_cases, onnx 8-bit (the file that ships)": {
+   "whole": 49,
+   "of": 50,
+   "sure": 50,
+   "sure_wrong": 0,
+   "kinds": {
+    "plain": [
+     29,
+     29
+    ],
+    "paraphrase": [
+     6,
+     7
+    ],
+    "negation": [
+     4,
+     4
+    ],
+    "offtopic": [
+     4,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     4,
+     4
+    ]
+   }
+  },
+  "routing_written (test half), onnx 8-bit (the file that ships)": {
+   "whole": 589,
+   "of": 658,
+   "sure": 648,
+   "sure_wrong": 12,
+   "kinds": {
+    "plain": [
+     270,
+     288
+    ],
+    "mixed-language": [
+     119,
+     121
+    ],
+    "paraphrase": [
+     132,
+     173
+    ],
+    "offtopic": [
+     30,
+     33
+    ],
+    "negation": [
+     34,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ]
+   }
+  }
+ }
+}

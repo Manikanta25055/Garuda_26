@@ -6,15 +6,22 @@ a paragraph -- and a label with a calibrated confidence is exactly what lets
 the house act at once when it is sure and hand over to the language model
 when it is not. That is the shape TypeSafe's Jev exposes (typed questions,
 each answered with a value, a probability distribution and a confidence), so
-the interface here is that shape, with two interchangeable backends:
+the interface here is that shape, with three interchangeable backends:
 
-  LocalBackend  on the Pi, instant, offline. Literal matching over the
-                device and scene names; it knows what it does not know and
-                says so with a low confidence.
-  JevBackend    TypeSafe's hosted Jev (POST /v1/systemone). Used when a
-                JEV_API_KEY is configured. Jev is cloud-only and in early
-                access, so its wire format here follows the published
-                example and every failure falls back to LocalBackend.
+  LocalBackend   on the Pi, instant, offline. Literal matching over the
+                 device and scene names; it knows what it does not know and
+                 says so with a low confidence.
+  RouterBackend  on the Pi, offline (router.py). A small encoder trained for
+                 exactly these questions, so it also reads a sentence that
+                 names nothing ("it's too dark in the study") and Telugu or
+                 Hindi. Used when its model file and onnxruntime are present.
+  JevBackend     TypeSafe's hosted Jev (POST /v1/systemone). Used when a
+                 JEV_API_KEY is configured. Jev is cloud-only and in early
+                 access, so its wire format here follows the published
+                 example.
+
+The engine asks the first of Jev, the router and the matcher that is there,
+and a backend that fails hands the sentence to the next.
 
 Egress: Jev receives the utterance and the device/scene names, never frames,
 readings or history -- the same boundary the rule compiler keeps.
@@ -196,100 +203,6 @@ class JevBackend:
         return out
 
 
-# What each intent means, for a backend that reads descriptions (Laya's
-# "criteria" are label -> description; Jev's wire format took a bare list).
-INTENT_CRITERIA = {
-    "device_control": "switch one named device on or off right now",
-    "all_off": "switch everything, or every device in a room, off",
-    "scene": "run a saved scene by its name",
-    "timer": "do something after a delay or at a clock time",
-    "state_query": "a question about what is on, off, or who is home",
-    "automation_rule": "a standing rule: when, if or whenever something happens, do something",
-    "mode_change": "change a security mode such as do not disturb, night, idle or privacy",
-    "explain": "asks why something happened",
-    "other": "anything else: conversation, general questions, several requests at once",
-}
-
-
-class LayaBackend(JevBackend):
-    """Laya (github.com/NandhaKishorM/laya) served on this machine or the LAN.
-
-    `laya-serve` speaks the same POST /v1/systemone as Jev, so this is the Jev
-    client with two differences: no key (it is yours, on your network), and
-    the questions are sent the way Laya reads them, with a description for
-    every option. An experiment, off unless LAYA_URL is set: see
-    scripts/laya_experiment.py for what it costs on a Pi and how it scores.
-
-    Measured on this Pi 5 on 2026-10-02 (laya 0.3.23, CPU, two threads, base
-    checkpoints, no fine-tuning), on tests/eval/routing_cases.json: 14 of 49
-    whole decisions right against the local matcher's 30 of 50, about 15 s a
-    decision, 5.5 GB resident with its three checkpoints loaded, and the CPU
-    went from 64 to 85 C and hit its soft temperature limit within fifteen
-    minutes. Do not point the live service at it as it stands.
-    """
-    name = "laya"
-
-    def __init__(self, base_url="", timeout=8.0, post=None):
-        super().__init__(api_key="", base_url=base_url or "", timeout=timeout, post=post)
-
-    @property
-    def configured(self):
-        return bool(self.base_url)
-
-    @staticmethod
-    def questions_for_laya(questions, state):
-        devices = {d["id"]: f"{d['name']}" + (f" in the {d['room']}" if d.get("room") else "")
-                   for d in (state.get("devices") or [])} if isinstance(state, dict) else {}
-        scenes = {s["id"]: f"the scene called {s['name']}" for s in (state.get("scenes") or [])} \
-            if isinstance(state, dict) else {}
-        describe = {
-            "intent": lambda o: INTENT_CRITERIA.get(o, o),
-            "device": lambda o: devices.get(o, "no single device is named" if o == "none" else o),
-            "action": lambda o: {"on": "switch it on, start it", "off": "switch it off, stop it",
-                                 "none": "neither on nor off is asked for"}.get(o, o),
-            "scene": lambda o: scenes.get(o, "no saved scene is named" if o == "none" else o),
-        }
-        out = {}
-        for name, q in questions.items():
-            label = describe.get(name, lambda o: o)
-            out[name] = {"type": "choice", "instructions": q.get("criteria", name),
-                         "criteria": {o: label(o) for o in q.get("options", [])}}
-        return out
-
-    def decide(self, state, questions):
-        text = state.get("utterance", "") if isinstance(state, dict) else str(state)
-        resp = self._post(f"{self.base_url}/v1/systemone",
-                          headers={"Content-Type": "application/json"},
-                          json={"state": {"body": text},
-                                "questions": self.questions_for_laya(questions, state)},
-                          timeout=self.timeout)
-        resp.raise_for_status()
-        payload = resp.json()
-        answers = payload.get("answers", payload)
-        out = {}
-        for name, q in questions.items():
-            raw = answers.get(name)
-            if not isinstance(raw, dict):
-                raise ValueError(f"Laya returned no answer for {name}")
-            value = raw.get("choice", raw.get("value"))
-            if value not in q.get("options", []):
-                raise ValueError(f"Laya answered {name} outside its options")
-            probs = raw.get("probabilities") or raw.get("probs") or {}
-            if isinstance(probs, list):
-                probs = dict(zip(q.get("options", []), probs))
-            # Laya's `confidence` is one minus the normalised entropy, not the chance
-            # of being right; `answer_confidence` is the probability of the answer
-            # it gave, which is what a threshold here means.
-            confidence = raw.get("answer_confidence")
-            if confidence is None and isinstance(probs, dict) and value in probs:
-                confidence = probs[value]
-            if confidence is None:
-                confidence = raw.get("confidence")
-            out[name] = Answer(value=value, probs=probs, confidence=float(confidence or 0.0),
-                               backend=self.name)
-        return out
-
-
 def _state_text(state):
     parts = [f"Utterance: {state.get('utterance', '')}"]
     if state.get("devices"):
@@ -301,25 +214,28 @@ def _state_text(state):
 
 
 class DecisionEngine:
-    def __init__(self, local, jev=None, threshold=0.85, clock=time.monotonic):
+    def __init__(self, local, jev=None, threshold=0.85, clock=time.monotonic, router=None):
         self.local = local
         self.jev = jev
+        self.router = router
         self.threshold = threshold
         self._clock = clock
-        self.stats = {"local": 0, "jev": 0, "jev_errors": 0, "last_backend": "",
-                      "last_latency_ms": None, "last_error": ""}
+        self.stats = {"local": 0, "router": 0, "jev": 0, "jev_errors": 0, "router_errors": 0,
+                      "last_backend": "", "last_latency_ms": None, "last_error": ""}
 
     def decide(self, state, questions):
         started = self._clock()
-        if self.jev is not None and self.jev.configured:
+        for name, backend in (("jev", self.jev), ("router", self.router)):
+            if backend is None or not backend.configured:
+                continue
             try:
-                out = self.jev.decide(state, questions)
-                self._note("jev", started)
+                out = backend.decide(state, questions)
+                self._note(name, started)
                 return out
             except Exception as exc:
-                self.stats["jev_errors"] += 1
+                self.stats[f"{name}_errors"] += 1
                 self.stats["last_error"] = f"{type(exc).__name__}: {exc}"[:160]
-                log.warning("Jev failed, using local backend: %s", exc)
+                log.warning("%s failed, trying the next backend: %s", name, exc)
         out = self.local.decide(state, questions)
         self._note("local", started)
         return out
@@ -336,4 +252,6 @@ class DecisionEngine:
     def status(self):
         return {"threshold": self.threshold,
                 "jev_configured": bool(self.jev and self.jev.configured),
+                "router_configured": bool(self.router and self.router.configured),
+                "router_error": getattr(self.router, "error", ""),
                 **self.stats}

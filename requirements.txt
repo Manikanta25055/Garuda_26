@@ -30,5 +30,6 @@ elevenlabs
 # aiortc av              # WebRTC camera transport; MJPEG / WebSocket are used without it
 # cryptography paramiko  # encrypted off-site copy of evidence clips (EXFIL_*)
 # sentence-transformers  # embedding backend for utterance matcher
+# onnxruntime tokenizers  # Narada's routing model (garuda_auto/router.py); the literal matcher answers without them
 # gpiozero               # relay bank; no-op stub used when unavailable
 # paho-mqtt              # MQTT transport; devices unreachable when absent

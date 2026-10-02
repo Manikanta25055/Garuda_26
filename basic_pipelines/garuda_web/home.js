@@ -667,7 +667,7 @@ const H = (() => {
       $('ai-thr').value = Math.round((dec.threshold || 0.85) * 100);
       $('ai-thr-val').textContent = (dec.threshold || 0.85).toFixed(2);
       const lanes = st.lanes || {};
-      $('ai-decision-meta').textContent = `${dec.jev_configured ? 'Jev key set' : 'Local engine'} · handled on-device ${lanes.fast || 0}, by NIM ${lanes.agent || 0}, offline ${lanes.local || 0}${dec.last_latency_ms != null ? ` · last decision ${dec.last_latency_ms} ms (${dec.last_backend})` : ''}${dec.jev_errors ? ` · Jev errors ${dec.jev_errors}` : ''}`;
+      $('ai-decision-meta').textContent = `${dec.jev_configured ? 'Jev key set' : dec.router_configured ? 'Routing model on the Pi' : 'Local engine'} · handled on-device ${lanes.fast || 0}, by NIM ${lanes.agent || 0}, offline ${lanes.local || 0}${dec.last_latency_ms != null ? ` · last decision ${dec.last_latency_ms} ms (${dec.last_backend})` : ''}${dec.jev_errors ? ` · Jev errors ${dec.jev_errors}` : ''}`;
     } catch (_) {}
   }
 
