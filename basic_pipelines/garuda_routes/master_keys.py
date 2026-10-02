@@ -81,7 +81,7 @@ def build_master_keys_router(core):
         core.MASTER_KEY_OTP = core.generate_otp_code(6)
         core._master_otp_ts = time.time()
         core._master_otp_attempts = 0
-        dest = core.EMAIL_RECIPIENTS[0] if core.EMAIL_RECIPIENTS else core.EMAIL_SENDER
+        dest = core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender
         ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, core.MASTER_KEY_OTP)
         if not ok:
             return {"ok": False, "error": err}

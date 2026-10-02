@@ -69,7 +69,7 @@ class user_app_callback_class(app_callback_class):
     def __init__(self):
         super().__init__()
         self.person_detected = False
-        self.danger_labels = list(core.DANGER_LABELS)
+        self.danger_labels = list(core.STATE.config.danger_labels)
         # Override with a threading-safe lock-based store
         # (base class uses multiprocessing.Queue which breaks across threads)
         self._frame = None

@@ -75,7 +75,7 @@ def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
     without NIM nothing is changed and Narada says why.
     """
     lower = msg.lower()
-    for phrase, resp in core.CUSTOM_VOICE_COMMANDS.items():
+    for phrase, resp in core.STATE.config.custom_voice_commands.items():
         if phrase in lower:
             return {"reply": resp, "lane": "custom", "actions": []}
     return core.AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice)

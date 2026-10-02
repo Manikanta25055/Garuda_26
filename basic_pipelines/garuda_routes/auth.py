@@ -176,7 +176,7 @@ def build_auth_router(core):
         core._admin_otp_user = u          # store server-side so step 2 cannot be hijacked
         core._admin_otp_ts = time.time()  # for expiry check
         core._admin_otp_attempts = 0      # a new code gets its own three tries
-        dest = core.EMAIL_RECIPIENTS[0] if core.EMAIL_RECIPIENTS else core.EMAIL_SENDER
+        dest = core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender
         # SMTP can take ten seconds; off the event loop so nothing else waits on it.
         ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, core.ADMIN_OTP)
         if not ok:
@@ -231,7 +231,7 @@ def build_auth_router(core):
         core._forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
         core.USER_FORGOT_OTP = otp   # test-facing alias
         # Send to the user's own email if stored, else fall back to admin recipient
-        dest = core.USERS[u].get("email") or (core.EMAIL_RECIPIENTS[0] if core.EMAIL_RECIPIENTS else core.EMAIL_SENDER)
+        dest = core.USERS[u].get("email") or (core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender)
         ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, otp)
         if not ok:
             core._forgot_otp_store.pop(u, None)

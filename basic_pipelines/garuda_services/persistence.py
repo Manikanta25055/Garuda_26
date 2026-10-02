@@ -67,20 +67,20 @@ def load_config():
         try:
             with open(core.CONFIG_FILE) as f:
                 cfg = json.load(f)
-            core.CUSTOM_VOICE_COMMANDS = cfg.get("custom_voice_commands", core.CUSTOM_VOICE_COMMANDS)
+            core.STATE.config.custom_voice_commands = cfg.get("custom_voice_commands", core.STATE.config.custom_voice_commands)
             core.STATE.modes.custom = cfg.get("custom_modes", core.STATE.modes.custom)
-            core.EMAIL_RECIPIENTS = cfg.get("email_recipients", core.EMAIL_RECIPIENTS)
-            core.EMAIL_COOLDOWN = cfg.get("email_cooldown", core.EMAIL_COOLDOWN)
-            core.EMAIL_SENDER = cfg.get("email_sender", core.EMAIL_SENDER)
-            core.DETECTION_THRESHOLD = cfg.get("detection_threshold", core.DETECTION_THRESHOLD)
-            core.KNOWN_DEVICES = cfg.get("known_devices", core.KNOWN_DEVICES)
-            core.WATCH_LABELS = cfg.get("watch_labels", core.WATCH_LABELS)
+            core.STATE.config.email_recipients = cfg.get("email_recipients", core.STATE.config.email_recipients)
+            core.STATE.config.email_cooldown = cfg.get("email_cooldown", core.STATE.config.email_cooldown)
+            core.STATE.config.email_sender = cfg.get("email_sender", core.STATE.config.email_sender)
+            core.STATE.config.detection_threshold = cfg.get("detection_threshold", core.STATE.config.detection_threshold)
+            core.STATE.config.known_devices = cfg.get("known_devices", core.STATE.config.known_devices)
+            core.STATE.config.watch_labels = cfg.get("watch_labels", core.STATE.config.watch_labels)
             # Support both legacy "danger_label" (str) and new "danger_labels" (list)
             if "danger_labels" in cfg:
-                core.DANGER_LABELS = cfg["danger_labels"]
+                core.STATE.config.danger_labels = cfg["danger_labels"]
             elif "danger_label" in cfg:
-                core.DANGER_LABELS = [cfg["danger_label"]]
-            core.NIGHT_PRESENCE_WINDOW = cfg.get("night_presence_window", core.NIGHT_PRESENCE_WINDOW)
+                core.STATE.config.danger_labels = [cfg["danger_label"]]
+            core.STATE.config.night_presence_window = cfg.get("night_presence_window", core.STATE.config.night_presence_window)
             # Restore persisted mode states
             modes = cfg.get("modes", {})
             core.STATE.modes.dnd       = bool(modes.get("dnd",       core.STATE.modes.dnd))
@@ -214,16 +214,16 @@ def save_config():
     # credentials must not be stored in plaintext JSON on disk.
     try:
         cfg = {
-            "custom_voice_commands": core.CUSTOM_VOICE_COMMANDS,
+            "custom_voice_commands": core.STATE.config.custom_voice_commands,
             "custom_modes": core.STATE.modes.custom,
-            "email_recipients": core.EMAIL_RECIPIENTS,
-            "email_cooldown": core.EMAIL_COOLDOWN,
-            "email_sender": core.EMAIL_SENDER,
-            "detection_threshold": core.DETECTION_THRESHOLD,
-            "known_devices": core.KNOWN_DEVICES,
-            "watch_labels": core.WATCH_LABELS,
-            "danger_labels": core.DANGER_LABELS,
-            "night_presence_window": core.NIGHT_PRESENCE_WINDOW,
+            "email_recipients": core.STATE.config.email_recipients,
+            "email_cooldown": core.STATE.config.email_cooldown,
+            "email_sender": core.STATE.config.email_sender,
+            "detection_threshold": core.STATE.config.detection_threshold,
+            "known_devices": core.STATE.config.known_devices,
+            "watch_labels": core.STATE.config.watch_labels,
+            "danger_labels": core.STATE.config.danger_labels,
+            "night_presence_window": core.STATE.config.night_presence_window,
             "modes": {
                 "dnd":       core.STATE.modes.dnd,
                 "email_off": core.STATE.modes.email_off,

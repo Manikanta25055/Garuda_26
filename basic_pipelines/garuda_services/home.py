@@ -65,7 +65,7 @@ def _drishti_set_privacy(on):
 
 def _home_presence():
     """True home / False away / None when no phone is registered to watch."""
-    return core._owner_present if core.KNOWN_DEVICES else None
+    return core._owner_present if core.STATE.config.known_devices else None
 
 
 def _home_security():
@@ -78,7 +78,7 @@ def _home_security():
 
 def _home_email(subject, body):
     """Home notices go to the alert recipients, unless email alerts are off."""
-    if core.STATE.modes.email_off or not (core.EMAIL_SENDER and core.EMAIL_SENDER_PASS and core.EMAIL_RECIPIENTS):
+    if core.STATE.modes.email_off or not (core.STATE.config.email_sender and core.STATE.config.email_sender_pass and core.STATE.config.email_recipients):
         return
     core._send_mail(subject, body)
 

@@ -32,3 +32,31 @@ def test_unknown_mode_is_refused():
         gw.STATE.modes.set("MODE_DND", True)      # field names only, not the old globals
     with pytest.raises(KeyError):
         gw.STATE.modes.get("lock")
+
+
+CONFIG = {"EMAIL_SENDER": "email_sender", "EMAIL_SENDER_PASS": "email_sender_pass",
+          "EMAIL_RECIPIENTS": "email_recipients", "EMAIL_COOLDOWN": "email_cooldown",
+          "DETECTION_THRESHOLD": "detection_threshold", "DANGER_LABELS": "danger_labels",
+          "WATCH_LABELS": "watch_labels", "KNOWN_DEVICES": "known_devices",
+          "NIGHT_PRESENCE_WINDOW": "night_presence_window",
+          "CUSTOM_VOICE_COMMANDS": "custom_voice_commands"}
+
+
+@pytest.mark.parametrize("old,field", sorted(CONFIG.items()))
+def test_flat_config_name_and_state_field_are_the_same_value(old, field, monkeypatch):
+    assert old not in vars(gw)
+    marker = object()
+    monkeypatch.setattr(gw, old, marker)
+    assert getattr(gw.STATE.config, field) is marker
+    monkeypatch.undo()
+    assert getattr(gw.STATE.config, field) is getattr(gw, old) is not marker
+
+
+def test_mail_wrapper_reads_the_state(monkeypatch):
+    sent = {}
+    monkeypatch.setattr(gw._mailer, "send", lambda subject, body, **kw: sent.update(kw))
+    monkeypatch.setattr(gw, "EMAIL_SENDER", "pi@example.com")
+    monkeypatch.setattr(gw.STATE.config, "email_sender_pass", "secret")
+    monkeypatch.setattr(gw, "EMAIL_RECIPIENTS", ["a@example.com"])
+    gw._send_mail("s", "b")
+    assert sent == {"sender": "pi@example.com", "password": "secret", "to": ["a@example.com"]}

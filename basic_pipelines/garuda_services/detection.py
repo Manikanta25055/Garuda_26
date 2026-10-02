@@ -67,7 +67,7 @@ def _secondary_worker_loop():
 def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
     with core._np_lock:
-        win = dict(core.NIGHT_PRESENCE_WINDOW)   # snapshot — avoids race with config update
+        win = dict(core.STATE.config.night_presence_window)   # snapshot — avoids race with config update
     if not win.get("enabled", True):
         return
     now_ist = datetime.datetime.now(core._IST) if core._IST is not None else datetime.datetime.now()
@@ -124,12 +124,12 @@ def app_callback(pad, info, user_data):
     detections = roi.get_objects_typed(core.hailo.HAILO_DETECTION)
 
     with core.STATE.modes.lock:
-        threshold = core.DETECTION_THRESHOLD
+        threshold = core.STATE.config.detection_threshold
         privacy = core.STATE.modes.privacy
 
     # Build case-insensitive lookup sets so UI casing mismatches never break detection
     _danger_set = {lbl.lower() for lbl in user_data.danger_labels}
-    _watch_set  = {lbl.lower() for lbl in core.WATCH_LABELS}
+    _watch_set  = {lbl.lower() for lbl in core.STATE.config.watch_labels}
 
     danger_detected = False
     det_count = 0

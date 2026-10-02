@@ -160,7 +160,7 @@ def get_state_dict():
         "voice_log": core.voice_assistant_log[-30:],
         "voice_mic": {"ok": core._voice_mic_ok, "detail": core._voice_mic_detail},
         "voice_responses": core.voice_responses[-30:],
-        "detection_threshold": core.DETECTION_THRESHOLD,
+        "detection_threshold": core.STATE.config.detection_threshold,
         "cpu_percent": cpu_pct,
         "cpu_cores": cpu_cores,
         "ram_percent": ram_pct,
@@ -174,7 +174,7 @@ def get_state_dict():
         "known_devices": [
             {"name": d.get("name", ""), "mac": core._device_mac(d),
              "online": core._mac_online(core._device_mac(d))}
-            for d in core.KNOWN_DEVICES
+            for d in core.STATE.config.known_devices
         ],
         # The heatmap shows 13 weeks; the full history (one key per day, for
         # ever) was being sent to every client every two seconds.
@@ -317,7 +317,7 @@ def _client_meta(request: Request) -> dict:
             "assistant": bool(core.NIM_CHAT.configured),
             "webrtc": bool(core._WEBRTC_AVAILABLE),
             "clips": True,
-            "email_alerts": bool(core.EMAIL_SENDER and core.EMAIL_SENDER_PASS and core.EMAIL_RECIPIENTS),
+            "email_alerts": bool(core.STATE.config.email_sender and core.STATE.config.email_sender_pass and core.STATE.config.email_recipients),
         },
         "auth": {"access_token_s": core._ACCESS_DURATION, "refresh_token_s": core._REFRESH_DURATION,
                  "header": "X-Garuda-Token", "refresh_header": "X-Garuda-Refresh"},

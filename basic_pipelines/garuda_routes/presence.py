@@ -23,7 +23,7 @@ def build_presence_router(core):
 
     @router.get("/api/devices")
     async def get_devices(session=Depends(core.require_admin)):
-        return {"devices": core.KNOWN_DEVICES, "owner_present": core._owner_present}
+        return {"devices": core.STATE.config.known_devices, "owner_present": core._owner_present}
 
     @router.get("/api/arp")
     async def get_arp_table(session=Depends(core.require_admin)):
@@ -37,7 +37,7 @@ def build_presence_router(core):
                         entries.append({"ip": parts[0], "mac": parts[3]})
         except Exception as e:
             raise HTTPException(500, str(e))
-        registered_macs = {core._device_mac(d) for d in core.KNOWN_DEVICES}
+        registered_macs = {core._device_mac(d) for d in core.STATE.config.known_devices}
         for e in entries:
             e["registered"] = e["mac"].lower() in registered_macs
         return {"entries": entries}
@@ -55,32 +55,32 @@ def build_presence_router(core):
         mac = data.mac.strip().lower()
         if not re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
             raise HTTPException(400, "Invalid MAC address format (use aa:bb:cc:dd:ee:ff)")
-        if any(core._device_mac(d) == mac for d in core.KNOWN_DEVICES):
+        if any(core._device_mac(d) == mac for d in core.STATE.config.known_devices):
             raise HTTPException(400, "Device with this MAC already registered")
         name = data.name.strip()[:64]
         if not name:
             raise HTTPException(400, "Device name is required.")
-        if len(core.KNOWN_DEVICES) >= 32:
+        if len(core.STATE.config.known_devices) >= 32:
             raise HTTPException(400, "Maximum 32 known devices.")
-        core.KNOWN_DEVICES.append({"name": name, "mac": mac})
+        core.STATE.config.known_devices.append({"name": name, "mac": mac})
         await core._async_save_config()
         core.log_system_update(f"Known device added: {name} ({mac})")
-        return {"ok": True, "devices": core.KNOWN_DEVICES}
+        return {"ok": True, "devices": core.STATE.config.known_devices}
 
     @router.post("/api/devices/delete")
     async def delete_device(data: DeviceDeleteRequest, session=Depends(core.require_admin)):
         mac = data.mac.strip().lower()
-        before = len(core.KNOWN_DEVICES)
-        core.KNOWN_DEVICES[:] = [d for d in core.KNOWN_DEVICES if core._device_mac(d) != mac]
-        if len(core.KNOWN_DEVICES) == before:
+        before = len(core.STATE.config.known_devices)
+        core.STATE.config.known_devices[:] = [d for d in core.STATE.config.known_devices if core._device_mac(d) != mac]
+        if len(core.STATE.config.known_devices) == before:
             raise HTTPException(404, "Device not found")
         await core._async_save_config()
         core.log_system_update(f"Known device removed: {mac}")
-        return {"ok": True, "devices": core.KNOWN_DEVICES}
+        return {"ok": True, "devices": core.STATE.config.known_devices}
 
     @router.post("/api/email/test")
     async def test_email(session=Depends(core.require_admin)):
-        dest = core.EMAIL_RECIPIENTS[0] if core.EMAIL_RECIPIENTS else core.EMAIL_SENDER
+        dest = core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender
         ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, "TEST-123")
         if not ok:
             return {"ok": False, "error": err}

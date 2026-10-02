@@ -80,7 +80,7 @@ def _mac_online(mac: str) -> bool:
 
 def _present_device():
     """The first registered device seen on the network, or None."""
-    return next((d for d in core.KNOWN_DEVICES if core._mac_online(core._device_mac(d))), None)
+    return next((d for d in core.STATE.config.known_devices if core._mac_online(core._device_mac(d))), None)
 
 
 def _check_device_presence() -> bool:
@@ -106,7 +106,7 @@ def _presence_poller():
         if not first:
             time.sleep(30)
         first = False
-        if not core.KNOWN_DEVICES:
+        if not core.STATE.config.known_devices:
             continue
         # One bad cycle (a malformed device entry, a failed probe) must not end
         # the thread: presence would then stay frozen until the next restart.
@@ -133,7 +133,7 @@ def _presence_poller():
                     core.push_urgent_ws()
             elif core._owner_present and (time.time() - core._owner_last_seen > core.OWNER_AWAY_GRACE):
                 core._owner_present = False
-                dev = next((d.get("name", "Unknown") for d in core.KNOWN_DEVICES), "Unknown")
+                dev = next((d.get("name", "Unknown") for d in core.STATE.config.known_devices), "Unknown")
                 core._append_presence_log("left", dev, "")
                 core.log_system_update(f"[OWNER] {dev} away — device not seen for {core.OWNER_AWAY_GRACE}s.")
                 core.push_urgent_ws()
@@ -158,6 +158,6 @@ def _do_presence_check():
             core.log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
     elif core._owner_present and (time.time() - core._owner_last_seen > core.OWNER_AWAY_GRACE):
         core._owner_present = False
-        dev = next((d.get("name", "Unknown") for d in core.KNOWN_DEVICES), "Unknown")
+        dev = next((d.get("name", "Unknown") for d in core.STATE.config.known_devices), "Unknown")
         core._append_presence_log("left", dev, "")
         core.log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")

@@ -63,11 +63,11 @@ def send_email_alert():
         return
     with core._email_lock:
         current_time = time.time()
-        if (current_time - core.last_email_sent_time) < core.EMAIL_COOLDOWN:
+        if (current_time - core.last_email_sent_time) < core.STATE.config.email_cooldown:
             return
         core.last_email_sent_time = current_time
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    label_str = ", ".join(core.DANGER_LABELS)
+    label_str = ", ".join(core.STATE.config.danger_labels)
     subject = f"Danger Object Detected — {label_str}"
     if emergency:
         subject = "EMERGENCY: " + subject
@@ -92,7 +92,7 @@ def _send_tamper_email():
     Rate-limited to one email per _TAMPER_EMAIL_COOLDOWN so a flickering /
     intermittently-dark camera cannot spam the recipient.
     """
-    if not core.EMAIL_SENDER or not core.EMAIL_RECIPIENTS:
+    if not core.STATE.config.email_sender or not core.STATE.config.email_recipients:
         return
     now = time.time()
     if (now - core._last_tamper_email) < core._TAMPER_EMAIL_COOLDOWN:

@@ -115,22 +115,12 @@ from hailo_rpi_common import (
     app_callback_class,
 )
 
-##############################################################################
-# EMAIL CONFIG (secrets from .env, overridable via config.json for non-secrets)
-##############################################################################
-EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "")
-EMAIL_SENDER_PASS = os.environ.get("EMAIL_SENDER_PASS", "")
-EMAIL_RECIPIENTS = [r.strip() for r in os.environ.get("EMAIL_RECIPIENTS", "amarmanikantan@gmail.com").split(",") if r.strip()]
-
 # Set SECURE_COOKIES=1 in .env when serving behind HTTPS (Cloudflare tunnel).
 # Leave unset for direct http://localhost access — secure=True drops cookies on plain HTTP.
 _COOKIE_SECURE = os.environ.get("SECURE_COOKIES", "0").lower() in ("1", "true", "yes")
-EMAIL_COOLDOWN = 60
 last_email_sent_time = 0
 _email_lock = threading.Lock()
 _danger_active = False   # True while danger label is continuously detected
-
-DANGER_LABELS: list = ["Knife", "scissors", "Hammer"]   # all non-person model outputs
 
 # ── Encrypted evidence exfiltration (AES-256-GCM + SSH) ─────────────────────
 # Set these in .env to enable off-site encrypted clip backup:
@@ -403,11 +393,17 @@ _core_state.forward(sys.modules[__name__], {
     "MODE_EMERGENCY": ("modes", "emergency"), "MODE_PRIVACY": ("modes", "privacy"),
     "MODE_SCHEDULE": ("modes", "schedule"), "CUSTOM_MODES": ("modes", "custom"),
     "_mode_lock": ("modes", "lock"),
+    # Email settings: the secrets come from .env, the rest from config.json.
+    "EMAIL_SENDER": ("config", "email_sender"), "EMAIL_SENDER_PASS": ("config", "email_sender_pass"),
+    "EMAIL_RECIPIENTS": ("config", "email_recipients"), "EMAIL_COOLDOWN": ("config", "email_cooldown"),
+    "DETECTION_THRESHOLD": ("config", "detection_threshold"),
+    "DANGER_LABELS": ("config", "danger_labels"), "WATCH_LABELS": ("config", "watch_labels"),
+    "KNOWN_DEVICES": ("config", "known_devices"),
+    "NIGHT_PRESENCE_WINDOW": ("config", "night_presence_window"),
+    "CUSTOM_VOICE_COMMANDS": ("config", "custom_voice_commands"),
 })
 
-DETECTION_THRESHOLD = 0.3
 NARADA_WAKE_WORD = "narada"
-CUSTOM_VOICE_COMMANDS = {}
 
 _alert_active = False
 _alert_end_time     = 0.0   # epoch when current alert expires (3s visual banner)
@@ -446,8 +442,7 @@ _log_buffer_lock = threading.Lock()
 # ── False positive reduction ──────────────────────────────
 _label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
 
-# ── Night presence window (yellow alarm when human seen in dead hours) ─────────
-NIGHT_PRESENCE_WINDOW: dict = {"start": "01:30", "end": "05:00", "enabled": True}
+# ── Night presence alarm (the window itself is STATE.config.night_presence_window) ──
 _night_presence_alert_active = False
 _night_presence_alert_end_time = 0.0
 _np_lock = threading.Lock()
@@ -459,7 +454,6 @@ _clip_start_time = 0.0
 _clip_path       = ""
 
 # ── Phone presence detection ──────────────────────────────
-KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
 _alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
 _presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
 MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
@@ -468,9 +462,6 @@ _owner_present   = False
 _owner_last_seen = 0.0
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
 _last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_poller)
-
-# ── Detection categories ──────────────────────────────────
-WATCH_LABELS: list = ['Person', 'person']   # human — log silently, no alert
 
 # ── Password hashing (PBKDF2-SHA256) ────────────────────
 
@@ -630,8 +621,9 @@ def mark_events_synced(up_to_id: int):
 def _send_mail(subject, body, to=None):
     """One email from the configured sender; to the alert recipients unless
     `to` names someone else. Raises on failure (see garuda_core.mailer)."""
-    _mailer.send(subject, body, sender=EMAIL_SENDER, password=EMAIL_SENDER_PASS,
-                 to=EMAIL_RECIPIENTS if to is None else to)
+    cfg = STATE.config
+    _mailer.send(subject, body, sender=cfg.email_sender, password=cfg.email_sender_pass,
+                 to=cfg.email_recipients if to is None else to)
 
 ##############################################################################
 # WEBRTC VIDEO TRACK
