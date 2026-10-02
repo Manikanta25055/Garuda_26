@@ -237,6 +237,9 @@ try:
     from .garuda_services import monitors as _svc_monitors
     from .garuda_services.monitors import (  # noqa: F401
         _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
+    from .garuda_services import alerts as _svc_alerts
+    from .garuda_services.alerts import (  # noqa: F401
+        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -274,6 +277,9 @@ except ImportError:
     from basic_pipelines.garuda_services import monitors as _svc_monitors
     from basic_pipelines.garuda_services.monitors import (  # noqa: F401
         _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
+    from basic_pipelines.garuda_services import alerts as _svc_alerts
+    from basic_pipelines.garuda_services.alerts import (  # noqa: F401
+        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -292,6 +298,7 @@ except ImportError:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 # garuda_services modules read this module's state through `core`.
+_svc_alerts.bind(sys.modules[__name__])
 _svc_monitors.bind(sys.modules[__name__])
 _svc_presence.bind(sys.modules[__name__])
 
@@ -1128,91 +1135,6 @@ def push_urgent_ws():
 ##############################################################################
 # ALERTS
 ##############################################################################
-def trigger_software_alert():
-    global _alert_active, _last_alert_time, _alert_end_time
-    with _mode_lock:
-        dnd = MODE_DND
-        idle = MODE_IDLE
-        night = MODE_NIGHT
-    if dnd or idle:
-        return
-    with _alert_lock:
-        was_active = _alert_active
-        # Extend the 3s window every frame scissors is visible — alert stays on
-        # while scissors is in frame and expires 3s after it disappears.
-        _alert_active = True
-        _alert_end_time = time.time() + 3
-    if not was_active:
-        # New alert starting: log, record, sound, email
-        if night:
-            _perm_write(NIGHT_MODE_LOG_FILE,
-                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        _last_alert_time = datetime.datetime.now()
-        _record_alert_activity()
-        log_system_update("Alert triggered.")
-        push_urgent_ws()
-        try:
-            subprocess.Popen(["aplay", "/usr/share/sounds/alsa/Front_Center.wav"],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-
-def send_email_alert():
-    global last_email_sent_time
-    with _mode_lock:
-        email_off = MODE_EMAIL_OFF
-        idle = MODE_IDLE
-        emergency = MODE_EMERGENCY
-        night = MODE_NIGHT
-    if email_off or idle:
-        return
-    with _email_lock:
-        current_time = time.time()
-        if (current_time - last_email_sent_time) < EMAIL_COOLDOWN:
-            return
-        last_email_sent_time = current_time
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    label_str = ", ".join(DANGER_LABELS)
-    subject = f"Danger Object Detected — {label_str}"
-    if emergency:
-        subject = "EMERGENCY: " + subject
-    elif night:
-        subject = "HIGH PRIORITY: " + subject
-    body = f"Danger object detected at {now_str}.\nObject(s): {label_str}\nCheck your environment for safety.\n"
-    try:
-        _send_mail(subject, body)
-        log_system_update("Email alert sent.")
-    except Exception as e:
-        log_system_update(f"Failed sending email alert: {e}")
-
-def log_scissors_detection(label: str = "danger"):
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    _perm_write(SCISSORS_LOG_FILE, f"[{stamp}] DANGER DETECTED: {label.upper()}")
-
-def _send_tamper_email():
-    """Maximum-priority tamper alert — bypasses DND/idle/email-off modes.
-
-    Rate-limited to one email per _TAMPER_EMAIL_COOLDOWN so a flickering /
-    intermittently-dark camera cannot spam the recipient.
-    """
-    global _last_tamper_email
-    if not EMAIL_SENDER or not EMAIL_RECIPIENTS:
-        return
-    now = time.time()
-    if (now - _last_tamper_email) < _TAMPER_EMAIL_COOLDOWN:
-        return
-    _last_tamper_email = now
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    body = (
-        f"CRITICAL: Camera tamper detected at {now_str}.\n"
-        "The camera lens appears to be covered or the feed has gone blank.\n"
-        "Immediate physical inspection required."
-    )
-    try:
-        _send_mail("CRITICAL TAMPER ALERT — Garuda Camera Covered", body)
-        log_system_update("[TAMPER] Alert email sent.")
-    except Exception as e:
-        log_system_update(f"[TAMPER] Email failed: {e}")
 
 ##############################################################################
 # ENCRYPTED EVIDENCE EXFILTRATION
@@ -1229,24 +1151,6 @@ def _ssh_upload(local_path: str, remote_filename: str) -> bool:
         local_path, remote_filename, host=_EXFIL_HOST, port=_EXFIL_PORT, user=_EXFIL_USER,
         key_path=_EXFIL_KEY_PATH, password=_EXFIL_PASSWORD, remote_dir=_EXFIL_REMOTE,
         log=log_system_update)
-
-def exfiltrate_clip(clip_path: str):
-    """Encrypt a clip and upload the ciphertext off-device via SSH. Runs in a daemon thread."""
-    if not _EXFIL_HOST or _EXFIL_AES_KEY is None:
-        return   # exfiltration not configured
-    enc_path = _encrypt_clip_aes256(clip_path)
-    if not enc_path:
-        return
-    log_system_update(f"[EXFIL] Encrypted → {os.path.basename(enc_path)}")
-    if _ssh_upload(enc_path, os.path.basename(enc_path)):
-        log_system_update(f"[EXFIL] Uploaded to {_EXFIL_HOST}:{_EXFIL_REMOTE}")
-        # Remove plaintext clip — only ciphertext kept locally (briefly)
-        try:
-            os.unlink(clip_path)
-        except Exception:
-            pass
-    else:
-        log_system_update(f"[EXFIL] Upload failed — encrypted clip retained locally: {enc_path}")
 
 ##############################################################################
 # GSTREAMER CALLBACK
