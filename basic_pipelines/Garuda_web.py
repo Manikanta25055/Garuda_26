@@ -813,8 +813,11 @@ except ImportError:
 HOME_ENV_PATH = str(Path(__file__).resolve().parent.parent / ".env")
 
 # The planner's models when .env names none (measured: evaluation/narada_planner/).
-PLANNER_DEFAULT_MODEL = "moonshotai/kimi-k3"
-PLANNER_DEFAULT_FALLBACKS = "z-ai/glm-5.3,nvidia/nemotron-3-super-120b-a12b"
+# Kimi K3 and GLM 5.3 were the owner's first candidates; on NIM they took two to
+# four minutes to begin answering a five-word prompt (2026-10-03), which a job
+# of several model calls cannot use. These two answer in seconds.
+PLANNER_DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+PLANNER_DEFAULT_FALLBACKS = "nvidia/nemotron-3-super-120b-a12b"
 
 NIM_CHAT = NimChat(
     os.environ.get("NIM_API_KEY", ""),
