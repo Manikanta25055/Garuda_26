@@ -68,7 +68,7 @@ def load_config():
             with open(core.CONFIG_FILE) as f:
                 cfg = json.load(f)
             core.CUSTOM_VOICE_COMMANDS = cfg.get("custom_voice_commands", core.CUSTOM_VOICE_COMMANDS)
-            core.CUSTOM_MODES = cfg.get("custom_modes", core.CUSTOM_MODES)
+            core.STATE.modes.custom = cfg.get("custom_modes", core.STATE.modes.custom)
             core.EMAIL_RECIPIENTS = cfg.get("email_recipients", core.EMAIL_RECIPIENTS)
             core.EMAIL_COOLDOWN = cfg.get("email_cooldown", core.EMAIL_COOLDOWN)
             core.EMAIL_SENDER = cfg.get("email_sender", core.EMAIL_SENDER)
@@ -83,13 +83,13 @@ def load_config():
             core.NIGHT_PRESENCE_WINDOW = cfg.get("night_presence_window", core.NIGHT_PRESENCE_WINDOW)
             # Restore persisted mode states
             modes = cfg.get("modes", {})
-            core.MODE_DND       = bool(modes.get("dnd",       core.MODE_DND))
-            core.MODE_EMAIL_OFF = bool(modes.get("email_off", core.MODE_EMAIL_OFF))
-            core.MODE_IDLE      = bool(modes.get("idle",      core.MODE_IDLE))
-            core.MODE_NIGHT     = bool(modes.get("night",     core.MODE_NIGHT))
-            core.MODE_EMERGENCY = bool(modes.get("emergency", core.MODE_EMERGENCY))
-            core.MODE_PRIVACY   = bool(modes.get("privacy",   core.MODE_PRIVACY))
-            core.MODE_SCHEDULE  = cfg.get("mode_schedule", core.MODE_SCHEDULE)
+            core.STATE.modes.dnd       = bool(modes.get("dnd",       core.STATE.modes.dnd))
+            core.STATE.modes.email_off = bool(modes.get("email_off", core.STATE.modes.email_off))
+            core.STATE.modes.idle      = bool(modes.get("idle",      core.STATE.modes.idle))
+            core.STATE.modes.night     = bool(modes.get("night",     core.STATE.modes.night))
+            core.STATE.modes.emergency = bool(modes.get("emergency", core.STATE.modes.emergency))
+            core.STATE.modes.privacy   = bool(modes.get("privacy",   core.STATE.modes.privacy))
+            core.STATE.modes.schedule  = cfg.get("mode_schedule", core.STATE.modes.schedule)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
 
@@ -215,7 +215,7 @@ def save_config():
     try:
         cfg = {
             "custom_voice_commands": core.CUSTOM_VOICE_COMMANDS,
-            "custom_modes": core.CUSTOM_MODES,
+            "custom_modes": core.STATE.modes.custom,
             "email_recipients": core.EMAIL_RECIPIENTS,
             "email_cooldown": core.EMAIL_COOLDOWN,
             "email_sender": core.EMAIL_SENDER,
@@ -225,14 +225,14 @@ def save_config():
             "danger_labels": core.DANGER_LABELS,
             "night_presence_window": core.NIGHT_PRESENCE_WINDOW,
             "modes": {
-                "dnd":       core.MODE_DND,
-                "email_off": core.MODE_EMAIL_OFF,
-                "idle":      core.MODE_IDLE,
-                "night":     core.MODE_NIGHT,
-                "emergency": core.MODE_EMERGENCY,
-                "privacy":   core.MODE_PRIVACY,
+                "dnd":       core.STATE.modes.dnd,
+                "email_off": core.STATE.modes.email_off,
+                "idle":      core.STATE.modes.idle,
+                "night":     core.STATE.modes.night,
+                "emergency": core.STATE.modes.emergency,
+                "privacy":   core.STATE.modes.privacy,
             },
-            "mode_schedule": core.MODE_SCHEDULE,
+            "mode_schedule": core.STATE.modes.schedule,
         }
         core._atomic_json_write(core.CONFIG_FILE, cfg)
     except Exception as e:

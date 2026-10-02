@@ -40,9 +40,9 @@ def _drishti_system_state():
     """Mode flags, uptime and camera liveness for the Drishti Home screen."""
     return {
         "modes": {
-            "dnd": core.MODE_DND, "night": core.MODE_NIGHT, "idle": core.MODE_IDLE,
-            "emergency": core.MODE_EMERGENCY, "privacy": core.MODE_PRIVACY,
-            "email_off": core.MODE_EMAIL_OFF,
+            "dnd": core.STATE.modes.dnd, "night": core.STATE.modes.night, "idle": core.STATE.modes.idle,
+            "emergency": core.STATE.modes.emergency, "privacy": core.STATE.modes.privacy,
+            "email_off": core.STATE.modes.email_off,
         },
         "uptime_s": int(time.time() - core._app_start_time),
         # There is no pipeline liveness flag, and app_gst is set before the
@@ -59,8 +59,8 @@ def _drishti_set_privacy(on):
     MODE_PRIVACY was reachable only through the voice assistant, so the web app
     could read the flag and never change it.
     """
-    core.MODE_PRIVACY = bool(on)
-    core.log_system_update(f"[DRISHTI] privacy {'on' if core.MODE_PRIVACY else 'off'}")
+    core.STATE.modes.privacy = bool(on)
+    core.log_system_update(f"[DRISHTI] privacy {'on' if core.STATE.modes.privacy else 'off'}")
 
 
 def _home_presence():
@@ -78,28 +78,26 @@ def _home_security():
 
 def _home_email(subject, body):
     """Home notices go to the alert recipients, unless email alerts are off."""
-    if core.MODE_EMAIL_OFF or not (core.EMAIL_SENDER and core.EMAIL_SENDER_PASS and core.EMAIL_RECIPIENTS):
+    if core.STATE.modes.email_off or not (core.EMAIL_SENDER and core.EMAIL_SENDER_PASS and core.EMAIL_RECIPIENTS):
         return
     core._send_mail(subject, body)
 
 
 def _home_modes():
-    return {"dnd": core.MODE_DND, "night": core.MODE_NIGHT, "idle": core.MODE_IDLE,
-            "emergency": core.MODE_EMERGENCY, "privacy": core.MODE_PRIVACY, "email_off": core.MODE_EMAIL_OFF}
+    return {"dnd": core.STATE.modes.dnd, "night": core.STATE.modes.night, "idle": core.STATE.modes.idle,
+            "emergency": core.STATE.modes.emergency, "privacy": core.STATE.modes.privacy, "email_off": core.STATE.modes.email_off}
 
 
 def _home_set_mode(mode, value, actor):
     """The assistant's way into the same switch as POST /api/modes."""
-    names = {"dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF", "idle": "MODE_IDLE",
-             "night": "MODE_NIGHT", "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY"}
-    if mode not in names:
+    if mode not in core.STATE.modes.FLAGS:
         raise ValueError(f"unknown mode: {mode!r}")
     if mode in core.ADMIN_ONLY_MODES and value and core.USERS.get(actor, {}).get("role") != "admin":
         raise PermissionError("only an admin can turn this mode on: it silences alerts")
-    with core._mode_lock:
-        core._set_mode_flag(names[mode], bool(value))
+    with core.STATE.modes.lock:
+        core.STATE.modes.set(mode, bool(value))
         if mode == "emergency" and value:
-            core.MODE_DND = False
+            core.STATE.modes.dnd = False
     core.save_config()
     core.log_system_update(f"Mode {mode} set to {bool(value)} by {actor or 'assistant'} (Narada)")
     core.push_urgent_ws()

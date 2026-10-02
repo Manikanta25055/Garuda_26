@@ -92,10 +92,7 @@ def _schedule_monitor():
     correct state without a 60-s blind window.  Takes a dict snapshot before
     iterating so a concurrent update_config() call can't cause a RuntimeError.
     """
-    mode_map = {
-        "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
-        "idle": "MODE_IDLE", "night": "MODE_NIGHT",
-    }
+    schedulable = ("dnd", "email_off", "idle", "night")
     # What each schedule last asked for. A mode is only written when that
     # changes (the window opens or closes, or the schedule is edited): writing
     # it on every pass undid, within 30 s, any switch a person flipped by hand
@@ -103,28 +100,27 @@ def _schedule_monitor():
     applied: dict = {}
     while True:
         try:
-            sched_snap = dict(core.MODE_SCHEDULE)   # snapshot outside lock — avoids racing with update_config
+            sched_snap = dict(core.STATE.modes.schedule)   # snapshot outside lock — avoids racing with update_config
             for gone in [m for m in applied if m not in sched_snap]:
                 applied.pop(gone, None)
             if sched_snap:
                 now_str = datetime.datetime.now().strftime("%H:%M")
                 changed = False
-                with core._mode_lock:
+                with core.STATE.modes.lock:
                     for mode_name, sched in sched_snap.items():
                         if not isinstance(sched, dict):
                             continue
                         start = sched.get("start", "")
                         end   = sched.get("end", "")
-                        if not start or not end or mode_name not in mode_map:
+                        if not start or not end or mode_name not in schedulable:
                             continue
                         in_range = core._time_in_range(start, end, now_str)
                         key = (start, end, in_range)
                         if applied.get(mode_name) == key:
                             continue
                         applied[mode_name] = key
-                        gkey = mode_map[mode_name]
-                        if core._get_mode_flag(gkey) != in_range:
-                            core._set_mode_flag(gkey, in_range)
+                        if core.STATE.modes.get(mode_name) != in_range:
+                            core.STATE.modes.set(mode_name, in_range)
                             changed = True
                             core.log_system_update(
                                 f"[MODE] {mode_name} {'on' if in_range else 'off'} by schedule ({start}-{end})")

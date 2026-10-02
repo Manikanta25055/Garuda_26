@@ -123,9 +123,9 @@ def app_callback(pad, info, user_data):
     roi = core.hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(core.hailo.HAILO_DETECTION)
 
-    with core._mode_lock:
+    with core.STATE.modes.lock:
         threshold = core.DETECTION_THRESHOLD
-        privacy = core.MODE_PRIVACY
+        privacy = core.STATE.modes.privacy
 
     # Build case-insensitive lookup sets so UI casing mismatches never break detection
     _danger_set = {lbl.lower() for lbl in user_data.danger_labels}

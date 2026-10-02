@@ -272,6 +272,7 @@ try:
     from .garuda_core.workers import Supervisor
     from .garuda_core.backup import BackupManager
     from .garuda_core import http as _core_http
+    from .garuda_core import state as _core_state
     from .garuda_core import logging_setup as _core_logging
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
@@ -342,6 +343,7 @@ except ImportError:
     from basic_pipelines.garuda_core.workers import Supervisor
     from basic_pipelines.garuda_core.backup import BackupManager
     from basic_pipelines.garuda_core import http as _core_http
+    from basic_pipelines.garuda_core import state as _core_state
     from basic_pipelines.garuda_core import logging_setup as _core_logging
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
@@ -392,16 +394,18 @@ _forgot_otp_user: str | None = None
 _forgot_otp_ts: float = 0.0
 _forgot_otp_attempts: int = 0
 
-# Modes
-MODE_DND = False
-MODE_EMAIL_OFF = False
-MODE_IDLE = False
-MODE_NIGHT = False
-MODE_EMERGENCY = False
-MODE_PRIVACY = True
+# Live state, grouped by concern (garuda_core/state.py). The flat names the
+# tests still use are forwarded to it; code in this file uses STATE directly.
+STATE = _core_state.State()
+_core_state.forward(sys.modules[__name__], {
+    "MODE_DND": ("modes", "dnd"), "MODE_EMAIL_OFF": ("modes", "email_off"),
+    "MODE_IDLE": ("modes", "idle"), "MODE_NIGHT": ("modes", "night"),
+    "MODE_EMERGENCY": ("modes", "emergency"), "MODE_PRIVACY": ("modes", "privacy"),
+    "MODE_SCHEDULE": ("modes", "schedule"), "CUSTOM_MODES": ("modes", "custom"),
+    "_mode_lock": ("modes", "lock"),
+})
 
 DETECTION_THRESHOLD = 0.3
-CUSTOM_MODES = {}
 NARADA_WAKE_WORD = "narada"
 CUSTOM_VOICE_COMMANDS = {}
 
@@ -412,7 +416,6 @@ _last_danger_conf    = 0.0  # confidence of last danger detection (for logging)
 _app_start_time = time.time()
 _detections_today = 0
 _last_alert_time = None
-_mode_lock = threading.Lock()
 _alert_lock = threading.Lock()   # guards _alert_active/_alert_end_time/_danger_trigger_info
 
 # ── Dead man's switch ────────────────────────────────────
@@ -442,9 +445,6 @@ _log_buffer_lock = threading.Lock()
 
 # ── False positive reduction ──────────────────────────────
 _label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
-
-# ── Scheduled modes ───────────────────────────────────────
-MODE_SCHEDULE: dict = {}   # {"night": {"start": "22:00", "end": "06:00"}, ...}
 
 # ── Night presence window (yellow alarm when human seen in dead hours) ─────────
 NIGHT_PRESENCE_WINDOW: dict = {"start": "01:30", "end": "05:00", "enabled": True}
@@ -955,20 +955,6 @@ fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
 fastapi_app.include_router(build_narada_router(sys.modules[__name__]))
 
 ADMIN_ONLY_MODES = frozenset({"idle", "email_off"})
-
-def _set_mode_flag(global_name: str, value):
-    """Set one MODE_* flag of this module by name.
-
-    A function of its own because it relies on globals(), which always means
-    the module the code is written in: a route handler that lives in another
-    file must call this, not write to its own globals.
-    """
-    globals()[global_name] = value
-
-
-def _get_mode_flag(global_name: str):
-    """Read one MODE_* flag of this module by name (see _set_mode_flag)."""
-    return globals().get(global_name)
 
 fastapi_app.include_router(build_users_router(sys.modules[__name__]))
 

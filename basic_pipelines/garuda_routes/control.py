@@ -36,22 +36,17 @@ def build_control_router(core):
     @router.post("/api/modes")
     @router.post("/api/set-mode", include_in_schema=False)
     async def set_mode(data: ModeRequest, session=Depends(core.require_session)):
-        mode_map = {
-            "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
-            "idle": "MODE_IDLE", "night": "MODE_NIGHT",
-            "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY",
-        }
-        if data.mode not in mode_map:
+        if data.mode not in core.STATE.modes.FLAGS:
             raise HTTPException(400, f"Unknown mode: {data.mode}")
         if data.mode in core.ADMIN_ONLY_MODES and data.value and session["role"] != "admin":
             # Idle and Email Off stop the system telling anyone about a threat.
             # Any signed-in profile could switch them on; switching them back off
             # (the safe direction) stays open to everyone.
             raise HTTPException(403, "Only an admin can turn this mode on: it silences alerts.")
-        with core._mode_lock:
-            core._set_mode_flag(mode_map[data.mode], data.value)
+        with core.STATE.modes.lock:
+            core.STATE.modes.set(data.mode, data.value)
             if data.mode == "emergency" and data.value:
-                core.MODE_DND = False
+                core.STATE.modes.dnd = False
         await core._async_save_config()
         core.log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
         core.push_urgent_ws()

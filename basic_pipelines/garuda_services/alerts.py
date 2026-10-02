@@ -25,10 +25,10 @@ def bind(module):
 
 
 def trigger_software_alert():
-    with core._mode_lock:
-        dnd = core.MODE_DND
-        idle = core.MODE_IDLE
-        night = core.MODE_NIGHT
+    with core.STATE.modes.lock:
+        dnd = core.STATE.modes.dnd
+        idle = core.STATE.modes.idle
+        night = core.STATE.modes.night
     if dnd or idle:
         return
     with core._alert_lock:
@@ -54,11 +54,11 @@ def trigger_software_alert():
 
 
 def send_email_alert():
-    with core._mode_lock:
-        email_off = core.MODE_EMAIL_OFF
-        idle = core.MODE_IDLE
-        emergency = core.MODE_EMERGENCY
-        night = core.MODE_NIGHT
+    with core.STATE.modes.lock:
+        email_off = core.STATE.modes.email_off
+        idle = core.STATE.modes.idle
+        emergency = core.STATE.modes.emergency
+        night = core.STATE.modes.night
     if email_off or idle:
         return
     with core._email_lock:

@@ -143,12 +143,12 @@ def get_state_dict():
 
     return {
         "modes": {
-            "dnd": core.MODE_DND,
-            "email_off": core.MODE_EMAIL_OFF,
-            "idle": core.MODE_IDLE,
-            "night": core.MODE_NIGHT,
-            "emergency": core.MODE_EMERGENCY,
-            "privacy": core.MODE_PRIVACY,
+            "dnd": core.STATE.modes.dnd,
+            "email_off": core.STATE.modes.email_off,
+            "idle": core.STATE.modes.idle,
+            "night": core.STATE.modes.night,
+            "emergency": core.STATE.modes.emergency,
+            "privacy": core.STATE.modes.privacy,
         },
         "alert_active": core._alert_active,
         "night_presence_alert": np_alert,

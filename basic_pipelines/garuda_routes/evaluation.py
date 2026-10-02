@@ -51,11 +51,11 @@ def build_evaluation_router(core):
     @router.get("/api/eval/fps_probe")
     async def eval_fps_probe(request: Request):
         core._require_eval_token(request)
-        with core._mode_lock:
+        with core.STATE.modes.lock:
             modes = {
-                "dnd": core.MODE_DND, "email_off": core.MODE_EMAIL_OFF,
-                "idle": core.MODE_IDLE, "night": core.MODE_NIGHT,
-                "emergency": core.MODE_EMERGENCY, "privacy": core.MODE_PRIVACY,
+                "dnd": core.STATE.modes.dnd, "email_off": core.STATE.modes.email_off,
+                "idle": core.STATE.modes.idle, "night": core.STATE.modes.night,
+                "emergency": core.STATE.modes.emergency, "privacy": core.STATE.modes.privacy,
             }
         cm = core._cascade_metrics.snapshot() if core._cascade_metrics else {}
         return {

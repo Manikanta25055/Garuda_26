@@ -46,11 +46,11 @@ def build_config_router(core):
             "email_sender": core.EMAIL_SENDER,
             "email_recipients": core.EMAIL_RECIPIENTS,
             "email_cooldown": core.EMAIL_COOLDOWN,
-            "privacy": core.MODE_PRIVACY,
+            "privacy": core.STATE.modes.privacy,
             "custom_voice_commands": core.CUSTOM_VOICE_COMMANDS,
-            "custom_modes": core.CUSTOM_MODES,
+            "custom_modes": core.STATE.modes.custom,
             "watch_labels": core.WATCH_LABELS,
-            "mode_schedule": core.MODE_SCHEDULE,
+            "mode_schedule": core.STATE.modes.schedule,
             "night_presence_window": core.NIGHT_PRESENCE_WINDOW,
         }
 
@@ -88,8 +88,8 @@ def build_config_router(core):
                 raise HTTPException(400, "Email cooldown must be between 5 and 3600 seconds.")
             core.EMAIL_COOLDOWN = data.email_cooldown
         if data.privacy is not None:
-            with core._mode_lock:
-                core.MODE_PRIVACY = data.privacy
+            with core.STATE.modes.lock:
+                core.STATE.modes.privacy = data.privacy
         # Accept danger_labels (list) or legacy danger_label (single)
         if data.danger_labels is not None:
             cleaned = core._clean_labels(data.danger_labels)
@@ -117,7 +117,7 @@ def build_config_router(core):
                     e = v.get("end", "")
                     if isinstance(s, str) and isinstance(e, str) and core._HHMM_RE.match(s) and core._HHMM_RE.match(e):
                         clean[k] = {"start": s, "end": e}
-            core.MODE_SCHEDULE = clean
+            core.STATE.modes.schedule = clean
         # Night presence window
         if data.night_presence_start is not None or data.night_presence_end is not None or data.night_presence_enabled is not None:
             with core._np_lock:
