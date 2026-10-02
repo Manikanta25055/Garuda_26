@@ -175,6 +175,23 @@ def main():
     for name, cases in sets.items():
         results[f"router / {name}"] = report(f"routing model on {name}", *run(lambda d, s: router, cases),
                                              misses=args.misses)
+    # Is it the planner's work? The question the agent asks of the intent
+    # (agent.PLANNER_INTENTS, at the engine's threshold), on sentences typed by hand.
+    build_path = eval_dir / "routing_build.json"
+    if build_path.exists():
+        cases = load(build_path)
+        rows, _, _ = run(lambda d, s: router, cases)
+        sent = lambda r: (r["got"]["intent"] in ("build", "automation_rule")       # noqa: E731
+                          and r["confidence"]["intent"] >= THRESHOLD)
+        yes = [r for r in rows if r["case"]["build"]]
+        no = [r for r in rows if not r["case"]["build"]]
+        reached, wrongly = [r for r in yes if sent(r)], [r for r in no if sent(r)]
+        print(f"\n== planner routing on routing_build: {len(reached)}/{len(yes)} of the planner's jobs sent "
+              f"to it; {len(wrongly)}/{len(no)} others sent there by mistake")
+        for r in [r for r in yes if not sent(r)][:10] + wrongly[:10]:
+            print(f"      {r['case']['say']!r}: {r['got']['intent']} ({r['confidence']['intent']:.2f})")
+        results["planner routing"] = {"jobs": len(yes), "sent": len(reached), "others": len(no),
+                                      "sent_by_mistake": len(wrongly)}
     after = {"temp_c": cpu_temp(), "camera_fps": camera_fps(), "load": os.getloadavg()[0], "memory_mb": memory_mb()}
     print(f"\nafter it worked: {after}")
     results["cost"] = {"before": before, "after": after}

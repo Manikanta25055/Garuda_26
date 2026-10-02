@@ -309,12 +309,74 @@ NOT = ["don't turn off {d}", "do not switch {d} on", "leave {d} on", "leave {d} 
        "don't enable night mode", "do not turn on do not disturb", "no, forget it", "cancel that, leave everything"]
 
 JOIN = [" and ", " then ", ", also ", " and then ", ", and ", " plus ", " and also "]
-MANAGE = ["create a scene called {s}", "make a new scene for reading", "list my automations", "delete that schedule",
+MANAGE = ["create a scene called {s}", "make a new scene for reading", "list my automations",
           "how much energy did {d} use this week", "what did you save about me", "show my schedules",
-          "remove the automation for {d}", "rename {d}", "add a new device", "what scenes do I have",
+          "what scenes do I have", "what shortcuts do I have", "list my shortcuts",
           "forget what I told you about dinner", "how much power did we use yesterday", "list the rules",
-          "delete the {s} scene", "what do you remember about me", "show me the last alerts",
-          "how many times did {d} turn on today", "edit the {s} scene", "pause all automations"]
+          "what do you remember about me", "how many times did {d} turn on today"]
+
+# Work for the planner: something to be built (a shortcut, a routine, a page to
+# look at), several steps that depend on each other, or the upkeep of the house
+# itself (its devices, people, settings, saved things). The quick model has no
+# tool for these, so the routing model sends them on.
+BUILD_WHAT = ["turns {a} {d}", "switches {d} {a}", "runs {s}", "turns everything off", "turns {a} {d} and {d2}",
+              "puts the house in night mode", "turns {d} on for {n} minutes and then off",
+              "turns {d} off if nobody is in the {room}", "dims the house for a movie",
+              "switches {d} on, waits {n} minutes and switches {d2} on", "tells me if {d} is still on"]
+BUILD = [
+    # shortcuts, routines, buttons
+    "make a shortcut that {w}", "create a shortcut that {w}", "build me a shortcut that {w}",
+    "make a button that {w}", "I want a button that {w}", "create a routine that {w}",
+    "set up a routine that {w} every evening", "build a routine for bedtime that {w}",
+    "make me a {s} button", "create a shortcut called {s}", "build an automation that {w} {t}",
+    "make a shortcut for leaving home", "can you put together a morning routine for me",
+    "design a bedtime routine that {w}", "write me a shortcut: {w}, then wait {n} minutes, then {w2}",
+    "I need a one tap way to get {d} {a} and {d2} off", "make a program that {w} {t}",
+    "create a shortcut that {w} only if I am home", "set something up so that it {w} {t} on weekdays",
+    "build a routine: {w}, and if the room is empty after {n} minutes, turn everything off",
+    # several steps that hang on each other
+    "turn {a} {d}, wait {n} minutes, and if nobody is in the {room} turn it back",
+    "switch {d} on, then after {n} minutes check whether {d2} is on and switch it off if so",
+    "every hour check if {d} is on and tell me", "{t} check whether {d} is still on and if it is, turn it off and notify me",
+    "if {d} has been on for more than {n} minutes, switch it off and email me",
+    "keep {d} on until the room is empty and then turn it off and tell me",
+    # something to look at
+    "show me a chart of the energy use this week", "draw a graph of how long {d} was on each day",
+    "make a dashboard of the house", "build me a control panel for all the devices",
+    "show a table of the recent activity", "plot the energy each device used this month",
+    "give me a timeline of what happened in the house today", "make a page with a button for every device",
+    "visualise the power consumption per room", "show me the schedules as a calendar",
+    "create a little widget to control {d}", "build a panel with switches for {d} and {d2}",
+    "chart how often {d} was switched on this week", "show me a bar chart of {d} usage",
+    "make an artifact showing which devices are on", "draw the house status as a diagram",
+    # the devices themselves
+    "add a new device", "add a device called {name} in the {room}", "register a new {kind} on channel {n}",
+    "rename {d}", "rename {d} to {name}", "move {d} to the {room}", "remove {d} from the house",
+    "delete the device {d}", "set the wattage of {d} to {n}", "disable {d}", "what kinds of device can I add",
+    # people and settings
+    "add a new user", "add a user called ravi", "create an account for my sister", "remove the user asha",
+    "change ravi's display name", "reset the password for the guest account", "who can sign in here",
+    "change the detection threshold to 0.{n}", "add another email for the alerts",
+    "set the night presence window from 1 am to 5 am", "change the alert email cooldown",
+    "schedule do not disturb from 10 pm to 7 am every day", "change the home settings",
+    "turn on vacation lighting in the settings", "teach yourself to answer good night with sleep well",
+    "track my phone for presence", "stop tracking that phone",
+    # upkeep
+    "make a backup now", "take a backup of the house data", "list the backups", "show me the system logs",
+    "what do the logs say about last night", "is the system healthy, give me a report",
+    "send a test alert email", "start recording a clip", "record the camera for a bit", "stop the recording",
+    "who is on the network right now", "run a full check of the system", "show me the last alerts",
+    # saved things: change, pause, remove
+    "delete that schedule", "delete the 7 am schedule", "cancel the timer for {d}", "pause the {s} shortcut",
+    "delete the {s} shortcut", "change my {s} shortcut to run at {c} pm", "edit the {s} scene",
+    "delete the {s} scene", "remove the automation for {d}", "pause all automations",
+    "stop the shortcut that is running", "change the {s} routine so it also {w}", "confirm that proposal",
+    "accept the suggestion about {d}", "dismiss that suggestion",
+    # reports that take several lookups
+    "compare this week's energy use with last week and tell me which device grew the most",
+    "summarise everything that happened in the house today", "which device is costing me the most, and what should I do",
+    "go through the house and tell me what looks wrong", "audit my automations and tell me which never run",
+]
 
 # Anything else. A few of these name a device on purpose: a word is not a request.
 OTHER = """what is the capital of France
@@ -653,8 +715,32 @@ def _need(rng):
     return _row(house, say, "other", "none", "none", "none", "unanswerable")
 
 
+def _build(rng):
+    """A job for the planner, in a house that may or may not have what it names."""
+    house = House(rng)
+    acts = house.actuators()
+    template = rng.choice(BUILD)
+    if ("{d}" in template or "{w" in template) and not acts:
+        return None
+    dev = lambda: house.refer(rng.choice(acts))[1] if acts else "the lamp"   # noqa: E731
+
+    def what():
+        return rng.choice(BUILD_WHAT).format(
+            a=rng.choice(["on", "off"]), d=dev(), d2=dev(), n=rng.choice([2, 5, 10, 15, 20, 30, 45, 60]),
+            s=(rng.choice(house.scenes)["name"] if house.scenes else rng.choice(SCENE_NAMES)).lower(),
+            room=rng.choice(ROOMS))
+    kind = rng.choice([k for k in KINDS if k != "sensor"])
+    say = template.format(
+        w=what(), w2=what(), d=dev(), d2=dev(), a=rng.choice(["on", "off"]), t=_time(rng),
+        n=rng.choice([2, 3, 4, 5, 10, 15, 20, 30, 45, 60]), c=rng.randint(1, 11), room=rng.choice(ROOMS),
+        s=rng.choice(SCENE_NAMES).lower(), name=rng.choice(KINDS[kind]["names"]).lower(), kind=kind)
+    return _row(house, decorate(rng, say, command=rng.random() < 0.5), "build", None, None, None, "build")
+
+
 def make(rng):
     """One example, or None when the house drawn cannot carry the kind of sentence drawn."""
+    if rng.random() < 0.08:
+        return _build(rng)
     roll = rng.random()
     if 0.33 <= roll < 0.47:
         return _need(rng)

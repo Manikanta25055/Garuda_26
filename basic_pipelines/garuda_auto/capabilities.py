@@ -238,7 +238,8 @@ CAPABILITIES += (
                "capability of the site. Use it for anything you have no tool for: building a "
                "shortcut or automation, several steps that depend on each other, managing "
                "devices, people or settings, or showing a chart, table or small tool.",
-               {"why": {"type": "string", "description": "a few words on what is needed"}}),
+               {"why": {"type": "string", "description": "a few words on what is needed"}},
+               security=True),
     Capability("show_artifact",
                "Show the person a page you write: a chart, table, dashboard or small tool. "
                "Give one complete, self-contained HTML document.",

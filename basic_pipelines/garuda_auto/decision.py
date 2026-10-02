@@ -34,8 +34,11 @@ import requests
 
 log = logging.getLogger(__name__)
 
+# "build" is work for the planner (agent.py): something to be made, steps that
+# depend on each other, or the upkeep of the house. Only the routing model
+# gives that answer; the literal matcher has no way to tell.
 INTENTS = ("device_control", "all_off", "scene", "timer", "state_query",
-           "automation_rule", "mode_change", "explain", "other")
+           "automation_rule", "mode_change", "explain", "other", "build")
 MODES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
 
 _CONDITIONAL = re.compile(r"\b(when|whenever|if|unless|every time|as soon as|each time)\b", re.I)

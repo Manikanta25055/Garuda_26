@@ -32,6 +32,8 @@ UNKNOWN_REPLY = "This conversation was not started from Garuda. Please reopen Na
 # filler spoken first, the way a person says "hmm" while they think; any
 # sooner and the filler itself delays (and bills for) most answers.
 FILLER_AFTER_S = 2.2
+PLANNER_CHECK_S = 2.0
+PLANNER_LINE = "This one takes some building. Give me a moment."
 FILLERS = ("Mm, one sec.", "Sure, let me check.", "Okay, on it.", "Hmm, give me a moment.",
            "Right, one moment.")
 
@@ -59,6 +61,8 @@ class NaradaVoice:
         self._client = client
         self._lock = threading.Lock()
         self._bindings = {}                # conversation_id -> (user, role, scope, expires)
+        # (user) -> what Narada is doing for them right now, or None (agent.live_for).
+        self.live_fn = None
 
     @property
     def configured(self):
@@ -131,6 +135,17 @@ class NaradaVoice:
             log.warning("narada voice: rejected connection (%s)", type(exc).__name__)
             return False
 
+    def _planning(self, conversation_id):
+        """Has this conversation's turn gone to the planner?"""
+        bound = self.binding(conversation_id)
+        if bound is None or self.live_fn is None:
+            return False
+        try:
+            live = self.live_fn(bound[0])
+        except Exception:
+            return False
+        return bool(live) and live.get("lane") == "planner"
+
     async def reply_for(self, conversation_id, transcript):
         """Reply text for the latest user turn of one conversation."""
         heard = next((m.content for m in reversed(transcript) if m.role == "user"), "").strip()
@@ -172,6 +187,15 @@ class NaradaVoice:
             done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
             if not done:
                 yield random.choice(FILLERS) + " "
+            # A request that goes to the planner can take a minute. Said once,
+            # so the silence that follows is understood; the steps themselves
+            # show on the screen (the page asks /api/narada/progress).
+            told = False
+            while not task.done():
+                await asyncio.wait({task}, timeout=PLANNER_CHECK_S)
+                if not told and not task.done() and self._planning(conversation_id):
+                    told = True
+                    yield PLANNER_LINE + " "
             said = await task
             if said:
                 yield said

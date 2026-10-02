@@ -48,7 +48,7 @@ for place in (HERE, HERE.parent / "basic_pipelines" / "garuda_auto"):
 import router  # noqa: E402  (garuda_auto/router.py: the encoding the Pi uses)
 
 INTENTS = ["device_control", "all_off", "scene", "timer", "state_query",
-           "automation_rule", "mode_change", "explain", "other"]
+           "automation_rule", "mode_change", "explain", "other", "build"]
 ACTIONS = ["on", "off", "none"]
 FIELDS = ("intent", "device", "action", "scene")
 SKIP = -100
@@ -126,7 +126,7 @@ def featurise(rows, tokenizer, cls_id, sep_id):
             return at[known.index(value)] if value in known else SKIP
 
         out.append({"ids": ids, "device_at": device_at, "scene_at": scene_at,
-                    "intent": INTENTS.index(row["intent"]),
+                    "intent": SKIP if row["intent"] is None else INTENTS.index(row["intent"]),
                     "action": SKIP if row["action"] is None else ACTIONS.index(row["action"]),
                     "device": target(row["device"], device_ids, device_at),
                     "scene": target(row["scene"], scene_ids, scene_at)})

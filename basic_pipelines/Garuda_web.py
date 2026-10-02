@@ -886,6 +886,7 @@ NARADA_VOICE = NaradaVoice(
     on_turn=_voice_turn_logged,
     voice_id=os.environ.get("ELEVENLABS_VOICE_ID", ""),
 )
+NARADA_VOICE.live_fn = AGENT.live_for
 DIGEST = Digest(HOME, NIM_CHAT,
                 alerts_fn=lambda: STATE.alerts.history.get(datetime.date.today().isoformat(), 0))
 HOME.digest_fn = DIGEST.text

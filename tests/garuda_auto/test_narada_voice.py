@@ -121,3 +121,19 @@ def test_a_slow_answer_gets_a_filler_first(monkeypatch):
     chunks = _collect(v.speak("conv_1", [msg("user", "anything happening?")]))
     assert len(chunks) == 2 and chunks[0].strip() in narada_voice.FILLERS
     assert chunks[1] == "All quiet at home."
+
+
+def test_a_turn_that_goes_to_the_planner_says_so_once(monkeypatch):
+    import time as _time
+    monkeypatch.setattr(narada_voice, "FILLER_AFTER_S", 0.02)
+    monkeypatch.setattr(narada_voice, "PLANNER_CHECK_S", 0.05)
+
+    def slow(*a):
+        _time.sleep(0.4)
+        return {"reply": "Your shortcut is waiting on the screen."}
+    v = voice(reply=slow)
+    v.live_fn = lambda user: {"lane": "planner", "step": "create_shortcut"} if user == "mani" else None
+    v.issue_token("mani", "admin", "home")
+    chunks = _collect(v.speak("conv_1", [msg("user", "make a bedtime routine")]))
+    assert [c.strip() for c in chunks[1:]] == [narada_voice.PLANNER_LINE,
+                                               "Your shortcut is waiting on the screen."]
