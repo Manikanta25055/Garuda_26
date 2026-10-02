@@ -240,6 +240,12 @@ try:
     from .garuda_services import alerts as _svc_alerts
     from .garuda_services.alerts import (  # noqa: F401
         trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
+    from .garuda_services import persistence as _svc_persistence
+    from .garuda_services.persistence import (  # noqa: F401
+        load_users, save_users, load_config, _load_alert_history, _record_alert_activity, _remember_user_activity, _load_presence_log, _append_presence_log, load_master_keys, save_master_keys, _async_save_config, save_config)
+    from .garuda_services import logs as _svc_logs
+    from .garuda_services.logs import (  # noqa: F401
+        _load_logs_from_disk, _rotate_log, _do_flush_logs, _flush_log_thread, _perm_write, _append_detection_perm, log_system_update, append_voice_log, append_voice_response)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -280,6 +286,12 @@ except ImportError:
     from basic_pipelines.garuda_services import alerts as _svc_alerts
     from basic_pipelines.garuda_services.alerts import (  # noqa: F401
         trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
+    from basic_pipelines.garuda_services import persistence as _svc_persistence
+    from basic_pipelines.garuda_services.persistence import (  # noqa: F401
+        load_users, save_users, load_config, _load_alert_history, _record_alert_activity, _remember_user_activity, _load_presence_log, _append_presence_log, load_master_keys, save_master_keys, _async_save_config, save_config)
+    from basic_pipelines.garuda_services import logs as _svc_logs
+    from basic_pipelines.garuda_services.logs import (  # noqa: F401
+        _load_logs_from_disk, _rotate_log, _do_flush_logs, _flush_log_thread, _perm_write, _append_detection_perm, log_system_update, append_voice_log, append_voice_response)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -298,6 +310,8 @@ except ImportError:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 # garuda_services modules read this module's state through `core`.
+_svc_logs.bind(sys.modules[__name__])
+_svc_persistence.bind(sys.modules[__name__])
 _svc_alerts.bind(sys.modules[__name__])
 _svc_monitors.bind(sys.modules[__name__])
 _svc_presence.bind(sys.modules[__name__])
@@ -677,239 +691,9 @@ _voice_stop_event = threading.Event()
 ##############################################################################
 # PERSISTENCE
 ##############################################################################
-def load_users():
-    global USERS
-    # The legacy file holds plaintext passwords from before hashing. It is read
-    # only on a machine that has never had a users.json; a users.json that is
-    # there but unreadable must not quietly bring those old passwords back.
-    candidates = [USERS_FILE] if os.path.exists(USERS_FILE) else [USERS_FILE, "system_logs/users_data.json"]
-    for path in candidates:
-        if os.path.exists(path):
-            try:
-                with open(path) as f:
-                    data = json.load(f)
-                if isinstance(data, dict) and data:
-                    default_colors = ["#1565c0","#2e7d32","#6a1b9a","#00838f",
-                                      "#f57f17","#4527a0","#ad1457"]
-                    idx = 0
-                    for uname, udata in data.items():
-                        if "display_name" not in udata:
-                            udata["display_name"] = uname.capitalize()
-                        if "box_color" not in udata:
-                            udata["box_color"] = "#e65100" if udata.get("role") == "admin" \
-                                else default_colors[idx % len(default_colors)]
-                            idx += 1
-                        if "history" not in udata:
-                            udata["history"] = {"logins": [], "narada_activity": []}
-                    USERS = data
-                    return
-            except Exception as e:
-                print(f"Warning: failed to load users from {path}: {e}")
-
-def save_users():
-    try:
-        _atomic_json_write(USERS_FILE, USERS)
-    except Exception as e:
-        log_system_update(f"Failed to save users: {e}")
-
-def load_config():
-    global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
-    global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
-    global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABELS
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    global NIGHT_PRESENCE_WINDOW
-    # NOTE: EMAIL_SENDER_PASS is NOT loaded from config.json —
-    # it lives exclusively in .env / environment variables for security.
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE) as f:
-                cfg = json.load(f)
-            CUSTOM_VOICE_COMMANDS = cfg.get("custom_voice_commands", CUSTOM_VOICE_COMMANDS)
-            CUSTOM_MODES = cfg.get("custom_modes", CUSTOM_MODES)
-            EMAIL_RECIPIENTS = cfg.get("email_recipients", EMAIL_RECIPIENTS)
-            EMAIL_COOLDOWN = cfg.get("email_cooldown", EMAIL_COOLDOWN)
-            EMAIL_SENDER = cfg.get("email_sender", EMAIL_SENDER)
-            DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
-            KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
-            WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
-            # Support both legacy "danger_label" (str) and new "danger_labels" (list)
-            if "danger_labels" in cfg:
-                DANGER_LABELS = cfg["danger_labels"]
-            elif "danger_label" in cfg:
-                DANGER_LABELS = [cfg["danger_label"]]
-            NIGHT_PRESENCE_WINDOW = cfg.get("night_presence_window", NIGHT_PRESENCE_WINDOW)
-            # Restore persisted mode states
-            modes = cfg.get("modes", {})
-            MODE_DND       = bool(modes.get("dnd",       MODE_DND))
-            MODE_EMAIL_OFF = bool(modes.get("email_off", MODE_EMAIL_OFF))
-            MODE_IDLE      = bool(modes.get("idle",      MODE_IDLE))
-            MODE_NIGHT     = bool(modes.get("night",     MODE_NIGHT))
-            MODE_EMERGENCY = bool(modes.get("emergency", MODE_EMERGENCY))
-            MODE_PRIVACY   = bool(modes.get("privacy",   MODE_PRIVACY))
-            global MODE_SCHEDULE
-            MODE_SCHEDULE  = cfg.get("mode_schedule", MODE_SCHEDULE)
-        except Exception as e:
-            print(f"Warning: failed to load config: {e}")
-
-def _load_alert_history():
-    """Load alert-activity history from disk into _alert_history."""
-    global _alert_history
-    try:
-        if os.path.exists(ALERT_HISTORY_FILE):
-            with open(ALERT_HISTORY_FILE) as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                _alert_history = data
-            elif isinstance(data, list):
-                # Legacy list format — migrate to {date: count} by counting entries per day
-                migrated: dict = {}
-                for entry in data:
-                    if isinstance(entry, dict) and "timestamp" in entry:
-                        day = entry["timestamp"][:10]
-                        migrated[day] = migrated.get(day, 0) + 1
-                _alert_history = migrated
-                _atomic_json_write(ALERT_HISTORY_FILE, _alert_history)
-            else:
-                _alert_history = {}
-    except Exception:
-        _alert_history = {}
-
-def _record_alert_activity():
-    """Increment today's alert count and persist to disk."""
-    global _alert_history
-    today = datetime.date.today().isoformat()
-    _alert_history[today] = _alert_history.get(today, 0) + 1
-    try:
-        _atomic_json_write(ALERT_HISTORY_FILE, _alert_history)
-    except Exception:
-        pass
 
 _PRESENCE_LOG_MAX = 5000
 _USER_HISTORY_MAX = 200
-
-def _remember_user_activity(user_name, kind, entry):
-    """Append to a user's history list, keeping only the recent entries."""
-    user = USERS.get(user_name) if user_name else None
-    if not isinstance(user, dict):
-        return
-    items = user.setdefault("history", {}).setdefault(kind, [])
-    items.append(entry)
-    if len(items) > _USER_HISTORY_MAX:
-        del items[:-_USER_HISTORY_MAX]
-
-def _load_presence_log():
-    global _presence_log
-    try:
-        if os.path.exists(PRESENCE_LOG_FILE):
-            with open(PRESENCE_LOG_FILE) as f:
-                data = json.load(f)
-            _presence_log = data[-_PRESENCE_LOG_MAX:] if isinstance(data, list) else []
-    except Exception:
-        _presence_log = []
-
-def _append_presence_log(event: str, device: str, mac: str):
-    """Append one presence event, persist to disk, and queue for sync."""
-    global _presence_log
-    _presence_log.append({
-        "ts":     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "event":  event,
-        "device": device,
-        "mac":    mac,
-    })
-    # The whole list is rewritten on every event; without a cap that write
-    # (and the file) grew for ever.
-    if len(_presence_log) > _PRESENCE_LOG_MAX:
-        _presence_log[:] = _presence_log[-_PRESENCE_LOG_MAX:]
-    try:
-        _atomic_json_write(PRESENCE_LOG_FILE, _presence_log)
-    except Exception:
-        pass
-    queue_event("PRESENCE", device, 0.0, f"{event} (mac={mac})")
-
-def load_master_keys():
-    global MASTER_KEYS
-    try:
-        if os.path.exists(MASTER_KEYS_FILE):
-            with open(MASTER_KEYS_FILE) as f:
-                data = json.load(f)
-            if isinstance(data.get("keys"), list) and data["keys"]:
-                keys = [k for k in data["keys"] if isinstance(k, str) and k]
-                if any(not _mk_is_hashed(k) for k in keys):
-                    # One-time migration of a file written before hashing.
-                    keys = [k if _mk_is_hashed(k) else _mk_hash(k) for k in keys]
-                    MASTER_KEYS[:] = keys
-                    save_master_keys()
-                else:
-                    MASTER_KEYS[:] = keys
-                return
-    except Exception:
-        pass
-    # If no key file, seed from MASTER_KEY env var (set in .env)
-    bootstrap = os.environ.get("MASTER_KEY", "").strip()
-    if bootstrap:
-        MASTER_KEYS[:] = [_mk_hash(bootstrap)]
-        save_master_keys()  # persist to file for future runs
-
-def save_master_keys():
-    try:
-        # Never write a key as typed, whatever put it in the list.
-        MASTER_KEYS[:] = [k if _mk_is_hashed(k) else _mk_hash(k) for k in MASTER_KEYS]
-        _atomic_json_write(MASTER_KEYS_FILE, {"keys": MASTER_KEYS})
-        try:
-            os.chmod(MASTER_KEYS_FILE, 0o600)
-        except OSError:
-            pass
-    except Exception as exc:
-        log_system_update(f"Failed to save master keys: {type(exc).__name__}")
-
-async def _async_save_config():
-    """Run save_config in a thread so it never blocks the async event loop (fsync is slow on RPi SD)."""
-    await asyncio.to_thread(save_config)
-
-def save_config():
-    # NOTE: EMAIL_SENDER_PASS is intentionally excluded —
-    # credentials must not be stored in plaintext JSON on disk.
-    try:
-        cfg = {
-            "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
-            "custom_modes": CUSTOM_MODES,
-            "email_recipients": EMAIL_RECIPIENTS,
-            "email_cooldown": EMAIL_COOLDOWN,
-            "email_sender": EMAIL_SENDER,
-            "detection_threshold": DETECTION_THRESHOLD,
-            "known_devices": KNOWN_DEVICES,
-            "watch_labels": WATCH_LABELS,
-            "danger_labels": DANGER_LABELS,
-            "night_presence_window": NIGHT_PRESENCE_WINDOW,
-            "modes": {
-                "dnd":       MODE_DND,
-                "email_off": MODE_EMAIL_OFF,
-                "idle":      MODE_IDLE,
-                "night":     MODE_NIGHT,
-                "emergency": MODE_EMERGENCY,
-                "privacy":   MODE_PRIVACY,
-            },
-            "mode_schedule": MODE_SCHEDULE,
-        }
-        _atomic_json_write(CONFIG_FILE, cfg)
-    except Exception as e:
-        log_system_update(f"Failed to save config: {e}")
-
-def _load_logs_from_disk():
-    """Populate in-memory log lists from permanent files on startup (last 500 lines each)."""
-    global system_updates_log, voice_assistant_log, _detection_log
-    def _tail(path, n=500):
-        try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                lines = f.readlines()
-            return [l.rstrip("\n") for l in lines[-n:]]
-        except FileNotFoundError:
-            return []
-        except Exception:
-            return []
-    system_updates_log[:] = _tail(PERM_SYSTEM_LOG)
-    voice_assistant_log[:] = _tail(PERM_VOICE_LOG)
-    _detection_log[:] = _tail(PERM_DETECTION_LOG)
 
 load_users()
 load_config()
@@ -928,92 +712,6 @@ _load_logs_from_disk()
 # load_users() so startup log calls work correctly).
 _LOG_FLUSH_INTERVAL = 60    # flush every 60 seconds
 _LOG_MAX_SIZE_BYTES = 10 * 1024 * 1024   # rotate at 10 MB
-
-def _rotate_log(filepath: str):
-    """Rename filepath → filepath.1, discarding any previous .1 file."""
-    try:
-        rotated = filepath + ".1"
-        if os.path.exists(rotated):
-            os.unlink(rotated)
-        os.rename(filepath, rotated)
-    except Exception:
-        pass
-
-def _do_flush_logs():
-    """Write all buffered log lines to disk. Called by the flush thread and on shutdown."""
-    with _log_buffer_lock:
-        snapshots = {path: buf[:] for path, buf in _log_buffer.items() if buf}
-        for path in snapshots:
-            _log_buffer[path].clear()
-    for path, lines in snapshots.items():
-        if not lines:
-            continue
-        try:
-            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-            # Rotate if over size cap
-            try:
-                if os.path.getsize(path) > _LOG_MAX_SIZE_BYTES:
-                    _rotate_log(path)
-            except FileNotFoundError:
-                pass
-            with open(path, "a", encoding="utf-8") as f:
-                for line in lines:
-                    f.write(line + "\n")
-        except Exception:
-            pass
-
-def _flush_log_thread():
-    """Background daemon thread: flush log buffer on interval."""
-    while True:
-        time.sleep(_LOG_FLUSH_INTERVAL)
-        _do_flush_logs()
-
-def _perm_write(filepath: str, line: str):
-    """Buffer a log line in RAM; flushed to disk every _LOG_FLUSH_INTERVAL seconds."""
-    with _log_buffer_lock:
-        _log_buffer[filepath].append(line)
-
-def _append_detection_perm(event_type: str, label: str, confidence: float, info: str = ""):
-    """Append one detection event to in-memory list, permanent file, and SQLite queue."""
-    global _detection_log
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{stamp}] [{event_type.upper()}] {label} conf={confidence:.2f}"
-    if info:
-        line += f" — {info}"
-    _detection_log.append(line)
-    if len(_detection_log) > 500:
-        _detection_log[:] = _detection_log[-500:]
-    _perm_write(PERM_DETECTION_LOG, line)
-    queue_event(event_type.upper(), label, confidence, info)
-
-def log_system_update(message):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{timestamp}] {message}"
-    system_updates_log.append(entry)
-    if len(system_updates_log) > 500:
-        system_updates_log[:] = system_updates_log[-500:]
-    _perm_write(PERM_SYSTEM_LOG, entry)
-    # Also into the one service log (garuda.log), next to the request and
-    # worker lines, so there is a single file to read when something is wrong.
-    _syslog.info("%s", message)
-
-def append_voice_log(message, user_name=None):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{timestamp}] {message}"
-    voice_assistant_log.append(entry)
-    if len(voice_assistant_log) > 500:
-        voice_assistant_log[:] = voice_assistant_log[-500:]
-    _perm_write(PERM_VOICE_LOG, entry)
-    _remember_user_activity(user_name, "narada_activity", entry)
-
-def append_voice_response(message, user_name=None):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{timestamp}] {message}"
-    voice_responses.append(entry)
-    if len(voice_responses) > 500:
-        voice_responses[:] = voice_responses[-500:]
-    _perm_write(PERM_VOICE_LOG, "→ " + entry)
-    _remember_user_activity(user_name, "narada_activity", entry)
 
 ##############################################################################
 # OFFLINE EVENT QUEUE (SQLite)
