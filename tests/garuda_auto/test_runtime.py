@@ -143,6 +143,7 @@ def test_a_disabled_rule_does_not_fire(rt):
 def test_the_fire_is_written_to_the_activity_log(rt):
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
+    ctx.device_router.set("lamp", "on")
     runtime.observe([], luma=0)
     runtime.tick()
 
@@ -193,17 +194,35 @@ def test_the_rule_counts_its_own_fires(rt):
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
     runtime.observe([], luma=0)
-    runtime.tick()
-    runtime.tick()
+    for _ in range(2):
+        ctx.device_router.set("lamp", "on")       # someone switches it back on
+        runtime.tick()
 
     rule = ctx.store.rules[0]
     assert rule["fired_count"] == 2
     assert rule["last_fired"] > 0
 
 
+def test_a_rule_whose_device_is_already_so_does_nothing(rt):
+    """A rule holds while its condition does. With no cooldown it used to set
+    the relay, log the action and rewrite the rule file on every tick."""
+    runtime, ctx, _ = rt
+    ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
+    ctx.device_router.set("lamp", "on")
+    runtime.observe([], luma=0)
+    assert len(runtime.tick()) == 1
+    for _ in range(5):
+        assert runtime.tick() == []
+    assert ctx.store.rules[0]["fired_count"] == 1
+    assert len(actuation_log.recent(ctx.log_path)) == 1
+    ctx.device_router.set("lamp", "on")
+    assert len(runtime.tick()) == 1               # and it still holds the lamp off
+
+
 def test_the_fire_count_survives_a_restart(rt, tmp_path):
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
+    ctx.device_router.set("lamp", "on")
     runtime.observe([], luma=0)
     runtime.tick()
 
@@ -216,7 +235,9 @@ def test_a_cooldown_holds_the_rule_back(rt):
     ctx.store.add({**EMPTY_ROOM_LAMP_OFF, "cooldown_s": 60})
     runtime.observe([], luma=0)
 
+    ctx.device_router.set("lamp", "on")
     assert len(runtime.tick()) == 1
+    ctx.device_router.set("lamp", "on")
     assert runtime.tick() == []
     clock.t += 61
     assert len(runtime.tick()) == 1
@@ -288,8 +309,9 @@ def test_health_counts_ticks_and_fires(rt):
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
     runtime.observe([], luma=0)
-    runtime.tick()
-    runtime.tick()
+    for _ in range(2):
+        ctx.device_router.set("lamp", "on")
+        runtime.tick()
 
     health = runtime.health()
     assert health["ticks"] == 2

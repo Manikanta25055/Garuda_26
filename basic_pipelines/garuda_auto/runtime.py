@@ -139,6 +139,12 @@ class DrishtiRuntime:
 
         performed, touched = [], set()
         for action in actions:
+            if self.ctx.device_router.state(action["device"]) == action["action"]:
+                # Already so. A rule holds while its condition does, and one with
+                # no cooldown asked for the same thing every tick: the relay was
+                # set, the action logged and the rule file rewritten twice a
+                # second for as long as someone was home.
+                continue
             ok, reason = self.ctx.device_router.set(action["device"], action["action"])
             if ok:
                 # The rule base can now see what it just did, so a rule that
