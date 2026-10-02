@@ -17,6 +17,7 @@ from ..garuda_auto.llm import NO_THINKING
 from . import distiller, gate, guards, persona
 from .conversation import SUMMARY_INSTRUCTION, Conversations
 from .memory import CATEGORIES, MEMORY_FILE, MemoryStore
+from .noticing import NOTICES_FILE, Noticer
 from .observer import OFFERS_FILE, REFRESH_S, Observer
 
 log = logging.getLogger(__name__)
@@ -46,6 +47,8 @@ class Brain:
                                   clock=clock)
         self.observer = Observer(self.memory, os.path.join(data_dir, OFFERS_FILE) if data_dir else None,
                                  clock=clock)
+        self.noticer = Noticer(self.memory, os.path.join(data_dir, NOTICES_FILE) if data_dir else None,
+                               clock=clock)
         self._habits, self._habits_at = [], None
         self.stats = {"leaks_blocked": 0, "facts_saved": 0, "facts_held": 0, "facts_refused": 0}
         # What memory just did, for the chat to show ("Saved to memory", with Undo).
@@ -195,6 +198,27 @@ class Brain:
         except Exception:
             log.exception("observing routines")
             return None
+
+    def notice(self, snapshot_fn, *, scope="home"):
+        """One thing worth saying that nobody asked about, or None (see noticing.py).
+
+        Never raises: like observe(), it rides along with a turn.
+        """
+        try:
+            found = self.noticer.notice(snapshot_fn, scope=scope)
+            if found:
+                self.stats["noticed"] = self.stats.get("noticed", 0) + 1
+            return found
+        except Exception:
+            log.exception("noticing")
+            return None
+
+    def mute_notice(self, key, names, by=""):
+        """ "Don't tell me this": kept as the household's choice. Returns the outcome or None."""
+        outcome = self.noticer.mute(key, names, by=by)
+        if outcome and outcome["status"] in ("saved", "updated"):
+            outcome["event"] = self._event(outcome["fact"], outcome["status"], outcome["replaced"])
+        return outcome
 
     def routine_decided(self, suggestion, name, accepted, by=""):
         """The household answered an offered routine, on whichever page."""

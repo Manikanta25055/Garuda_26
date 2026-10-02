@@ -196,6 +196,88 @@ class JevBackend:
         return out
 
 
+# What each intent means, for a backend that reads descriptions (Laya's
+# "criteria" are label -> description; Jev's wire format took a bare list).
+INTENT_CRITERIA = {
+    "device_control": "switch one named device on or off right now",
+    "all_off": "switch everything, or every device in a room, off",
+    "scene": "run a saved scene by its name",
+    "timer": "do something after a delay or at a clock time",
+    "state_query": "a question about what is on, off, or who is home",
+    "automation_rule": "a standing rule: when, if or whenever something happens, do something",
+    "mode_change": "change a security mode such as do not disturb, night, idle or privacy",
+    "explain": "asks why something happened",
+    "other": "anything else: conversation, general questions, several requests at once",
+}
+
+
+class LayaBackend(JevBackend):
+    """Laya (github.com/NandhaKishorM/laya) served on this machine or the LAN.
+
+    `laya-serve` speaks the same POST /v1/systemone as Jev, so this is the Jev
+    client with two differences: no key (it is yours, on your network), and
+    the questions are sent the way Laya reads them, with a description for
+    every option. An experiment, off unless LAYA_URL is set: see
+    scripts/laya_experiment.py for what it costs on a Pi and how it scores.
+    """
+    name = "laya"
+
+    def __init__(self, base_url="", timeout=8.0, post=None):
+        super().__init__(api_key="", base_url=base_url or "", timeout=timeout, post=post)
+
+    @property
+    def configured(self):
+        return bool(self.base_url)
+
+    @staticmethod
+    def questions_for_laya(questions, state):
+        devices = {d["id"]: f"{d['name']}" + (f" in the {d['room']}" if d.get("room") else "")
+                   for d in (state.get("devices") or [])} if isinstance(state, dict) else {}
+        scenes = {s["id"]: f"the scene called {s['name']}" for s in (state.get("scenes") or [])} \
+            if isinstance(state, dict) else {}
+        describe = {
+            "intent": lambda o: INTENT_CRITERIA.get(o, o),
+            "device": lambda o: devices.get(o, "no single device is named" if o == "none" else o),
+            "action": lambda o: {"on": "switch it on, start it", "off": "switch it off, stop it",
+                                 "none": "neither on nor off is asked for"}.get(o, o),
+            "scene": lambda o: scenes.get(o, "no saved scene is named" if o == "none" else o),
+        }
+        out = {}
+        for name, q in questions.items():
+            label = describe.get(name, lambda o: o)
+            out[name] = {"type": "choice", "instructions": q.get("criteria", name),
+                         "criteria": {o: label(o) for o in q.get("options", [])}}
+        return out
+
+    def decide(self, state, questions):
+        text = state.get("utterance", "") if isinstance(state, dict) else str(state)
+        resp = self._post(f"{self.base_url}/v1/systemone",
+                          headers={"Content-Type": "application/json"},
+                          json={"state": {"body": text},
+                                "questions": self.questions_for_laya(questions, state)},
+                          timeout=self.timeout)
+        resp.raise_for_status()
+        payload = resp.json()
+        answers = payload.get("answers", payload)
+        out = {}
+        for name, q in questions.items():
+            raw = answers.get(name)
+            if not isinstance(raw, dict):
+                raise ValueError(f"Laya returned no answer for {name}")
+            value = raw.get("choice", raw.get("value"))
+            if value not in q.get("options", []):
+                raise ValueError(f"Laya answered {name} outside its options")
+            probs = raw.get("probabilities") or raw.get("probs") or {}
+            if isinstance(probs, list):
+                probs = dict(zip(q.get("options", []), probs))
+            confidence = raw.get("confidence")
+            if confidence is None and isinstance(probs, dict):
+                confidence = probs.get(value, 0.0)
+            out[name] = Answer(value=value, probs=probs, confidence=float(confidence or 0.0),
+                               backend=self.name)
+        return out
+
+
 def _state_text(state):
     parts = [f"Utterance: {state.get('utterance', '')}"]
     if state.get("devices"):

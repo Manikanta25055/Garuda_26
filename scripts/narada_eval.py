@@ -98,6 +98,22 @@ class House:
                                  matched=[], ok=True, clock=lambda s=stamp: s, source="manual",
                                  actor=USERS["admin"])
 
+    def seed_running_long(self, device, usual_hours=3, on_for_hours=9):
+        """A device that usually runs `usual_hours` at a time and has now been on far longer."""
+        now = time.time()
+
+        def log(action, ts):
+            actuation_log.record(self.ctx.log_path, device=device, action=action, rule_id=None,
+                                 matched=[], ok=True, clock=lambda: ts, source="manual",
+                                 actor=USERS["admin"])
+        for day in range(2, 7):
+            # At a different hour each day, so this is not also a routine.
+            start = now - day * 86400 + day * 2 * 3600
+            log("on", start)
+            log("off", start + usual_hours * 3600)
+        log("on", now - on_for_hours * 3600)
+        self.home.set(device, "on", source="manual", actor=USERS["admin"])
+
     def answer_offer(self, offer, accepted, user):
         match = next(s for s in self.home.suggestions() if s["id"] == offer["id"])
         if accepted:
@@ -161,6 +177,8 @@ def run_case(case, chat):
         house = House(data_dir, chat, case.get("devices", ()))
         for routine in case.get("routines", ()):
             house.seed_routine(**routine)
+        for device in case.get("running_long", ()):
+            house.seed_running_long(device)
         try:
             for number, step in enumerate(case["steps"], 1):
                 role = step.get("role", "admin")
@@ -193,6 +211,12 @@ def run_case(case, chat):
                     found.append("no routine was offered")
                 if step.get("offer") is False and result.get("offer"):
                     found.append(f"offered a routine it should not have: {result['offer']['text']}")
+                want = step.get("observation")
+                seen = (result.get("observation") or {}).get("rule")
+                if want and seen != want:
+                    found.append(f"expected the observation {want!r}, got {seen!r}")
+                if want is False and seen:
+                    found.append(f"made an unasked remark: {seen}")
                 # Answer the offer the way the Automations page would.
                 if step.get("answer") and result.get("offer"):
                     house.answer_offer(result["offer"], step["answer"] == "yes", user)

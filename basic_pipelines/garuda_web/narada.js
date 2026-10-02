@@ -563,6 +563,7 @@ const N = (() => {
       }
       memoryChips(res.memory);
       offerChip(res.offer);
+      observationChip(res.observation);
       pollMemory();                       // routines the house noticed, facts kept after a pause
       if (infoOpen) renderInfo();
     } catch (e) {
@@ -618,6 +619,33 @@ const N = (() => {
     card.innerHTML = `<span class="nx-memchip-l">Noticed</span><span class="nx-memchip-t">${escHtml(offer.text)}</span>`
       + '<span class="nx-memchip-b"><button type="button" data-chip="accept">Yes</button><button type="button" data-chip="decline">No</button></span>';
     scrollLog();
+  }
+
+  // Something Narada noticed that nobody asked about. The label is the name of
+  // the rule that fired, so it can be judged; "Don't tell me this" silences it.
+  function observationChip(o) {
+    if (!o || document.querySelector(`.nx-memchip[data-observation="${o.key}"]`)) return;
+    const card = bubble('extra', '');
+    if (!card) return;
+    card.classList.add('nx-memchip');
+    card.dataset.observation = o.key;
+    card.innerHTML = `<span class="nx-memchip-l">Noticed · ${escHtml(o.title)}</span><span class="nx-memchip-t">${escHtml(o.text)}</span>`
+      + '<span class="nx-memchip-b"><button type="button" data-chip="ok">OK</button><button type="button" data-chip="mute">Don’t tell me this</button></span>';
+    scrollLog();
+  }
+
+  async function observationAction(card, what) {
+    const b = card.querySelector('.nx-memchip-b');
+    card.querySelectorAll('button').forEach(x => { x.disabled = true; });
+    if (what !== 'mute') { b.textContent = ''; return; }
+    try {
+      await G._apiFn('POST', '/api/narada/observations/mute', { key: card.dataset.observation });
+      b.textContent = 'I will not mention it again';
+      haptic('tap');
+      pollMemory();
+    } catch (e) {
+      b.textContent = (e && e.detail) || 'That did not work';
+    }
   }
 
   async function offerAction(card, what) {
@@ -806,7 +834,9 @@ const N = (() => {
     $('nx-log').addEventListener('click', e => {
       const btn = e.target.closest('[data-chip]'), card = btn && btn.closest('.nx-memchip');
       if (!card) return;
-      if (card.dataset.offer) offerAction(card, btn.dataset.chip); else chipAction(card, btn.dataset.chip);
+      if (card.dataset.offer) offerAction(card, btn.dataset.chip);
+      else if (card.dataset.observation) observationAction(card, btn.dataset.chip);
+      else chipAction(card, btn.dataset.chip);
     });
     const infoBody = $('nx-info-body');
     infoBody.addEventListener('click', e => {

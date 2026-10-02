@@ -24,6 +24,10 @@ class MemoryFactRequest(BaseModel):
     category: str | None = Field(default=None, max_length=20)
 
 
+class MuteRequest(BaseModel):
+    key: str = Field(min_length=3, max_length=80, pattern=r"^[a-z-]+(:[A-Za-z0-9_-]+){0,2}$")
+
+
 class MemoryEditRequest(BaseModel):
     text: str | None = Field(default=None, max_length=300)
     category: str | None = Field(default=None, max_length=20)
@@ -43,6 +47,7 @@ def build_narada_router(core):
         return {"response": result["reply"], "lane": result.get("lane"),
                 "actions": result.get("actions", []), "proposal": result.get("proposal"),
                 "memory": result.get("memory", []), "offer": result.get("offer"),
+                "observation": result.get("observation"),
                 "route": result.get("route"), "model": result.get("model")}
 
 
@@ -65,7 +70,8 @@ def build_narada_router(core):
                 result = core._assistant_reply(msg, user, role, scope)
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
-            meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer", "model")}
+            meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer",
+                                               "observation", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
             for word in re.findall(r"\S+\s*", result["reply"]):
                 loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
@@ -189,5 +195,18 @@ def build_narada_router(core):
             raise HTTPException(404, "Nothing is waiting under that id")
         core.log_system_update(f"Narada memory: {session['username']} confirmed a fact")
         return {"fact": fact}
+
+    @router.post("/api/narada/observations/mute")
+    async def narada_mute_observation(data: MuteRequest, session=Depends(core.require_session)):
+        """ "Don't tell me this": Narada stops making one kind of remark. It is kept
+        in memory as the household's choice, and removing it there undoes it."""
+        names = {d["id"]: d["name"] for d in core.DRISHTI_CTX.registry.devices}
+        outcome = core.BRAIN.mute_notice(data.key, names, by=session["username"])
+        if outcome is None:
+            raise HTTPException(400, "Narada makes no such remark")
+        if outcome["status"] == "rejected":
+            raise HTTPException(400, outcome["reason"])
+        core.log_system_update(f"Narada: {session['username']} muted the remark {data.key}")
+        return {"ok": True, "fact": outcome["fact"]}
 
     return router

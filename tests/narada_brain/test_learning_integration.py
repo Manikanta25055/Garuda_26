@@ -140,3 +140,57 @@ def test_two_houses_in_one_process_do_not_share_dismissed_routines(tmp_path):
     assert made[1][1].settings["dismissed_suggestions"] == []
     for ctx, _ in made:
         ctx.relay_bank.close()
+
+
+# ── phase 5: a remark nobody asked for ────────────────────────────────────────
+
+FAN = {"id": "fan", "name": "Fan", "type": "fan", "room": "bedroom",
+       "transport": {"kind": "relay", "channel": 2}}
+
+
+@pytest.fixture
+def long_fan(tmp_path):
+    """A house whose fan usually runs three hours and has now been on for nine."""
+    ctx = drishti_api.build_context(data_dir=str(tmp_path), relay_channels=(1, 2),
+                                    channel_to_pin={1: 17, 2: 27})
+    ctx.registry.add(dict(FAN))
+    ctx.rebuild()
+    home = HomeServices(ctx, DrishtiRuntime(ctx), str(tmp_path))
+    now = time.time()
+
+    def log(action, ts):
+        actuation_log.record(ctx.log_path, device="fan", action=action, rule_id=None, matched=[],
+                             ok=True, clock=lambda: ts, source="manual", actor="mani")
+    for day in range(2, 7):                       # at a different hour each day: not a routine
+        log("on", now - day * 86400 + day * 7200)
+        log("off", now - day * 86400 + day * 7200 + 3 * 3600)
+    log("on", now - 9 * 3600)
+    home.set("fan", "on", source="manual", actor="mani")
+    brain = Brain(str(tmp_path), background=False)
+    decision = DecisionEngine(LocalBackend(lambda: ctx.registry.devices, lambda: home.scenes.scenes))
+    yield HomeAgent(ctx, home, chat(), decision, brain=brain), brain
+    ctx.relay_bank.close()
+
+
+def test_a_typed_reply_carries_one_observation_with_its_rule(long_fan):
+    agent, brain = long_fan
+    out = agent.handle("hello", user="mani", role="user")
+    seen = out["observation"]
+    assert seen["rule"] == "running-long" and seen["key"] == "running-long:fan"
+    assert seen["title"] == "Running longer than usual"
+    assert seen["text"].startswith("The Fan has been on for 9 hours. It usually runs about 3 hours")
+    assert out["reply"] == "Hello."                                  # the model's words are untouched
+    last = brain.history("mani")[-1]["content"]                   # and Narada remembers showing it
+    assert last.startswith("Hello.") and "The Fan has been on for 9 hours" in last
+    assert "observation" not in agent.handle("hello again", user="mani")
+
+
+def test_no_observation_in_speech(long_fan):
+    agent, brain = long_fan
+    assert "observation" not in agent.handle("hello", user="mani", voice=True)
+
+
+def test_muting_it_stops_it(long_fan):
+    agent, brain = long_fan
+    brain.mute_notice("running-long:fan", {"fan": "Fan"}, by="mani")
+    assert "observation" not in agent.handle("hello", user="mani")

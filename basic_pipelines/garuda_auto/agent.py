@@ -18,7 +18,7 @@ import logging
 import threading
 import time
 
-from ..narada_brain import Brain, guards, persona
+from ..narada_brain import Brain, guards, noticing, persona
 from ..narada_brain.memory import CATEGORIES as MEMORY_CATEGORIES
 from . import actuation_log
 from .device_types import is_actuator
@@ -116,7 +116,19 @@ class HomeAgent:
                 may_offer=role == "admin" and not voice and not result.get("injection"))
             if offer:
                 result["offer"] = offer
+        if result["lane"] == "agent" and not voice and not result.get("injection") \
+                and "offer" not in result:
+            # One thing worth saying that nobody asked about, at most (noticing.py).
+            noticed = self.brain.notice(self._snapshot_for_noticing, scope=scope)
+            if noticed:
+                result["observation"] = noticed
         turn = result.pop("_turn", None)
+        shown = (result.get("offer") or result.get("observation") or {}).get("text")
+        if shown and turn:
+            # The chip is on the person's screen, so it belongs in what Narada
+            # remembers saying: a follow-up ("why?", "how long?") refers to it.
+            turn[-1] = {**turn[-1], "content": turn[-1]["content"]
+                        + f"\n\n(A note shown beside this reply, from you: \"{shown}\")"}
         if result["lane"] == "agent" and turn:
             self.brain.record(f"security:{user}" if scope == "security" else user, turn)
         return result
@@ -266,6 +278,18 @@ class HomeAgent:
                 "model": self.chat.last_model}
 
     # ── tools ─────────────────────────────────────────────────────────────────
+
+    def _snapshot_for_noticing(self):
+        """Recorded data only: the log, device states, noticed routines, modes."""
+        security = self.security_fn() or {}
+        return noticing.snapshot(
+            entries=self.home.log_entries(),
+            devices=[{"id": d["id"], "name": d["name"], "state": d["state"]}
+                     for d in self.home.devices() if d["actuator"]],
+            routines=self.home.suggestions(), modes=self.modes_fn(),
+            security=security if isinstance(security, dict) else {},
+            owner_home=self.home.context().get("owner_presence") != "away",
+            now=self._clock())
 
     def _run_tool(self, name, args, user, role):
         try:

@@ -10,7 +10,7 @@ The design is the one worked out for the bREADth assistant (a context budget
 that carries whole messages or none, a rolling summary, guards that are code
 and not prose in a prompt), rewritten for this house.
 """
-from . import guards, persona
+from . import guards, noticing, persona
 from .brain import Brain
 
-__all__ = ["Brain", "guards", "persona"]
+__all__ = ["Brain", "guards", "noticing", "persona"]

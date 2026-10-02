@@ -240,6 +240,9 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw.BRAIN.observer, '_offered', {})
     monkeypatch.setattr(gw.BRAIN.observer, '_last_offer', 0.0)
     monkeypatch.setattr(gw.BRAIN, '_habits_at', None)
+    monkeypatch.setattr(gw.BRAIN.noticer, 'path', str(tmp_data / 'system_logs/narada_notices.json'))
+    monkeypatch.setattr(gw.BRAIN.noticer, 'state', {'fired': {}, 'last': 0.0, 'since': {}})
+    monkeypatch.setattr(gw.BRAIN.noticer, '_checked_at', None)
 
     # ── In-memory state reset ──
     monkeypatch.setattr(gw.STATE.auth, 'sessions',    {})

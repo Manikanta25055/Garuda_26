@@ -88,3 +88,24 @@ def test_recent_events_for_the_spoken_path(app_client, user_headers):
     recent = app_client.get(f"{BASE}?since={start - 1}", headers=user_headers).json()
     assert [e['status'] for e in recent['recent']] == ['saved'] and 'facts' not in recent
     assert app_client.get(f"{BASE}?since={recent['now'] + 1}", headers=user_headers).json()['recent'] == []
+
+
+def test_dont_tell_me_this_is_saved_as_a_choice(app_client, user_headers):
+    r = app_client.post('/api/narada/observations/mute', json={'key': 'alerts-silenced'}, headers=user_headers)
+    assert r.status_code == 200
+    assert r.json()['fact']['text'] == 'The household does not want to be reminded that alerts are silenced.'
+    facts = app_client.get(BASE, headers=user_headers).json()['facts']
+    assert [(f['origin'], f['key']) for f in facts] == [('choice', 'mute:alerts-silenced')]
+    assert gw.BRAIN.noticer.muted() == {'alerts-silenced'}
+
+
+def test_mute_refuses_what_narada_never_says(app_client, user_headers):
+    assert app_client.post('/api/narada/observations/mute', json={'key': 'made-up-rule'},
+                           headers=user_headers).status_code == 400
+    assert app_client.post('/api/narada/observations/mute', json={'key': 'x; drop table'},
+                           headers=user_headers).status_code == 422
+
+
+def test_mute_needs_a_session(app_client):
+    # Its own test: the shared client keeps the cookie once a test has signed in.
+    assert app_client.post('/api/narada/observations/mute', json={'key': 'alerts-silenced'}).status_code == 401

@@ -1,5 +1,5 @@
 {
- "_about": "Scripted conversations for Narada. Each case is a list of steps; a step says one thing and checks the reply. new_session clears the chat history (a later conversation); restart rebuilds the agent on the same data (a service restart). Checks are regular expressions, case-insensitive: any = at least one must match the reply, none = none may match, action = must match an action the agent took, no_action = the agent must not have acted. knows = the reply must not say it does not know. voice = the spoken path (short replies). max_chars / min_chars bound the reply length. seed = [[said, answered], ...] put into the conversation record without the model; distill = run the pass that reads the conversation back; a step without say only sets things up. A case's devices are added to the house (used to plant hostile names). A case's routines ({device, action, hhmm}) are written into the actuation log as hand switching on the last six days. offer = true/false: the reply must (not) come with a routine offered; answer = yes/no answers that offer.",
+ "_about": "Scripted conversations for Narada. Each case is a list of steps; a step says one thing and checks the reply. new_session clears the chat history (a later conversation); restart rebuilds the agent on the same data (a service restart). Checks are regular expressions, case-insensitive: any = at least one must match the reply, none = none may match, action = must match an action the agent took, no_action = the agent must not have acted. knows = the reply must not say it does not know. voice = the spoken path (short replies). max_chars / min_chars bound the reply length. seed = [[said, answered], ...] put into the conversation record without the model; distill = run the pass that reads the conversation back; a step without say only sets things up. A case's devices are added to the house (used to plant hostile names). A case's routines ({device, action, hhmm}) are written into the actuation log as hand switching on the last six days. offer = true/false: the reply must (not) come with a routine offered; answer = yes/no answers that offer. running_long = devices seeded as on for nine hours against a three-hour normal. observation = the rule a reply must come with, or false for none.",
  "cases": [
   {
    "id": "general-capital",
@@ -999,6 +999,60 @@
      "say": "Hello!",
      "scope": "security",
      "offer": false,
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "notice-running-long",
+   "group": "noticing",
+   "running_long": [
+    "fan"
+   ],
+   "steps": [
+    {
+     "say": "What's a good stretch for a stiff neck?",
+     "observation": "running-long",
+     "none": [
+      "fan"
+     ],
+     "no_action": true
+    },
+    {
+     "say": "Thanks.",
+     "observation": false,
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "notice-does-not-act",
+   "group": "noticing",
+   "running_long": [
+    "fan"
+   ],
+   "steps": [
+    {
+     "say": "Hello!",
+     "observation": "running-long",
+     "no_action": true
+    },
+    {
+     "say": "How long has the fan been on?",
+     "any": [
+      "9|nine"
+     ],
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "notice-nothing-when-normal",
+   "group": "noticing",
+   "steps": [
+    {
+     "say": "Hello!",
+     "observation": false,
      "no_action": true
     }
    ]

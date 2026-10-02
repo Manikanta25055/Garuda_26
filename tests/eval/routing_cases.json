@@ -1,0 +1,432 @@
+{
+ "_about": "Utterances with the routing a decision backend should give them: intent, device, action, scene. The house is Lamp (study), Fan (bedroom), TV (hall) with the scenes Movie night (movie) and Good night (night). 'kind' groups them: plain imperatives, paraphrases that never name the device, negations, off-topic talk, compound requests and mixed-language. For a negation or a compound request the right intent is 'other': the language model should handle it, not a fast path. A field set to null is not scored.",
+ "devices": [
+  {
+   "id": "lamp",
+   "name": "Lamp",
+   "room": "study"
+  },
+  {
+   "id": "fan",
+   "name": "Fan",
+   "room": "bedroom"
+  },
+  {
+   "id": "tv",
+   "name": "TV",
+   "room": "hall"
+  }
+ ],
+ "scenes": [
+  {
+   "id": "movie",
+   "name": "Movie night"
+  },
+  {
+   "id": "night",
+   "name": "Good night"
+  }
+ ],
+ "cases": [
+  {
+   "say": "turn on the lamp",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "lamp off",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "switch the fan on",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "fan off please",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "turn the tv off",
+   "intent": "device_control",
+   "device": "tv",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "start the fan",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "kill the tv",
+   "intent": "device_control",
+   "device": "tv",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "could you put the lamp on for me",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "it's too dark in the study",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "I'm feeling hot in the bedroom",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "on",
+   "scene": "none",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "I can't read, there's no light",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "the television is still blaring, make it stop",
+   "intent": "device_control",
+   "device": "tv",
+   "action": "off",
+   "scene": "none",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "it's freezing in here with that thing spinning",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "off",
+   "scene": "none",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "I'm done watching",
+   "intent": "device_control",
+   "device": "tv",
+   "action": "off",
+   "scene": "none",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "don't turn off the fan",
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": "none",
+   "kind": "negation"
+  },
+  {
+   "say": "leave the lamp on",
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": "none",
+   "kind": "negation"
+  },
+  {
+   "say": "never mind the tv, keep it as it is",
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": "none",
+   "kind": "negation"
+  },
+  {
+   "say": "do not switch the lamp on",
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": "none",
+   "kind": "negation"
+  },
+  {
+   "say": "switch everything off",
+   "intent": "all_off",
+   "device": "none",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "turn off all the lights",
+   "intent": "all_off",
+   "device": "none",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "shut the whole house down",
+   "intent": "all_off",
+   "device": "none",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "run movie night",
+   "intent": "scene",
+   "device": "none",
+   "action": "none",
+   "scene": "movie",
+   "kind": "plain"
+  },
+  {
+   "say": "start the good night scene",
+   "intent": "scene",
+   "device": "none",
+   "action": "none",
+   "scene": "night",
+   "kind": "plain"
+  },
+  {
+   "say": "movie night please",
+   "intent": "scene",
+   "device": "none",
+   "action": "none",
+   "scene": "movie",
+   "kind": "plain"
+  },
+  {
+   "say": "time for a film, set the room up",
+   "intent": "scene",
+   "device": "none",
+   "action": "none",
+   "scene": "movie",
+   "kind": "paraphrase"
+  },
+  {
+   "say": "turn the fan off in 20 minutes",
+   "intent": "timer",
+   "device": "fan",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "lamp on at 7 pm",
+   "intent": "timer",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "switch the tv off after an hour",
+   "intent": "timer",
+   "device": "tv",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "is the lamp on?",
+   "intent": "state_query",
+   "device": "lamp",
+   "action": "none",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "what's running right now",
+   "intent": "state_query",
+   "device": "none",
+   "action": "none",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "is anyone home",
+   "intent": "state_query",
+   "device": "none",
+   "action": "none",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "did I leave the fan on",
+   "intent": "state_query",
+   "device": "fan",
+   "action": "none",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "when someone enters the study turn on the lamp",
+   "intent": "automation_rule",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "if the room is empty switch off the fan",
+   "intent": "automation_rule",
+   "device": "fan",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "whenever I leave home turn everything off",
+   "intent": "automation_rule",
+   "device": "none",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "why did the fan turn on",
+   "intent": "explain",
+   "device": "fan",
+   "action": "none",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "why is the lamp off",
+   "intent": "explain",
+   "device": "lamp",
+   "action": "none",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "turn on do not disturb",
+   "intent": "mode_change",
+   "device": "none",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "disable night mode",
+   "intent": "mode_change",
+   "device": "none",
+   "action": "off",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "switch privacy on",
+   "intent": "mode_change",
+   "device": "none",
+   "action": "on",
+   "scene": "none",
+   "kind": "plain"
+  },
+  {
+   "say": "what is the capital of Australia",
+   "intent": "other",
+   "device": "none",
+   "action": "none",
+   "scene": "none",
+   "kind": "offtopic"
+  },
+  {
+   "say": "tell me a joke",
+   "intent": "other",
+   "device": "none",
+   "action": "none",
+   "scene": "none",
+   "kind": "offtopic"
+  },
+  {
+   "say": "how do transistors work",
+   "intent": "other",
+   "device": "none",
+   "action": "none",
+   "scene": "none",
+   "kind": "offtopic"
+  },
+  {
+   "say": "I'm vegetarian, suggest a dinner",
+   "intent": "other",
+   "device": "none",
+   "action": "none",
+   "scene": "none",
+   "kind": "offtopic"
+  },
+  {
+   "say": "turn on the lamp and switch off the fan",
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": "none",
+   "kind": "compound"
+  },
+  {
+   "say": "arm night mode and switch everything off",
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": "none",
+   "kind": "compound"
+  },
+  {
+   "say": "lamp on cheyyi",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "mixed-language"
+  },
+  {
+   "say": "fan band karo",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "off",
+   "scene": "none",
+   "kind": "mixed-language"
+  },
+  {
+   "say": "light veyyi",
+   "intent": "device_control",
+   "device": "lamp",
+   "action": "on",
+   "scene": "none",
+   "kind": "mixed-language"
+  },
+  {
+   "say": "pankha chalu karo",
+   "intent": "device_control",
+   "device": "fan",
+   "action": "on",
+   "scene": "none",
+   "kind": "mixed-language"
+  }
+ ]
+}
