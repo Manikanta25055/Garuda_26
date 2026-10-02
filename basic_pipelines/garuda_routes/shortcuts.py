@@ -18,7 +18,8 @@ def build_shortcuts_router(core):
     shortcuts = core._shortcuts_mod
 
     def _view(entry, names=None):
-        return {**entry, "rendered": shortcuts.describe(entry, names or core.SHORTCUTS.names())}
+        return {**entry, "rendered": shortcuts.describe(entry, names or core.SHORTCUTS.names()),
+                "cautions": shortcuts.cautions(entry)}
 
     def _own_or_admin(shortcut_id, session):
         entry = core.SHORTCUTS.store.get(shortcut_id)
@@ -58,7 +59,8 @@ def build_shortcuts_router(core):
         """Check a shortcut without saving it, and say it back in plain lines."""
         clean = _checked(data.program, session)
         return {"ok": True, "program": clean,
-                "rendered": shortcuts.describe(clean, core.SHORTCUTS.names())}
+                "rendered": shortcuts.describe(clean, core.SHORTCUTS.names()),
+                "cautions": shortcuts.cautions(clean)}
 
     @router.post("")
     async def create_shortcut(data: ShortcutRequest, session=Depends(core.require_session)):

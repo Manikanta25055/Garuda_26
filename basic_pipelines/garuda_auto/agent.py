@@ -83,6 +83,7 @@ Shortcuts. Nothing is prebuilt: you compose a shortcut from capabilities when on
   C = {"field":F,"op":"==|!=|<|<=|>|>=","value":V} | {"all":[C..]} | {"any":[C..]} | {"not":C} | {"between":["HH:MM","HH:MM"]}
   step = {"do":"<capability name>","args":{..},"optional"?:true} | {"wait":seconds} | {"if":C,"then":[step..],"else":[step..]} | {"repeat":N,"steps":[..]} | {"notify":"text with {field} placeholders","email"?:true} | {"run":"<shortcut id>"} | {"stop":true}
   A step's capability is any of your tools that changes or reads something, except ones that need a card.
+  This is a security system first. The modes idle, email_off and dnd silence it: never switch one of them on in a shortcut (when someone leaves, at night, on a schedule) unless the person asked in so many words for alerts to be silenced. Leaving home is when alerts matter most. A shortcut that would silence alerts is shown to the person with a warning.
   "for 10 minutes" in a request is for_minutes: 10 on a when trigger. To tell the person something from a shortcut, use a notify step. A wait is at most six hours: two things at two clock times are two shortcuts, or one schedule each.
   Fields a condition can test, with their values now: %(facts)s
   What the less obvious ones mean: occupancy is empty/occupied as the camera sees the room; occupancy_duration_s is how long the room has been in its present state (empty or occupied), so "empty for 10 minutes" is occupancy == empty with for_minutes 10; owner_presence is home/away from the tracked phones and owner_event says arrived or left just after it changes; <device>_state is on/off; mode_<name> is on/off; time is HH:MM, weekday is 0 for Monday.
@@ -593,7 +594,8 @@ class HomeAgent:
             if "error" in checked:
                 return {"error": checked["error"]}
             args = {**args, "program": checked["program"]}
-            rendered = {"name": checked["program"]["name"], **checked["rendered"]}
+            rendered = {"name": checked["program"]["name"], **checked["rendered"],
+                        "cautions": checked.get("cautions") or []}
         card = self.confirmations.add(capability, args, user, key=getattr(self._turn, "key", user))
         if rendered:
             card["shortcut"] = rendered

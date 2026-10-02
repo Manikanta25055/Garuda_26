@@ -284,3 +284,14 @@ def test_a_notice_fills_in_facts_and_nothing_else():
 
 def test_what_cannot_be_a_step():
     assert {"take_snapshot", "show_artifact", "hand_to_planner", "create_shortcut"} <= sc.NOT_STEPS
+
+
+def test_a_shortcut_that_silences_alerts_says_so():
+    quiet = check(program(trigger={"type": "when", "condition": {"field": "owner_presence", "op": "==", "value": "away"}},
+                          steps=[{"do": "all_off", "args": {}},
+                                 {"if": {"field": "occupancy", "op": "==", "value": "empty"},
+                                  "then": [{"do": "set_security_mode", "args": {"mode": "idle", "on": True}}]}]))
+    assert sc.cautions(quiet) == ["Turns on idle mode: all alerts off while it is on."]
+    assert sc.cautions(check(program(steps=[{"do": "set_security_mode", "args": {"mode": "night", "on": True}},
+                                            {"do": "set_security_mode", "args": {"mode": "idle", "on": False}}]))) == []
+    assert "every 2 min" in sc.cautions(check(program(trigger={"type": "every", "minutes": 2})))[0]

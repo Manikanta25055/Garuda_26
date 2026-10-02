@@ -5059,3 +5059,8 @@ body { overscroll-behavior: auto; }
   background: rgba(255,255,255,0.12);
 }
 .nx-msg.md a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+
+.nx-card-warn {
+  padding: 7px 10px; border-radius: 9px; font-size: 12.5px; line-height: 1.4;
+  background: rgba(255, 138, 128, 0.14); border: 1px solid rgba(255, 138, 128, 0.4); color: #ffb4ab;
+}

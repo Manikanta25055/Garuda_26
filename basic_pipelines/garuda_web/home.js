@@ -547,6 +547,7 @@ const H = (() => {
         <div class="ha-row-main">
           <div><b>${esc(sc.name)}</b></div>
           <div class="ha-sub">${esc(sc.rendered.when)}${sc.rendered.only_if ? ' · only if ' + esc(sc.rendered.only_if) : ''}</div>
+          ${(sc.cautions || []).map(w => `<div class="ha-sub warn">${esc(w)}</div>`).join('')}
           <details class="ha-steps"><summary>${sc.rendered.steps.length} step${sc.rendered.steps.length === 1 ? '' : 's'}</summary><ol>${steps}</ol></details>
           <div class="ha-sub">${live ? `Running now: ${esc(String(live.now || '').replace(/_/g, ' '))}`
             : last ? `Last run ${ago(last.started)} · ${esc(last.outcome)}` : 'Has not run yet'} · by ${esc(sc.created_by)}</div>

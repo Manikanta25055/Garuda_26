@@ -785,7 +785,8 @@ const N = (() => {
       el.innerHTML = `<div class="nx-card-k">Needs your confirmation</div>
         <div class="nx-card-t">${escHtml(sc ? c.title + ': ' + sc.name : c.title)}</div>
         ${sc ? `<div class="nx-card-when">${escHtml(sc.when)}${sc.only_if ? `<small>Only if ${escHtml(sc.only_if)}</small>` : ''}</div>
-                <ol class="nx-card-steps">${stepsHtml(sc.steps)}</ol>` : `<div class="nx-card-about">${escHtml(c.about)}</div>`}
+                <ol class="nx-card-steps">${stepsHtml(sc.steps)}</ol>
+                ${(sc.cautions || []).map(w => `<div class="nx-card-warn">${escHtml(w)}</div>`).join('')}` : `<div class="nx-card-about">${escHtml(c.about)}</div>`}
         ${(c.lines || []).length ? `<dl class="nx-card-lines">${c.lines.map(l => `<dt>${escHtml(l.name)}</dt><dd>${escHtml(showValue(l.value))}</dd>`).join('')}</dl>` : ''}
         ${(c.typed || []).map(f => `<label class="nx-card-f"><span>${escHtml(f.label)}${f.required ? '' : ' (leave empty to keep)'}</span>
             <input class="nx-card-in" type="${f.secret ? 'password' : 'text'}" data-field="${escHtml(f.name)}" autocomplete="new-password" maxlength="128"/></label>`).join('')}

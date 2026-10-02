@@ -327,6 +327,37 @@ def _say_steps(steps, names, depth=0):
     return lines
 
 
+# Modes that stop the security system from telling anyone what it sees.
+SILENCING_MODES = {"idle": "all alerts off", "email_off": "alert emails off", "dnd": "alerts silenced"}
+
+
+def cautions(program):
+    """What a person should notice before agreeing to this shortcut."""
+    out = []
+    steps = list(_walk(program.get("steps") or []))
+    for step in steps:
+        args = step.get("args") or {}
+        if step.get("do") == "set_security_mode" and args.get("on") is True \
+                and args.get("mode") in SILENCING_MODES:
+            line = f"Turns on {args['mode']} mode: {SILENCING_MODES[args['mode']]} while it is on."
+            if line not in out:
+                out.append(line)
+    trigger = program.get("trigger") or {}
+    if trigger.get("type") == "every" and trigger.get("minutes", 60) < 5:
+        out.append(f"Runs every {trigger['minutes']} min, day and night.")
+    if any(s.get("notify") and s.get("email") for s in steps) and trigger.get("type") in ("every", "when"):
+        out.append("Sends email each time it runs.")
+    return out
+
+
+def _walk(steps):
+    for step in steps:
+        yield step
+        for key in ("then", "else", "steps"):
+            if isinstance(step.get(key), list):
+                yield from _walk(step[key])
+
+
 def describe(program, names=None):
     """The shortcut in plain lines, for the card a person confirms and for the page."""
     out = {"when": _say_trigger(program.get("trigger") or {"type": "manual"}),
