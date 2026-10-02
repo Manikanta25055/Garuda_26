@@ -60,6 +60,13 @@ PLANNER_RESULT_CHARS = 12000
 PLANNER_EXTRA = None            # request fields for the planner model (see llm.NO_THINKING)
 # The routing model's word for "this needs the planner", and how sure it must be.
 PLANNER_INTENTS = ("build", "automation_rule")
+# Said to the quick model when there is a planner to hand over to. Without it
+# the quick model answered "I have no tool for that" to a request the planner
+# could have done (renaming a device), or made up a tool of its own.
+HANDOVER_RULE = ("\n\nIf a request needs something you have no tool for (making or changing a shortcut "
+                 "or routine, steps that depend on each other, a chart, table or panel to look at, "
+                 "adding, renaming or removing devices or people, settings, backups, logs, recordings), "
+                 "do not refuse and do not explain: call hand_to_planner.")
 PLANNER_RULES = """
 
 You are now working as the planner: this request needs something built or several steps. You have every capability of the site as a tool.
@@ -334,6 +341,8 @@ class HomeAgent:
         system += guards.wrap(brief) if self._turn.injected else brief
         if planner:
             system += self._planner_rules()
+        elif self._planner_ready():
+            system += HANDOVER_RULE
         if voice:
             system += persona.VOICE_STYLE
         chat = self.planner if planner else self.chat
@@ -378,9 +387,11 @@ class HomeAgent:
                         "_turn": _for_memory(messages[first:])
                         + [{"role": "assistant", "content": reply}]}
             if not planner and any(c.get("function", {}).get("name") == "hand_to_planner"
+                                   or c.get("function", {}).get("name") not in offered
                                    for c in calls):
-                # The quick model's judgement that this is beyond its tools. The
-                # planner starts the turn again from the person's own words.
+                # The quick model's judgement that this is beyond its tools (or
+                # its reaching for a tool it does not have, which says the same).
+                # The planner starts the turn again from the person's own words.
                 if actions or not self._planner_ready():
                     calls = [c for c in calls
                              if c.get("function", {}).get("name") != "hand_to_planner"]

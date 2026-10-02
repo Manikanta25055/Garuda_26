@@ -126,3 +126,18 @@ def test_the_planner_cannot_run_a_tool_it_was_not_offered(house):
     assert result["steps"] == [{"tool": "create_automation", "ok": False, "waiting": False}]
     assert result["proposal"] is None and len(ctx.pending.all()) == 0
     assert "create_shortcut" in json.dumps(planner.requests[1]["messages"][-1])
+
+
+def test_reaching_for_a_tool_it_does_not_have_is_a_handover_too(house):
+    ctx, home = house
+    quick = ScriptedChat([completion(tool_calls=[call("set_device_name", {"device": "lamp", "name": "Reading lamp"})])])
+    planner = ScriptedChat([completion("A card is waiting.")])
+    a = agent(ctx, home, quick, planner=planner)
+    result = a.handle("rename the lamp to reading lamp", user="mani", role="admin")
+    assert result["planner"] and result["reply"] == "A card is waiting."
+    assert "call hand_to_planner" in quick.requests[0]["messages"][0]["content"]
+    # Without a planner the made-up tool is simply an unknown tool, as before.
+    alone = ScriptedChat([completion(tool_calls=[call("set_device_name", {})]), completion("I can't do that.")])
+    b = agent(ctx, home, alone)
+    assert not b.handle("rename the lamp", user="mani", role="admin")["planner"]
+    assert "call hand_to_planner" not in alone.requests[0]["messages"][0]["content"]
