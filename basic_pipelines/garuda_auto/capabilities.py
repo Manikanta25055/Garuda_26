@@ -229,6 +229,25 @@ CAPABILITIES += (
     _site("list_users", "People who can sign in, with their roles.", "GET /api/users",
           role="admin", security=True),
 )
+# Not a button on the site: these are the agent's own.
+INTERNAL = frozenset({"hand_to_planner", "show_artifact"})
+
+CAPABILITIES += (
+    Capability("hand_to_planner",
+               "Pass the request to the planner, a slower and more capable model with every "
+               "capability of the site. Use it for anything you have no tool for: building a "
+               "shortcut or automation, several steps that depend on each other, managing "
+               "devices, people or settings, or showing a chart, table or small tool.",
+               {"why": {"type": "string", "description": "a few words on what is needed"}}),
+    Capability("show_artifact",
+               "Show the person a page you write: a chart, table, dashboard or small tool. "
+               "Give one complete, self-contained HTML document.",
+               {"title": _S, "html": {"type": "string",
+                                      "description": "a complete HTML document; inline CSS and "
+                                                     "JavaScript only, no external URLs"}},
+               ("title", "html"), tier="change", lane="planner", security=True),
+)
+
 _PROGRAM = {"type": "object", "description":
             'the shortcut: {"name", "description", "trigger", "conditions"?, "steps", '
             '"cooldown_s"?}. See shortcut_vocabulary for the grammar\'s facts and steps.'}
@@ -332,9 +351,11 @@ BY_NAME = {c.name: c for c in CAPABILITIES}
 
 
 def tools(lane="fast", security_only=False):
-    """What one lane is offered. The planner also gets everything the fast lane has."""
+    """What one lane is offered. The planner also gets everything the fast lane
+    has, except the tool for reaching the planner."""
     return [c.tool() for c in CAPABILITIES
-            if (c.lane == lane or lane == "planner") and (c.security or not security_only)]
+            if (c.lane == lane or lane == "planner") and (c.security or not security_only)
+            and not (lane == "planner" and c.name == "hand_to_planner")]
 
 
 def names(*, security=None, changing=None):
@@ -399,8 +420,12 @@ PLUMBING = frozenset({
     "GET /api/health", "GET /api/ready", "GET /api/meta", "GET /api/heartbeat",
     "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
-    "POST /api/chat", "POST /api/chat/stream",
-    "POST /api/narada/actions/{action_id}/confirm", "POST /api/narada/actions/{action_id}/cancel", "GET /api/narada/info",
+    "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/progress",
+    "POST /api/narada/actions/{action_id}/confirm", "POST /api/narada/actions/{action_id}/cancel",
+    # Artifacts are made by show_artifact; these show, keep and serve them.
+    "GET /api/narada/artifacts", "GET /api/narada/artifacts/{artifact_id}/view",
+    "POST /api/narada/artifacts/{artifact_id}/call", "POST /api/narada/artifacts/{artifact_id}/pin",
+    "DELETE /api/narada/artifacts/{artifact_id}", "GET /api/narada/info",
     "POST /api/narada/voice/token",
 })
 

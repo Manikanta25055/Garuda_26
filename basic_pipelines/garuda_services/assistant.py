@@ -67,7 +67,7 @@ def _voice_turn_logged(user, heard, said):
     core.append_voice_response(said, user_name=user)
 
 
-def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
+def _assistant_reply(msg, user="", role="user", scope="home", voice=False, progress=None):
     """Narada's one brain for chat and voice.
 
     Phrases the owner taught on the Commands page return their fixed reply
@@ -78,7 +78,8 @@ def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
     for phrase, resp in core.STATE.config.custom_voice_commands.items():
         if phrase in lower:
             return {"reply": resp, "lane": "custom", "actions": []}
-    return core.AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice)
+    return core.AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice,
+                             progress=progress)
 
 
 def _ai_configure(fields, actor):
@@ -86,6 +87,7 @@ def _ai_configure(fields, actor):
     persist = {}
     if fields.get("nim_api_key"):
         core.NIM_CHAT.configure(api_key=fields["nim_api_key"])
+        core.NIM_PLANNER.configure(api_key=fields["nim_api_key"])
         persist["NIM_API_KEY"] = core.NIM_CHAT.api_key
     if fields.get("nim_model") is not None or fields.get("nim_fallback_models") is not None:
         primary = fields.get("nim_model") or os.environ.get("NIM_MODEL", "")

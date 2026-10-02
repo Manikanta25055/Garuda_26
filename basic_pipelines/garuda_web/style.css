@@ -4275,7 +4275,7 @@ body:has(#page-narada.active) { position: fixed; inset: 0; width: 100%; }
 .nx-dock.has-peek:not(.open) .nx-peek { display: block; }
 
 .nx-bar { height: 56px; display: flex; align-items: center; gap: 8px; padding: 0 8px; }
-.nx-dock.open .nx-bar { border-top: 1px solid rgba(255,255,255,0.1); }
+/* No rule between the conversation and the bar: the log fades out above it. */
 .nx-input {
   flex: 1; min-width: 0; height: 100%;
   background: transparent; border: 0; outline: 0;
@@ -4848,4 +4848,148 @@ body { overscroll-behavior: auto; }
 @media (min-width: 769px) and (max-width: 1023px) {
   #main.dash-active { overflow-y: auto; display: block; }
   #page-dashboard, #page-dashboard.active { overflow: visible; height: auto; flex: none; }
+}
+
+/* ── Scroll fades ────────────────────────────────────────────
+   Wherever content scrolls out of view, it fades out instead of being cut
+   by a hard edge. app.js marks each scrolling box with the sides that have
+   more to show (data-ft/fb for top and bottom, data-fl/fr for left and
+   right), so a side with nothing hidden stays crisp. The mask is applied
+   only while a side is fading: a box that is not scrolled is not touched. */
+@property --ft { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fb { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fl { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --fr { syntax: '<length>'; inherits: false; initial-value: 0px; }
+.fade-y, .fade-x { transition: --ft 0.22s ease, --fb 0.22s ease, --fl 0.22s ease, --fr 0.22s ease; }
+.fade-y[data-ft] { --ft: var(--fade-size, 28px); }
+.fade-y[data-fb] { --fb: var(--fade-size, 28px); }
+.fade-x[data-fl] { --fl: var(--fade-size, 24px); }
+.fade-x[data-fr] { --fr: var(--fade-size, 24px); }
+.fade-y.fade-on {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 var(--ft), #000 calc(100% - var(--fb)), transparent 100%);
+}
+.fade-x.fade-on {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%);
+          mask-image: linear-gradient(to right, transparent 0, #000 var(--fl), #000 calc(100% - var(--fr)), transparent 100%);
+}
+.console.fade-y, .det-feed.fade-y, .det-timeline.fade-y { --fade-size: 16px; }
+#main.fade-y, .admin-page.fade-y, .modal.fade-y { --fade-size: 36px; }
+
+/* ── Narada at work ──────────────────────────────────────────
+   The busy bar under the status pill, the planner's steps in the
+   conversation, the cards a person confirms and the pages Narada writes. */
+.nx-progress {
+  position: absolute; left: 22px; right: 22px; top: -3px; height: 2px; border-radius: 2px;
+  overflow: hidden; opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+  background: color-mix(in srgb, var(--t1) 14%, transparent);
+}
+.nx-progress i {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 34%; border-radius: 2px;
+  background: var(--t1); animation: nx-progress 1.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.nx-dock[data-state="working"] .nx-progress, .nx-dock[data-state="thinking"] .nx-progress { opacity: 1; }
+.nx-dock[data-state="working"] .nx-status { color: var(--t1); }
+@keyframes nx-progress { from { transform: translateX(-110%); } to { transform: translateX(310%); } }
+
+.nx-msg.nx-work, .nx-msg.nx-card, .nx-msg.nx-artifact {
+  border-radius: 14px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.86); font-size: 13.5px; line-height: 1.45;
+}
+.nx-msg.nx-work { padding: 4px 12px 8px; }
+.nx-work-h {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 0; border: 0; background: none;
+  color: inherit; font: inherit; cursor: pointer; text-align: left;
+}
+.nx-work-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #fff; flex-shrink: 0;
+  animation: nx-dot 1.1s ease-in-out infinite;
+}
+.nx-work.done .nx-work-dot { animation: none; opacity: 0.5; }
+.nx-work-t { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.6); }
+.nx-work-m { margin-left: auto; font: 500 11.5px/1 var(--mono, ui-monospace, monospace); color: rgba(255,255,255,0.45); }
+.nx-work-l { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; }
+.nx-work.shut .nx-work-l { display: none; }
+.nx-work-l li { display: flex; align-items: center; gap: 9px; color: rgba(255,255,255,0.72); animation: nx-cap-in 0.3s ease both; }
+.nx-work-l li::before {
+  content: ''; width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid rgba(255,255,255,0.55);
+}
+.nx-work-l li.run { color: #fff; }
+.nx-work-l li.run::before { border-color: #fff transparent #fff transparent; animation: nx-spin 0.8s linear infinite; }
+.nx-work-l li.ok::before { background: #fff; border-color: #fff; }
+.nx-work-l li.wait::before { background: none; border-style: dashed; }
+.nx-work-l li.wait::after { content: 'waits for you'; margin-left: auto; font-size: 11.5px; color: rgba(255,255,255,0.5); }
+.nx-work-l li.bad { color: #ff8a80; }
+.nx-work-l li.bad::before { border-color: #ff8a80; }
+
+.nx-msg.nx-card { padding: 12px 14px; display: grid; gap: 8px; }
+.nx-card-k { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+.nx-card-t { font-size: 15px; font-weight: 600; color: #fff; overflow-wrap: anywhere; }
+.nx-card-about, .nx-card-when small { color: rgba(255,255,255,0.6); font-size: 12.5px; }
+.nx-card-when { font-weight: 600; color: #fff; }
+.nx-card-when small { display: block; font-weight: 400; margin-top: 2px; }
+.nx-card-steps { margin: 0; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 4px; }
+.nx-card-steps li {
+  counter-increment: step; padding-left: calc(24px + var(--d, 0) * 16px); position: relative; overflow-wrap: anywhere;
+}
+.nx-card-steps li::before {
+  content: counter(step); position: absolute; left: calc(var(--d, 0) * 16px); top: 1px;
+  width: 17px; height: 17px; border-radius: 50%; background: rgba(255,255,255,0.14);
+  font: 600 10px/17px var(--font); text-align: center; color: rgba(255,255,255,0.8);
+}
+.nx-card-steps li.branch { color: rgba(255,255,255,0.62); font-style: italic; }
+.nx-card-lines { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; font-size: 13px; }
+.nx-card-lines dt { color: rgba(255,255,255,0.55); }
+.nx-card-lines dd { margin: 0; color: #fff; overflow-wrap: anywhere; }
+.nx-card-f { display: grid; gap: 4px; font-size: 12px; color: rgba(255,255,255,0.6); }
+.nx-card-in {
+  padding: 9px 11px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.06); color: #fff; font: inherit; font-size: 16px;
+}
+.nx-card-in:focus { outline: none; border-color: #fff; box-shadow: inset 0 0 0 1px #fff; }
+.nx-card-b { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.nx-card-b button {
+  height: 34px; padding: 0 16px; border-radius: 17px; border: 0; cursor: pointer;
+  font: 600 13px/1 var(--font); transition: transform 0.18s cubic-bezier(0.32, 1.42, 0.52, 1), opacity 0.2s;
+}
+.nx-card-b button:active { transform: scale(0.95); }
+.nx-card-b button[data-card="confirm"] { background: #fff; color: #000; }
+.nx-card-b button[data-card="cancel"] { background: rgba(255,255,255,0.12); color: #fff; }
+.nx-card-b button:disabled { opacity: 0.4; cursor: default; }
+.nx-card-msg { font-size: 12.5px; color: rgba(255,255,255,0.7); }
+.nx-card.closed { opacity: 0.72; }
+.nx-card.closed.ok .nx-card-msg { color: #fff; font-weight: 600; }
+.nx-card:not(.closed) .nx-card-msg:not(:empty) { color: #ff8a80; }
+
+.nx-msg.nx-artifact { padding: 0; overflow: hidden; }
+.nx-art-h { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.nx-art-h b { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-art-acts { display: inline-flex; gap: 12px; flex-shrink: 0; }
+.nx-art-acts button {
+  background: none; border: 0; padding: 0; font: 600 12px/1 var(--font); color: rgba(255,255,255,0.65);
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.nx-art-acts button:hover { color: #fff; }
+/* The page inside is drawn on paper of its own, whichever theme the site is in. */
+.nx-art-f {
+  display: block; width: 100%; height: 240px; border: 0; background: #fff; color-scheme: light dark;
+  transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-theme="dark"] .nx-art-f { background: #111; }
+.nx-artifact.full {
+  position: fixed; inset: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) 12px;
+  z-index: 2000; max-width: none; display: flex; flex-direction: column; background: #000;
+  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.55);
+}
+.nx-artifact.full .nx-art-f { flex: 1; height: auto !important; }
+
+/* Shortcuts on the Automations page. */
+.ha-steps { margin: 4px 0 2px; font-size: 13px; color: var(--t2); }
+.ha-steps summary { cursor: pointer; font-weight: 600; color: var(--t2); }
+.ha-steps ol { margin: 6px 0 2px; padding: 0; list-style: none; counter-reset: step; display: grid; gap: 3px; }
+.ha-steps li { counter-increment: step; padding-left: calc(22px + var(--d, 0) * 16px); position: relative; overflow-wrap: anywhere; }
+.ha-steps li::before {
+  content: counter(step) '.'; position: absolute; left: calc(var(--d, 0) * 16px);
+  color: var(--t3); font-variant-numeric: tabular-nums;
 }

@@ -54,12 +54,15 @@ def build_narada_router(core):
                 "memory": result.get("memory", []), "offer": result.get("offer"),
                 "observation": result.get("observation"),
                 "confirm": result.get("confirm", []),
+                "artifacts": result.get("artifacts", []), "steps": result.get("steps", []),
+                "planner": bool(result.get("planner")),
                 "route": result.get("route"), "model": result.get("model")}
 
 
     @router.post("/api/chat/stream")
     async def chat_stream(data: ChatRequest, request: Request, session=Depends(core.require_session)):
-        """SSE chat: the NIM agent's reply, replayed word by word."""
+        """SSE chat: what Narada is doing while it works (which model took the
+        request, each step as it starts and ends), then the reply, word by word."""
         msg = data.message.strip()
         if not msg:
             raise HTTPException(400, "Empty message")
@@ -73,11 +76,15 @@ def build_narada_router(core):
             # The agent answers in one piece after its tool calls, so the reply is
             # replayed word by word to keep the chat's typing feel.
             try:
-                result = core._assistant_reply(msg, user, role, scope)
+                result = core._assistant_reply(
+                    msg, user, role, scope,
+                    progress=lambda event: loop.call_soon_threadsafe(
+                        queue.put_nowait, ("progress", event)))
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
             meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer",
-                                               "observation", "confirm", "model")}
+                                               "observation", "confirm", "artifacts", "steps",
+                                               "planner", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
             for word in re.findall(r"\S+\s*", result["reply"]):
                 loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
@@ -87,11 +94,22 @@ def build_narada_router(core):
 
         async def generate():
             yield f"data: {json.dumps({'type': 'start'})}\n\n"
+            waited = 0
             while True:
                 try:
-                    kind, payload_val = await asyncio.wait_for(queue.get(), timeout=90)
+                    kind, payload_val = await asyncio.wait_for(queue.get(), timeout=15)
                 except asyncio.TimeoutError:
-                    break
+                    # The planner can think for a minute or two between steps. A
+                    # comment line keeps the tunnel from closing a quiet response.
+                    waited += 15
+                    if waited >= 900:
+                        break
+                    yield ": waiting\n\n"
+                    continue
+                waited = 0
+                if kind == "progress":
+                    yield f"data: {json.dumps({'type': 'progress', 'event': payload_val})}\n\n"
+                    continue
                 if kind == "done":
                     yield f"data: {json.dumps({'type': 'done'})}\n\n"
                     break
@@ -129,6 +147,12 @@ def build_narada_router(core):
         return {"nim": {k: nim.get(k) for k in ("configured", "models", "last_model",
                                                 "last_latency_s", "calls", "tokens_used")},
                 "voice": voice}
+
+    @router.get("/api/narada/progress")
+    async def narada_progress(session=Depends(core.require_session)):
+        """What Narada is doing for this person right now, for a spoken turn:
+        the browser cannot be sent steps through the voice service."""
+        return {"progress": core.AGENT.live_for(session["username"])}
 
     # ── What Narada knows ─────────────────────────────────────────────────────
     # One memory for the household: anyone signed in may read and correct it.

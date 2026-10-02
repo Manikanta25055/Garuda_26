@@ -58,7 +58,8 @@ CLOCK_FIELDS = ("time", "weekday", "hour", "minute")
 _HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 # Not steps: these build or remove shortcuts and memories, or call a model.
 NOT_STEPS = frozenset({"create_shortcut", "update_shortcut", "delete_shortcut", "check_shortcut",
-                       "run_shortcut", "remember_fact", "forget_fact", "create_automation"})
+                       "run_shortcut", "remember_fact", "forget_fact", "create_automation",
+                       "hand_to_planner", "show_artifact"})
 STEP_KINDS = ("do", "wait", "if", "repeat", "notify", "run", "stop")
 
 

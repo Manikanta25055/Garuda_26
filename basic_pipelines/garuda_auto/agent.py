@@ -49,6 +49,40 @@ HEDGE_AFTER_S = 1.5
 VOICE_MAX_TOKENS = 700
 TEXT_MAX_TOKENS = 1500
 MAX_INPUT_CHARS = 2000
+# The planner: a slower, more capable model that is offered every capability
+# and builds things (shortcuts, artifacts, several dependent steps). People
+# wait for it knowingly, with its steps shown as it goes, so its limits are
+# those of a job, not of a sentence.
+PLANNER_ROUNDS = 14
+PLANNER_TIMEOUT_S = 120
+PLANNER_MAX_TOKENS = 8000
+PLANNER_RESULT_CHARS = 12000
+PLANNER_EXTRA = None            # request fields for the planner model (see llm.NO_THINKING)
+# The routing model's word for "this needs the planner", and how sure it must be.
+PLANNER_INTENTS = ("build", "automation_rule")
+PLANNER_RULES = """
+
+You are now working as the planner: this request needs something built or several steps. You have every capability of the site as a tool.
+- Look before you act: ids of devices, scenes, schedules, shortcuts and people come from the state above or from a list tool. Never invent an id.
+- Do the whole job in this turn, then answer in a few plain sentences: what you did, and what is waiting for the person.
+- A tool that answers "NOT done ... card" has put a card on the person's screen. Say that it waits for their tap; never say it is done.
+- If a tool returns an error, read it, fix your arguments and try again; give up after three tries and say what stopped you.
+
+Shortcuts. Nothing is prebuilt: you compose a shortcut from capabilities when one is asked for (an automation, a routine, "when X do Y", "every evening", a button that does several things). Save it with create_shortcut; it is checked, and the error tells you what to fix.
+  program = {"name", "description", "trigger", "conditions"?, "steps", "cooldown_s"?}
+  trigger = {"type":"manual"} | {"type":"time","at":"HH:MM","days":[0-6, 0 is Monday]} | {"type":"every","minutes":N} | {"type":"when","condition":C,"for_minutes":N}   (when fires at the moment C becomes true)
+  C = {"field":F,"op":"==|!=|<|<=|>|>=","value":V} | {"all":[C..]} | {"any":[C..]} | {"not":C} | {"between":["HH:MM","HH:MM"]}
+  step = {"do":"<capability name>","args":{..},"optional"?:true} | {"wait":seconds} | {"if":C,"then":[step..],"else":[step..]} | {"repeat":N,"steps":[..]} | {"notify":"text with {field} placeholders","email"?:true} | {"run":"<shortcut id>"} | {"stop":true}
+  A step's capability is any of your tools that changes or reads something, except ones that need a card.
+  Fields a condition can test, with their values now: %(facts)s
+
+Artifacts. When a chart, table, timeline, dashboard or small interactive tool would answer better than sentences, call show_artifact with one complete HTML document written for this request.
+  - First get the real data with tools; put it in the page as JSON. Never invent numbers.
+  - Self-contained: inline <style> and <script> only. No external URLs, fonts, images or libraries; draw charts with SVG or canvas yourself.
+  - It is shown in the chat, 320 to 680 px wide. Use a transparent background, `color-scheme: light dark`, system-ui font, CSS variables with light-dark() for colours, and no fixed widths.
+  - Inside the page, `await garuda.call("<capability>", {args})` runs a capability for live data or a button (not ones that need a card). `garuda.resize()` refits the frame after the content changes.
+  - Then say in one or two sentences what the artifact shows.
+"""
 # What may be done with NIM unreachable, and only on the routing model's word:
 # the literal matcher reads "don't turn off the fan" as a command.
 OFFLINE_INTENTS = ("device_control", "all_off", "scene")
@@ -69,10 +103,14 @@ _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
 
 class HomeAgent:
     def __init__(self, ctx, home, chat, decision, *, modes_fn=None, set_mode_fn=None,
-                 security_fn=None, clock=time.time, brain=None):
+                 security_fn=None, clock=time.time, brain=None, planner=None, artifacts=None,
+                 facts_fn=None):
         self.ctx = ctx
         self.home = home
         self.chat = chat
+        self.planner = planner          # a NimChat with the planner's models, or None
+        self.artifacts = artifacts      # an ArtifactStore, or None
+        self.facts_fn = facts_fn        # () -> the facts a shortcut's condition may test
         self.decision = decision
         self.modes_fn = modes_fn or (lambda: {})
         self.set_mode_fn = set_mode_fn
@@ -89,18 +127,27 @@ class HomeAgent:
         # What the person said in the turn a tool is running for: a memory
         # write is checked against it (see narada_brain.gate).
         self._turn = threading.local()
-        self.stats = {"agent": 0, "unavailable": 0}
+        self.stats = {"agent": 0, "unavailable": 0, "planner": 0}
+        # What is being done for each person right now: {user: {...}} (live_for).
+        self._live = {}
 
     # ── entry point ───────────────────────────────────────────────────────────
 
-    def handle(self, text, *, user="", role="user", scope="home", voice=False):
+    def handle(self, text, *, user="", role="user", scope="home", voice=False, progress=None):
+        """`progress(event)` is told what is happening while the turn runs: which
+        lane and model took it, each step as it starts and ends."""
         text = (text or "").strip()[:MAX_INPUT_CHARS]
         if not text:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
         route_view = route = None
         self._turn.actions = []
         self._turn.confirms = []
+        self._turn.artifacts = []
+        self._turn.steps = []
+        self._turn.progress = progress
         self._turn.voice = voice
+        self._turn.user = user
+        self._live.pop(user, None)
         self._turn.key = f"security:{user}" if scope == "security" else user
         if scope != "security":
             devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
@@ -114,12 +161,15 @@ class HomeAgent:
             result = self._offline(text, route, user, role, "the NVIDIA NIM key is not configured")
         else:
             try:
-                result = self._agent(text, user, role, scope=scope, voice=voice)
+                result = self._agent(text, user, role, scope=scope, voice=voice,
+                                     planner=self._wants_planner(route))
             except NimUnavailable as exc:
                 result = self._offline(text, route, user, role, str(exc))
         if route_view is not None:
             result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
+        if result.get("planner"):
+            self.stats["planner"] += 1
         if result["lane"] == "agent" and scope != "security":
             # Routines the house has noticed become things Narada knows, and one
             # at a time is offered here. To an admin only (a schedule is theirs to
@@ -135,6 +185,7 @@ class HomeAgent:
             noticed = self.brain.notice(self._snapshot_for_noticing, scope=scope)
             if noticed:
                 result["observation"] = noticed
+        self._live.pop(user, None)
         turn = result.pop("_turn", None)
         shown = (result.get("offer") or result.get("observation") or {}).get("text")
         if shown and turn:
@@ -194,9 +245,60 @@ class HomeAgent:
 
     # ── agent lane ────────────────────────────────────────────────────────────
 
-    def _tools(self):
+    def _planner_ready(self):
+        planner = getattr(self, "planner", None)
+        return planner is not None and planner.configured
+
+    def _wants_planner(self, route):
+        """The routing model's call: is this a job for the planner?"""
+        if not route or not self._planner_ready():
+            return False
+        intent = route.get("intent") or {}
+        return (intent.get("backend") == OFFLINE_BACKEND and intent.get("value") in PLANNER_INTENTS
+                and intent.get("confidence", 0) >= self.decision.threshold)
+
+    def _tools(self, planner=False):
         # What Narada can do is one table: capabilities.py.
-        return capabilities.tools()
+        if planner:
+            return capabilities.tools("planner")
+        tools = capabilities.tools()
+        if self is None or not self._planner_ready():
+            # Nothing to hand over to.
+            tools = [t for t in tools if t["function"]["name"] != "hand_to_planner"]
+        return tools
+
+    def live_for(self, user):
+        """The turn in progress for this person, or None: {lane, model, step, done}."""
+        live = self._live.get(user)
+        if live is None or self._clock() - live["at"] > PLANNER_TIMEOUT_S * 2:
+            return None
+        return {k: v for k, v in live.items() if k != "at"}
+
+    def _emit(self, **event):
+        user = getattr(self._turn, "user", None)
+        if user is not None:
+            live = self._live.setdefault(user, {"lane": "agent", "model": "", "step": "",
+                                                "done": 0})
+            live["at"] = self._clock()
+            if event.get("type") == "lane":
+                live.update(lane=event["lane"], model=event["model"])
+            elif event.get("status") == "start":
+                live["step"] = event["tool"]
+            elif event.get("status") == "done":
+                live["done"] += 1
+        progress = getattr(self._turn, "progress", None)
+        if progress is not None:
+            try:
+                progress(event)
+            except Exception:
+                log.exception("progress")
+
+    def _planner_rules(self):
+        try:
+            facts = dict(self.facts_fn()) if self.facts_fn else {}
+        except Exception:
+            facts = {}
+        return PLANNER_RULES % {"facts": json.dumps(facts, default=str)[:2500]}
 
     def _state_brief(self, scope):
         """The current state, handed over with the question.
@@ -217,7 +319,7 @@ class HomeAgent:
         return ("\nCurrent state, read just now (act on it directly; only call a state tool "
                 "for something not listed here):\n" + json.dumps(state, default=str)[:3000])
 
-    def _agent(self, text, user, role, scope="home", voice=False):
+    def _agent(self, text, user, role, scope="home", voice=False, planner=False):
         # Separate conversations, so a Drishti one never leaks into Garuda's.
         history_key = f"security:{user}" if scope == "security" else user
         system = self.brain.system_prompt(user, role, scope=scope, key=history_key, query=text)
@@ -226,9 +328,12 @@ class HomeAgent:
         self._turn.injection_text = self.brain.scan(brief)
         self._turn.injected = bool(self._turn.injection_text)
         system += guards.wrap(brief) if self._turn.injected else brief
+        if planner:
+            system += self._planner_rules()
         if voice:
             system += persona.VOICE_STYLE
-        tools = self._tools()
+        chat = self.planner if planner else self.chat
+        tools = self._tools(planner)
         if scope == "security":
             tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]
         messages = [{"role": "system", "content": system}]
@@ -236,12 +341,26 @@ class HomeAgent:
         first = len(messages)
         messages.append({"role": "user", "content": text})
         actions, proposal, memory = self._turn.actions, None, []
-        for _ in range(MAX_ROUNDS):
-            message = self.chat.chat(messages, tools=tools,
-                                     max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
-                                     temperature=0.3,
-                                     timeout=VOICE_TIMEOUT_S if voice else TEXT_TIMEOUT_S,
-                                     extra=NO_THINKING, hedge_after=HEDGE_AFTER_S)
+        if planner:
+            self._emit(type="lane", lane="planner", model=(chat.models or [""])[0])
+
+        def finish(reply):
+            return {"reply": reply, "lane": "agent", "actions": actions,
+                    "proposal": proposal, "memory": memory, "model": chat.last_model,
+                    "confirm": self._turn.confirms, "artifacts": self._turn.artifacts,
+                    "steps": self._turn.steps, "planner": planner,
+                    "injection": self._turn.injected}
+
+        for _ in range(PLANNER_ROUNDS if planner else MAX_ROUNDS):
+            if planner:
+                message = chat.chat(messages, tools=tools, max_tokens=PLANNER_MAX_TOKENS,
+                                    temperature=0.2, timeout=PLANNER_TIMEOUT_S, extra=PLANNER_EXTRA)
+            else:
+                message = chat.chat(messages, tools=tools,
+                                    max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
+                                    temperature=0.3,
+                                    timeout=VOICE_TIMEOUT_S if voice else TEXT_TIMEOUT_S,
+                                    extra=NO_THINKING, hedge_after=HEDGE_AFTER_S)
             calls = message.get("tool_calls") or []
             if not calls:
                 reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.",
@@ -250,11 +369,21 @@ class HomeAgent:
                     # Said every time: a turn that read an injected instruction and
                     # told nobody is how a poisoned name stays in the house unnoticed.
                     reply += "\n\n" + guards.injection_note(self._turn.injection_text)
-                return {"reply": reply, "lane": "agent", "actions": actions,
-                        "proposal": proposal, "memory": memory, "model": self.chat.last_model,
-                        "confirm": self._turn.confirms,
-                        "injection": self._turn.injected,
-                        "_turn": messages[first:] + [{"role": "assistant", "content": reply}]}
+                return {**finish(reply),
+                        "_turn": _for_memory(messages[first:])
+                        + [{"role": "assistant", "content": reply}]}
+            if not planner and any(c.get("function", {}).get("name") == "hand_to_planner"
+                                   for c in calls):
+                # The quick model's judgement that this is beyond its tools. The
+                # planner starts the turn again from the person's own words.
+                if actions or not self._planner_ready():
+                    calls = [c for c in calls
+                             if c.get("function", {}).get("name") != "hand_to_planner"]
+                    if not calls:
+                        return finish("That needs the planner, which is not available right "
+                                      "now. I have not changed anything more.")
+                else:
+                    return self._agent(text, user, role, scope=scope, voice=voice, planner=True)
             messages.append({"role": "assistant", "content": message.get("content") or "",
                              "tool_calls": calls})
             for call in calls:
@@ -264,6 +393,7 @@ class HomeAgent:
                 except ValueError:
                     args = {}
                 name = fn.get("name", "")
+                self._emit(type="step", tool=name, status="start")
                 if scope == "security" and name not in SECURITY_TOOLS:
                     out = {"error": f"{name} is not available in Garuda"}
                 elif self._turn.injected and name in CHANGING_TOOLS:
@@ -278,7 +408,11 @@ class HomeAgent:
                     actions.append(out.get("result", ""))
                 if out.get("proposal"):
                     proposal = out["proposal"]
-                content = json.dumps(out, default=str)[:4000]
+                step = {"tool": name, "ok": "error" not in out,
+                        "waiting": "waiting" in out}
+                self._turn.steps.append(step)
+                self._emit(type="step", status="done", **step)
+                content = json.dumps(out, default=str)[:PLANNER_RESULT_CHARS if planner else 4000]
                 found = self.brain.scan(content)
                 if found:
                     self._turn.injected = True
@@ -286,10 +420,12 @@ class HomeAgent:
                     content = guards.wrap(content)
                 messages.append({"role": "tool", "tool_call_id": call.get("id", ""),
                                  "content": content})
-        return {"reply": "I did what I could: " + "; ".join(actions) if actions
-                else "That took too many steps; try asking more specifically.",
-                "lane": "agent", "actions": actions, "proposal": proposal, "memory": memory,
-                "confirm": self._turn.confirms, "model": self.chat.last_model}
+        done = [x for x in actions if x]
+        waiting = len(self._turn.confirms)
+        return finish(("I did what I could: " + "; ".join(done) + "."
+                       + (f" {waiting} card(s) are waiting for your tap." if waiting else ""))
+                      if done or waiting
+                      else "That took too many steps; try asking more specifically.")
 
     # ── tools ─────────────────────────────────────────────────────────────────
 
@@ -336,6 +472,23 @@ class HomeAgent:
             out["_action"] = True
             out.setdefault("result", capability.name.replace("_", " "))
         return out
+
+    def _tool_hand_to_planner(self, args, user, role):
+        # Reached only when the planner is the one calling, or there is none.
+        return {"error": "there is no planner to hand this to; do what you can with your tools"}
+
+    def _tool_show_artifact(self, args, user, role):
+        if self.artifacts is None:
+            return {"error": "artifacts are not available here"}
+        if getattr(self._turn, "voice", False):
+            return {"error": "a spoken conversation cannot show a page; describe it in words"}
+        entry, reason = self.artifacts.add(args.get("title"), args.get("html"), by=user)
+        if entry is None:
+            return {"error": reason}
+        self._turn.artifacts.append({k: entry[k] for k in ("id", "key", "title")})
+        return {"ok": True, "artifact_id": entry["id"],
+                "result": f"Showed the artifact {entry['title']}",
+                "note": "It is on the person's screen now, below your reply."}
 
     def _propose(self, capability, args, user, role):
         """A confirm-tier capability is shown to the person as a card, not done."""
@@ -563,3 +716,26 @@ class HomeAgent:
         return {"nim": self.chat.status() if self.chat else {"configured": False},
                 "decision": self.decision.status(), "lanes": dict(self.stats),
                 "actuators": sum(1 for d in self.ctx.registry.devices if is_actuator(d["type"]))}
+
+
+def _for_memory(messages):
+    """A turn as it is remembered: without the pages the model wrote, which are
+    long, are kept elsewhere, and would crowd the next conversation's budget."""
+    out = []
+    for message in messages:
+        calls = message.get("tool_calls")
+        if calls and any(c.get("function", {}).get("name") == "show_artifact" for c in calls):
+            trimmed = []
+            for call in calls:
+                fn = call.get("function", {})
+                if fn.get("name") == "show_artifact":
+                    try:
+                        title = json.loads(fn.get("arguments") or "{}").get("title", "")
+                    except ValueError:
+                        title = ""
+                    fn = {**fn, "arguments": json.dumps({"title": title,
+                                                         "html": "(the page you wrote)"})}
+                trimmed.append({**call, "function": fn})
+            message = {**message, "tool_calls": trimmed}
+        out.append(message)
+    return out

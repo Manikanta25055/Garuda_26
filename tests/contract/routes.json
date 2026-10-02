@@ -524,6 +524,36 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/narada/artifacts",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/narada/artifacts/{artifact_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/artifacts/{artifact_id}/call",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/artifacts/{artifact_id}/pin",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/narada/artifacts/{artifact_id}/view",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/narada/info",
   "guard": "require_session"
  },
@@ -567,6 +597,12 @@
   "kind": "http",
   "method": "POST",
   "path": "/api/narada/observations/mute",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/narada/progress",
   "guard": "require_session"
  },
  {

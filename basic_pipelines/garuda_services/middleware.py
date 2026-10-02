@@ -52,6 +52,11 @@ async def product_scope(request: Request, call_next):
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
+    if response.headers.get("Content-Security-Policy", "").endswith("sandbox allow-scripts"):
+        # An artifact page (garuda_routes/artifacts.py) brings its own, stricter
+        # policy and must be framed by the chat: the site's policy is not laid over it.
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"

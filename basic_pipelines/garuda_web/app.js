@@ -2469,6 +2469,100 @@ const G = (() => {
     return d;
   }
 
+  // ── Scroll fades ──────────────────────────────────────────
+  // Every box that scrolls fades its content out at the sides that have more
+  // to show (style.css: "Scroll fades"). This keeps the marks current.
+  const FADE_Y = '#main, .nx-log, .nx-info-body, .console, .det-timeline, .det-feed, .activity-feed, '
+    + '.docs-body, .modal, .info-pane, .timeline-list, .activity-timeline-wrap, .fb-inbox-list, .fb-panel, '
+    + '.ha-activity, .more-panel, .sidebar-left, .sidebar-right, .admin-page, .page-inner, .dash-layout, .login-center';
+  const FADE_X = '.docs-tabs, .log-tabs, .t-wrap, #ios-nav, #heatmap, .fc-wrap, .docs-section pre';
+  const _fadeSeen = new WeakSet();
+  let _fadeQueued = false, _fadeResize = null;
+
+  function _fadeSync(el) {
+    const y = el.classList.contains('fade-y');
+    const pos = y ? el.scrollTop : el.scrollLeft;
+    const max = y ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth;
+    const before = pos > 1, after = max > 1 && pos < max - 1;
+    el.toggleAttribute(y ? 'data-ft' : 'data-fl', before);
+    el.toggleAttribute(y ? 'data-fb' : 'data-fr', after);
+    if (before || after) el.classList.add('fade-on');
+    else if (el.classList.contains('fade-on')) {
+      // Kept until the fade has run out, so the last edge does not snap sharp.
+      clearTimeout(el._fadeOff);
+      el._fadeOff = setTimeout(() => {
+        if (!el.hasAttribute('data-ft') && !el.hasAttribute('data-fb')
+            && !el.hasAttribute('data-fl') && !el.hasAttribute('data-fr')) el.classList.remove('fade-on');
+      }, 260);
+    }
+  }
+
+  function _fadeAttach(el, axis) {
+    if (_fadeSeen.has(el)) return _fadeSync(el);
+    _fadeSeen.add(el);
+    el.classList.add(axis);
+    el.addEventListener('scroll', () => _fadeSync(el), { passive: true });
+    if (_fadeResize) _fadeResize.observe(el);
+    _fadeSync(el);
+  }
+
+  function _fadeScan() {
+    _fadeQueued = false;
+    document.querySelectorAll(FADE_Y).forEach(el => _fadeAttach(el, 'fade-y'));
+    document.querySelectorAll(FADE_X).forEach(el => _fadeAttach(el, 'fade-x'));
+  }
+
+  function _initFades() {
+    if (!window.CSS || !CSS.supports || !(CSS.supports('mask-image', 'none') || CSS.supports('-webkit-mask-image', 'none'))) return;
+    if (window.ResizeObserver) _fadeResize = new ResizeObserver(entries => entries.forEach(e => _fadeSync(e.target)));
+    _fadeScan();
+    // Content arrives and leaves all the time (logs, lists, a new message):
+    // look again shortly after the page changes, at most a few times a second.
+    new MutationObserver(() => {
+      if (_fadeQueued) return;
+      _fadeQueued = true;
+      setTimeout(_fadeScan, 180);
+    }).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', () => { if (!_fadeQueued) { _fadeQueued = true; setTimeout(_fadeScan, 180); } });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initFades);
+  else _initFades();
+
+  // A POST whose answer arrives in pieces (server-sent events): onEvent is
+  // given each one as it comes. Used by Narada to show its steps as it works.
+  async function apiStream(url, body, onEvent) {
+    const base = getBackend();
+    const fullUrl = base ? base.replace(/\/$/, '') + url : url;
+    const headers = { 'Content-Type': 'application/json' };
+    const tok = _token || (base ? _lsGet('garuda_token') : null);
+    if (tok) headers['X-Garuda-Token'] = tok;
+    const r = await fetch(fullUrl, { method: 'POST', headers, credentials: base ? 'omit' : 'include', body: JSON.stringify(body) });
+    if (!r.ok || !r.body) {
+      let d;
+      try { d = await r.json(); } catch (_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
+      d.status = r.status;
+      throw d;
+    }
+    const reader = r.body.getReader(), decoder = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let at;
+      while ((at = buf.indexOf('\n\n')) !== -1) {
+        const chunk = buf.slice(0, at);
+        buf = buf.slice(at + 2);
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          let event = null;
+          try { event = JSON.parse(line.slice(6)); } catch (_) {}
+          if (event) onEvent(event);
+        }
+      }
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────
   return {
     init,
@@ -2497,6 +2591,8 @@ const G = (() => {
     // Exposed for the feedback widget (separate IIFE, needs access to session + api)
     getSession: () => _session,
     _apiFn: api,
+    _apiStream: apiStream,
+    _base: () => (getBackend() || '').replace(/\/$/, ''),
   };
 })();
 window.G = G;

@@ -507,6 +507,8 @@ const H = (() => {
           <button class="ha-x" aria-label="Delete schedule" onclick="H.deleteSchedule('${esc(e.id)}')">&times;</button></div>` : ''}
       </div>`).join('') : '<div class="ha-empty">Nothing scheduled.</div>';
 
+    loadShortcuts();
+
     // Schedule form
     const devs = pick.devices.filter(d => d.actuator);
     const keepTarget = $('ha-s-target').value;
@@ -527,6 +529,49 @@ const H = (() => {
     $('ha-lefton').value = _settings.left_on_minutes ?? 120;
     ['ha-vac-start', 'ha-vac-end', 'ha-lefton'].forEach(i => { $(i).disabled = !isAdmin(); });
   }
+
+  // Shortcuts: programs Narada writes from the things it can do. This page
+  // lists, runs, pauses and removes them; making one is done by asking Narada.
+  async function loadShortcuts() {
+    const box = $('ha-shortcuts');
+    if (!box) return;
+    let data;
+    try { data = await api('GET', '/api/home/shortcuts'); } catch (e) { box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
+    const me = (G.getSession() || {}).username;
+    const running = Object.fromEntries((data.running || []).map(r => [r.shortcut, r]));
+    box.innerHTML = data.shortcuts.length ? data.shortcuts.map(sc => {
+      const mine = isAdmin() || sc.created_by === me, live = running[sc.id], last = (sc.runs || [])[0];
+      const steps = sc.rendered.steps.map(line => `<li style="--d:${(line.match(/^ */)[0].length / 2) | 0}">${esc(line.trim())}</li>`).join('');
+      return `
+      <div class="ha-row ha-shortcut ${sc.enabled === false ? 'off' : ''}">
+        <div class="ha-row-main">
+          <div><b>${esc(sc.name)}</b></div>
+          <div class="ha-sub">${esc(sc.rendered.when)}${sc.rendered.only_if ? ' · only if ' + esc(sc.rendered.only_if) : ''}</div>
+          <details class="ha-steps"><summary>${sc.rendered.steps.length} step${sc.rendered.steps.length === 1 ? '' : 's'}</summary><ol>${steps}</ol></details>
+          <div class="ha-sub">${live ? `Running now: ${esc(String(live.now || '').replace(/_/g, ' '))}`
+            : last ? `Last run ${ago(last.started)} · ${esc(last.outcome)}` : 'Has not run yet'} · by ${esc(sc.created_by)}</div>
+        </div>
+        <div class="ha-row-actions">
+          ${live ? `<button class="btn btn-ghost btn-sm" onclick="H.cancelShortcut('${esc(sc.id)}')">Stop</button>`
+                 : `<button class="btn btn-primary btn-sm" onclick="H.runShortcut('${esc(sc.id)}')">Run</button>`}
+          ${mine && sc.trigger.type !== 'manual' ? `<div class="toggle ${sc.enabled === false ? '' : 'on'}" onclick="H.toggleShortcut('${esc(sc.id)}')"></div>` : ''}
+          ${mine ? `<button class="ha-x" aria-label="Delete shortcut" onclick="H.deleteShortcut('${esc(sc.id)}')">&times;</button>` : ''}
+        </div>
+      </div>`;
+    }).join('') : '<div class="ha-empty">No shortcuts yet. Ask Narada: “make a movie night button that turns the lamp off and the TV on”.</div>';
+  }
+  async function shortcutCall(method, path, done) {
+    try {
+      await api(method, '/api/home/shortcuts/' + path);
+      if (done) G.showToast(done, 'success');
+    } catch (e) { G.showToast(errText(e), 'error'); }
+    loadShortcuts();
+    setTimeout(loadShortcuts, 1500);          // a short run has finished by then
+  }
+  const runShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/run`, 'Shortcut started');
+  const cancelShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/cancel`);
+  const toggleShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/toggle`);
+  const deleteShortcut = id => shortcutCall('DELETE', encodeURIComponent(id), 'Shortcut deleted');
 
   let _days = [0, 1, 2, 3, 4, 5, 6];
   function renderDays() {
@@ -707,6 +752,9 @@ const H = (() => {
     toggleSchedule, deleteSchedule, acceptSuggestion, dismissSuggestion,
     toggleDay, onSchedMode, addSchedule, toggleSetting, saveAway,
     loadDigest, saveTariff, loadAI, saveAI, testAI,
+    runShortcut, cancelShortcut, toggleShortcut, deleteShortcut,
+    // After a card is confirmed in the conversation, whatever page is open reloads.
+    refresh: () => onNav(_page),
   };
 })();
 window.H = H;

@@ -215,6 +215,7 @@ try:
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
     from .garuda_routes.shortcuts import build_shortcuts_router
+    from .garuda_routes.artifacts import build_artifacts_router
     from .garuda_services import presence as _svc_presence
     from .garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
@@ -288,6 +289,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_routes.shortcuts import build_shortcuts_router
+    from basic_pipelines.garuda_routes.artifacts import build_artifacts_router
     from basic_pipelines.garuda_services import presence as _svc_presence
     from basic_pipelines.garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
@@ -785,6 +787,7 @@ try:
     from .garuda_auto.agent import HomeAgent
     from .garuda_auto.site_calls import SiteCaller
     from .garuda_auto import shortcuts as _shortcuts_mod
+    from .garuda_auto.artifacts import ArtifactStore
     from .narada_brain import Brain
     from .garuda_auto.digest import Digest
     from .garuda_auto.narada_voice import NaradaVoice
@@ -798,6 +801,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.agent import HomeAgent
     from basic_pipelines.garuda_auto.site_calls import SiteCaller
     from basic_pipelines.garuda_auto import shortcuts as _shortcuts_mod
+    from basic_pipelines.garuda_auto.artifacts import ArtifactStore
     from basic_pipelines.narada_brain import Brain
     from basic_pipelines.garuda_auto.digest import Digest
     from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
@@ -807,6 +811,10 @@ except ImportError:
 # Where admin-entered AI keys are persisted. A module global so the tests can
 # point it at a temp file: the suite must never rewrite the real .env.
 HOME_ENV_PATH = str(Path(__file__).resolve().parent.parent / ".env")
+
+# The planner's models when .env names none (measured: evaluation/narada_planner/).
+PLANNER_DEFAULT_MODEL = "moonshotai/kimi-k3"
+PLANNER_DEFAULT_FALLBACKS = "z-ai/glm-5.3,nvidia/nemotron-3-super-120b-a12b"
 
 NIM_CHAT = NimChat(
     os.environ.get("NIM_API_KEY", ""),
@@ -836,8 +844,21 @@ DECISION = DecisionEngine(
 # Who Narada is and what it carries between turns: the persona, and the
 # conversation saved beside the rest of the house's data.
 BRAIN = Brain(DRISHTI_DATA_DIR, NIM_CHAT)
+# The planner: a slower, more capable model for requests that need something
+# built (a shortcut, an artifact, several dependent steps). Chosen by
+# scripts/planner_eval.py; the routing model on the Pi decides which requests
+# go to it, and the quick model can hand one over.
+NIM_PLANNER = NimChat(
+    os.environ.get("NIM_API_KEY", ""),
+    parse_models(os.environ.get("NIM_PLANNER_MODEL", "") or PLANNER_DEFAULT_MODEL,
+                 os.environ.get("NIM_PLANNER_FALLBACKS", "") or PLANNER_DEFAULT_FALLBACKS),
+    timeout=120,
+)
+# Pages Narada writes to answer with something you can see (garuda_auto/artifacts.py).
+ARTIFACTS = ArtifactStore(os.path.join(DRISHTI_DATA_DIR, "artifacts"))
 AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
-                  set_mode_fn=_home_set_mode, security_fn=_home_security_summary, brain=BRAIN)
+                  set_mode_fn=_home_set_mode, security_fn=_home_security_summary, brain=BRAIN,
+                  planner=NIM_PLANNER, artifacts=ARTIFACTS)
 # What a button can do, Narada can do the same way: by the site's own endpoint,
 # as the person who asked (garuda_auto/capabilities.py lists which).
 AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
@@ -849,6 +870,9 @@ SHORTCUTS = _shortcuts_mod.ShortcutEngine(
     _shortcuts_mod.ShortcutStore(os.path.join(DRISHTI_DATA_DIR, "shortcuts.json")),
     do_fn=AGENT._run_tool, facts_fn=_shortcut_facts, role_of=_shortcut_role_of,
     notify_fn=_shortcut_notify, on_change=lambda: push_urgent_ws())
+AGENT.facts_fn = SHORTCUTS.facts
+# What a page in the chat may not ask for, whatever its tier.
+ARTIFACT_BLOCKED = _shortcuts_mod.NOT_STEPS
 
 
 # ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.
@@ -876,6 +900,8 @@ fastapi_app.include_router(build_home_router(
 fastapi_app.include_router(build_pages_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_shortcuts_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_artifacts_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 

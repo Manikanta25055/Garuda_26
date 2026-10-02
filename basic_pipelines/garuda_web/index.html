@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=72"/>
+  <link rel="stylesheet" href="/static/style.css?v=73"/>
 </head>
 <body>
 <div id="app">
@@ -481,6 +481,7 @@
              has the page to itself. -->
         <div class="nx-dock" id="nx-dock" data-state="idle">
           <div class="nx-status" id="nx-status">Tap the core to talk · or type</div>
+          <div class="nx-progress" aria-hidden="true"><i></i></div>
           <div class="nx-sheet" id="nx-sheet">
             <div class="nx-sheet-in">
               <div class="nx-head">
@@ -574,6 +575,10 @@
           <div class="ha-section-title">Rules</div>
           <div class="ha-hint">Say or type a condition — “when the room is empty for 10 minutes, turn the lamp off”. NVIDIA NIM drafts it; it only runs after it is confirmed.</div>
           <div id="ha-rules" class="ha-list"></div>
+
+          <div class="ha-section-title">Shortcuts</div>
+          <div class="ha-hint">Ask Narada for one — “at 10 pm, if the TV is still on, switch it off and tell me”. It writes the steps from everything the house can do; they are saved only after you confirm the card.</div>
+          <div id="ha-shortcuts" class="ha-list"></div>
 
           <div class="ha-section-hdr">
             <div class="ha-section-title">Schedules &amp; timers</div>
@@ -1275,9 +1280,9 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/narada.js?v=9"></script>
+<script src="/static/narada.js?v=10"></script>
 <script src="/static/island.js?v=3"></script>
-<script src="/static/app.js?v=69"></script>
-<script src="/static/home.js?v=9"></script>
+<script src="/static/app.js?v=70"></script>
+<script src="/static/home.js?v=10"></script>
 </body>
 </html>

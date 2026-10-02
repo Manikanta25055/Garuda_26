@@ -15,6 +15,8 @@
      connecting  rings light up one after another
      listening   each direction follows a band of the microphone's spectrum
      thinking    a comet orbits the core, trailing light
+     working     two comets circle opposite ways while the planner builds
+                 something; each finished step sends a ring outward
      talking     rings bloom with Narada's own voice, low notes inside
 
    All dots are drawn in a few batched fills per frame (grouped by colour
@@ -42,6 +44,7 @@ const N = (() => {
   // The dot field, rebuilt on resize: position, direction, distance, size.
   let D = null, cx = 0, cy = 0, Rfx = 1, coreR = 1;
   let synthTalkUntil = 0;             // text replies animate "talking" too
+  let workPulse = -100;               // when the planner last finished a step (s)
 
   // ── Voice session ──────────────────────────────────────────
   let conv = null, voice = 'off';     // off | connecting | on
@@ -202,6 +205,14 @@ const N = (() => {
         e = Math.max(breath * 0.8, Math.exp(-d * 2.2) * (0.7 + 0.3 * Math.sin(t * 6 - rf * 9)));
         break;
       }
+      case 'working': {
+        const d1 = angDist(D.ang[i], t * 2.3 - Math.PI / 2) + Math.abs(rf - 0.38) * 2.4;
+        const d2 = angDist(D.ang[i], Math.PI / 2 - t * 1.7) + Math.abs(rf - 0.74) * 2.4;
+        const age = t - workPulse;
+        const ring = age < 2.4 ? Math.exp(-Math.abs(rf - age * 0.75) * 8) * Math.exp(-age * 1.1) : 0;
+        e = Math.max(breath * 0.8, Math.exp(-d1 * 2.2) * 0.9, Math.exp(-d2 * 2.4) * 0.72, ring);
+        break;
+      }
       case 'talking':
         e = clamp(breath + ringLevel[D.rbin[i]] * 0.75 * (1 - rf * 0.3) + level[a] * 0.3 * (1 - rf));
         break;
@@ -283,7 +294,7 @@ const N = (() => {
     // Core: breathes when idle, follows the loudest band otherwise.
     let peak = 0;
     for (let i = 0; i < RAYS; i++) peak = Math.max(peak, level[i]);
-    const pulse = state === 'thinking' ? 0.5 + 0.5 * Math.sin(t * 6)
+    const pulse = state === 'thinking' || state === 'working' ? 0.5 + 0.5 * Math.sin(t * 6)
       : state === 'idle' ? 0.5 + 0.5 * Math.sin(t * 1.25) : peak;
     ctx.globalAlpha = 1;
     ctx.fillStyle = state === 'error' ? danger : ink;
@@ -318,7 +329,7 @@ const N = (() => {
   function _syncChrome() {
     const hud = $('top-hud'), lbl = $('di-voice-lbl'), mic = $('nx-mic'), status = $('nx-status');
     if (hud) hud.classList.toggle('di-talk', state === 'talking');
-    if (lbl) lbl.textContent = state === 'talking' ? 'Speaking' : state === 'thinking' ? 'Thinking' : 'Listening';
+    if (lbl) lbl.textContent = state === 'talking' ? 'Speaking' : state === 'thinking' ? 'Thinking' : state === 'working' ? 'Working' : 'Listening';
     if (mic) {
       mic.classList.toggle('on', voice !== 'off');
       mic.classList.toggle('connecting', voice === 'connecting');
@@ -333,6 +344,7 @@ const N = (() => {
         connecting: 'Connecting…',
         listening: 'Listening',
         thinking: 'Thinking',
+        working: status.dataset.work || 'Working',
         talking: 'Speaking',
         error: status.dataset.err || 'Something went wrong',
       }[state] || '';
@@ -340,7 +352,7 @@ const N = (() => {
     if (window.G && G.setDI) {
       // Typed questions show the island's thinking pill; voice has its own.
       const hud = $('top-hud');
-      if (state === 'thinking' && voice === 'off') G.setDI('thinking');
+      if ((state === 'thinking' || state === 'working') && voice === 'off') G.setDI('thinking');
       else if (hud && hud.classList.contains('di-thinking')) G.setDI('');
       else G.syncDI();
     }
@@ -353,7 +365,10 @@ const N = (() => {
   function restore() {
     try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '[]') || []; } catch (_) { session = []; }
     if (!Array.isArray(session)) session = [];
-    for (const m of session) bubble(m.who, m.text);
+    for (const m of session) {
+      if (m.who === 'artifact') artifactFrames([m.art], true);
+      else bubble(m.who, m.text);
+    }
     syncDock();
   }
 
@@ -506,6 +521,7 @@ const N = (() => {
             lastUserAt = performance.now();
             setState('thinking');
             setPending(true);
+            watchVoiceTurn();
           } else if (m.message) {
             say('narada', m.message);
             pollMemory();                 // a spoken reply carries no chips of its own
@@ -552,7 +568,8 @@ const N = (() => {
     setState('thinking');
     try {
       const t0 = performance.now();
-      const res = await G._apiFn('POST', '/api/chat', { message: text });
+      const res = await ask(text);
+      workDone(res);
       lastReply = { ...res, seconds: (performance.now() - t0) / 1000 };
       say('narada', res.response || '…', true);
       // A drafted automation needs a Confirm button, so it goes into the
@@ -561,18 +578,268 @@ const N = (() => {
         const card = bubble('extra', '');
         if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
       }
+      artifactFrames(res.artifacts);
+      confirmCards(res.confirm);
       memoryChips(res.memory);
       offerChip(res.offer);
       observationChip(res.observation);
       pollMemory();                       // routines the house noticed, facts kept after a pause
       if (infoOpen) renderInfo();
     } catch (e) {
+      workDone(null);
       const msg = (e && e.detail) || 'Connection error. Please try again.';
       say('error', msg);
       voiceError(msg);
     } finally {
       busy = false;
     }
+  }
+
+  // One typed question. The answer is streamed so the steps show while Narada
+  // works; a browser or proxy that will not stream gets the plain request.
+  async function ask(text) {
+    if (!G._apiStream || !window.ReadableStream) return G._apiFn('POST', '/api/chat', { message: text });
+    let meta = null, reply = '', got = false;
+    const onEvent = ev => {
+      got = true;
+      if (ev.type === 'progress') workEvent(ev.event);
+      else if (ev.type === 'meta') meta = ev;
+      else if (ev.type === 'token') reply += ev.text;
+    };
+    try {
+      await G._apiStream('/api/chat/stream', { message: text }, onEvent);
+    } catch (e) {
+      if (e && e.status === 401 && !got) {
+        await G._apiFn('GET', '/api/session');          // renews the sign-in, or signs out
+        await G._apiStream('/api/chat/stream', { message: text }, onEvent);
+      } else if (!got && !(e && e.status)) {
+        return G._apiFn('POST', '/api/chat', { message: text });
+      } else throw e;
+    }
+    if (!meta) throw { detail: 'The connection dropped before Narada answered. Please try again.' };
+    return { ...meta, response: reply };
+  }
+
+  // ── Working: the planner's steps, as they happen ───────────
+  // A request that needs something built goes to a slower, more capable
+  // model. Its steps are listed in the conversation while it works, the dot
+  // field changes to "working", and the bar under the status shows it is busy.
+  const words = n => String(n || '').replace(/_/g, ' ');
+  const shortModel = m => String(m || '').split('/').pop();
+  let work = null;                    // {el, list, steps}
+
+  function workCard(model) {
+    if (work) return work;
+    setPending(false);
+    const el = bubble('extra', '');
+    if (!el) return null;
+    el.classList.add('nx-work');
+    el.innerHTML = `<button type="button" class="nx-work-h" data-work="toggle" aria-expanded="true">
+        <span class="nx-work-dot" aria-hidden="true"></span><span class="nx-work-t">Planning</span>
+        <span class="nx-work-m">${escHtml(shortModel(model))}</span></button>
+      <ol class="nx-work-l"></ol>`;
+    work = { el, list: el.querySelector('.nx-work-l'), steps: 0 };
+    if (!userMinimised) sheetOpen = true;
+    syncDock();
+    scrollLog();
+    return work;
+  }
+
+  function workStatus(text) {
+    const status = $('nx-status');
+    if (status) status.dataset.work = text;
+    if (state === 'working') _syncChrome(); else setState('working');
+  }
+
+  function workEvent(ev) {
+    if (!ev) return;
+    if (ev.type === 'lane' && ev.lane === 'planner') {
+      workCard(ev.model);
+      workStatus('Planning');
+      haptic('tap');
+      return;
+    }
+    if (ev.type !== 'step') return;
+    if (!work) {                      // the quick model: no card, just say what it is doing
+      const status = $('nx-status');
+      if (status && ev.status === 'start') { status.dataset.work = words(ev.tool); }
+      return;
+    }
+    if (ev.status === 'start') {
+      const li = document.createElement('li');
+      li.className = 'run';
+      li.textContent = words(ev.tool);
+      work.list.appendChild(li);
+      workStatus('Working · ' + words(ev.tool));
+    } else {
+      const li = work.list.querySelector('li.run');
+      if (li) li.className = ev.waiting ? 'wait' : ev.ok ? 'ok' : 'bad';
+      work.steps++;
+      workPulse = performance.now() / 1000;
+      haptic('talk');
+    }
+    scrollLog();
+  }
+
+  function workDone(res) {
+    const status = $('nx-status');
+    if (status) delete status.dataset.work;
+    if (!work) return;
+    const w = work;
+    work = null;
+    w.list.querySelectorAll('li.run').forEach(li => { li.className = 'bad'; });
+    w.el.classList.add('done', 'shut');
+    const n = w.steps;
+    w.el.querySelector('.nx-work-t').textContent = res ? `Planned in ${n} step${n === 1 ? '' : 's'}` : 'Stopped';
+    w.el.querySelector('.nx-work-h').setAttribute('aria-expanded', 'false');
+    if (!n) w.el.remove();
+  }
+
+  // A spoken turn's steps cannot come through the voice service, so the page
+  // asks for them while it waits for the reply.
+  let voiceWatch = 0;
+  function watchVoiceTurn() {
+    clearTimeout(voiceWatch);
+    let seen = 0;
+    const tick = async () => {
+      if (!conv || (state !== 'thinking' && state !== 'working')) return;
+      try {
+        const p = (await G._apiFn('GET', '/api/narada/progress')).progress;
+        if (p && p.lane === 'planner') {
+          workStatus(p.step ? 'Working · ' + words(p.step) : 'Planning');
+          if (p.done > seen) { seen = p.done; workPulse = performance.now() / 1000; }
+        }
+      } catch (_) {}
+      voiceWatch = setTimeout(tick, 1500);
+    };
+    voiceWatch = setTimeout(tick, 1800);
+  }
+
+  // ── Cards: things Narada proposes and a person confirms ────
+  // Deleting a device, changing who can sign in, saving a shortcut: Narada
+  // only proposes these. The card says exactly what will happen; a password,
+  // where one is needed, is typed here and never passes through the model.
+  const showValue = v => typeof v === 'object' && v !== null ? JSON.stringify(v) : String(v);
+  function stepsHtml(lines) {
+    return (lines || []).map(line => {
+      const depth = (line.match(/^ */)[0].length / 2) | 0;
+      return `<li style="--d:${depth}"${/:$/.test(line) ? ' class="branch"' : ''}>${escHtml(line.trim())}</li>`;
+    }).join('');
+  }
+  function confirmCards(cards) {
+    for (const c of cards || []) {
+      const el = bubble('extra', '');
+      if (!el) continue;
+      el.classList.add('nx-card');
+      el.dataset.action = c.id;
+      const sc = c.shortcut;
+      el.innerHTML = `<div class="nx-card-k">Needs your confirmation</div>
+        <div class="nx-card-t">${escHtml(sc ? c.title + ': ' + sc.name : c.title)}</div>
+        ${sc ? `<div class="nx-card-when">${escHtml(sc.when)}${sc.only_if ? `<small>Only if ${escHtml(sc.only_if)}</small>` : ''}</div>
+                <ol class="nx-card-steps">${stepsHtml(sc.steps)}</ol>` : `<div class="nx-card-about">${escHtml(c.about)}</div>`}
+        ${(c.lines || []).length ? `<dl class="nx-card-lines">${c.lines.map(l => `<dt>${escHtml(l.name)}</dt><dd>${escHtml(showValue(l.value))}</dd>`).join('')}</dl>` : ''}
+        ${(c.typed || []).map(f => `<label class="nx-card-f"><span>${escHtml(f.label)}${f.required ? '' : ' (leave empty to keep)'}</span>
+            <input class="nx-card-in" type="${f.secret ? 'password' : 'text'}" data-field="${escHtml(f.name)}" autocomplete="new-password" maxlength="128"/></label>`).join('')}
+        <div class="nx-card-b"><button type="button" data-card="confirm">Confirm</button><button type="button" data-card="cancel">Cancel</button><span class="nx-card-msg" role="status"></span></div>`;
+    }
+    if ((cards || []).length) { scrollLog(); haptic('tap'); }
+  }
+
+  async function cardAction(card, what) {
+    const msg = card.querySelector('.nx-card-msg'), buttons = card.querySelectorAll('.nx-card-b button');
+    const url = `/api/narada/actions/${encodeURIComponent(card.dataset.action)}/`;
+    buttons.forEach(b => { b.disabled = true; });
+    msg.textContent = '';
+    try {
+      if (what === 'cancel') {
+        await G._apiFn('POST', url + 'cancel');
+        card.classList.add('closed');
+        msg.textContent = 'Cancelled';
+      } else {
+        const fields = {};
+        card.querySelectorAll('[data-field]').forEach(i => { if (i.value) fields[i.dataset.field] = i.value; });
+        await G._apiFn('POST', url + 'confirm', { fields });
+        card.classList.add('closed', 'ok');
+        msg.textContent = 'Done';
+        card.querySelectorAll('[data-field]').forEach(i => { i.value = ''; i.disabled = true; });
+        if (window.H && H.refresh) H.refresh();
+      }
+      card.querySelectorAll('.nx-card-b button').forEach(b => b.remove());
+      haptic('tap');
+    } catch (e) {
+      msg.textContent = (e && e.detail) || 'That did not work';
+      // A card that has expired cannot be tried again; anything else can.
+      if (!/expired/i.test(msg.textContent)) buttons.forEach(b => { b.disabled = false; });
+      haptic('error');
+    }
+  }
+
+  // ── Artifacts: pages Narada writes ─────────────────────────
+  // Each is shown in a frame that has no access to this site. What the page
+  // needs (live data, a button that switches something) it asks for by
+  // message; this page makes the call as the signed-in person and answers.
+  const ART_MIN = 80, ART_MAX = 720;
+  function artifactFrames(list, restoring) {
+    for (const a of list || []) {
+      if (!a || !a.id || document.querySelector(`.nx-artifact[data-art="${a.id}"]`)) continue;
+      const el = bubble('extra', '');
+      if (!el) continue;
+      el.classList.add('nx-artifact');
+      el.dataset.art = a.id;
+      const src = `${G._base ? G._base() : ''}/api/narada/artifacts/${encodeURIComponent(a.id)}/view?k=${encodeURIComponent(a.key)}`;
+      el.innerHTML = `<div class="nx-art-h"><b>${escHtml(a.title)}</b>
+          <span class="nx-art-acts"><button type="button" data-art-act="full">Expand</button><button type="button" data-art-act="keep">Keep</button><button type="button" data-art-act="remove">Remove</button></span></div>
+        <iframe class="nx-art-f" sandbox="allow-scripts" referrerpolicy="no-referrer" loading="lazy" title="${escHtml(a.title)}" src="${escHtml(src)}"></iframe>`;
+      if (!restoring) {
+        session.push({ who: 'artifact', text: a.title, art: { id: a.id, key: a.key, title: a.title } });
+        save();
+      }
+    }
+    if ((list || []).length && !restoring) { syncDock(); scrollLog(); }
+  }
+
+  async function artifactAction(card, what, btn) {
+    const id = card.dataset.art;
+    if (what === 'full') {
+      const full = card.classList.toggle('full');
+      btn.textContent = full ? 'Close' : 'Expand';
+      return;
+    }
+    try {
+      if (what === 'keep') {
+        const keep = !card.classList.contains('kept');
+        await G._apiFn('POST', `/api/narada/artifacts/${id}/pin`, { pinned: keep });
+        card.classList.toggle('kept', keep);
+        btn.textContent = keep ? 'Kept' : 'Keep';
+      } else if (what === 'remove') {
+        await G._apiFn('DELETE', `/api/narada/artifacts/${id}`).catch(() => {});
+        session = session.filter(m => !(m.who === 'artifact' && m.art.id === id));
+        save();
+        card.remove();
+        syncDock();
+      }
+      haptic('tap');
+    } catch (e) {
+      if (window.G) G.showToast((e && e.detail) || 'That did not work', 'error');
+    }
+  }
+
+  function onArtifactMessage(e) {
+    const m = e.data;
+    if (!m || m.garuda !== true) return;
+    const frame = [...document.querySelectorAll('.nx-art-f')].find(f => f.contentWindow === e.source);
+    if (!frame) return;
+    const card = frame.closest('.nx-artifact');
+    if (m.type === 'resize') {
+      const h = Math.max(ART_MIN, Math.min(ART_MAX, Number(m.height) || 0));
+      frame.style.height = h + 'px';
+      return;
+    }
+    if (m.type !== 'call') return;
+    const answer = extra => frame.contentWindow && frame.contentWindow.postMessage({ garuda: true, type: 'result', id: m.id, ...extra }, '*');
+    G._apiFn('POST', `/api/narada/artifacts/${card.dataset.art}/call`, { capability: String(m.capability || ''), args: m.args && typeof m.args === 'object' ? m.args : {} })
+      .then(res => answer({ result: res.result }))
+      .catch(err => answer({ error: (err && err.detail) || 'That did not work' }));
   }
 
   // ── Memory: what Narada knows about the household ──────────
@@ -790,7 +1057,7 @@ const N = (() => {
       ${row('Voice', esc(v.voice || '—'))}
       ${row('Characters this month', used)}
       ${r ? `<div class="nx-info-h">Last reply</div>
-        ${row('Answered by', esc(r.lane === 'agent' ? (r.model || 'NIM') : r.lane === 'unavailable' ? 'NIM unavailable' : r.lane))}
+        ${row('Answered by', esc(r.lane === 'agent' ? (r.model || 'NIM') + (r.planner ? ' · planner' : '') : r.lane === 'unavailable' ? 'NIM unavailable' : r.lane))}
         ${row('Round trip', r.seconds.toFixed(1) + ' s')}
         ${(r.actions || []).length ? `<div class="nx-info-acts">${r.actions.map(a => `<span>${esc(a)}</span>`).join('')}</div>` : ''}` : ''}`;
   }
@@ -832,6 +1099,14 @@ const N = (() => {
     restore();
     // Memory: chips in the conversation, and the panel's buttons and forms.
     $('nx-log').addEventListener('click', e => {
+      const act = e.target.closest('[data-card], [data-art-act], [data-work]');
+      if (act) {
+        if (act.dataset.card) return cardAction(act.closest('.nx-card'), act.dataset.card);
+        if (act.dataset.artAct) return artifactAction(act.closest('.nx-artifact'), act.dataset.artAct, act);
+        const box = act.closest('.nx-work');
+        act.setAttribute('aria-expanded', String(box.classList.toggle('shut') === false));
+        return;
+      }
       const btn = e.target.closest('[data-chip]'), card = btn && btn.closest('.nx-memchip');
       if (!card) return;
       if (card.dataset.offer) offerAction(card, btn.dataset.chip);
@@ -851,6 +1126,7 @@ const N = (() => {
       e.preventDefault();
       memoryAct(form.dataset.form === 'edit' ? 'save' : 'add', form.dataset.id, form);
     });
+    window.addEventListener('message', onArtifactMessage);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) stop(); else if (window.G && $('page-narada').classList.contains('active')) start();
     });
