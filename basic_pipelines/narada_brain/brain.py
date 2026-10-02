@@ -11,14 +11,20 @@ from collections import deque
 import time
 
 import re
+import threading
 
-from . import gate, guards, persona
+from ..garuda_auto.llm import NO_THINKING
+from . import distiller, gate, guards, persona
 from .conversation import SUMMARY_INSTRUCTION, Conversations
 from .memory import CATEGORIES, MEMORY_FILE, MemoryStore
 
 log = logging.getLogger(__name__)
 
 CONVERSATIONS_FILE = "narada_conversations.json"
+# A conversation left alone this long is read back for facts worth keeping.
+DISTILL_IDLE_S = 180
+# ... and so is a long one that never pauses, every this many unread turns.
+DISTILL_EVERY = 8
 # The person asked for this to be kept, as opposed to mentioning it in passing.
 _ASKED = re.compile(r"\b(remember|note (that|this|it|down)|keep (that|this|it)? ?in mind|don.t forget|"
                     r"make a note|save (that|this))\b", re.I)
@@ -42,6 +48,14 @@ class Brain:
         # A typed reply carries its own; a spoken one is fetched from here, because
         # the voice service relays Narada's words and nothing else.
         self._events = deque(maxlen=50)
+        self._background = background
+        self._timers = {}
+        self._timer_lock = threading.Lock()
+        if background and chat is not None:
+            # Turns a restart interrupted are read back once the service has settled.
+            for key in self.conversations.keys():
+                if self.conversations.undistilled(key):
+                    self._schedule_distill(key, delay=60)
 
     # ── what goes into a turn ─────────────────────────────────────────────────
 
@@ -57,6 +71,14 @@ class Brain:
 
     # ── what comes out of one ─────────────────────────────────────────────────
 
+    def scan(self, text):
+        """Whether data read this turn carries an instruction (see guards.injected)."""
+        hit = guards.injected(text)
+        if hit:
+            self.stats["injections"] = self.stats.get("injections", 0) + 1
+            log.warning("instruction-like text in house data: %r", hit[:80])
+        return hit
+
     def check_reply(self, reply, *, voice=False):
         reply, leaked = guards.protect(reply, persona.protected_text())
         if leaked:
@@ -66,21 +88,76 @@ class Brain:
 
     def record(self, key, turn):
         self.conversations.record(key, turn)
+        if self._background and self.chat is not None:
+            due_now = len(self.conversations.undistilled(key)) >= DISTILL_EVERY
+            self._schedule_distill(key, delay=1 if due_now else DISTILL_IDLE_S)
+
+    # ── reading a conversation back for what was missed ───────────────────────
+
+    def _schedule_distill(self, key, delay):
+        """(Re)start the idle clock for this conversation: each new turn pushes it back."""
+        with self._timer_lock:
+            old = self._timers.pop(key, None)
+            if old is not None:
+                old.cancel()
+            timer = threading.Timer(delay, self._distill_quietly, args=(key,))
+            timer.daemon = True
+            timer.name = "narada-distill"
+            self._timers[key] = timer
+            timer.start()
+
+    def _distill_quietly(self, key):
+        try:
+            self.distill(key)
+        except Exception:
+            log.exception("distilling %s", key)
+
+    def distill(self, key):
+        """Read this conversation's unread turns and keep what was missed.
+
+        Returns the facts written. Turns are marked read only when the model
+        answered, so a failed call is retried with the next turn or restart.
+        """
+        if self.chat is None or not getattr(self.chat, "configured", True):
+            return []
+        turns = self.conversations.undistilled(key)
+        if not turns:
+            return []
+        speaker = key.split(":", 1)[-1] or "the person"
+        known = [f["text"] for f in self.memory.facts()]
+        names = [f["text"] for f in self.memory.facts() if f["category"] == "person"]
+        found = distiller.distill(turns, speaker=speaker, chat=self.chat, known=known, names=names)
+        if found is None:
+            return []
+        self.conversations.mark_distilled(turns)
+        written = []
+        for text, category in found:
+            outcome = self.memory.remember(text, category=category, origin="distilled", by=speaker)
+            if outcome["status"] in ("saved", "updated"):
+                self.stats["facts_saved"] += 1
+                self._event(outcome["fact"], outcome["status"], outcome["replaced"])
+                written.append(outcome["fact"])
+        if written:
+            log.info("distilled %d fact(s) from the conversation with %s", len(written), speaker)
+        return written
 
     def forget(self, key):
         self.conversations.forget(key)
 
     # ── memory ────────────────────────────────────────────────────────────────
 
-    def remember_fact(self, text, *, said="", user="", category=None, replaces=None):
+    def remember_fact(self, text, *, said="", user="", category=None, replaces=None,
+                      untrusted=False):
         """A fact the model wants kept, written through the gate.
 
         Saved at once when its words trace to what the person just said; held
         for their confirmation when they do not (the model concluded it, or was
-        steered by something it read). Returns the store's outcome.
+        steered by something it read). `untrusted` is set once the turn has read
+        text that looked like an instruction: after that nothing is saved without
+        the person, even a fact that would have traced. Returns the store's outcome.
         """
         names = [user] + [f["text"] for f in self.memory.facts() if f["category"] == "person"]
-        theirs = gate.traces_to(text, said, names=names)
+        theirs = gate.traces_to(text, said, names=names) and not untrusted
         outcome = self.memory.remember(
             text, category=category, by=user, replaces=replaces, pending=not theirs,
             origin="asked" if _ASKED.search(said or "") else "noticed")
@@ -114,7 +191,7 @@ class Brain:
             [{"role": "system", "content": SUMMARY_INSTRUCTION},
              {"role": "user", "content": f"Summary so far:\n{previous or '(none yet)'}\n\n"
                                          f"New turns:\n{transcript}"}],
-            max_tokens=400, temperature=0.2, timeout=30)
+            max_tokens=500, temperature=0.2, timeout=30, extra=NO_THINKING)
         return message.get("content") or ""
 
     def status(self):

@@ -102,6 +102,14 @@ def test_a_failed_summary_loses_nothing(tmp_path):
     assert c.summary("mani") == ""
 
 
+def test_an_empty_summary_is_a_failed_summary(tmp_path):
+    c = Conversations(str(tmp_path / "c.json"), summarise=lambda previous, transcript: "  ", background=False)
+    for i in range(conv.FOLD_AT):
+        c.record("mani", turn(f"q{i}", f"a{i}"))
+    assert len([m for m in c.history("mani", token_budget=10**6) if m["role"] == "user"]) == conv.FOLD_AT
+    assert c.summary("mani") == ""
+
+
 def test_the_file_is_bounded_even_without_a_summariser(tmp_path):
     c = Conversations(str(tmp_path / "c.json"), background=False)
     for i in range(conv.HARD_CAP + 15):

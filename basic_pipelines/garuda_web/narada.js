@@ -798,7 +798,8 @@ const N = (() => {
   }
 
   function onNav(pageId) {
-    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); }
+    // Facts kept after a conversation went quiet show their chip the next time the page is open.
+    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); pollMemory(); }
     else stop();                               // a live conversation keeps going in the island
   }
 

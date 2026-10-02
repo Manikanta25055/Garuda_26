@@ -63,8 +63,8 @@ IGNORANCE = (r"don.t (have|know)|do not (have|know)|not aware|no (information|re
 class House:
     """One throwaway house and the agent that runs it."""
 
-    def __init__(self, data_dir, chat):
-        self.data_dir, self.chat = data_dir, chat
+    def __init__(self, data_dir, chat, extra_devices=()):
+        self.data_dir, self.chat, self.extra_devices = data_dir, chat, list(extra_devices)
         self.modes = {"dnd": False, "night": False, "idle": False, "emergency": False,
                       "privacy": True, "email_off": False}
         self.build(first=True)
@@ -73,11 +73,13 @@ class House:
         """(Re)build everything that lives in memory: what a service restart does."""
         if not first:
             self.ctx.relay_bank.close()
-        self.ctx = drishti_api.build_context(data_dir=self.data_dir, relay_channels=(1, 2, 3),
-                                             channel_to_pin={1: 17, 2: 27, 3: 22})
+        self.ctx = drishti_api.build_context(data_dir=self.data_dir, relay_channels=(1, 2, 3, 4),
+                                             channel_to_pin={1: 17, 2: 27, 3: 22, 4: 23})
         if first:
-            for device in DEVICES:
-                self.ctx.registry.add(dict(device))
+            for device in DEVICES + self.extra_devices:
+                ok, why = self.ctx.registry.add(dict(device))
+                if not ok:
+                    raise RuntimeError(f"the test house could not add {device['id']}: {why}")
         self.ctx.rebuild()
         self.home = HomeServices(self.ctx, DrishtiRuntime(self.ctx), self.data_dir)
         decision = DecisionEngine(LocalBackend(lambda: self.ctx.registry.devices,
@@ -99,7 +101,7 @@ class House:
 def make_agent(house, decision):
     """The one place that says how Narada is put together for the evaluation."""
     return HomeAgent(house.ctx, house.home, house.chat, decision,
-                     brain=Brain(house.data_dir, house.chat),
+                     brain=Brain(house.data_dir, house.chat, background=False),
                      modes_fn=lambda: dict(house.modes), set_mode_fn=house.set_mode,
                      security_fn=lambda: {"modes": dict(house.modes), "alert_active": False,
                                           "camera": "delivering frames", "owner_present": True})
@@ -134,7 +136,7 @@ def check(step, reply, actions):
 def run_case(case, chat):
     started, transcript, problems = time.time(), [], []
     with tempfile.TemporaryDirectory(prefix="narada-eval-") as data_dir:
-        house = House(data_dir, chat)
+        house = House(data_dir, chat, case.get("devices", ()))
         try:
             for number, step in enumerate(case["steps"], 1):
                 role = step.get("role", "admin")
@@ -144,6 +146,15 @@ def run_case(case, chat):
                 elif step.get("new_session"):
                     house.agent.forget(user)
                     house.agent.forget(f"security:{user}")
+                # A conversation that already happened, put straight into the record ...
+                for said, answered in step.get("seed", ()):
+                    house.agent.brain.record(user, [{"role": "user", "content": said},
+                                                    {"role": "assistant", "content": answered}])
+                # ... and the pass that reads it back once it has gone quiet.
+                if step.get("distill"):
+                    house.agent.brain.distill(user)
+                if not step.get("say"):
+                    continue
                 try:
                     result = house.agent.handle(step["say"], user=user, role=role,
                                                 scope=step.get("scope", "home"),

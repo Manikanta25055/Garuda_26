@@ -135,6 +135,27 @@ class Conversations:
             if self._data["conversations"].pop(key, None) is not None:
                 self._save()
 
+    def keys(self):
+        with self._lock:
+            return list(self._data["conversations"])
+
+    def undistilled(self, key):
+        """Turns the memory distiller has not read yet (the stored entries themselves)."""
+        with self._lock:
+            return [t for t in self._data["conversations"].get(key, {}).get("turns", ())
+                    if not t.get("distilled")]
+
+    def mark_distilled(self, entries):
+        with self._lock:
+            for entry in entries:
+                entry["distilled"] = True
+            self._save()
+
+    def last_turn_at(self, key):
+        with self._lock:
+            turns = self._data["conversations"].get(key, {}).get("turns", ())
+            return turns[-1].get("at", 0) if turns else 0
+
     def _save(self):
         if self.path:
             try:
@@ -154,10 +175,15 @@ class Conversations:
             summary = previous
             if self._summarise:
                 try:
-                    summary = (self._summarise(previous, _plain(old)) or "").strip()[:SUMMARY_CHARS] or previous
+                    summary = (self._summarise(previous, _plain(old)) or "").strip()[:SUMMARY_CHARS]
                 except Exception as exc:
                     # Keep the turns for the next attempt; the hard cap bounds the file.
                     log.warning("conversation summary failed: %s: %s", type(exc).__name__, exc)
+                    return
+                if not summary:
+                    # An empty summary is a failed one: folding now would throw the
+                    # turns away and keep nothing in their place.
+                    log.warning("conversation summary came back empty; keeping the turns")
                     return
             with self._lock:
                 entry = self._data["conversations"].get(key)
