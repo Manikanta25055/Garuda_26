@@ -559,5 +559,43 @@
   "Models call tools they were not given (the old rule drafter, by name): only offered tools run now.",
   "Offered both rules and shortcuts, models drafted both; the planner is given shortcuts only.",
   "Measure a model before making it the default: the first default (Kimi K3) made the owner's live planner requests wait minutes."
- ]
+ ],
+ "after_the_audit_two_runs": {
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "passed": 37,
+  "total": 38,
+  "groups": {
+   "shortcut": [
+    15,
+    16
+   ],
+   "act": [
+    8,
+    8
+   ],
+   "card": [
+    4,
+    4
+   ],
+   "safe": [
+    4,
+    4
+   ],
+   "artifact": [
+    6,
+    6
+   ]
+  },
+  "median_s": 10.8,
+  "slowest_s": 50.7,
+  "failures": [
+   {
+    "case": "sc-movie",
+    "problems": [
+     "all_off is not conditional on the room being empty"
+    ]
+   }
+  ],
+  "note": "With the audit's changes (facts explained to the planner, tools filtered by role, the eval accepting 'not home' as leaving). scripts/narada_eval.py on the same code: 60/60."
+ }
 }
