@@ -177,6 +177,78 @@ class State:
         self.auth = Auth()
 
 
+# The flat names Garuda_web grew up with, and where each one lives now. Garuda_web
+# forwards them (see forward() below) so the test suite, which patches these
+# names, and the state object are one value.
+FLAT_NAMES = {
+    # modes
+    "MODE_DND": ("modes", "dnd"), "MODE_EMAIL_OFF": ("modes", "email_off"),
+    "MODE_IDLE": ("modes", "idle"), "MODE_NIGHT": ("modes", "night"),
+    "MODE_EMERGENCY": ("modes", "emergency"), "MODE_PRIVACY": ("modes", "privacy"),
+    "MODE_SCHEDULE": ("modes", "schedule"), "CUSTOM_MODES": ("modes", "custom"),
+    "_mode_lock": ("modes", "lock"),
+    # config
+    "EMAIL_SENDER": ("config", "email_sender"), "EMAIL_SENDER_PASS": ("config", "email_sender_pass"),
+    "EMAIL_RECIPIENTS": ("config", "email_recipients"), "EMAIL_COOLDOWN": ("config", "email_cooldown"),
+    "DETECTION_THRESHOLD": ("config", "detection_threshold"),
+    "DANGER_LABELS": ("config", "danger_labels"), "WATCH_LABELS": ("config", "watch_labels"),
+    "KNOWN_DEVICES": ("config", "known_devices"),
+    "NIGHT_PRESENCE_WINDOW": ("config", "night_presence_window"),
+    "CUSTOM_VOICE_COMMANDS": ("config", "custom_voice_commands"),
+    # alerts
+    "_alert_active": ("alerts", "active"), "_alert_end_time": ("alerts", "end_time"),
+    "_danger_trigger_info": ("alerts", "danger_trigger_info"),
+    "_last_danger_conf": ("alerts", "last_danger_conf"), "_danger_active": ("alerts", "danger_active"),
+    "_last_alert_time": ("alerts", "last_alert_time"), "_alert_history": ("alerts", "history"),
+    "_alert_lock": ("alerts", "lock"), "last_email_sent_time": ("alerts", "last_email_sent_time"),
+    "_email_lock": ("alerts", "email_lock"), "_last_tamper_email": ("alerts", "last_tamper_email"),
+    "_night_presence_alert_active": ("alerts", "night_presence_active"),
+    "_night_presence_alert_end_time": ("alerts", "night_presence_end_time"),
+    "_np_last_check": ("alerts", "night_presence_last_check"),
+    "_np_lock": ("alerts", "night_presence_lock"),
+    "_blind_frame_count": ("alerts", "blind_frame_count"),
+    "_blind_alert_sent": ("alerts", "blind_alert_sent"),
+    # presence
+    "_owner_present": ("presence", "owner_present"),
+    "_owner_last_seen": ("presence", "owner_last_seen"),
+    "_last_arp_cache": ("presence", "last_arp_cache"), "_presence_log": ("presence", "log"),
+    # system
+    "_net_online": ("system", "net_online"), "_last_heartbeat": ("system", "last_heartbeat"),
+    "_heartbeat_ever": ("system", "heartbeat_ever"),
+    "_deadman_alert_sent": ("system", "deadman_alert_sent"),
+    "_deadman_last_alert": ("system", "deadman_last_alert"), "_cpu_ema": ("system", "cpu_ema"),
+    "_ram_ema": ("system", "ram_ema"), "_temp_ema": ("system", "temp_ema"),
+    "_cpu_cores_ema": ("system", "cpu_cores_ema"), "_voice_mic_ok": ("system", "voice_mic_ok"),
+    "_voice_mic_detail": ("system", "voice_mic_detail"), "_event_loop": ("system", "event_loop"),
+    "_ws_trigger": ("system", "ws_trigger"), "_ws_broadcaster_task": ("system", "ws_broadcaster_task"),
+    # camera
+    "_frame_buffer": ("camera", "frame_buffer"), "_frame_raw": ("camera", "frame_raw"),
+    "_frame_seq": ("camera", "frame_seq"), "_frame_ts": ("camera", "frame_ts"),
+    "_frame_lock": ("camera", "frame_lock"), "_total_frames": ("camera", "total_frames"),
+    "_detections_today": ("camera", "detections_today"),
+    "latest_detection_info": ("camera", "latest_detection_info"),
+    "_class_counts_today": ("camera", "class_counts_today"),
+    "_watch_last_logged": ("camera", "watch_last_logged"),
+    "_label_consec_frames": ("camera", "label_consec_frames"),
+    "_drishti_last_observe": ("camera", "drishti_last_observe"),
+    "_clip_writer": ("camera", "clip_writer"), "_clip_lock": ("camera", "clip_lock"),
+    "_clip_start_time": ("camera", "clip_start_time"), "_clip_path": ("camera", "clip_path"),
+    "app_gst": ("camera", "app_gst"),
+    # auth
+    "USERS": ("auth", "users"), "MASTER_KEYS": ("auth", "master_keys"),
+    "_sessions": ("auth", "sessions"), "_refresh_tokens": ("auth", "refresh_tokens"),
+    "_persisted_refresh": ("auth", "persisted_refresh"), "_refresh_dirty": ("auth", "refresh_dirty"),
+    "_login_failures": ("auth", "login_failures"), "_rate_store": ("auth", "rate_store"),
+    "ADMIN_OTP": ("auth", "admin_otp"), "_admin_otp_user": ("auth", "admin_otp_user"),
+    "_admin_otp_ts": ("auth", "admin_otp_ts"), "_admin_otp_attempts": ("auth", "admin_otp_attempts"),
+    "_forgot_otp_store": ("auth", "forgot_otp_store"), "USER_FORGOT_OTP": ("auth", "user_forgot_otp"),
+    "_forgot_otp_user": ("auth", "forgot_otp_user"), "_forgot_otp_ts": ("auth", "forgot_otp_ts"),
+    "_forgot_otp_attempts": ("auth", "forgot_otp_attempts"),
+    "MASTER_KEY_OTP": ("auth", "master_key_otp"), "_master_otp_ts": ("auth", "master_otp_ts"),
+    "_master_otp_attempts": ("auth", "master_otp_attempts"),
+}
+
+
 def forward(module, names: dict) -> None:
     """Make `module.<old name>` read and write `module.STATE.<group>.<field>`.
 

@@ -368,91 +368,11 @@ voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
 _detection_log: List[str] = []   # in-memory recent detection events (danger + watch)
 
-# Flat test-facing aliases (conftest monkeypatches these directly)
-
-# Live state, grouped by concern (garuda_core/state.py). The flat names the
-# tests still use are forwarded to it; code in this file uses STATE directly.
+# Live state, grouped by concern (garuda_core/state.py): modes, config, alerts,
+# presence, system, camera, auth. The flat names the tests still use (MODE_DND,
+# USERS, ...) are forwarded to it; code in this file uses STATE directly.
 STATE = _core_state.State()
-_core_state.forward(sys.modules[__name__], {
-    "MODE_DND": ("modes", "dnd"), "MODE_EMAIL_OFF": ("modes", "email_off"),
-    "MODE_IDLE": ("modes", "idle"), "MODE_NIGHT": ("modes", "night"),
-    "MODE_EMERGENCY": ("modes", "emergency"), "MODE_PRIVACY": ("modes", "privacy"),
-    "MODE_SCHEDULE": ("modes", "schedule"), "CUSTOM_MODES": ("modes", "custom"),
-    "_mode_lock": ("modes", "lock"),
-    # Email settings: the secrets come from .env, the rest from config.json.
-    "EMAIL_SENDER": ("config", "email_sender"), "EMAIL_SENDER_PASS": ("config", "email_sender_pass"),
-    "EMAIL_RECIPIENTS": ("config", "email_recipients"), "EMAIL_COOLDOWN": ("config", "email_cooldown"),
-    "DETECTION_THRESHOLD": ("config", "detection_threshold"),
-    "DANGER_LABELS": ("config", "danger_labels"), "WATCH_LABELS": ("config", "watch_labels"),
-    "KNOWN_DEVICES": ("config", "known_devices"),
-    "NIGHT_PRESENCE_WINDOW": ("config", "night_presence_window"),
-    "CUSTOM_VOICE_COMMANDS": ("config", "custom_voice_commands"),
-})
-
-_core_state.forward(sys.modules[__name__], {
-    "_alert_active": ("alerts", "active"), "_alert_end_time": ("alerts", "end_time"),
-    "_danger_trigger_info": ("alerts", "danger_trigger_info"),
-    "_last_danger_conf": ("alerts", "last_danger_conf"),
-    "_danger_active": ("alerts", "danger_active"),
-    "_last_alert_time": ("alerts", "last_alert_time"), "_alert_history": ("alerts", "history"),
-    "_alert_lock": ("alerts", "lock"), "last_email_sent_time": ("alerts", "last_email_sent_time"),
-    "_email_lock": ("alerts", "email_lock"), "_last_tamper_email": ("alerts", "last_tamper_email"),
-    "_night_presence_alert_active": ("alerts", "night_presence_active"),
-    "_night_presence_alert_end_time": ("alerts", "night_presence_end_time"),
-    "_np_last_check": ("alerts", "night_presence_last_check"),
-    "_np_lock": ("alerts", "night_presence_lock"),
-    "_blind_frame_count": ("alerts", "blind_frame_count"),
-    "_blind_alert_sent": ("alerts", "blind_alert_sent"),
-})
-
-_core_state.forward(sys.modules[__name__], {
-    "_owner_present": ("presence", "owner_present"),
-    "_owner_last_seen": ("presence", "owner_last_seen"),
-    "_last_arp_cache": ("presence", "last_arp_cache"), "_presence_log": ("presence", "log"),
-})
-
-_core_state.forward(sys.modules[__name__], {
-    "_net_online": ("system", "net_online"), "_last_heartbeat": ("system", "last_heartbeat"),
-    "_heartbeat_ever": ("system", "heartbeat_ever"),
-    "_deadman_alert_sent": ("system", "deadman_alert_sent"),
-    "_deadman_last_alert": ("system", "deadman_last_alert"), "_cpu_ema": ("system", "cpu_ema"),
-    "_ram_ema": ("system", "ram_ema"), "_temp_ema": ("system", "temp_ema"),
-    "_cpu_cores_ema": ("system", "cpu_cores_ema"), "_voice_mic_ok": ("system", "voice_mic_ok"),
-    "_voice_mic_detail": ("system", "voice_mic_detail"), "_event_loop": ("system", "event_loop"),
-    "_ws_trigger": ("system", "ws_trigger"),
-    "_ws_broadcaster_task": ("system", "ws_broadcaster_task"),
-})
-
-_core_state.forward(sys.modules[__name__], {
-    "_frame_buffer": ("camera", "frame_buffer"), "_frame_raw": ("camera", "frame_raw"),
-    "_frame_seq": ("camera", "frame_seq"), "_frame_ts": ("camera", "frame_ts"),
-    "_frame_lock": ("camera", "frame_lock"), "_total_frames": ("camera", "total_frames"),
-    "_detections_today": ("camera", "detections_today"),
-    "latest_detection_info": ("camera", "latest_detection_info"),
-    "_class_counts_today": ("camera", "class_counts_today"),
-    "_watch_last_logged": ("camera", "watch_last_logged"),
-    "_label_consec_frames": ("camera", "label_consec_frames"),
-    "_drishti_last_observe": ("camera", "drishti_last_observe"),
-    "_clip_writer": ("camera", "clip_writer"), "_clip_lock": ("camera", "clip_lock"),
-    "_clip_start_time": ("camera", "clip_start_time"), "_clip_path": ("camera", "clip_path"),
-    "app_gst": ("camera", "app_gst"),
-})
-
-_core_state.forward(sys.modules[__name__], {
-    "USERS": ("auth", "users"), "MASTER_KEYS": ("auth", "master_keys"),
-    "_sessions": ("auth", "sessions"), "_refresh_tokens": ("auth", "refresh_tokens"),
-    "_persisted_refresh": ("auth", "persisted_refresh"),
-    "_refresh_dirty": ("auth", "refresh_dirty"), "_login_failures": ("auth", "login_failures"),
-    "_rate_store": ("auth", "rate_store"), "ADMIN_OTP": ("auth", "admin_otp"),
-    "_admin_otp_user": ("auth", "admin_otp_user"), "_admin_otp_ts": ("auth", "admin_otp_ts"),
-    "_admin_otp_attempts": ("auth", "admin_otp_attempts"),
-    "_forgot_otp_store": ("auth", "forgot_otp_store"),
-    "USER_FORGOT_OTP": ("auth", "user_forgot_otp"), "_forgot_otp_user": ("auth", "forgot_otp_user"),
-    "_forgot_otp_ts": ("auth", "forgot_otp_ts"),
-    "_forgot_otp_attempts": ("auth", "forgot_otp_attempts"),
-    "MASTER_KEY_OTP": ("auth", "master_key_otp"), "_master_otp_ts": ("auth", "master_otp_ts"),
-    "_master_otp_attempts": ("auth", "master_otp_attempts"),
-})
+_core_state.forward(sys.modules[__name__], _core_state.FLAT_NAMES)
 
 NARADA_WAKE_WORD = "narada"
 
@@ -466,25 +386,15 @@ _DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper ale
 _DEADMAN_ENABLED = os.environ.get("DEADMAN_ENABLED", "0") == "1"
 _DEADMAN_REALERT_INTERVAL = 3600   # min seconds between repeat alerts (anti-spam)
 
-# ── Camera blindness detection ───────────────────────────
+# ── Camera tamper ────────────────────────────────────────
 _TAMPER_EMAIL_COOLDOWN = 3600      # min seconds between camera-tamper emails
 _perm_lock = threading.Lock()
-# ── RAM-buffered log write globals (buffer defined here; functions in HELPERS) ─
+# ── RAM-buffered log writes (functions in garuda_services/logs.py) ─────────────
 _log_buffer: "defaultdict[str, list]" = defaultdict(list)
 _log_buffer_lock = threading.Lock()
 
-# ── False positive reduction ──────────────────────────────
-
-# ── Night presence alarm (the window itself is STATE.config.night_presence_window) ──
-
-# ── Clip recording ────────────────────────────────────────
-
 # ── Phone presence detection ──────────────────────────────
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
-
-# ── Password hashing (PBKDF2-SHA256) ────────────────────
-
-# ── Atomic JSON write ────────────────────────────────────
 
 # ── Rate limiter (in-memory, per-IP) ────────────────────
 _RATE_LIMIT = 30     # max requests
@@ -504,7 +414,6 @@ try:
 except ImportError:
     from basic_pipelines.garuda_auto.frame_publisher import FramePublisher
 
-# MJPEG / WebRTC frame buffer
 # Pipeline rate in, browser rate out. The clip writer shares this gate, because
 # its VideoWriter is built at a fixed 15fps and writing faster is what made
 # saved clips play back in slow motion.
