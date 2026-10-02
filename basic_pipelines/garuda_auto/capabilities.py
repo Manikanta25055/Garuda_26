@@ -116,10 +116,10 @@ CAPABILITIES = (
 )
 
 def _site(name, summary, call, params=None, required=(), *, role="user", tier="read",
-          security=False, typed=()):
+          security=False, typed=(), lane="planner"):
     """A capability carried out by the site's own endpoint; the planner's to use."""
     return Capability(name, summary, params or {}, tuple(required), role=role, tier=tier,
-                      lane="planner", security=security, routes=(call,), typed=tuple(typed),
+                      lane=lane, security=security, routes=(call,), typed=tuple(typed),
                       call=call)
 
 
@@ -262,9 +262,10 @@ CAPABILITIES += (
     _site("check_shortcut", "Check a shortcut without saving it; returns the problem, or the "
                             "shortcut said back in plain lines.",
           "POST /api/home/shortcuts/check", {"program": _PROGRAM}, ["program"]),
+    # Saying a shortcut's name is an everyday command, so the quick model has this one.
     _site("run_shortcut", "Run a saved shortcut now.", "POST /api/home/shortcuts/{shortcut_id}/run",
           {"shortcut_id": {"type": "string", "description": "the shortcut's id or its name"}},
-          ["shortcut_id"], tier="change"),
+          ["shortcut_id"], tier="change", lane="fast"),
     _site("cancel_shortcut", "Stop a shortcut that is running.",
           "POST /api/home/shortcuts/{shortcut_id}/cancel", {"shortcut_id": _ID("shortcut")},
           ["shortcut_id"], tier="change"),
@@ -350,12 +351,20 @@ CAPABILITIES += (
 BY_NAME = {c.name: c for c in CAPABILITIES}
 
 
+# Kept from the planner's tool list. It is already there; a shortcut does all a
+# rule does, and with both offered the models drafted a rule first and a
+# shortcut after; create_shortcut checks itself and the facts are in its
+# instructions, so the two helpers only cost a round trip each.
+PLANNER_HIDDEN = frozenset({"hand_to_planner", "create_automation", "check_shortcut",
+                            "shortcut_vocabulary"})
+
+
 def tools(lane="fast", security_only=False):
     """What one lane is offered. The planner also gets everything the fast lane
-    has, except the tool for reaching the planner."""
+    has, except what PLANNER_HIDDEN names."""
     return [c.tool() for c in CAPABILITIES
             if (c.lane == lane or lane == "planner") and (c.security or not security_only)
-            and not (lane == "planner" and c.name == "hand_to_planner")]
+            and not (lane == "planner" and c.name in PLANNER_HIDDEN)]
 
 
 def names(*, security=None, changing=None):

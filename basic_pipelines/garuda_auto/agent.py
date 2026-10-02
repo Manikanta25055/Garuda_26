@@ -68,17 +68,18 @@ You are now working as the planner: this request needs something built or severa
 - A tool that answers "NOT done ... card" has put a card on the person's screen. Say that it waits for their tap; never say it is done.
 - If a tool returns an error, read it, fix your arguments and try again; give up after three tries and say what stopped you.
 
-Shortcuts. Nothing is prebuilt: you compose a shortcut from capabilities when one is asked for (an automation, a routine, "when X do Y", "every evening", a button that does several things). Save it with create_shortcut; it is checked, and the error tells you what to fix.
+Shortcuts. Nothing is prebuilt: you compose a shortcut from capabilities when one is asked for (an automation, a routine, "when X do Y", "every evening", a button that does several things). Save it with create_shortcut straight away; it checks the program itself, and an error tells you what to fix. Saved shortcuts are listed in the state above: run one with run_shortcut, change one with update_shortcut (send the whole program).
   program = {"name", "description", "trigger", "conditions"?, "steps", "cooldown_s"?}
   trigger = {"type":"manual"} | {"type":"time","at":"HH:MM","days":[0-6, 0 is Monday]} | {"type":"every","minutes":N} | {"type":"when","condition":C,"for_minutes":N}   (when fires at the moment C becomes true)
   C = {"field":F,"op":"==|!=|<|<=|>|>=","value":V} | {"all":[C..]} | {"any":[C..]} | {"not":C} | {"between":["HH:MM","HH:MM"]}
   step = {"do":"<capability name>","args":{..},"optional"?:true} | {"wait":seconds} | {"if":C,"then":[step..],"else":[step..]} | {"repeat":N,"steps":[..]} | {"notify":"text with {field} placeholders","email"?:true} | {"run":"<shortcut id>"} | {"stop":true}
   A step's capability is any of your tools that changes or reads something, except ones that need a card.
+  "for 10 minutes" in a request is for_minutes: 10 on a when trigger. To tell the person something from a shortcut, use a notify step. A wait is at most six hours: two things at two clock times are two shortcuts, or one schedule each.
   Fields a condition can test, with their values now: %(facts)s
 
 Artifacts. When a chart, table, timeline, dashboard or small interactive tool would answer better than sentences, call show_artifact with one complete HTML document written for this request.
   - First get the real data with tools; put it in the page as JSON. Never invent numbers.
-  - Self-contained: inline <style> and <script> only. No external URLs, fonts, images or libraries; draw charts with SVG or canvas yourself.
+  - Self-contained: inline <style> and <script> only. No external URLs, fonts, images or libraries (a page that names one is refused): draw charts yourself with SVG, canvas or plain CSS.
   - It is shown in the chat, 320 to 680 px wide. Use a transparent background, `color-scheme: light dark`, system-ui font, CSS variables with light-dark() for colours, and no fixed widths.
   - Inside the page, `await garuda.call("<capability>", {args})` runs a capability for live data or a button (not ones that need a card). `garuda.resize()` refits the frame after the content changes.
   - Then say in one or two sentences what the artifact shows.
@@ -111,6 +112,7 @@ class HomeAgent:
         self.planner = planner          # a NimChat with the planner's models, or None
         self.artifacts = artifacts      # an ArtifactStore, or None
         self.facts_fn = facts_fn        # () -> the facts a shortcut's condition may test
+        self.shortcuts_fn = None        # () -> [{"id", "name", "when"}], the saved shortcuts
         self.decision = decision
         self.modes_fn = modes_fn or (lambda: {})
         self.set_mode_fn = set_mode_fn
@@ -311,8 +313,9 @@ class HomeAgent:
                 state = self._tool_get_security_state({}, "", "")
             else:
                 snap = self.state_snapshot()
-                state = {k: snap.get(k) for k in ("devices", "scenes", "modes", "occupancy",
-                                                  "person_count", "owner_presence")}
+                state = {k: snap.get(k) for k in ("devices", "scenes", "shortcuts", "modes",
+                                                  "occupancy", "person_count", "owner_presence")
+                         if k in snap}
         except Exception:
             log.exception("state brief")
             return ""
@@ -533,6 +536,9 @@ class HomeAgent:
             "owner_presence": ctx["owner_presence"], "security": ctx["security"],
             "modes": self.modes_fn(), "pending_proposals": len(self.ctx.pending.all()),
         }
+        if self.shortcuts_fn is not None:
+            # By name, so "run movie night" is one call and not a search.
+            snapshot["shortcuts"] = self.shortcuts_fn()
         # Only real sensors: the runtime's neutral placeholders are not readings.
         for sensor in self.ctx.registry.sensors():
             snapshot[f"{sensor['id']}_reading"] = d.get(f"{sensor['id']}_state")

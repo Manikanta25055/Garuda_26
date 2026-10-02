@@ -789,13 +789,13 @@ const N = (() => {
       const src = `${G._base ? G._base() : ''}/api/narada/artifacts/${encodeURIComponent(a.id)}/view?k=${encodeURIComponent(a.key)}`;
       el.innerHTML = `<div class="nx-art-h"><b>${escHtml(a.title)}</b>
           <span class="nx-art-acts"><button type="button" data-art-act="full">Expand</button><button type="button" data-art-act="keep">Keep</button><button type="button" data-art-act="remove">Remove</button></span></div>
-        <iframe class="nx-art-f" sandbox="allow-scripts" referrerpolicy="no-referrer" loading="lazy" title="${escHtml(a.title)}" src="${escHtml(src)}"></iframe>`;
+        <iframe class="nx-art-f" sandbox="allow-scripts" referrerpolicy="no-referrer" title="${escHtml(a.title)}" src="${escHtml(src)}"></iframe>`;
       if (!restoring) {
         session.push({ who: 'artifact', text: a.title, art: { id: a.id, key: a.key, title: a.title } });
         save();
       }
     }
-    if ((list || []).length && !restoring) { syncDock(); scrollLog(); }
+    if ((list || []).length && !restoring) { syncDock(); scrollLog(); setTimeout(scrollLog, 700); }
   }
 
   async function artifactAction(card, what, btn) {
@@ -832,7 +832,10 @@ const N = (() => {
     const card = frame.closest('.nx-artifact');
     if (m.type === 'resize') {
       const h = Math.max(ART_MIN, Math.min(ART_MAX, Number(m.height) || 0));
+      // The newest thing in the conversation stays in view as it finds its height.
+      const log = $('nx-log'), follow = log && card === log.lastElementChild;
       frame.style.height = h + 'px';
+      if (follow) setTimeout(scrollLog, 320);
       return;
     }
     if (m.type !== 'call') return;

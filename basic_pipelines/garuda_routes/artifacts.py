@@ -27,8 +27,10 @@ BOOTSTRAP = """<script>
   var waiting = {}, next = 1;
   function post(message) { parent.postMessage(Object.assign({garuda: true}, message), '*'); }
   function height() {
+    // The page's own height, not the frame's: scrollHeight of the root is never
+    // less than the frame, so a short page would keep a tall frame.
     var d = document.documentElement, b = document.body;
-    return Math.ceil(Math.max(d ? d.scrollHeight : 0, b ? b.scrollHeight : 0));
+    return Math.ceil(Math.max(d ? d.offsetHeight : 0, b ? b.scrollHeight : 0));
   }
   function resize() { post({type: 'resize', height: height()}); }
   window.garuda = {

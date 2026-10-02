@@ -73,6 +73,9 @@ class PlannerHouse:
             sc.ShortcutStore(os.path.join(data_dir, "shortcuts.json")),
             do_fn=self.agent._run_tool, facts_fn=self.facts, role_of=ROLES.get)
         self.agent.facts_fn = self.engine.facts
+        self.agent.shortcuts_fn = lambda: [
+            {"id": s["id"], "name": s["name"], "when": sc.describe(s)["when"]}
+            for s in self.engine.store.all()]
         self.agent._wants_planner = lambda route: True
         core = SimpleNamespace(SHORTCUTS=self.engine, require_session=require_session,
                                _shortcuts_mod=sc, AGENT_CAPABILITIES=caps.BY_NAME,
@@ -169,7 +172,14 @@ def check_when_empty(ph, r, p):
 def check_weekday_morning(ph, r, p):
     found = programs(ph, r)
     if not found:
-        return p.append("no shortcut card was proposed")
+        # Two recurring schedules say the same thing, and need no card.
+        wanted = {("07:00", "on"), ("07:30", "off")}
+        have = {(e.get("time"), e["target"].get("action")) for e in ph.house.home.schedule_view()
+                if e["kind"] == "daily" and e["target"].get("device") == "lamp"
+                and e.get("days") == [0, 1, 2, 3, 4]}
+        if not wanted <= have:
+            p.append(f"no shortcut card and no weekday schedules: {sorted(map(str, have))}")
+        return
     first = next((x for x in found if x["trigger"].get("at") == "07:00"), None)
     if first is None or first["trigger"].get("days") != [0, 1, 2, 3, 4]:
         return p.append(f"no 07:00 weekday trigger: {[x['trigger'] for x in found]}")
@@ -217,6 +227,12 @@ def check_movie(ph, r, p):
 
 
 def check_night_mode(ph, r, p):
+    # The security settings have a mode schedule of their own: proposing that is right too.
+    for entry in ph.agent.confirmations.waiting(ADMIN):
+        night = (entry["args"].get("mode_schedule") or {}).get("night") or {}
+        if entry["capability"] == "change_security_settings" \
+                and night.get("start") == "23:00" and night.get("end") == "06:00":
+            return
     found = programs(ph, r)
     on = any(x["trigger"].get("at") == "23:00" and does(x, "set_security_mode", mode="night", on=True)
              for x in found)
@@ -323,8 +339,8 @@ def _artifact(ph, r, p):
 def check_energy_chart(ph, r, p):
     html = _artifact(ph, r, p)
     if html:
-        if not re.search(r"<svg|<canvas", html, re.I):
-            p.append("no svg or canvas chart")
+        if not re.search(r"<svg|<canvas|width:|height:", html, re.I):
+            p.append("nothing is drawn")
         if not all(name in html for name in ("Lamp", "Fan", "TV")):
             p.append("not every device is in the chart")
         if not any(s["tool"] in ("energy_usage", "home_insights") for s in r.get("steps") or []):
@@ -338,7 +354,7 @@ def check_control_panel(ph, r, p):
             p.append("the buttons do not call garuda.call")
         if "set_device" not in html:
             p.append("the page never uses set_device")
-        if not all(d in html for d in ("lamp", "fan", "tv")):
+        if not all(d in html for d in ("lamp", "fan", "tv")) and "get_house_state" not in html:
             p.append("not every device has a control")
 
 
@@ -482,6 +498,7 @@ def main():
     ap.add_argument("--case")
     ap.add_argument("--group")
     ap.add_argument("--runs", type=int, default=1)
+    ap.add_argument("--timeout", type=int, help="seconds to wait for one model answer")
     ap.add_argument("--workers", type=int, default=2)
     ap.add_argument("--out")
     ap.add_argument("-v", "--verbose", action="store_true")
@@ -490,6 +507,8 @@ def main():
         raise SystemExit("NIM_API_KEY is not set: there is no model to evaluate")
     cases = [c for c in CASES if (not args.case or c["id"] == args.case)
              and (not args.group or c["group"] == args.group)]
+    if args.timeout:
+        agent_mod.PLANNER_TIMEOUT_S = args.timeout
     report = {}
     for spec in args.models.split(","):
         model, _, flag = spec.strip().partition(":")

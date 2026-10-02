@@ -90,3 +90,26 @@ def test_the_planner_is_told_the_facts_a_shortcut_can_test(house):
     a._wants_planner = lambda route: True
     a.handle("make a routine", user="mani", role="admin")
     assert '{"occupancy": "empty"}' in planner.requests[0]["messages"][0]["content"]
+
+
+def test_a_page_that_loads_something_from_outside_is_refused(house):
+    store = ArtifactStore()
+    for bad in ('<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>',
+                "<link rel=stylesheet href=//fonts.example/x.css>",
+                "<style>@import url(https://x.example/a.css);</style>",
+                '<style>body{background:url("http://x.example/a.png")}</style>'):
+        entry, reason = store.add("t", "<html><body>" + bad + "</body></html>", by="a")
+        assert entry is None and "outside" in reason, bad
+    ok, _ = store.add("t", '<svg xmlns="http://www.w3.org/2000/svg"></svg><a href="https://x.example">x</a>',
+                      by="a")
+    assert ok is not None
+
+
+def test_saved_shortcuts_are_in_the_state_the_model_reads(house):
+    ctx, home = house
+    chat = ScriptedChat([completion("ok")])
+    a = agent(ctx, home, chat)
+    a.shortcuts_fn = lambda: [{"id": "ab12", "name": "Good night", "when": "At 22:30 every day"}]
+    a.handle("hello", user="mani", role="admin")
+    assert "Good night" in chat.requests[0]["messages"][0]["content"]
+    assert "run_shortcut" in names(chat.requests[0])

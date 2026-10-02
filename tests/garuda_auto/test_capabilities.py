@@ -42,7 +42,7 @@ def test_every_capability_can_be_carried_out_one_way():
     assert handlers & by_route == set(), "a capability has both a handler and a route"
     for c in caps.CAPABILITIES:
         if c.call:
-            assert c.routes == (c.call,) and c.lane == "planner"
+            assert c.routes == (c.call,)
 
 
 def test_a_route_backed_capability_asks_for_the_role_its_route_asks_for():
@@ -58,9 +58,10 @@ def test_the_quick_model_is_offered_what_it_always_was():
     assert offered == ["get_security_state", "get_house_state", "set_device", "all_off",
                        "run_scene", "create_scene", "schedule_action", "list_schedules",
                        "create_automation", "list_automations", "set_security_mode",
-                       "recent_activity", "energy_usage", "remember_fact", "forget_fact"]
+                       "recent_activity", "energy_usage", "remember_fact", "forget_fact",
+                       "run_shortcut"]
     # With a planner to hand over to, the quick model gets one more tool: the way to it.
-    assert [t["function"]["name"] for t in caps.tools()][-1] == "hand_to_planner"
+    assert "hand_to_planner" in [t["function"]["name"] for t in caps.tools()]
     assert "hand_to_planner" not in [t["function"]["name"] for t in caps.tools("planner")]
     assert [n for n in offered if n in SECURITY_TOOLS] == [
         "get_security_state", "set_security_mode", "remember_fact", "forget_fact"]
@@ -68,7 +69,7 @@ def test_the_quick_model_is_offered_what_it_always_was():
             "create_automation", "set_security_mode", "forget_fact"} <= set(CHANGING_TOOLS)
     assert "remember_fact" not in CHANGING_TOOLS
     # The planner is offered everything, the quick model's tools included.
-    assert len(caps.tools("planner")) == len(caps.CAPABILITIES) - 1
+    assert len(caps.tools("planner")) == len(caps.CAPABILITIES) - len(caps.PLANNER_HIDDEN)
 
 
 def test_nothing_about_sign_in_or_keys_is_planned():

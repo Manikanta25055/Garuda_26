@@ -21,6 +21,11 @@ from . import jsonfile
 MAX_HTML = 200_000
 MAX_KEPT = 80
 _ID = re.compile(r"^[0-9a-f]{12}$")
+# A script, stylesheet, image, frame or font fetched from another place.
+_OUTSIDE = re.compile(
+    r"""<(?:script|link|img|iframe|source|video|audio|embed|object)\b[^>]*?\b(?:src|href|data)\s*=\s*["']?\s*(?:https?:)?//[^\s"'>]+"""
+    r"""|@import\s+(?:url\()?\s*["']?(?:https?:)?//[^\s"')]+"""
+    r"""|url\(\s*["']?(?:https?:)?//[^\s"')]+""", re.I)
 
 
 class ArtifactStore:
@@ -47,6 +52,13 @@ class ArtifactStore:
             return None, "html is needed: one complete HTML document"
         if len(html) > MAX_HTML:
             return None, f"the page is too large (over {MAX_HTML // 1000} KB)"
+        outside = _OUTSIDE.search(html)
+        if outside:
+            # It would be blocked in the frame anyway, leaving a broken page;
+            # said here, the model writes it again without.
+            return None, ("the page loads something from outside "
+                          f"({outside.group(0)[:60]!r}), which is not allowed: use inline "
+                          "<script> and <style> only, and draw charts yourself")
         entry = {"id": secrets.token_hex(6), "key": secrets.token_urlsafe(24), "title": title,
                  "by": by, "created": self._clock(), "size": len(html), "pinned": False}
         with self._lock:

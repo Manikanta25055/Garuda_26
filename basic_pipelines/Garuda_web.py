@@ -871,6 +871,9 @@ SHORTCUTS = _shortcuts_mod.ShortcutEngine(
     do_fn=AGENT._run_tool, facts_fn=_shortcut_facts, role_of=_shortcut_role_of,
     notify_fn=_shortcut_notify, on_change=lambda: push_urgent_ws())
 AGENT.facts_fn = SHORTCUTS.facts
+AGENT.shortcuts_fn = lambda: [
+    {"id": s["id"], "name": s["name"], "when": _shortcuts_mod.describe(s)["when"]}
+    for s in SHORTCUTS.store.all() if s.get("enabled", True)]
 # What a page in the chat may not ask for, whatever its tier.
 ARTIFACT_BLOCKED = _shortcuts_mod.NOT_STEPS
 
