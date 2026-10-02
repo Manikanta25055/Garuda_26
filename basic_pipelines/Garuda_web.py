@@ -261,6 +261,9 @@ try:
     from .garuda_services import assistant as _svc_assistant
     from .garuda_services.assistant import (  # noqa: F401
         voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+    from .garuda_services import home as _svc_home
+    from .garuda_services.home import (  # noqa: F401
+        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -322,6 +325,9 @@ except ImportError:
     from basic_pipelines.garuda_services import assistant as _svc_assistant
     from basic_pipelines.garuda_services.assistant import (  # noqa: F401
         voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+    from basic_pipelines.garuda_services import home as _svc_home
+    from basic_pipelines.garuda_services.home import (  # noqa: F401
+        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -340,6 +346,7 @@ except ImportError:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 # garuda_services modules read this module's state through `core`.
+_svc_home.bind(sys.modules[__name__])
 _svc_assistant.bind(sys.modules[__name__])
 _svc_state.bind(sys.modules[__name__])
 _svc_sessions.bind(sys.modules[__name__])
@@ -865,7 +872,6 @@ fastapi_app.add_middleware(
 _RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
                          "/api/health", "/api/ready")
 
-@fastapi_app.middleware("http")
 async def global_rate_limit(request: Request, call_next):
     path = request.url.path
     _eval_tok = os.environ.get("GARUDA_EVAL_TOKEN", "")
@@ -880,8 +886,8 @@ async def global_rate_limit(request: Request, call_next):
             from fastapi.responses import JSONResponse
             return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
     return await call_next(request)
+fastapi_app.middleware("http")(global_rate_limit)
 
-@fastapi_app.middleware("http")
 async def product_scope(request: Request, call_next):
     """The security-only product has no home automation, on the server too."""
     if (request.url.path.startswith("/api/home")
@@ -889,9 +895,9 @@ async def product_scope(request: Request, call_next):
         from fastapi.responses import JSONResponse
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     return await call_next(request)
+fastapi_app.middleware("http")(product_scope)
 
 # Security headers middleware
-@fastapi_app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -915,6 +921,7 @@ async def security_headers(request: Request, call_next):
     if request.url.path.startswith("/api/") and "cache-control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
     return response
+fastapi_app.middleware("http")(security_headers)
 
 # Request ids, the /api/v1 alias, one error shape and the access log. Added
 # after the middleware above so it wraps them: a 429 from the rate limiter
@@ -954,48 +961,6 @@ DRISHTI_CTX = _build_drishti_context(
     nim_model=os.environ.get("NIM_MODEL", ""),
     matcher_backend=os.environ.get("DRISHTI_MATCHER", "fuzzy"),
 )
-
-
-def _drishti_authenticate(username, password):
-    """Drishti login against Garuda's own user table. Returns a role or None.
-
-    drishti_api cannot import this module to reach USERS: Garuda_web runs as a
-    script, so the live globals are __main__'s, and an import would produce a
-    second copy whose USERS is still the empty dict it starts as. Passing the
-    function in keeps the one live table.
-    """
-    user = USERS.get(username)
-    if user is None or not _verify_password(password, user["password"]):
-        return None
-    return user.get("role", "user")
-
-
-def _drishti_system_state():
-    """Mode flags, uptime and camera liveness for the Drishti Home screen."""
-    return {
-        "modes": {
-            "dnd": MODE_DND, "night": MODE_NIGHT, "idle": MODE_IDLE,
-            "emergency": MODE_EMERGENCY, "privacy": MODE_PRIVACY,
-            "email_off": MODE_EMAIL_OFF,
-        },
-        "uptime_s": int(time.time() - _app_start_time),
-        # There is no pipeline liveness flag, and app_gst is set before the
-        # pipeline produces anything. Frame freshness is the honest signal:
-        # what the screen wants to know is whether the camera is delivering.
-        "pipeline": "running" if (time.time() - _frame_ts) < 5.0 else "stopped",
-        "rule_loop": DRISHTI_RUNTIME.health(),
-    }
-
-
-def _drishti_set_privacy(on):
-    """Turn the camera off from the app.
-
-    MODE_PRIVACY was reachable only through the voice assistant, so the web app
-    could read the flag and never change it.
-    """
-    global MODE_PRIVACY
-    MODE_PRIVACY = bool(on)
-    log_system_update(f"[DRISHTI] privacy {'on' if MODE_PRIVACY else 'off'}")
 
 
 DRISHTI_CTX.authenticate = _drishti_authenticate
@@ -1046,56 +1011,6 @@ DRISHTI_CTX.nim.chat = NIM_CHAT
 
 HOME = HomeServices(DRISHTI_CTX, DRISHTI_RUNTIME, DRISHTI_DATA_DIR)
 DRISHTI_RUNTIME.context_provider = HOME.context
-
-
-def _home_presence():
-    """True home / False away / None when no phone is registered to watch."""
-    return _owner_present if KNOWN_DEVICES else None
-
-
-def _home_security():
-    if _alert_active:
-        return "danger"
-    if _night_presence_alert_active:
-        return "night_presence"
-    return "clear"
-
-
-def _home_email(subject, body):
-    """Home notices go to the alert recipients, unless email alerts are off."""
-    if MODE_EMAIL_OFF or not (EMAIL_SENDER and EMAIL_SENDER_PASS and EMAIL_RECIPIENTS):
-        return
-    _send_mail(subject, body)
-
-
-def _home_modes():
-    return {"dnd": MODE_DND, "night": MODE_NIGHT, "idle": MODE_IDLE,
-            "emergency": MODE_EMERGENCY, "privacy": MODE_PRIVACY, "email_off": MODE_EMAIL_OFF}
-
-
-def _home_set_mode(mode, value, actor):
-    """The assistant's way into the same switch as POST /api/modes."""
-    global MODE_DND
-    names = {"dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF", "idle": "MODE_IDLE",
-             "night": "MODE_NIGHT", "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY"}
-    if mode not in names:
-        raise ValueError(f"unknown mode: {mode!r}")
-    if mode in ADMIN_ONLY_MODES and value and USERS.get(actor, {}).get("role") != "admin":
-        raise PermissionError("only an admin can turn this mode on: it silences alerts")
-    with _mode_lock:
-        globals()[names[mode]] = bool(value)
-        if mode == "emergency" and value:
-            MODE_DND = False
-    save_config()
-    log_system_update(f"Mode {mode} set to {bool(value)} by {actor or 'assistant'} (Narada)")
-    push_urgent_ws()
-    return f"{mode} {'on' if value else 'off'}"
-
-
-def _home_security_summary():
-    return {"alert_active": _alert_active, "night_presence_alert": _night_presence_alert_active,
-            "alerts_today": _alert_history.get(datetime.date.today().isoformat(), 0),
-            "camera_live": (time.time() - _frame_ts) < 5.0}
 
 
 HOME.presence_fn = _home_presence
@@ -1299,8 +1214,10 @@ DRISHTI_CTX.frame_source = mjpeg_frames
 # ── Clip recording ────────────────────────────────────────────────────────────
 _CLIPS_KEEP = 50
 
-def _prune_old_clips(keep: int = _CLIPS_KEEP):
-    """Keep the newest `keep` clips; nothing ever removed them before."""
+def _prune_old_clips(keep: int = None):
+    """Keep the newest `keep` clips (default _CLIPS_KEEP); nothing ever removed them before."""
+    if keep is None:
+        keep = _CLIPS_KEEP
     try:
         clips = sorted((_BASE / "system_logs").glob("clip_*.mp4*"), key=lambda p: p.stat().st_mtime)
         for old in clips[:-keep]:
@@ -1311,7 +1228,6 @@ def _prune_old_clips(keep: int = _CLIPS_KEEP):
 fastapi_app.include_router(build_camera_router(sys.modules[__name__]))
 
 # ── Narada voice (ElevenLabs Speech Engine) ──────────────────────────────────
-@fastapi_app.websocket("/ws/narada-voice")
 async def narada_voice_ws(websocket: WebSocket):
     """ElevenLabs connects here with each conversation's transcripts."""
     if not NARADA_VOICE.verify(websocket.headers):
@@ -1322,6 +1238,7 @@ async def narada_voice_ws(websocket: WebSocket):
         await NARADA_VOICE.serve(websocket)
     except WebSocketDisconnect:
         pass
+fastapi_app.websocket("/ws/narada-voice")(narada_voice_ws)
 
 
 _WS_CONNECT_LIMIT = 60   # socket opens per client address per rate window
