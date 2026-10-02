@@ -89,7 +89,9 @@ class AIConfigRequest(BaseModel):
 
 
 def build_home_router(ctx, home, agent, digest, *, session_dep, admin_dep,
-                      ai_configure=None, ai_test=None):
+                      ai_configure=None, ai_test=None, suggestion_decided=None):
+    # suggestion_decided(suggestion, accepted, user) is told when a routine the
+    # house offered is accepted or dismissed, so the answer can be remembered.
     router = APIRouter(prefix="/api/home")
 
     def _user(session):
@@ -315,11 +317,16 @@ def build_home_router(ctx, home, agent, digest, *, session_dep, admin_dep,
         if not ok:
             raise HTTPException(400, reason)
         home.dismiss_suggestion(suggestion_id)
+        if suggestion_decided:
+            suggestion_decided(match, True, _user(session)[0])
         return {"ok": True, "schedule": entry}
 
     @router.post("/suggestions/{suggestion_id}/dismiss")
     async def dismiss_suggestion(suggestion_id: str, session=Depends(session_dep)):
+        match = next((s for s in home.suggestions() if s["id"] == suggestion_id), None)
         home.dismiss_suggestion(suggestion_id)
+        if match is not None and suggestion_decided:
+            suggestion_decided(match, False, _user(session)[0])
         return {"ok": True}
 
     # ── insight ───────────────────────────────────────────────────────────────

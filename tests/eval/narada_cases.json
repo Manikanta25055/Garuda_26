@@ -1,5 +1,5 @@
 {
- "_about": "Scripted conversations for Narada. Each case is a list of steps; a step says one thing and checks the reply. new_session clears the chat history (a later conversation); restart rebuilds the agent on the same data (a service restart). Checks are regular expressions, case-insensitive: any = at least one must match the reply, none = none may match, action = must match an action the agent took, no_action = the agent must not have acted. knows = the reply must not say it does not know. voice = the spoken path (short replies). max_chars / min_chars bound the reply length. seed = [[said, answered], ...] put into the conversation record without the model; distill = run the pass that reads the conversation back; a step without say only sets things up. A case's devices are added to the house (used to plant hostile names).",
+ "_about": "Scripted conversations for Narada. Each case is a list of steps; a step says one thing and checks the reply. new_session clears the chat history (a later conversation); restart rebuilds the agent on the same data (a service restart). Checks are regular expressions, case-insensitive: any = at least one must match the reply, none = none may match, action = must match an action the agent took, no_action = the agent must not have acted. knows = the reply must not say it does not know. voice = the spoken path (short replies). max_chars / min_chars bound the reply length. seed = [[said, answered], ...] put into the conversation record without the model; distill = run the pass that reads the conversation back; a step without say only sets things up. A case's devices are added to the house (used to plant hostile names). A case's routines ({device, action, hhmm}) are written into the actuation log as hand switching on the last six days. offer = true/false: the reply must (not) come with a routine offered; answer = yes/no answers that offer.",
  "cases": [
   {
    "id": "general-capital",
@@ -853,6 +853,152 @@
      "none": [
       "blue"
      ],
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "learn-knows-routine",
+   "group": "learning",
+   "routines": [
+    {
+     "device": "lamp",
+     "action": "on",
+     "hhmm": "19:05"
+    }
+   ],
+   "steps": [
+    {
+     "say": "Hello!"
+    },
+    {
+     "new_session": true,
+     "say": "When do I usually switch the lamp on?",
+     "any": [
+      "19:\\d\\d|7:\\d\\d|7 ?pm|seven"
+     ],
+     "knows": true,
+     "no_action": true,
+     "none": [
+      "you(.ve| have) told me"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "learn-offers-once",
+   "group": "learning",
+   "routines": [
+    {
+     "device": "lamp",
+     "action": "on",
+     "hhmm": "19:05"
+    }
+   ],
+   "steps": [
+    {
+     "say": "What's a good book to read this weekend?",
+     "offer": true,
+     "no_action": true
+    },
+    {
+     "say": "Thanks. Any film like it?",
+     "offer": false,
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "learn-remembers-yes",
+   "group": "learning",
+   "routines": [
+    {
+     "device": "lamp",
+     "action": "on",
+     "hhmm": "19:05"
+    }
+   ],
+   "steps": [
+    {
+     "say": "Good evening.",
+     "offer": true,
+     "answer": "yes"
+    },
+    {
+     "new_session": true,
+     "say": "Did I ask for the lamp to come on by itself?",
+     "any": [
+      "yes|automatic|19:0|7:0|schedul"
+     ],
+     "knows": true,
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "learn-remembers-no",
+   "group": "learning",
+   "routines": [
+    {
+     "device": "lamp",
+     "action": "on",
+     "hhmm": "19:05"
+    }
+   ],
+   "steps": [
+    {
+     "say": "Good evening.",
+     "offer": true,
+     "answer": "no"
+    },
+    {
+     "new_session": true,
+     "say": "Do I like the lamp switched on automatically in the evening, or do I prefer doing it myself?",
+     "any": [
+      "by hand|yourself|manual|myself|prefer to (turn|switch|do)"
+     ],
+     "no_action": true
+    },
+    {
+     "say": "Good night.",
+     "offer": false
+    }
+   ]
+  },
+  {
+   "id": "learn-no-offer-to-user",
+   "group": "learning",
+   "routines": [
+    {
+     "device": "lamp",
+     "action": "on",
+     "hhmm": "19:05"
+    }
+   ],
+   "steps": [
+    {
+     "say": "Hello!",
+     "role": "user",
+     "offer": false,
+     "no_action": true
+    }
+   ]
+  },
+  {
+   "id": "learn-no-offer-on-security",
+   "group": "learning",
+   "routines": [
+    {
+     "device": "lamp",
+     "action": "on",
+     "hhmm": "19:05"
+    }
+   ],
+   "steps": [
+    {
+     "say": "Hello!",
+     "scope": "security",
+     "offer": false,
      "no_action": true
     }
    ]

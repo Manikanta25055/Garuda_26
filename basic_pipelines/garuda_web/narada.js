@@ -562,6 +562,8 @@ const N = (() => {
         if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
       }
       memoryChips(res.memory);
+      offerChip(res.offer);
+      pollMemory();                       // routines the house noticed, facts kept after a pause
       if (infoOpen) renderInfo();
     } catch (e) {
       const msg = (e && e.detail) || 'Connection error. Please try again.';
@@ -577,7 +579,7 @@ const N = (() => {
   // memory", with Undo). The whole memory is one tap away in the "i" panel.
   const escHtml = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const CHIP_LABEL = { saved: 'Saved to memory', updated: 'Memory updated', forgotten: 'Removed from memory', pending: 'Keep this in memory?' };
-  const ORIGIN_LABEL = { asked: 'you asked', noticed: 'picked up in conversation', distilled: 'from a past conversation', manual: 'added by hand' };
+  const ORIGIN_LABEL = { asked: 'you asked', noticed: 'picked up in conversation', distilled: 'from a past conversation', manual: 'added by hand', observed: 'noticed from how the house is used', choice: 'your choice' };
   const shownEvents = new Set();
   let memSince = Date.now() / 1000;
   let memOpen = false, memData = null, memEditing = null, memError = '';
@@ -603,6 +605,33 @@ const N = (() => {
       added = true;
     }
     if (added) { scrollLog(); haptic('tap'); if (memOpen) loadMemory(); }
+  }
+
+  // A routine the house has noticed, offered once in a while: Yes makes it a
+  // schedule, No leaves it to you. Either way Narada remembers the answer.
+  function offerChip(offer) {
+    if (!offer || document.querySelector(`.nx-memchip[data-offer="${offer.id}"]`)) return;
+    const card = bubble('extra', '');
+    if (!card) return;
+    card.classList.add('nx-memchip');
+    card.dataset.offer = offer.id;
+    card.innerHTML = `<span class="nx-memchip-l">Noticed</span><span class="nx-memchip-t">${escHtml(offer.text)}</span>`
+      + '<span class="nx-memchip-b"><button type="button" data-chip="accept">Yes</button><button type="button" data-chip="decline">No</button></span>';
+    scrollLog();
+  }
+
+  async function offerAction(card, what) {
+    const b = card.querySelector('.nx-memchip-b'), l = card.querySelector('.nx-memchip-l');
+    card.querySelectorAll('button').forEach(x => { x.disabled = true; });
+    try {
+      await G._apiFn('POST', `/api/home/suggestions/${encodeURIComponent(card.dataset.offer)}/${what === 'accept' ? 'accept' : 'dismiss'}`);
+      l.textContent = what === 'accept' ? 'Scheduled' : 'Left to you';
+      b.textContent = '';
+      haptic('tap');
+      pollMemory();                       // the answer itself is remembered: show its chip
+    } catch (e) {
+      b.textContent = (e && e.detail) || 'That did not work';
+    }
   }
 
   async function pollMemory() {
@@ -776,7 +805,8 @@ const N = (() => {
     // Memory: chips in the conversation, and the panel's buttons and forms.
     $('nx-log').addEventListener('click', e => {
       const btn = e.target.closest('[data-chip]'), card = btn && btn.closest('.nx-memchip');
-      if (card) chipAction(card, btn.dataset.chip);
+      if (!card) return;
+      if (card.dataset.offer) offerAction(card, btn.dataset.chip); else chipAction(card, btn.dataset.chip);
     });
     const infoBody = $('nx-info-body');
     infoBody.addEventListener('click', e => {

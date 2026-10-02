@@ -236,6 +236,10 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw.BRAIN.conversations, '_data', {'conversations': {}})
     monkeypatch.setattr(gw.BRAIN.memory, 'path', str(tmp_data / 'system_logs/narada_memory.json'))
     monkeypatch.setattr(gw.BRAIN.memory, '_facts', [])
+    monkeypatch.setattr(gw.BRAIN.observer, 'path', str(tmp_data / 'system_logs/narada_offers.json'))
+    monkeypatch.setattr(gw.BRAIN.observer, '_offered', {})
+    monkeypatch.setattr(gw.BRAIN.observer, '_last_offer', 0.0)
+    monkeypatch.setattr(gw.BRAIN, '_habits_at', None)
 
     # ── In-memory state reset ──
     monkeypatch.setattr(gw.STATE.auth, 'sessions',    {})

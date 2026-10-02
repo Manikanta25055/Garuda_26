@@ -32,7 +32,7 @@ from dotenv import load_dotenv  # noqa: E402
 load_dotenv(ROOT / ".env")
 
 from basic_pipelines import drishti_api  # noqa: E402
-from basic_pipelines.garuda_auto import actuators  # noqa: E402
+from basic_pipelines.garuda_auto import actuation_log, actuators  # noqa: E402
 from basic_pipelines.garuda_auto.agent import HomeAgent  # noqa: E402
 from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend  # noqa: E402
 from basic_pipelines.garuda_auto.home import HomeServices  # noqa: E402
@@ -86,6 +86,28 @@ class House:
                                                lambda: self.home.scenes.scenes))
         self.agent = make_agent(self, decision)
 
+    def seed_routine(self, device, action, hhmm, days=6):
+        """Write a routine into the actuation log: switched by hand at about this time
+        on each of the last `days` days, the way habits.suggest looks for it."""
+        hour, minute = (int(x) for x in hhmm.split(":"))
+        today = time.localtime()
+        for back in range(1, days + 1):
+            stamp = time.mktime((today.tm_year, today.tm_mon, today.tm_mday - back, hour,
+                                 minute + (back % 3) * 4, 0, 0, 0, -1))
+            actuation_log.record(self.ctx.log_path, device=device, action=action, rule_id=None,
+                                 matched=[], ok=True, clock=lambda s=stamp: s, source="manual",
+                                 actor=USERS["admin"])
+
+    def answer_offer(self, offer, accepted, user):
+        match = next(s for s in self.home.suggestions() if s["id"] == offer["id"])
+        if accepted:
+            self.home.add_schedule({"device": match["device"], "action": match["action"]},
+                                   time_hhmm=match["time"], days=match["days"],
+                                   label="From your routine", created_by=user)
+        self.home.dismiss_suggestion(offer["id"])
+        name = self.ctx.registry.get(match["device"])["name"]
+        self.agent.brain.routine_decided(match, name, accepted, by=user)
+
     def set_mode(self, mode, value, actor):
         if mode not in self.modes:
             raise ValueError(f"unknown mode: {mode!r}")
@@ -137,6 +159,8 @@ def run_case(case, chat):
     started, transcript, problems = time.time(), [], []
     with tempfile.TemporaryDirectory(prefix="narada-eval-") as data_dir:
         house = House(data_dir, chat, case.get("devices", ()))
+        for routine in case.get("routines", ()):
+            house.seed_routine(**routine)
         try:
             for number, step in enumerate(case["steps"], 1):
                 role = step.get("role", "admin")
@@ -165,6 +189,13 @@ def run_case(case, chat):
                 found = check(step, reply, actions)
                 if result.get("lane") != "agent":
                     found.append(f"lane was {result.get('lane')!r}, not the model")
+                if step.get("offer") and not result.get("offer"):
+                    found.append("no routine was offered")
+                if step.get("offer") is False and result.get("offer"):
+                    found.append(f"offered a routine it should not have: {result['offer']['text']}")
+                # Answer the offer the way the Automations page would.
+                if step.get("answer") and result.get("offer"):
+                    house.answer_offer(result["offer"], step["answer"] == "yes", user)
                 transcript.append({"say": step["say"], "reply": reply, "actions": actions,
                                    "problems": found})
                 problems += [f"step {number}: {p}" for p in found]

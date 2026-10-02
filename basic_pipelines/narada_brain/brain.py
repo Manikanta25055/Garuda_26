@@ -17,6 +17,7 @@ from ..garuda_auto.llm import NO_THINKING
 from . import distiller, gate, guards, persona
 from .conversation import SUMMARY_INSTRUCTION, Conversations
 from .memory import CATEGORIES, MEMORY_FILE, MemoryStore
+from .observer import OFFERS_FILE, REFRESH_S, Observer
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,9 @@ class Brain:
                                            clock=clock, background=background)
         self.memory = MemoryStore(os.path.join(data_dir, MEMORY_FILE) if data_dir else None,
                                   clock=clock)
+        self.observer = Observer(self.memory, os.path.join(data_dir, OFFERS_FILE) if data_dir else None,
+                                 clock=clock)
+        self._habits, self._habits_at = [], None
         self.stats = {"leaks_blocked": 0, "facts_saved": 0, "facts_held": 0, "facts_refused": 0}
         # What memory just did, for the chat to show ("Saved to memory", with Undo).
         # A typed reply carries its own; a spoken one is fetched from here, because
@@ -166,6 +170,38 @@ class Brain:
         if key:
             self.stats[key] += 1
         if outcome["status"] in ("saved", "updated", "pending"):
+            outcome["event"] = self._event(outcome["fact"], outcome["status"], outcome["replaced"])
+        return outcome
+
+    # ── learning from what the household does ─────────────────────────────────
+
+    def observe(self, fetch, names, *, may_offer=False):
+        """Keep memory in step with the routines the house has noticed.
+
+        `fetch()` returns the house's current routine suggestions (it reads the
+        actuation log, so it is called at most every few minutes); `names`
+        maps device ids to names. Returns one routine to offer in the
+        conversation, or None. Never raises: this rides along with a turn and
+        must not be the reason one fails.
+        """
+        try:
+            now = self._clock()
+            if self._habits_at is None or now - self._habits_at >= REFRESH_S:
+                self._habits, self._habits_at = list(fetch() or []), now
+                for outcome in self.observer.sync(self._habits, names):
+                    self.stats["facts_saved"] += 1
+                    self._event(outcome["fact"], outcome["status"], outcome["replaced"])
+            return self.observer.offer(self._habits) if may_offer else None
+        except Exception:
+            log.exception("observing routines")
+            return None
+
+    def routine_decided(self, suggestion, name, accepted, by=""):
+        """The household answered an offered routine, on whichever page."""
+        outcome = self.observer.decided(suggestion, name, accepted, by=by)
+        self._habits_at = None                       # what is on offer has changed
+        if outcome["status"] in ("saved", "updated"):
+            self.stats["facts_saved"] += 1
             outcome["event"] = self._event(outcome["fact"], outcome["status"], outcome["replaced"])
         return outcome
 

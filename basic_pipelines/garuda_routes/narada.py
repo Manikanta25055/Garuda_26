@@ -42,7 +42,7 @@ def build_narada_router(core):
             lambda: core._assistant_reply(msg, session["username"], session["role"], scope))
         return {"response": result["reply"], "lane": result.get("lane"),
                 "actions": result.get("actions", []), "proposal": result.get("proposal"),
-                "memory": result.get("memory", []),
+                "memory": result.get("memory", []), "offer": result.get("offer"),
                 "route": result.get("route"), "model": result.get("model")}
 
 
@@ -65,7 +65,7 @@ def build_narada_router(core):
                 result = core._assistant_reply(msg, user, role, scope)
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
-            meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "model")}
+            meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
             for word in re.findall(r"\S+\s*", result["reply"]):
                 loop.call_soon_threadsafe(queue.put_nowait, ("token", word))

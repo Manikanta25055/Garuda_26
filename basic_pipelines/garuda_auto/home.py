@@ -10,6 +10,7 @@ A background thread (1 s) runs what is time-driven: schedules, the away
 check, vacation lighting and the daily digest. Rules keep their own faster
 loop in runtime.py.
 """
+import copy
 import logging
 import random
 import threading
@@ -67,7 +68,9 @@ class HomeServices:
         self.scenes = SceneStore(f"{data_dir}/scenes.json", ctx.registry)
         self.schedules = ScheduleStore(f"{data_dir}/schedules.json", clock=clock)
         self._settings_path = f"{data_dir}/home_settings.json"
-        self.settings = {**DEFAULT_SETTINGS, **jsonfile.load(self._settings_path, {})}
+        # A deep copy: the defaults hold lists, and a shallow one handed every
+        # HomeServices in the process the same "dismissed_suggestions" list.
+        self.settings = {**copy.deepcopy(DEFAULT_SETTINGS), **jsonfile.load(self._settings_path, {})}
         self.notices = []
         # Injected by Garuda.
         self.presence_fn = None    # () -> True (home) / False (away) / None (unknown)

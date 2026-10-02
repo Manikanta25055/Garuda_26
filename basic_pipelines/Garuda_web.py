@@ -840,7 +840,10 @@ HOME.digest_fn = DIGEST.text
 
 fastapi_app.include_router(build_home_router(
     DRISHTI_CTX, HOME, AGENT, DIGEST, session_dep=require_session, admin_dep=require_admin,
-    ai_configure=_ai_configure, ai_test=_ai_test))
+    ai_configure=_ai_configure, ai_test=_ai_test,
+    # Narada remembers the household's answer to an offered routine.
+    suggestion_decided=lambda s, accepted, by: BRAIN.routine_decided(
+        s, (DRISHTI_CTX.registry.get(s["device"]) or {}).get("name", s["device"]), accepted, by=by)))
 
 # ── Routes (one module per area in garuda_routes/) ───────────────────────────
 

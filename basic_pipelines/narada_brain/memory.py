@@ -40,7 +40,11 @@ BLOCK_TOKENS = 1200
 CATEGORIES = ("person", "family", "health", "routine", "preference", "house", "work", "contact", "other")
 # How a fact came to be known. What the person asked to be remembered outranks
 # what the model picked up, which outranks what a later pass inferred.
-ORIGINS = {"asked": 1.0, "noticed": 0.7, "distilled": 0.55, "manual": 1.0}
+# "observed" and "choice" are not things anyone said: the first is a routine
+# counted from how the house is used, the second is an answer the household
+# gave to an offer. Both are written by narada_brain.observer.
+ORIGINS = {"asked": 1.0, "noticed": 0.7, "distilled": 0.55, "manual": 1.0,
+           "observed": 0.8, "choice": 1.0}
 
 DUPLICATE_AT = 0.75
 _STOP = frozenset("""a an the and or but of to in on at for with from by is are was were be been am
@@ -119,6 +123,9 @@ class MemoryStore:
         self._lock = threading.RLock()
         data = jsonfile.load(path, {}) if path else {}
         self._facts = [f for f in data.get("facts", []) if isinstance(f, dict) and f.get("text")]
+        # Routines the household removed from memory: the house still sees them,
+        # but they asked not to have them written down, so they stay out.
+        self._suppressed = set(data.get("suppressed_keys", []))
 
     # ── reading ───────────────────────────────────────────────────────────────
 
@@ -165,7 +172,10 @@ class MemoryStore:
 
         lines, used = [], 0
         for f in sorted(facts, key=rank):
-            line = f"- ({f['id']}) {f['text']}"
+            # A routine counted from the actuation log was not told to anyone, and
+            # the model should not say it was.
+            seen = " [noticed from how the house is used, not told to you]" if f.get("origin") == "observed" else ""
+            line = f"- ({f['id']}) {f['text']}{seen}"
             cost = budget.tokens(line)
             if used + cost > token_cap:
                 break
@@ -182,16 +192,22 @@ class MemoryStore:
     # ── writing ───────────────────────────────────────────────────────────────
 
     def remember(self, text, *, category=None, origin="noticed", by="", replaces=None,
-                 pending=False):
+                 pending=False, key=None):
         """Record one fact. Returns {"status", "fact", "replaced", "reason"}.
 
         status: saved | updated (it corrected an existing fact, now archived) |
         duplicate (already known; nothing written) | pending (held until a
         person confirms it) | rejected (see reason).
+
+        `key` names the one thing a fact is about (a routine, a choice): a new
+        fact with the same key replaces the old one instead of sitting beside it.
         """
         clean, reason = gate.clean_fact(text)
         if clean is None:
             return {"status": "rejected", "fact": None, "replaced": None, "reason": reason}
+        if key and origin == "observed" and key in self._suppressed:
+            return {"status": "rejected", "fact": None, "replaced": None,
+                    "reason": "the household removed this from memory"}
         if category not in CATEGORIES:
             category = guess_category(clean)
         now = self._clock()
@@ -199,6 +215,12 @@ class MemoryStore:
             target = self._find(replaces)
             if target is not None and target.get("archived"):
                 target = None
+            if target is None and key:
+                target = next((f for f in self._facts if f.get("key") == key
+                               and not f.get("archived")), None)
+                if target is not None and target["text"] == clean:
+                    return {"status": "duplicate", "fact": dict(target), "replaced": None,
+                            "reason": "already known"}
             if target is None:
                 for existing in self._facts:
                     if existing.get("archived"):
@@ -221,6 +243,8 @@ class MemoryStore:
             fact = {"id": uuid.uuid4().hex[:6], "text": clean, "category": category,
                     "origin": origin if origin in ORIGINS else "noticed", "by": by or "",
                     "created": now, "updated": now}
+            if key:
+                fact["key"] = key
             if pending:
                 fact["pending"] = True
                 if target is not None:
@@ -233,6 +257,21 @@ class MemoryStore:
             return {"status": status, "fact": dict(fact),
                     "replaced": dict(target) if target is not None and not pending else None,
                     "reason": ""}
+
+    def by_key(self, key):
+        with self._lock:
+            found = next((f for f in self._facts if f.get("key") == key and not f.get("archived")), None)
+            return dict(found) if found else None
+
+    def archive_key(self, key, reason):
+        """Archive the active fact with this key, if there is one."""
+        with self._lock:
+            found = next((f for f in self._facts if f.get("key") == key and not f.get("archived")), None)
+            if found is None:
+                return None
+            self._archive(found, reason)
+            self._save()
+            return dict(found)
 
     def confirm(self, fact_id):
         """A person approved a held fact. Returns the fact, or None."""
@@ -266,6 +305,8 @@ class MemoryStore:
             if fact is None:
                 return None
             self._archive(fact, "forgotten")
+            if fact.get("key"):
+                self._suppressed.add(fact["key"])
             self._save()
             return dict(fact)
 
@@ -294,6 +335,7 @@ class MemoryStore:
             if fact is None or not fact.get("archived"):
                 return None
             fact.pop("archived")
+            self._suppressed.discard(fact.get("key"))
             fact["updated"] = self._clock()
             self._save()
             return dict(fact)
@@ -304,6 +346,8 @@ class MemoryStore:
             fact = self._find(fact_id)
             if fact is None:
                 return False
+            if fact.get("key") and not fact.get("archived"):
+                self._suppressed.add(fact["key"])
             self._facts.remove(fact)
             self._save()
             return True
@@ -320,6 +364,7 @@ class MemoryStore:
     def _save(self):
         if self.path:
             try:
-                jsonfile.save(self.path, {"facts": self._facts})
+                jsonfile.save(self.path, {"facts": self._facts,
+                                          "suppressed_keys": sorted(self._suppressed)})
             except OSError:
                 log.exception("saving memory")

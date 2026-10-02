@@ -107,6 +107,15 @@ class HomeAgent:
         if route_view is not None:
             result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
+        if result["lane"] == "agent" and scope != "security":
+            # Routines the house has noticed become things Narada knows, and one
+            # at a time is offered here. To an admin only (a schedule is theirs to
+            # make), in writing only, and never in a turn that read injected text.
+            offer = self.brain.observe(
+                self.home.suggestions, {d["id"]: d["name"] for d in self.ctx.registry.devices},
+                may_offer=role == "admin" and not voice and not result.get("injection"))
+            if offer:
+                result["offer"] = offer
         turn = result.pop("_turn", None)
         if result["lane"] == "agent" and turn:
             self.brain.record(f"security:{user}" if scope == "security" else user, turn)
