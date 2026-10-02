@@ -73,7 +73,7 @@ class TestPrimaryNonBlocking:
         source = inspect.getsource(gw.app_callback)
         assert "_secondary_queue.put_nowait" in source, \
             "primary callback must not block on the secondary queue"
-        assert "except _queue_mod.Full" in source, \
+        assert "except core._queue_mod.Full" in source, \
             "primary callback must handle a full secondary queue"
         assert "record_secondary_drop" in source, \
             "a dropped frame must be recorded as a metric"
