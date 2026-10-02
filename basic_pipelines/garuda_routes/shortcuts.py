@@ -96,6 +96,10 @@ def build_shortcuts_router(core):
 
     @router.post("/{shortcut_id}/cancel")
     async def cancel_shortcut(shortcut_id: str, session=Depends(core.require_session)):
+        # Whoever started this run may stop it; otherwise its maker or an admin.
+        live = next((r for r in core.SHORTCUTS.running() if r["shortcut"] == shortcut_id), None)
+        if live is not None and live.get("by") != session["username"]:
+            _own_or_admin(shortcut_id, session)
         return {"ok": True, "was_running": core.SHORTCUTS.cancel(shortcut_id)}
 
     @router.post("/{shortcut_id}/toggle")

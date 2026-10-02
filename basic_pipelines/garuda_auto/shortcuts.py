@@ -491,14 +491,17 @@ class ShortcutEngine:
         self._last_auto = {}        # shortcut id -> time of its last automatic run
         self._last_minute = ""
         self._seen_when = set()     # when-triggers this run of the service has looked at
+        self._facts_ok = True
         self._thread = None
         self.last_error = ""
 
     def facts(self):
+        self._facts_ok = True
         try:
             facts = dict(self.facts_fn() or {})
         except Exception as exc:
             self.last_error = f"facts: {type(exc).__name__}: {exc}"
+            self._facts_ok = False
             facts = {}
         facts.update(clock_facts(self._clock()))
         return facts
@@ -518,6 +521,10 @@ class ShortcutEngine:
     def tick(self):
         now = self._clock()
         facts = self.facts()
+        if not self._facts_ok:
+            # Nothing is known this second. Judging triggers on that would read
+            # every condition as false, and as newly true again a second later.
+            return
         minute = time.strftime("%Y-%m-%d %H:%M", time.localtime(now))
         new_minute, self._last_minute = minute != self._last_minute, minute
         for shortcut in self.store.all():
@@ -604,11 +611,14 @@ class ShortcutEngine:
             if progress is None:
                 return False
             progress["cancel"] = True
-            return True
+            child = progress.get("child")
+        if child:
+            self.cancel(child)          # the shortcut it is in the middle of running
+        return True
 
     def running(self):
         with self._lock:
-            return [{k: v for k, v in p.items() if k != "cancel"} | {"steps": list(p["steps"])}
+            return [{k: v for k, v in p.items() if k not in ("cancel", "child")} | {"steps": list(p["steps"])}
                     for p in self._running.values()]
 
     def _carry_out(self, shortcut, progress, by, role, depth):
@@ -671,8 +681,10 @@ class ShortcutEngine:
             elif "run" in step:
                 if depth >= MAX_DEPTH:
                     raise _Stop("failed: shortcuts are nested too deeply")
+                progress["child"] = step["run"]
                 ok, reason, _ = self.run(step["run"], by=by, role=role, cause="shortcut",
                                          wait=True, depth=depth + 1)
+                progress["child"] = None
                 self._note(progress, f"run {step['run']}", ok, reason)
                 if not ok:
                     raise _Stop(f"failed: run {step['run']}: {reason}")

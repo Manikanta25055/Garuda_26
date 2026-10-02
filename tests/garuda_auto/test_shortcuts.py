@@ -295,3 +295,45 @@ def test_a_shortcut_that_silences_alerts_says_so():
     assert sc.cautions(check(program(steps=[{"do": "set_security_mode", "args": {"mode": "night", "on": True}},
                                             {"do": "set_security_mode", "args": {"mode": "idle", "on": False}}]))) == []
     assert "every 2 min" in sc.cautions(check(program(trigger={"type": "every", "minutes": 2})))[0]
+
+
+def test_a_second_without_facts_is_not_a_change_of_state(house):
+    house.add(program(cooldown_s=5, trigger={
+        "type": "when", "condition": {"field": "occupancy", "op": "==", "value": "empty"}}))
+    house.facts["occupancy"] = "empty"
+    house.engine.tick()
+    time.sleep(0.15)
+    good = house.engine.facts_fn
+
+    def broken():
+        raise RuntimeError("the state could not be read")
+    house.engine.facts_fn = broken
+    house.now += 30
+    house.engine.tick()
+    house.engine.facts_fn = good
+    house.now += 30
+    house.engine.tick()
+    time.sleep(0.15)
+    assert len(house.done) == 1 and "could not be read" in house.engine.last_error
+
+
+def test_stopping_a_shortcut_stops_the_one_it_is_running(house):
+    import threading
+    inner = house.add(program(name="Inner", steps=[{"wait": 600}, {"do": "all_off", "args": {}}]))
+    outer = house.engine.store.add(house.engine.check(
+        {"name": "Outer", "steps": [{"run": inner}, {"do": "all_off", "args": {}}]}, "admin"),
+        created_by="admin")["id"]
+    gate = threading.Event()
+    house.engine._sleep = lambda seconds: gate.wait(2) and False
+    house.engine.run(outer, by="admin")
+    for _ in range(50):
+        if any(r["shortcut"] == inner for r in house.engine.running()):
+            break
+        time.sleep(0.02)
+    assert house.engine.cancel(outer)
+    gate.set()
+    for _ in range(100):
+        if not house.engine.running():
+            break
+        time.sleep(0.02)
+    assert house.done == [] and house.engine.store.get(inner)["runs"][0]["outcome"] == "cancelled"

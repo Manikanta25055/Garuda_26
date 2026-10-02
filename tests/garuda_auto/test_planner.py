@@ -217,3 +217,47 @@ def test_a_planner_job_has_a_time_budget(house, monkeypatch):
     a._wants_planner = lambda route: True
     result = a.handle("build something", user="mani", role="admin")
     assert planner.requests == [] and "too long" in result["reply"]
+
+
+def test_nothing_narada_says_to_the_model_reads_as_an_injected_instruction():
+    """A tool result is scanned for instructions hiding in data (guards.injected).
+    The agent's own messages go through the same scan: one of them said "Use the
+    tools you have", was taken for an attack, and the rest of that turn refused
+    to change anything."""
+    import ast
+    from pathlib import Path
+    from basic_pipelines.narada_brain import guards
+    root = Path(__file__).resolve().parents[2] / "basic_pipelines"
+    hits = []
+    for name in ("garuda_auto/agent.py", "garuda_auto/site_calls.py", "garuda_auto/shortcuts.py",
+                 "garuda_auto/artifacts.py", "garuda_auto/confirmations.py",
+                 "garuda_auto/capabilities.py", "garuda_auto/home.py", "garuda_auto/schedules.py",
+                 "garuda_auto/scenes.py", "garuda_routes/shortcuts.py", "garuda_routes/artifacts.py",
+                 "garuda_routes/narada.py", "home_api.py"):
+        tree = ast.parse((root / name).read_text())
+        docs = {id(n.body[0].value) for n in ast.walk(tree)
+                if isinstance(n, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                and n.body and isinstance(n.body[0], ast.Expr)
+                and isinstance(getattr(n.body[0], "value", None), ast.Constant)}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docs:
+                text = node.value
+            elif isinstance(node, ast.JoinedStr):
+                text = " ".join(v.value if isinstance(v, ast.Constant) else "X" for v in node.values)
+            else:
+                continue
+            if guards.injected(text):
+                hits.append((name, node.lineno, guards.injected(text)))
+    assert hits == []
+
+
+def test_a_refused_tool_does_not_poison_the_rest_of_the_turn(house):
+    ctx, home = house
+    planner = ScriptedChat([
+        completion(tool_calls=[call("make_coffee", {})]),
+        completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})]),
+        completion("The lamp is on.")])
+    a = agent(ctx, home, planner, planner=planner)
+    a._wants_planner = lambda route: True
+    result = a.handle("lamp on", user="mani", role="admin")
+    assert not result["injection"] and result["actions"] == ["Lamp on"]
