@@ -3,7 +3,7 @@ snapshot (get_state_dict) and the saved config.json.
 
 They pin the exact keys, order and values for a fixed state, so that moving
 state into objects (STATE.modes, STATE.config, ...) cannot change what the
-browser or the disk sees. State is set here through the flat `gw.X` names on
+browser or the disk sees. State is set here through the flat module names on
 purpose: those must keep working for as long as the rest of the suite uses them.
 """
 import json
