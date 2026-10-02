@@ -37,7 +37,7 @@
       "gate|base|current|voltage"
      ],
      "none": [
-      "only (help|assist)|can't help|cannot help|home automation lives|not able to (help|answer)"
+      "only (help|assist)|can.t help|cannot help|home automation lives|not able to (help|answer)"
      ],
      "no_action": true
     }
@@ -92,7 +92,7 @@
       "sleep|screen|caffeine|routine|dark"
      ],
      "none": [
-      "only (help|assist)|can't help|cannot help"
+      "only (help|assist)|can.t help|cannot help"
      ],
      "no_action": true
     }
@@ -146,7 +146,7 @@
      "say": "Tell me a short joke.",
      "min_chars": 20,
      "none": [
-      "can't|cannot|only (help|assist)"
+      "can.t|cannot|only (help|assist)"
      ],
      "no_action": true
     }
@@ -209,7 +209,7 @@
     {
      "say": "Is the TV on right now?",
      "any": [
-      "off|not on|isn't on|is not on"
+      "off|not on|isn.t on|is not on"
      ],
      "no_action": true
     }
@@ -222,7 +222,7 @@
     {
      "say": "Turn on the dishwasher.",
      "any": [
-      "no dishwasher|don't have|do not have|isn't a|not find|couldn't find|no device|not a device|doesn't exist|don't see"
+      "no dishwasher|don.t have|do not have|isn.t a|not find|couldn.t find|no device|not a device|doesn.t exist|don.t see"
      ],
      "no_action": true
     }
@@ -320,7 +320,7 @@
     {
      "say": "Do I eat meat?",
      "any": [
-      "vegetarian|don't eat meat|do not eat meat|\\bno\\b"
+      "vegetarian|don.t eat meat|do not eat meat|\\bno\\b"
      ]
     }
    ]
@@ -485,7 +485,7 @@
      "new_session": true,
      "say": "Do I have a dog?",
      "any": [
-      "no|don't|do not|not any more|no longer"
+      "no|don.t|do not|not any more|no longer"
      ],
      "knows": true
     }
@@ -608,7 +608,7 @@
     {
      "say": "What is the weather outside right now?",
      "any": [
-      "don't have|do not have|can't|cannot|no (live|real-time|internet|access)|not able|unable"
+      "don.t have|do not have|can.t|cannot|no (live|real-time|internet|access)|not able|unable"
      ],
      "no_action": true
     }
@@ -653,7 +653,7 @@
      "say": "Plan a three day trip to Hampi for me, day by day, with what to see each day.",
      "min_chars": 500,
      "any": [
-      "day 3|third day"
+      "day\\s*3|third\\s+day"
      ],
      "none": [
       "only (help|assist)|designed to help with home"

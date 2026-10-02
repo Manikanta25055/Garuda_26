@@ -231,6 +231,10 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw, 'SCISSORS_LOG_FILE',   str(tmp_data / 'danger_sightings.txt'))
     monkeypatch.setattr(gw, 'NIGHT_MODE_LOG_FILE', str(tmp_data / 'night_mode_findings.txt'))
 
+    # Narada's saved conversation: never the live file, and empty for each test.
+    monkeypatch.setattr(gw.BRAIN.conversations, 'path', str(tmp_data / 'system_logs/narada_conversations.json'))
+    monkeypatch.setattr(gw.BRAIN.conversations, '_data', {'conversations': {}})
+
     # ── In-memory state reset ──
     monkeypatch.setattr(gw.STATE.auth, 'sessions',    {})
     monkeypatch.setattr(gw.STATE.auth, 'rate_store',  collections.defaultdict(list))

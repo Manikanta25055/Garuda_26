@@ -776,6 +776,7 @@ try:
     from .garuda_auto.home import HomeServices
     from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
     from .garuda_auto.agent import HomeAgent
+    from .narada_brain import Brain
     from .garuda_auto.digest import Digest
     from .garuda_auto.narada_voice import NaradaVoice
     from .garuda_auto.envfile import set_vars as _set_env_vars
@@ -785,6 +786,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.home import HomeServices
     from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
     from basic_pipelines.garuda_auto.agent import HomeAgent
+    from basic_pipelines.narada_brain import Brain
     from basic_pipelines.garuda_auto.digest import Digest
     from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
     from basic_pipelines.garuda_auto.envfile import set_vars as _set_env_vars
@@ -816,8 +818,11 @@ DECISION = DecisionEngine(
                os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai")),
     threshold=float(os.environ.get("DECISION_THRESHOLD", "0.85")),
 )
+# Who Narada is and what it carries between turns: the persona, and the
+# conversation saved beside the rest of the house's data.
+BRAIN = Brain(DRISHTI_DATA_DIR, NIM_CHAT)
 AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
-                  set_mode_fn=_home_set_mode, security_fn=_home_security_summary)
+                  set_mode_fn=_home_set_mode, security_fn=_home_security_summary, brain=BRAIN)
 
 
 # ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.

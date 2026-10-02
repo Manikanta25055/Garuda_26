@@ -16,8 +16,8 @@ the same power the dashboard buttons already give them.
 import json
 import logging
 import time
-from collections import deque
 
+from ..narada_brain import Brain, persona
 from . import actuation_log
 from .device_types import is_actuator
 from .llm import NO_THINKING, NimUnavailable
@@ -29,27 +29,22 @@ MAX_ROUNDS = 5
 # Whole turns (the question, the tool calls and their results, the answer) are
 # remembered, not just the two sentences. With only "user: turn it on /
 # assistant: it's on" in memory the model learned that saying so was enough
-# and started confirming actions it had never called a tool for.
+# and started confirming actions it had never called a tool for. (The turns
+# themselves, their summary and the persona now live in narada_brain.)
 # A turn is a conversation, not a batch job: give up on a stalled request
-# quickly and race a second one when the first is slow (see llm.py).
-TURN_TIMEOUT_S = 10
+# quickly and race a second one when the first is slow (see llm.py). A spoken
+# turn is short by design; a typed one may be an explanation or a plan, and at
+# 10 s those were cut off as "the AI service is unavailable".
+VOICE_TIMEOUT_S = 10
+TEXT_TIMEOUT_S = 30
 HEDGE_AFTER_S = 1.5
-HISTORY_TURNS = 4
+VOICE_MAX_TOKENS = 700
+TEXT_MAX_TOKENS = 1500
+MAX_INPUT_CHARS = 2000
 MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
 # What Narada may do on the security-only product (Garuda). Home automation
 # is Drishti's; on Garuda's address the model is not even offered it.
 SECURITY_TOOLS = ("get_security_state", "set_security_mode")
-# Spoken replies: every character is synthesised (and billed), lists and
-# markdown read aloud badly, and a reply that sounds written feels robotic.
-VOICE_STYLE = (
-    "\nYou are speaking out loud in a live conversation, in everyday Indian English. "
-    "Sound like a warm, quick-witted person from the house, not a report: contractions, "
-    "plain words, the rhythm of speech. One or two short sentences (under 200 "
-    "characters). Let the feeling show in the wording: a light 'okay', 'sure', 'ah', "
-    "'right' where a person would say it, commas where they would breathe, and vary "
-    "how you begin. Do not tack a question like 'anything else?' onto every reply; ask "
-    "only when you really need an answer. Never read out lists, markdown, symbols, ids "
-    "or model names. If the person is just chatting, chat back.")
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -63,7 +58,7 @@ def _fn(name, description, properties=None, required=()):
 
 class HomeAgent:
     def __init__(self, ctx, home, chat, decision, *, modes_fn=None, set_mode_fn=None,
-                 security_fn=None, clock=time.time):
+                 security_fn=None, clock=time.time, brain=None):
         self.ctx = ctx
         self.home = home
         self.chat = chat
@@ -72,13 +67,15 @@ class HomeAgent:
         self.set_mode_fn = set_mode_fn
         self.security_fn = security_fn or (lambda: {})
         self._clock = clock
-        self._history = {}
+        # Who Narada is and what it carries between turns. Without one given,
+        # a brain that keeps the conversation in memory only.
+        self.brain = brain or Brain(clock=clock)
         self.stats = {"agent": 0, "unavailable": 0}
 
     # ── entry point ───────────────────────────────────────────────────────────
 
     def handle(self, text, *, user="", role="user", scope="home", voice=False):
-        text = (text or "").strip()[:500]
+        text = (text or "").strip()[:MAX_INPUT_CHARS]
         if not text:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
         route_view = None
@@ -102,7 +99,7 @@ class HomeAgent:
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
         turn = result.pop("_turn", None)
         if result["lane"] == "agent" and turn:
-            self._remember(f"security:{user}" if scope == "security" else user, turn)
+            self.brain.record(f"security:{user}" if scope == "security" else user, turn)
         return result
 
     @staticmethod
@@ -112,25 +109,6 @@ class HomeAgent:
                 "lane": "unavailable", "actions": []}
 
     # ── agent lane ────────────────────────────────────────────────────────────
-
-    def _system_prompt(self, user, role):
-        now = time.localtime(self._clock())
-        return (
-            "You are Narada, the assistant of Garuda, a home security and home automation "
-            "system on a Raspberry Pi 5. You control the house only through the tools. "
-            f"It is {time.strftime('%A %d %B %Y, %H:%M', now)} local time. "
-            f"You are talking to {user or 'a resident'} (role: {role}).\n"
-            "Rules:\n"
-            "- Never invent devices, scenes or readings; call get_house_state when unsure.\n"
-            "- A conditional instruction (when/if/whenever ...) is an automation: call "
-            "create_automation with the person's sentence. It becomes a proposal they confirm.\n"
-            "- A time-based instruction ('at 7 pm', 'in 20 minutes', 'every weekday') is a "
-            "schedule: call schedule_action.\n"
-            "- Only switch devices the person asked about. Confirm what you did in one or two "
-            "short sentences. No emojis. If a tool refused, say why.\n"
-            "- Nothing changes unless you call a tool in this turn. Never say something was "
-            "switched, set or scheduled unless its tool call just returned ok.\n"
-            "- Security modes: dnd, night, idle, emergency, privacy, email_off.")
 
     def _tools(self):
         return [
@@ -168,21 +146,6 @@ class HomeAgent:
                 {"days": {"type": "integer"}}),
         ]
 
-    def _security_prompt(self, user, role):
-        now = time.localtime(self._clock())
-        return (
-            "You are Narada, the assistant of Garuda, an AI home security system on a "
-            "Raspberry Pi 5 with a Hailo accelerator and a camera that detects people and "
-            "dangerous objects (knife, scissors, hammer) and emails alerts. "
-            f"It is {time.strftime('%A %d %B %Y, %H:%M', now)} local time. "
-            f"You are talking to {user or 'a resident'} (role: {role}).\n"
-            "Use get_security_state for anything about the current situation and "
-            "set_security_mode to change a mode (dnd, night, idle, emergency, privacy, "
-            "email_off). You do not control lights or appliances here; if asked, say that "
-            "home automation lives in the Drishti app. Be concise. No emojis. A mode only "
-            "changes through a set_security_mode call in this turn; never claim a change "
-            "you did not just make.")
-
     def _state_brief(self, scope):
         """The current state, handed over with the question.
 
@@ -203,28 +166,30 @@ class HomeAgent:
                 "for something not listed here):\n" + json.dumps(state, default=str)[:3000])
 
     def _agent(self, text, user, role, scope="home", voice=False):
-        system = self._security_prompt(user, role) if scope == "security" else self._system_prompt(user, role)
+        # Separate conversations, so a Drishti one never leaks into Garuda's.
+        history_key = f"security:{user}" if scope == "security" else user
+        system = self.brain.system_prompt(user, role, scope=scope, key=history_key)
         system += self._state_brief(scope)
         if voice:
-            system += VOICE_STYLE
+            system += persona.VOICE_STYLE
         tools = self._tools()
         if scope == "security":
             tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]
         messages = [{"role": "system", "content": system}]
-        # Separate memories, so a Drishti conversation never leaks into Garuda's.
-        history_key = f"security:{user}" if scope == "security" else user
-        for past in self._history.get(history_key, ()):
-            messages += past
+        messages += self.brain.history(history_key)
         first = len(messages)
         messages.append({"role": "user", "content": text})
         actions, proposal = [], None
         for _ in range(MAX_ROUNDS):
-            message = self.chat.chat(messages, tools=tools, max_tokens=700,
-                                     temperature=0.2, timeout=TURN_TIMEOUT_S,
+            message = self.chat.chat(messages, tools=tools,
+                                     max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
+                                     temperature=0.3,
+                                     timeout=VOICE_TIMEOUT_S if voice else TEXT_TIMEOUT_S,
                                      extra=NO_THINKING, hedge_after=HEDGE_AFTER_S)
             calls = message.get("tool_calls") or []
             if not calls:
-                reply = (message.get("content") or "").strip() or "Done."
+                reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.",
+                                               voice=voice)
                 return {"reply": reply, "lane": "agent", "actions": actions,
                         "proposal": proposal, "model": self.chat.last_model,
                         "_turn": messages[first:] + [{"role": "assistant", "content": reply}]}
@@ -429,14 +394,9 @@ class HomeAgent:
 
     # ── memory ────────────────────────────────────────────────────────────────
 
-    def _remember(self, user, turn):
-        history = self._history.setdefault(user, deque(maxlen=HISTORY_TURNS))
-        # Old tool results are only kept short: the state brief is the truth now.
-        history.append([{**m, "content": m["content"][:300]} if m["role"] == "tool" else m
-                        for m in turn])
-
     def forget(self, user):
-        self._history.pop(user, None)
+        """End a conversation: the next thing this person says starts a new one."""
+        self.brain.forget(user)
 
     def status(self):
         return {"nim": self.chat.status() if self.chat else {"configured": False},

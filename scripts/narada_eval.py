@@ -38,6 +38,7 @@ from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend  #
 from basic_pipelines.garuda_auto.home import HomeServices  # noqa: E402
 from basic_pipelines.garuda_auto.llm import NimChat, parse_models  # noqa: E402
 from basic_pipelines.garuda_auto.runtime import DrishtiRuntime  # noqa: E402
+from basic_pipelines.narada_brain import Brain  # noqa: E402
 
 # The relay bank's own no-op mode: the evaluation never opens a GPIO pin, so it
 # cannot switch anything real and cases can run side by side.
@@ -98,6 +99,7 @@ class House:
 def make_agent(house, decision):
     """The one place that says how Narada is put together for the evaluation."""
     return HomeAgent(house.ctx, house.home, house.chat, decision,
+                     brain=Brain(house.data_dir, house.chat),
                      modes_fn=lambda: dict(house.modes), set_mode_fn=house.set_mode,
                      security_fn=lambda: {"modes": dict(house.modes), "alert_active": False,
                                           "camera": "delivering frames", "owner_present": True})
