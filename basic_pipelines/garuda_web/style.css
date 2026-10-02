@@ -4410,8 +4410,13 @@ body:has(#page-narada.active) .fb-wrap { display: none !important; }
   flex: 1; min-width: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border);
   background: transparent; color: var(--t1); font: inherit; font-size: 13px;
 }
-.nx-mem-in:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
-.nx-mem-add { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+/* The focus ring is drawn inside the field. The panel scrolls, and a scrolling
+   box clips whatever is painted outside its edge: an outline around a field
+   that touches that edge lost its bottom and right sides. */
+.nx-mem-in:focus, .nx-mem-in:focus-visible {
+  outline: none; border-color: var(--t1); box-shadow: inset 0 0 0 1px var(--t1);
+}
+.nx-mem-add { display: flex; align-items: center; gap: 10px; margin: 12px 0 2px; }
 .nx-mem-old { margin-top: 12px; font-size: 12.5px; color: var(--t2); }
 .nx-mem-old summary { cursor: pointer; padding: 4px 0; font-weight: 600; }
 .nx-mem-old .nx-mem-row { color: var(--t2); }
