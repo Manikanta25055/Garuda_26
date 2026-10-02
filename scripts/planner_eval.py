@@ -144,6 +144,16 @@ def does(program, capability, **args):
                for s in walk(program["steps"]))
 
 
+def everything_off(steps):
+    """all_off, or each of the house's three devices switched off one by one."""
+    steps = list(walk(steps))
+    if any(s.get("do") == "all_off" for s in steps):
+        return True
+    off = {(s.get("args") or {}).get("device") for s in steps
+           if s.get("do") == "set_device" and (s.get("args") or {}).get("action") == "off"}
+    return {"lamp", "fan", "tv"} <= off
+
+
 def mentions(condition, field, value=None):
     text = json.dumps(condition or {})
     return f'"{field}"' in text and (value is None or json.dumps(value) in text)
@@ -165,8 +175,8 @@ def check_when_empty(ph, r, p):
             p.append(f"trigger is not 'when occupancy is empty': {t}")
         elif not 9 <= t.get("for_minutes", 0) <= 11:
             p.append(f"for_minutes is {t.get('for_minutes')}, wanted 10")
-        if not does(prog, "all_off"):
-            p.append("no all_off step")
+        if not everything_off(prog["steps"]):
+            p.append("nothing turns everything off")
 
 
 def check_weekday_morning(ph, r, p):
@@ -220,8 +230,7 @@ def check_movie(ph, r, p):
                 p.append(f"no step sets {device} {action}")
         if not any(s.get("wait") == 7200 for s in walk(prog["steps"])):
             p.append("no two-hour wait")
-        if not any("if" in s and mentions(s["if"], "occupancy", "empty")
-                   and any(x.get("do") == "all_off" for x in walk(s.get("then")))
+        if not any("if" in s and mentions(s["if"], "occupancy", "empty") and everything_off(s.get("then"))
                    for s in walk(prog["steps"])):
             p.append("all_off is not conditional on the room being empty")
 
@@ -266,8 +275,8 @@ def check_away(ph, r, p):
         if t["type"] != "when" or not (mentions(t.get("condition"), "owner_presence", "away")
                                       or mentions(t.get("condition"), "owner_event", "left")):
             p.append(f"trigger is not 'when the owner leaves': {t}")
-        if not does(prog, "all_off"):
-            p.append("no all_off step")
+        if not everything_off(prog["steps"]):
+            p.append("nothing turns everything off")
         if not does(prog, "set_security_mode", mode="emergency", on=True) \
                 and not does(prog, "set_security_mode", mode="night", on=True):
             p.append("no step raises the security mode")

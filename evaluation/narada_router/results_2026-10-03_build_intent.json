@@ -1,0 +1,277 @@
+{
+ "date": "2026-10-03",
+ "what": "The routing model retrained with a tenth intent, build (work for the planner). Same base, same recipe (scripts/router_train.py, Colab T4, 4 epochs, 131 s each), 96,000 examples of which 7,597 are build templates and 593 are NIM-written build / near-build / manage sentences (scripts/router_build_cases.py).",
+ "planner_routing_hand_typed": {
+  "jobs": 30,
+  "sent": 29,
+  "others": 30,
+  "sent_by_mistake": 0
+ },
+ "note": "On the sentences the earlier model was scored on (routing_written test half without the new kinds) whole decisions went from 590/658 to 579/658, nearly all of it in paraphrase (128 -> 117 of 173); wrong while sure of the intent fell from 13 to 8. routing_cases stays 49/50.",
+ "pi": {
+  "local / routing_cases": {
+   "fields": {
+    "intent": [
+     35,
+     50
+    ],
+    "device": [
+     36,
+     44
+    ],
+    "action": [
+     31,
+     44
+    ],
+    "scene": [
+     49,
+     50
+    ]
+   },
+   "kinds": {
+    "plain": [
+     24,
+     29
+    ],
+    "paraphrase": [
+     0,
+     7
+    ],
+    "negation": [
+     1,
+     4
+    ],
+    "offtopic": [
+     2,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     1,
+     4
+    ]
+   },
+   "whole": 30,
+   "answered": 50,
+   "errors": 0,
+   "sure": 21,
+   "sure_wrong": 2,
+   "latency_ms": {
+    "median": 0.042360989027656615,
+    "max": 0.38757300353609025
+   }
+  },
+  "local / routing_written (test half)": {
+   "fields": {
+    "intent": [
+     186,
+     717
+    ],
+    "device": [
+     152,
+     615
+    ],
+    "action": [
+     310,
+     615
+    ],
+    "scene": [
+     653,
+     654
+    ]
+   },
+   "kinds": {
+    "plain": [
+     29,
+     288
+    ],
+    "mixed-language": [
+     14,
+     121
+    ],
+    "paraphrase": [
+     0,
+     173
+    ],
+    "offtopic": [
+     21,
+     33
+    ],
+    "negation": [
+     31,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ],
+    "build": [
+     0,
+     49
+    ],
+    "near-build": [
+     2,
+     6
+    ],
+    "manage": [
+     2,
+     4
+    ]
+   },
+   "whole": 103,
+   "answered": 717,
+   "errors": 0,
+   "sure": 148,
+   "sure_wrong": 50,
+   "latency_ms": {
+    "median": 0.07070298306643963,
+    "max": 1.0355720005463809
+   }
+  },
+  "router / routing_cases": {
+   "fields": {
+    "intent": [
+     50,
+     50
+    ],
+    "device": [
+     44,
+     44
+    ],
+    "action": [
+     43,
+     44
+    ],
+    "scene": [
+     50,
+     50
+    ]
+   },
+   "kinds": {
+    "plain": [
+     29,
+     29
+    ],
+    "paraphrase": [
+     6,
+     7
+    ],
+    "negation": [
+     4,
+     4
+    ],
+    "offtopic": [
+     4,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     4,
+     4
+    ]
+   },
+   "whole": 49,
+   "answered": 50,
+   "errors": 0,
+   "sure": 50,
+   "sure_wrong": 0,
+   "latency_ms": {
+    "median": 18.351991500821896,
+    "max": 60.964639007579535
+   }
+  },
+  "router / routing_written (test half)": {
+   "fields": {
+    "intent": [
+     704,
+     717
+    ],
+    "device": [
+     578,
+     615
+    ],
+    "action": [
+     577,
+     615
+    ],
+    "scene": [
+     654,
+     654
+    ]
+   },
+   "kinds": {
+    "plain": [
+     273,
+     288
+    ],
+    "mixed-language": [
+     117,
+     121
+    ],
+    "paraphrase": [
+     117,
+     173
+    ],
+    "offtopic": [
+     32,
+     33
+    ],
+    "negation": [
+     36,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ],
+    "build": [
+     47,
+     49
+    ],
+    "near-build": [
+     6,
+     6
+    ],
+    "manage": [
+     4,
+     4
+    ]
+   },
+   "whole": 636,
+   "answered": 717,
+   "errors": 0,
+   "sure": 702,
+   "sure_wrong": 8,
+   "latency_ms": {
+    "median": 23.78300900454633,
+    "max": 89.898304984672
+   }
+  },
+  "planner routing": {
+   "jobs": 30,
+   "sent": 29,
+   "others": 30,
+   "sent_by_mistake": 0
+  },
+  "cost": {
+   "before": {
+    "temp_c": 59.8,
+    "camera_fps": 52.5,
+    "load": 1.76953125,
+    "memory_mb": 48
+   },
+   "after": {
+    "temp_c": 73.0,
+    "camera_fps": 52.6,
+    "load": 2.57275390625,
+    "memory_mb": 243
+   }
+  }
+ }
+}

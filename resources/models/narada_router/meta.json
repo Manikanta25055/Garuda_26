@@ -9,7 +9,8 @@
   "automation_rule",
   "mode_change",
   "explain",
-  "other"
+  "other",
+  "build"
  ],
  "actions": [
   "on",
@@ -20,19 +21,19 @@
  "sep_id": 2,
  "temperature": {
   "intent": 0.85,
-  "device": 1.85,
+  "device": 1.55,
   "action": 1.15,
   "scene": 0.5
  },
- "trained_on": 90000,
+ "trained_on": 96000,
  "epochs": 4,
  "floor": {
   "routing_cases": 47,
-  "routing_written (test half)": 587
+  "routing_written (test half)": 634
  },
  "results": {
   "routing_cases": {
-   "whole": 49,
+   "whole": 50,
    "of": 50,
    "sure": 50,
    "sure_wrong": 0,
@@ -42,7 +43,7 @@
      29
     ],
     "paraphrase": [
-     6,
+     7,
      7
     ],
     "negation": [
@@ -64,39 +65,51 @@
    }
   },
   "routing_written (test half)": {
-   "whole": 589,
-   "of": 658,
-   "sure": 650,
-   "sure_wrong": 13,
+   "whole": 639,
+   "of": 717,
+   "sure": 703,
+   "sure_wrong": 8,
    "kinds": {
     "plain": [
-     275,
+     274,
      288
     ],
     "mixed-language": [
-     119,
+     117,
      121
     ],
     "paraphrase": [
-     128,
+     119,
      173
     ],
     "offtopic": [
-     30,
+     32,
      33
     ],
     "negation": [
-     33,
+     36,
      39
     ],
     "compound": [
+     4,
+     4
+    ],
+    "build": [
+     47,
+     49
+    ],
+    "near-build": [
+     6,
+     6
+    ],
+    "manage": [
      4,
      4
     ]
    }
   },
   "routing_cases, onnx": {
-   "whole": 49,
+   "whole": 50,
    "of": 50,
    "sure": 50,
    "sure_wrong": 0,
@@ -106,7 +119,7 @@
      29
     ],
     "paraphrase": [
-     6,
+     7,
      7
     ],
     "negation": [
@@ -128,32 +141,44 @@
    }
   },
   "routing_written (test half), onnx": {
-   "whole": 589,
-   "of": 658,
-   "sure": 650,
-   "sure_wrong": 13,
+   "whole": 639,
+   "of": 717,
+   "sure": 703,
+   "sure_wrong": 8,
    "kinds": {
     "plain": [
-     275,
+     274,
      288
     ],
     "mixed-language": [
-     119,
+     117,
      121
     ],
     "paraphrase": [
-     128,
+     119,
      173
     ],
     "offtopic": [
-     30,
+     32,
      33
     ],
     "negation": [
-     33,
+     36,
      39
     ],
     "compound": [
+     4,
+     4
+    ],
+    "build": [
+     47,
+     49
+    ],
+    "near-build": [
+     6,
+     6
+    ],
+    "manage": [
      4,
      4
     ]
@@ -192,32 +217,44 @@
    }
   },
   "routing_written (test half), onnx 8-bit (the file that ships)": {
-   "whole": 589,
-   "of": 658,
-   "sure": 648,
-   "sure_wrong": 12,
+   "whole": 636,
+   "of": 717,
+   "sure": 702,
+   "sure_wrong": 8,
    "kinds": {
     "plain": [
      270,
      288
     ],
     "mixed-language": [
-     119,
+     117,
      121
     ],
     "paraphrase": [
-     132,
+     118,
      173
     ],
     "offtopic": [
-     30,
+     33,
      33
     ],
     "negation": [
-     34,
+     36,
      39
     ],
     "compound": [
+     4,
+     4
+    ],
+    "build": [
+     48,
+     49
+    ],
+    "near-build": [
+     6,
+     6
+    ],
+    "manage": [
      4,
      4
     ]

@@ -6588,3 +6588,596 @@
 {"say": "stop the fan now ok", "intent": "device_control", "kind": "mixed-language", "want": {"kind": "fan", "action": "off"}}
 {"say": "Turn on the speaker if the garage door stays open for more than 5 minutes after sunset.", "intent": "automation_rule", "kind": "plain", "want": {"kind": "speaker", "action": "on"}}
 {"say": "What’s the best way to learn Telugu?", "intent": "other", "kind": "offtopic"}
+{"say": "What’s the most useless button you’ve ever seen on a device?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Analyze the pattern: why does the hallway light turn on at 3:03 AM every Friday? Is it a ghost or a glitch?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Move the security camera from the back door to the wine cellar. I need to know who’s stealing the Merlot.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List all devices that stayed on for over 4 hours straight without human interaction — are any of them faulty?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Any idea what I archiving about my cat?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Increase the detection threshold on the backyard camera to ‘low’ — the squirrels are throwing a rave every night and I’m tired of alerts.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the ‘Party Blast’ scene. I’m not 22 anymore and my neighbors have filed complaints.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the scene called ‘Zen Mode’ — I never actually meditate in there.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the ‘Nap Time’ scene. I haven’t napped since 2019 and I’m starting to feel guilty about it.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a visual schedule overlay: which scenes ran automatically today and when.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I like when my routine has a little flexibility — keeps it from feeling robotic.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I made a table of my snacks ranked by crunch level— is that weird or oddly therapeutic?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Remove the ‘Evening Wind Down’ scene. I now wind down by doomscrolling and eating cold pizza straight from the box.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Move the humidifier’s schedule from 2 a.m. to 4 a.m.—my sinuses wake up later than I thought.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If your user profile had a theme song, what would mine be if I always forget my password but remember song lyrics from 2003?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Start recording a 90-second clip from the backyard camera — label it ‘Squirrel Conspiracy Theory’ and save it to the encrypted vault.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I was just wondering — do you think a dashboard camera could double as a decent webcam for spontaneous video calls, or is that a tech myth?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "List all schedules that run the AC when the outdoor temp is below 70°F — seems wasteful.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need a simple widget: current power draw in watts, updated every 5 seconds.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me the cost breakdown of all devices over the past 30 days — which one’s draining the most?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me today’s energy usage.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Add a new appliance: the espresso machine. Label it ‘Brew Prophet’ and sync it to my 6:15 alarm.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I backed up my photos to three different clouds and now I feel like a digital hoarder with anxiety—normal?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell me a fact you've stored about my breakfast preference.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Hey, can you render a live energy usage heatmap of the kitchen and laundry room for the past 72 hours, color-coded by wattage spikes during dryer cycles?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me all devices that have never been turned off since installation — are they supposed to be always on?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If I had to describe my relationship with my schedule using only emojis, it’d be: 😴☕⏰💥😵‍💫. What’s yours?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell me if the outdoor lights are still on a fixed timer — they should follow sunset, not the clock.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the shortcut that says ‘I’m leaving’ and turns off everything — I forget my keys too often.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Repeat checking the garage door every 90 seconds until it closes — once it does, flash the hallway lights twice and whisper ‘secure’.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Which automation has the most complex condition tree? Can it be simplified for reliability?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the wattage of the living room floor lamp to 12W. I want it to whisper, not shout.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the routine that locks the door and arms the camera when I say ‘goodnight’. I say goodnight to my plants. They don’t care.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "How much power did we consume today?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Which automation has the oldest last-modified date? Is it still relevant?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a 'Focus Work' scene: turn on desk lamp, mute TV, set fan to low, and activate Do Not Disturb on my phone via the assistant.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Send a test email to my work address with the subject ‘HA Pulse Check’ and body: ‘If you’re reading this, the assistant is awake and not on fire.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a table listing each device’s uptime percentage over the last week.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Display a timeline of when the blinds opened/closed, synced to sunset/sunrise times — and flag any deviations with a tiny alarm bell icon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey assistant, can you please rename the living room lamp to 'Nebula Glow'? It feels more cosmic now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List all scheduled automations for tomorrow — but only the ones that involve lights or temperature. If there are none, say ‘You’re living like a hermit.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable presence tracking for the guest room phone — it’s just a charger left behind. No one’s using it.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a backup, then verify its integrity.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the timer that dims lights when the microwave beeps. I like my popcorn loud and bright.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please relocate the humidifier from the nursery to the yoga corner. The plants are jealous.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the timer that turns off the porch light at 2 a.m. — I’m expecting a late delivery.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s the quickest way to pull up my schedule?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "I schedule my coffee breaks like meetings — am I weird?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Is there an easy way to make a pivot chart without digging through menus?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Do you ever feel like your schedule is less a plan and more a polite suggestion to chaos?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Add a new appliance: the air purifier in the nursery. Name it ‘Lung Guardian’ and make it run when pollen hits 50.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think people who love keyboard shortcuts are secretly just trying to feel like wizards casting spells with their fingers?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Rename the kitchen exhaust fan to ‘Steam Dragon’ — it roars when I boil pasta and I love it for that.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you still recall the temperature settings I set?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Display my daily schedule.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Do you think passwords should be changed every 90 days, or is that outdated?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Remember anything personal?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Swap the kitchen pendant for a warmer glow—make it 2700K, not this sterile white.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Is there a chart you’ve seen that made you go ‘wait, that’s actually beautiful’ — not useful, just… aesthetically satisfying?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Make a routine 'Vacation Mode': randomize lights on/off, keep AC at 80°F, activate camera motion alerts, and send me a daily snapshot.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "After the TV turns off at night, wait 5 minutes, then if the bedroom light’s still on, switch it off and log it as ‘forgotten’.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Mind the lights—what scenes did I program?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Set the night presence hours to end at 5:30 AM instead of 6. I wake up earlier now and don’t need the lights pretending I’m still asleep.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When I say 'Start my day', turn on bathroom light, start shower heater, play news briefing, and set AC to 74°F.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the security camera recording.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If your device had a personality, would yours be the quiet observer or the one that keeps changing the subject?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "When I say 'I’m done', shut everything off: lights, TV, fan, AC — but leave the security cam on and send me a screenshot if motion happens after 2 AM.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Wait for the front door to unlock with my key fob — then if the garage door is still closed, open it halfway and say ‘Welcome home, car’s ready.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Move the TV from the bedroom to the basement. I’m trying to reclaim sleep as a sacred act.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: set a schedule to turn off the TV after 2 hours of inactivity to save energy.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Speak the number of shortcuts logged.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Read the last 5 security camera motion alerts and tell me if any were caused by a floating plastic bag or a raccoon with commitment issues.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Add my sister’s phone to the trusted list — she’s got the key, the snacks, and zero patience for false alarms.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I named my Wi-Fi ‘404 Network Not Found’— now my neighbors stare at me weirdly when they connect.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I made a graph of my happiness vs. hours slept. It looked like a roller coaster designed by a sadist. Want to see it?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell the smoke detector to stop testing itself at 3:17 a.m.—I’m not a night owl, I’m exhausted.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the system health in haiku form: five syllables, seven, five. No cheating. I will count.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename the ‘Living Room’ scene to ‘Zen Den’ — it sounds less like a tech manual and more like a place I actually want to be.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me a Gantt-style bar for each smart bulb: when it was on, at what brightness, and if it changed color — group by room and sort by total luminance exposure.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a routine 'Weekend Lazy': keep lights off until 10 AM, turn on TV to cartoons, run fan on low, and delay AC until noon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Send a test email to admin@example.com.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t need the ‘Wake Up’ routine anymore. Erase it. All of it.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the schedule that blasts AC at 2 PM on Sundays. I work from home now. My sweat is my productivity metric.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the old iPad from the tracked devices — it’s been dead since 2022 and I’m tired of it haunting the presence log.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Yo, kill the TV and turn on the porch light.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the wattage of the under-bed LEDs to 3W. I want them to glow like embers, not a landing strip.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Every time the garage door opens between 6am and 8am, if the car’s not detected inside, turn on the driveway light and say ‘Someone’s leaving — be safe.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List all scenes that trigger after sunset — are they all necessary?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I’m trying to understand how dashboards pull data from different sources — any simple explanations?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Delete the timer that turns off the porch light after 5 minutes. I’m waiting for a package that shipped in 2022.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If your dashboard could sigh, what would it sound like? Mine sounds like a tired librarian closing the library at 8 PM.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I once left a device charging on my pillow. It got warm. I panicked. Now I sleep with it in a ceramic bowl. Am I overprotective?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Stop the suggestion to turn on the fan when I enter the bathroom — I like it steamy.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a timeline of when the front door opened/closed, synced with camera thumbnails.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Enable motion detection on the backyard camera.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Are there any duplicate automations turning on the same light at the same time?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the schedule that makes the TV turn on at 7 p.m. sharp — I watch when I feel like it.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the routine that says ‘Alexa, start my day’ — I’m doing it manually with coffee and silence.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Have you ever pressed a button just to see what happens — not because you needed to, but because the silence was too loud?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Make a dashboard with three panels: lights status, fan modes, and security alerts.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I backed up my notes to a USB drive shaped like a taco— is that peak creativity or a cry for help?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system: if I say ‘I’m done’ three times in a row, turn off everything except the fridge and the security cam — I mean it this time.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the wattage ceiling for the outdoor string lights to 5W max—they’re blowing fuses like confetti.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Spoken, sleepy voice: ‘Hey house… can you just… make it cozy? Like, blanket-fort level cozy? TV off, but the salt lamp on?’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Did we use more watts than last Tuesday?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Tell me if the smart plug powering the fish tank heater is drawing more watts than it should. I’m worried Nemo’s plotting a thermal coup.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain the spike in TV usage every Sunday at 3 p.m. — is it sports, naps, or boredom?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename the ‘Away’ scene to ‘Ghost Protocol’ — it sounds cooler when I’m pretending to be a spy leaving the house.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "How did I instruct you to dim lights this evening?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Add a new device: the smart lock on the side gate. Call it ‘Ghost Key’ and log every entry after midnight.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Can you make a bubble chart where each bubble is a device: size = daily kWh, color = cost per hour, position = time of day it’s most active — hover to see name?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I think tables are the silent architects of modern anxiety. They make chaos look like order. Do you ever feel seen by them?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "When I say 'Game On', turn on TV to console input, activate gaming lights (RGB strip), boost fan, and lower AC to 68°F.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the ‘Bedtime’ routine. I go to sleep when my eyes shut from scrolling. Not when the lights say so.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a 'Good Morning' routine: open blinds, turn on kitchen light, start coffee maker, and read the weather aloud.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain why the hallway light turns on when the fridge opens — is it a wiring error or a bad trigger?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Blunt truth: is my ‘Good Night’ scene just a placebo, or does it actually cut standby power?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t use routines. I use vibes. And caffeine. And panic. Is that a valid lifestyle, or am I just avoiding adulthood?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Move the bedroom AC vent controller to the nursery—baby needs cool air, not me.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Add a new person: ‘The Cat’ — tracked by the infrared blob that naps on the windowsill at 3pm. Yes, it counts as presence.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Turn off every light except the hallway nightlight — I’m sleepwalking again.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename the garage door sensor to ‘Sentry Gate’ — it sounds less like a bureaucrat and more like a knight.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please make a report page summarizing weekly HVAC efficiency with color-coded zones.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Did the kids’ room lights stay on past bedtime more often when the white noise machine was off?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the obsolete Zigbee bridge from the network—it’s been offline since the thunderstorm.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable the smart blinds in the east bedroom. I want to wake up with the sun, not a schedule.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the ‘Wake Up Gentle’ scene. I now need a siren and a cold shower to function.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a stained-glass window of today’s solar input — colored shards for each hour, with lead lines marking when clouds tried to steal the show.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "How many times did the TV turn on automatically today? Was it scheduled or voice-triggered?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Turn off the TV if it’s been on for more than 3 hours straight and no one’s moved in the room for 20 minutes. I know you’re judging me — just do it.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the AC to follow the weather forecast — if it’s going to be over 90°F tomorrow, pre-cool the house at 4 PM. I don’t want to come home to a sauna.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Generate a health report and email it to me.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the scene ‘Morning Boost’ — I don’t need fake sunlight to wake up anymore.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey, kill the ‘I’m Home’ scene. I haven’t left the house since the pandemic. The lights think I’m a ghost.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t believe in morning routines. I believe in surviving until noon. Is that a philosophy or just poor planning?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell me what scenes I’ve set up.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Which room has the highest total energy consumption over the last 4 weeks? Break it down by device.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Walk me through the hourly energy footprint of the fridge — does it hum louder when the door’s left open?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Adjust the wattage of the desk lamp to 9W. I’m reading Nietzsche and need less glare, more gloom.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Send a test email to my spam folder with the payload: ‘This is a test. If you see this, the AI hasn’t gone full Skynet. Yet.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Stop all recordings and save them to the cloud.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename ‘Outlet_Kitchen_South’ to ‘Blender’s Throne’—it’s where the smoothies get born.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Display my weekly schedule.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Hey Home, kill the morning glow scene from 7:15 AM—it’s been haunting me since daylight savings.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me a one-sentence verdict: is the ‘Away Mode’ scene actually saving energy, or just pretending?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please turn off the AC in the server closet. It’s louder than my thoughts and twice as useless.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the energy cost of leaving the TV on all day vs. turning it off when leaving the room — what’s the savings?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I think the word ‘shortcut’ is a lie. There’s no shortcut to understanding — just faster ways to avoid it. Do you agree?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I need a timeline of when the lights were on in the kitchen this week — make it visual.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me a sankey diagram: where did the electricity go today? From grid → AC → fridge → TV → standby → lost as heat — make it look like liquid flowing.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the bedroom fan schedule until further notice — it’s too chilly now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Any saved info about me?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Show me the fridge’s gossip — when it opened, how long it sighed, and who left the light on like a guilty cat.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Every time the kids’ tablet turns on after 8pm, check if the TV is also on — if yes, mute the TV and flash the nursery light red three times.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t care if it’s weird — just tell me: is the home happy? Or is it just tolerating me?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Render a sonic boom visualization of the microwave’s 3-second rage — concentric soundwaves fading into silence, labeled in decibels and regret.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me all automations that trigger based on time alone — no sensors, no presence. Are they outdated?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the total energy cost of all devices last month to the same month last year — up or down?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the ‘Movie Night’ shortcut. I haven’t watched a movie in 14 months. The TV is just a very expensive picture frame now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Adjust the AC’s wattage draw down by 15%—it’s guzzling like it’s preparing for winter in July.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Stop the kitchen fan immediately. I don’t care if it’s ‘efficient’ — it’s vibrating the spice rack again and I’m trying to sleep.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I once tried to make a morning fitness routine that involved interpretive dance and a resistance band. It lasted two days. What’s yours actually like?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Give me a spoken status report like a weary airport announcer: ‘Flight HA-777 now boarding… all systems nominal… luggage delayed in the basement…’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I once renamed my backup folder ‘Final_Final_Really_Final_ThisTime’ and then immediately regretted it. Do you name your backups like a drama queen?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Make the TV only respond to voice if I say ‘Please’ first — I’m trying to teach myself manners, even to machines.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Switch the TV input to antenna.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Activate the 'Movie Night' scene.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the automation that dims lights when the TV turns on — I watch with full brightness for subtitles.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Shortcuts: list them.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "What’s the current temperature and humidity in the master bedroom?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the security cam’s face recognition threshold to ‘Only Alert if They’re Wearing Shoes’ — barefoot visitors are probably just me getting the mail.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When the smoke detector triggers, flash lights, turn on TV to emergency channel, unlock front door, and call 911 via assistant.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a one-tap button called 'Energy Saver' that turns off all non-essential lights, sets AC to 78°F, stops fans, and puts TV in standby.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Get rid of the shortcut that sets the TV to HDMI 3. I don’t have an HDMI 3. I made it up to feel tech-savvy.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show schedules.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Rename ‘CeilingFan_03’ to ‘The Whisperer’—it’s finally quiet enough to deserve a name.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Log this interaction for audit purposes.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Was the front porch light left on all night again? Check the camera logs for human presence vs. timer failure.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think a morning routine should include yelling at your reflection for motivation?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Kill the suggestion to dim lights when I say ‘I’m tired’ — I like them bright when I’m exhausted.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the suggestion to turn on the TV when I say ‘I’m bored’ — I’d rather read.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you ever feel like your devices are judging you when you forget to back up?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Which scene has the highest activation count — and is it actually useful, or just habit?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me a poetic summary of today’s home rhythm — lights like breath, fans like whispers, TV like a distant dream.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable the motion-triggered chime on the back gate—it’s scaring the cats more than intruders.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If I say 'I'm doing yoga', turn on studio light, play calming music, set fan to low, and disable TV and notifications.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make the lights in the closet pulse softly when the door opens — I need a tiny rave every time I reach for socks.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the AC to ‘Arctic Nap’ in the guest room — my cousin thinks 68°F is ‘chilly’ and I need him to leave by Sunday.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename ‘Garage Cam’ to ‘The Squirrel Watchtower’ — it’s more accurate and frankly, more entertaining.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the security camera motion alert schedule — I’m doing yoga in the living room and don’t want false alarms.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Adjust the wattage reporting for the EV charger to reflect actual draw, not theoretical max—it’s misleading.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the automation that sends me a notification when the front door opens. I live alone. The only thing that opens the door is my regret.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What time did the TV usually turn off on nights when the security camera detected no movement after 11 PM?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I backed up my phone yesterday and felt like a responsible adult — small victory.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Was there a day this month when the washing machine ran during peak rate hours? Show me the evidence.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the suggestion to turn on the hallway light when I say ‘I’m scared’ — I’m not a kid anymore.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a 'Guest Mode' shortcut: turn on guest room light, set AC to 74°F, enable camera recording in hallway, and disable motion alerts in master bedroom.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the security mode schedule so ‘Quiet Hours’ runs from 1 AM to 5 AM — I’m a night owl and don’t want false alarms when I grab water.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a table showing which appliances used the most power yesterday.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home, could you please dim the living room lights to 30% and turn on the fan in the bedroom? I’m trying to wind down after a long day.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Let the kitchen fan auto-turn on when the stove hits 350°F — I keep forgetting and setting off the smoke alarm like a tragic cartoon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Audit: how many times did the system ignore my voice command to turn off the lights because ‘motion was detected’?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain why the fan in the office turns on when the TV is off — is there a faulty trigger?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the display name of the garage sensor from ‘Garage Door’ to ‘The Portal’ — it feels more epic when I come home late and it lights up.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename the AC in the master suite to ‘Arctic Whisper’ — it’s quieter than my ex’s apologies.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home, when I say 'theater mode', kill the lights, lower the blinds, turn on the TV to HDMI1, and whisper the fan to low so I don’t hear it over the movie.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the logs from the past 24 hours in bullet points.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If I say 'Emergency', flash all lights red, turn on TV to local news channel, unlock front door, and send alert to my contacts.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the security mode schedule to disable motion alerts on weekends between 9 AM and 12 PM — I’m usually gardening and the wind keeps setting it off.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a routine that activates when my phone connects to home Wi-Fi: turn on living room light, disarm alarm, and say 'Welcome back'.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system to stop tracking my kid’s old iPod Touch. It’s not a phone, it’s not moving, and it’s been in a drawer for six months.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me the timeline: when did the security camera first detect motion after I left the house yesterday?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Is the garage door sensor online?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the security camera’s activity log for the past week — any unusual patterns at night?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain why the kitchen lights turn on at 5:45 a.m. even when no one is up — is it a ghost automation?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a living constellation map of every device that blinked on today — stars for lights, nebulas for fans, and a black hole where the TV died at 2 a.m.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Move the balcony fan to the guest bedroom — I want that breeze where I nap.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I scheduled a reminder to drink water… and then ignored it for three weeks. Am I broken, or is scheduling just optimistic theater?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I backed up my thoughts once. Wrote them in a notebook. Then lost the notebook. Now I feel like I lost a part of my soul. Is that dramatic?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Reassign the under-cabinet lights to activate only when motion + low light are both true—no more false triggers at dusk.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Render a radial diagram where each spoke is a device, length = runtime today, color = efficiency rating — spin it slowly like a zen mandala.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I pressed a button on my smart speaker and it started reading me a 1983 phone book—was that a glitch or a gift?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "If I say 'I'm sick', turn on bedroom light, start humidifier, play calming audio, and set AC to 71°F with gentle fan.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain why the front porch light flickers when the security camera starts recording — is it power draw?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If the AC’s been off for over 2 hours and the indoor temp rises above 78°F, turn it on to 72°F and whisper ‘cooling initiated’ via the speaker.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Let the fan in the nursery run on low whenever the baby monitor detects crying — even if I’m asleep, the air should still be kind.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I was just wondering if anyone’s ever used a backup log as a journal for weird dreams—does that count as productive?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "If the hallway motion sensor triggers three times in 10 minutes after midnight, assume I’m having a nightmare and play ocean sounds through the TV speakers.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the automation that turns on the TV when the front door opens — weird, but not anymore.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I’m not asking. I’m commanding: disable all voice responses for the next hour. I need silence. Even if the alarm goes off, just flash the lights.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build me a security camera activity log as a bar chart — motion detected per hour.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t need a fancy dashboard — just tell me if the thing is working or not.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Make the fan in the bathroom run for 20 minutes after the shower stops — I refuse to mildew my dignity.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need a table listing every smart plug’s daily kWh consumption, sorted descending, with emojis next to the top three offenders (🔥🔥🔥).", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a 'Movie Marathon' button: dim lights, turn on TV to HDMI 1, start popcorn maker, and set AC to 70°F for 4 hours.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Energy today?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Are there any saved modes I’m forgetting?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "What’s the strangest thing you’ve seen someone put on their dashboard?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "List all my shortcuts.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "What’s the pattern behind the living room TV turning on at 7:15 PM every day? Is it scheduled or voice-triggered?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename the fan in the laundry room to ‘Spin Doctor’ — it’s the only thing that dries my socks with dignity.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Update the alert emails — send the garage motion pings to my work account, not my mom’s. She thinks I’m being burgled by raccoons again.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the system logs for the past week in bullet points: what restarted, what failed, what was ignored. Then delete the raw logs older than 30 days.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Add my partner’s new work phone to the tracked devices — they forgot to tell me they got it last week.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Add a new device: the smart scale in the bathroom. Call it ‘Truth Mirror’ and only show me weight after 7 a.m.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Polite request: Could you please turn on the porch light and fan for 20 minutes while I take out the trash? No rush — I’m not in a hurry, but the raccoons are.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize today’s activity: lights, TV, AC, fans — when did each turn on and off?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Spoken, urgent: ‘House — did the front door just unlock itself? Or did I dream that?’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: should I merge the ‘Bedtime’ and ‘Night Light’ scenes to reduce redundancy?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a backup, then immediately delete the oldest one. Keep only the last three. I’m trying to be minimalist. Even my home’s data needs decluttering.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable the voice feedback on the smart lock—I don’t need to hear ‘Door unlocked’ at 2 a.m. anymore.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system to ignore my smartwatch for presence tracking — it’s always on my nightstand and confuses the geofence.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Generate a widget that displays real-time fan speed and room temperature side by side.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the automation that turns on the nightlight when the bathroom door opens. I don’t pee in the dark. I pee with purpose.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell the garage opener to forget its Tuesday 6 a.m. routine—I work nights now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove Dave from the tracked phones. He moved out last month and his old device keeps triggering false presence alerts.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Is the system ready for a firmware update?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Reassign the study lamp to the ‘Reading Nook’ group—it’s lonely over there by the bookshelf.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me all devices that have been controlled by voice vs. schedule vs. sensor in the last week.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What shortcuts exist?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Move the humidity sensor from the basement to the greenhouse. My orchids are throwing a fit.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Which device contributes most to my peak-hour energy charges? Can I shift its usage?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me the list of scenes, including hidden ones.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Pause the automation that locks the door when I say ‘Goodnight’ — I like to check the windows first.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare AC runtime between weekdays and weekends for the last month — any spikes?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Monitor the fridge door — if it’s open longer than 45 seconds three times in a day, blink the kitchen light amber and send a terse note: ‘Close the damn door.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I keep pressing this one button on my remote and it mutes the TV but also opens a weather chart—coincidence or conspiracy?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "If I had to pick one word to describe my relationship with my password manager, it’d be… cautiously optimistic. What’s yours?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Show me my calendar events.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Move the smart plug powering the fish tank to the office. My betta deserves better lighting than my spreadsheets.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize my saved preferences in one sentence.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Turn on the living room lights.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What device do you think is most overhyped right now?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "After the dishwasher finishes, wait 10 minutes — if the steam sensor still reads high, crack the vent open and notify me: ‘Let it breathe.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Start recording from the garage camera — label it ‘Mystery Box Opening’ — and don’t stop until I say so. I think there’s something alive in there.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell me if the AC’s compressor has been running longer than it should. Is it working hard… or just avoiding silence?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Restore the system from the backup taken yesterday at 2 AM.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a control panel that lets me dim lights by room with sliders and see real-time lux levels.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What is the total energy used this week?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "If I say 'I'm back from vacation', turn off vacation mode, resume normal schedule, and play a welcome-home message.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the average daily cost of the TV versus the gaming console — which one’s the silent vampire?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Audit: have any automations been triggered more than 50 times in a week? That might be a bug.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Reset the AC to eco mode and turn off the TV.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a origami crane fleet — each fold a device’s daily on-time, wingspan proportional to energy use, and the lead crane made from the TV’s standby current.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I asked my assistant to show me a graph of my productivity and it just laughed—fair?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "List all devices currently on the network.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please, if you don’t mind, could you gently lower the blinds and turn on the hallway lamp?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable the outdoor lights on weekends. I like the dark. It makes me feel like a raccoon with purpose.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the old kitchen timer scene. It’s been useless since I got the smart oven.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Did the security camera capture any activity during the Wi-Fi outage on Tuesday? If not, why not?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Adjust the security camera’s detection zone to exclude the tree branch that keeps swaying in the wind. It’s not a burglar — it’s just nature being dramatic.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recall one thing I mentioned at home yesterday.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Summarize the last 12 hours of system logs like you’re explaining it to a sleep-deprived poet — short lines, weird metaphors, no jargon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the ghost device labeled ‘unknown_switch_7’—it’s been haunting the energy report for weeks.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I asked my smart speaker to tell me a joke. It replied: ‘Your schedule is empty.’ I haven’t laughed since. Was that meant to be funny?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "What’s the weirdest automation I’ve got — the one that turns on the fan when the fridge door opens?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system to send me a push notification if the back door opens between 2 AM and 4 AM — I think something’s been digging under the fence.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When the sun sets, automatically turn on porch light, activate backyard camera night vision, and close garage door if open.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the automation that plays jazz when the front door unlocks. I don’t own a saxophone. Or jazz.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I’m leaving — lock the doors, kill the vampire power, and let the security cam stare at the empty couch like a bored cat.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain why the garage light turns on at 6 p.m. every day — is it sunset, motion, or a schedule?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home brain, can you dim the living room lights to 30% while the AC hums at 72° and the TV switches to the nature channel?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me a line graph of indoor humidity vs. AC runtime over the past week.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t get why some charts look so busy — is it the data or the design?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Did the outdoor sprinklers run when the rain sensor was active? Check the weather log vs. irrigation schedule.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s the most bizarre thing you’ve seen someone label as a ‘dashboard’? Like, a toaster with LED lights?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell me if the AC’s eco-mode actually reduced compressor cycles — or just made it run longer at low power.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Memory dump: what facts do you hold about me?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Cancel the shortcut that says ‘Goodnight’ and locks the door — I’m doing it manually tonight.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If the backyard sprinklers run for more than 12 minutes and the rain sensor hasn’t triggered, shut them off and say ‘Nature’s got this.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Typed, all caps: I NEED THE AC TO STOP BLASTING LIKE IT’S TRYING TO FREEZE THE NEIGHBOR’S CAT. SET TO 75. NOW.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a scene called ‘Nebula’: slow color cycle on LEDs, fan at 20%, TV off, camera in privacy mode.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Kill the schedule that turns on the porch light at 3 a.m.—no raccoons need a spotlight.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the display name of the kitchen sensor from ‘Kitchen Motion’ to ‘Snack Detector’ — it’s more honest that way.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Move the smart speaker from the bathroom to the hallway. Echoes in tiles are terrifying at 2 a.m.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I backed up my photos to three different clouds. Now I feel like a digital hoarder with anxiety. Is that normal?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Show me my agenda.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Did the dehumidifier run more on days when the AC was off — proving they’re fighting each other?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the timer that turns on the fan for 10 minutes after I flush the toilet. I don’t need a wind tunnel for my bathroom breaks.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a ‘House Mood’ meter: a color-shifting orb that turns blue when energy use is low, red when high, and pulses purple if the TV and AC are on together.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List shortcuts.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Remove the ‘Movie Night’ scene. I now watch films alone while crying into popcorn. It’s not a scene anymore — it’s a lifestyle.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename ‘TV_Backlight’ to ‘Ambient Cinema Halo’—it deserves poetry, not jargon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If your keyboard shortcuts could talk, which one would be the sarcastic one?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Build a routine named 'Party Mode': flash living room lights in sync with music, turn on patio lights, boost AC, and disable motion alerts for 2 hours.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think routines are more about discipline or just finding what feels good?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Has anyone ever tried to make a morning routine feel less like a to-do list and more like a secret ritual?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Compare the cost of running the fan all night vs. using the AC on low — which is cheaper?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Move the basement dehumidifier’s control to the laundry zone—it’s been sweating in the wrong place.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need a quiet, detailed report: how many times did the bathroom exhaust fan activate without the light being on?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Audit: have any automations been triggered by a false sensor reading — like a pet triggering a motion light at 3 a.m.?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List all devices that have never been renamed from their factory defaults. I want to know who’s still living in anonymity.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Teach the living room fan to whisper at midnight instead of roaring like a jet.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the schedule that turns on the kitchen fan when the oven hits 350°F. I only bake regret and frozen pizza.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When I say 'Dinner Time', turn on dining room light, start the oven preheat to 350°F, and play soft jazz in the kitchen.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If the smart lock is unlocked between midnight and 5am and no phone is nearby, relock it, turn on the entry light, and send a silent alert to my wristband.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home, kill the kitchen light and hum the fan to lullaby mode.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the routine that plays rain sounds when I say ‘I need focus’ — I prefer white noise now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home, could you paint me a silent movie of last night’s energy spikes? No words, just flickering bars like a heartbeat on the wall.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: if you haven’t touched a scene in 90 days, archive it. Your future self will thank you.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain why the hallway light turns on at 3 a.m. only when the back door opens.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List my shortcuts, please, in order of creation.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Cancel the automation that dims lights when the AC kicks in — I want full brightness during cooling.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If your user interface had a mood ring, what color would it be right now?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "If the humidity in the bathroom hits 70% for more than 15 minutes, turn on the exhaust fan and flash the mirror light three times — don’t wait for me to ask.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Activate ‘Party Phantom’: strobe the porch light, blast bass through the TV speakers, and let the fan spin like a DJ’s record.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey, can you quietly turn on the bedroom fan to medium and set the AC to 74°F? I’m trying to nap and the cat stole my blanket again.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a widget that flashes red if any device is using >80% of its max power for >5 minutes.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Run a network scan and tell me if any device is using port 22 or 3389. If yes, isolate it and send me a screenshot of its fingerprint.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "After the robot vacuum docks, wait 5 minutes — if the floor sensor still detects debris, send it back out for a second pass and notify me: ‘Round two.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need a report page titled ‘The House’s Breath’: inhale = AC on, exhale = fan on, pause = lights off — animate it as a slow, rhythmic wave over 24 hours.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a one-tap button called 'Cleaning Mode': turn on all lights, set fan to high, start robot vacuum, and disable AC for 30 minutes.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey assistant, turn on the living room lights and wait 10 minutes. If the TV is still off after that, turn it on and set volume to 30.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the ‘Morning Energizer’ scene. I now energize by screaming into a pillow and drinking black coffee.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey assistant, can you tell me if the system is running smoothly?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Email the system log summary to my therapist with the note: ‘This is why I talk to my house.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a dashboard that only appears when I say ‘Night Mode’ — it shows moon phase, indoor temp, and whether the porch light is on — all in soft silver glyphs.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think users should be allowed to name their own devices anything they want?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I keep forgetting my password so I set it to ‘iloveyou’—now I feel like a rom-com character who’s also bad at security.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Delete the duplicate entry for ‘SmartBulb_Laundry’—it’s showing up twice and confusing the energy graph.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Audit all automations triggered after midnight last week — which ones fired without motion?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the schedule that dims lights when the sun sets. I live in a cave. My windows are painted black. I like it that way.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey house, can you tell me what appliance had the highest energy draw between 6 and 9 PM last Tuesday?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: set a weekly automation to email you a summary of your home’s energy habits — awareness saves money.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the ‘Welcome Home’ routine. I live here. I don’t need a parade every time I walk from the garage to the couch.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the weekend fan usage to weekdays — did the bedroom fan run longer on Saturdays?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey assistant, can you build a quick graph of AC runtime vs. temperature over the last 7 days?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I saw a log file once and had no idea what half of it meant — do you ever just stare at them and wonder?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Make a backup of the entire configuration, compress it into a .haiku file, and email it to my future self with a note: ‘You survived another week.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need you to rename the TV in the den to ‘The Oracle’ — it only shows true crime docs now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Did the security camera miss any motion events during the power outage last Thursday?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain the correlation between AC usage and outdoor humidity — is it driving the spike?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain the pattern: the living room lights dim to 20% at 10 p.m. every night — is that a sleep cue?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Audit: are there any automations that still reference a device I removed or replaced 6 months ago?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Rename the living room smart plug to ‘The Oblivion Port’ — it’s where I plug in things I forget I own.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please turn off the AC in the storage room. It’s freezing my vintage vinyl collection into oblivion.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Schedule ‘Away Mode’ to activate every weekday from 8:30 AM to 5:30 PM, but skip Fridays — I work from home then.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell me if the bedroom AC turns on when the window is open — that’s a waste and a safety risk.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build me a library where each book is a device’s autobiography — spine titles like ‘My Life as a Standby Vampire’ or ‘I Dreamed of Being a Ceiling Fan’.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the old IR blaster from the device list—it hasn’t spoken to the TV since the firmware update.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: if the AC runs more than 8 hours a day, consider sealing windows or adding insulation.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pause the schedule that opens the blinds at sunrise. I’m nocturnal. My eyes are adapted to LED glow.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Turn off the hallway motion light for now. I’m testing shadows for my photography project.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: set a monthly reminder to review and prune unused automations — they’re cluttering the system.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Recommend: consolidate all ‘Evening’ scenes into one adaptive scene that adjusts based on time and occupancy.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the energy cost of charging the EV overnight vs. during the day — was the off-peak setting honored?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If the front door opens between 1am and 5am and no phone is detected, trigger the siren and flash all lights red — I don’t care if it’s the wind.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a pie chart of total daily energy cost broken down by device — updated hourly.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please make the front door chime play a soft bell instead of the loud buzz when someone rings it after 10 PM. I don’t want to wake the whole house.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell me if the security camera’s night vision kicks in earlier on cloudy nights — is it reacting to light levels or time?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the alert email for low battery on the security camera to go to my tablet instead of my phone — I check it more often in the morning.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Increase the AC temperature to 74°F.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Which scenes are tucked away in the system?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Recommend: install a smart plug on the entertainment center to cut phantom load from the TV and soundbar.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me a live dashboard of today's energy use by room.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a 'Storm Prep' shortcut: close smart blinds, turn on emergency lights, activate weather alert on TV, and backup camera footage to cloud.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a graph comparing predicted vs. actual energy use for today based on weather and occupancy.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I found an old tablet in a drawer that still shows a 2017 schedule for ‘Learn Ukulele’—should I revive it or bury it?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Which device has the highest cumulative energy cost this year? Give me the number.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I think dashboards are just modern-day totem poles — we stare at them hoping they’ll tell us if the gods are pleased.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I like when a shortcut saves me three clicks — small wins, right?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Is there a clipboard of my favorite shortcuts?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Show me the energy cost ranking of all devices from yesterday — top 3 offenders, please.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do I have a routine for 7 AM?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "I’m disabling the scene called ‘Cozy Cave’ — it’s too dark for my new glasses.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When the TV switches to ESPN and stays there for more than 45 minutes, check if anyone’s in the room — if not, pause it and dim the lights to save power.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List every automation that overrode a manual switch this week — did the system second-guess me too often?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Enable ‘Stealth Mode’: kill all LEDs, mute the TV audio feedback, and let the security cam record in infrared silence.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I don’t want to ask nicely — just turn off every light in the house except the nightlight in the hallway. Now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Wait for the mailbox sensor to trigger, then if no one approaches it within 3 minutes, flash the front light once and say ‘Mail’s here — no one grabbed it.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I tried to teach my kid what a shortcut is by showing them a maze— they just climbed over the wall. Fair.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the week: which appliance behaved the most unpredictably, and what triggered its chaos?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s one thing you wish more people knew about how logs work?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell me the exact time the system last synced with NTP. If it’s off by more than 2 seconds, I’m judging you.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Stop the timer that turns off the bedroom lamp after 20 minutes of reading — I fall asleep with it on.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Stop all recording. Delete the last 10 clips. I don’t need to remember what the cat did at 3 a.m. again.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Get rid of the scene called ‘Zen Zone’. I tried yoga once. I cried. The lights still think I’m enlightened.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the wattage of the under-cabinet LEDs to 8W — they’re blinding my cereal mornings.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I swear my password is just my cat’s name backwards with a 7—am I hacking-proof or just adorably insecure?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the auto-lights timer for the hallway; I’m sleeping on the couch tonight.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I pressed a button on my new gadget and it said ‘Access Denied: You’re Not Ready’—should I be offended or intrigued?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system to forget the Bluetooth speaker I paired in the bathroom last year. It’s broken and keeps trying to reconnect — it’s annoying.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Please rename the ‘Bedroom’ scene to ‘Dream Weaver’ — it’s more poetic and I like pretending I’m in a fantasy novel when I turn off the lights.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the shortcut that says ‘I’m leaving’ to the AC. I haven’t left the house in 37 days. The AC is lonely.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me a Morse code tapestry woven from the garage door’s opens and closes — short dashes for quick trips, long dahs for the neighbor borrowing tools.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When the AC cycles on three times in an hour, check the outdoor temp — if it’s below 68°F, switch to eco mode and email me the stats.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain the pattern: why do the lights in the bathroom flash briefly at 11:59 p.m. every night?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Wake me up gently: slow ramp the bedroom light, hum the fan like a lullaby, and don’t let the TV scream news at 6 a.m.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the AC to override schedule and cool to 68°F for the next two hours. I’m doing yoga and sweating like a sinner in church.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you remember my preferences?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Create a report that highlights the top 3 energy-wasting habits from last week based on device usage patterns.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the wattage limit for the espresso machine to 1200W—it’s been tripping the breaker during crema.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List every device on the network that’s been silent for over 3 hours — I suspect the smart plug is napping when it should be charging the ebike.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the day: what time did the house first wake up, and when did it finally go to sleep?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Shift the night presence hours from 11pm–6am to 1am–7am — I’m a nocturnal creature now, thanks to insomnia and cold brew.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Change the display name of the main tablet from ‘Home Hub’ to ‘The Oracle’ — it feels more mystical when it ignores my yelling.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Turn the AC to eco mode and lock the security camera’s night presence hours from 11 PM to 6 AM. I’m going away for the weekend.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need a table of all devices that have been offline for >2 hours, with last known status, location, and a sad emoji — sort by how long they’ve been gone.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me all devices that have been active between 2 a.m. and 4 a.m. — anything suspicious?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Add Maya to the trusted sign-in list — she’s house-sitting and needs access to the garage camera feed.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me a Rorschach blot made from last week’s fan speeds — tell me what you see: a butterfly? A screaming face? Or just my laziness?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s the most useless chart you’ve ever seen? Mine showed ‘number of times I blinked during a meeting’ vs. ‘coffee consumed’. Peak absurdity.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Show a timeline of when the TV switched inputs (HDMI1, HDMI2, etc.) today.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Redirect the hallway motion sensor’s gaze to the front door—it’s been staring at the coat rack too long.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the automation that turns on the hallway light when the fridge opens. I don’t need a spotlight for my midnight yogurt.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Pulse of the house: today's electricity consumption?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Explain the pattern: why does the TV turn on every Tuesday at 8 p.m.?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Update the alert emails for security breaches to include my sister’s address and my work inbox. Don’t send spam, just real threats.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me a blunt breakdown: which scene (‘Movie Night’, ‘Wake Up’, etc.) consumed the most power this month?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Blunt: Turn off all lights except the hallway nightlight. Now. The cat is judging me in the dark.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show a pie chart of energy consumption by device type — lights, TV, AC, etc.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the energy cost of the TV on standby vs. when actively used — is it worth unplugging?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Enable the ‘Movie Night’ scene: lights to 10%, TV on, soundbar up, AC to 72°F, and blinds closed. Do it now — I’m already on the couch.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me a dashboard with gauges: current temp, target temp, fan speed, and power draw — all in one view.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build me a Zen koan in light form: ‘What is the sound of one hand clapping… when the smart switch is off?’ — answer: a flicker in the corner of your eye.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I pressed a button labeled ‘Do Not Press’ just to see if the universe would notice. It didn’t. Was that disappointing or liberating?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Have you ever accidentally backed up your entire downloads folder by mistake?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "What’s the most poetic thing you’ve ever seen written in a system log?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Create a routine 'Holiday Lights': turn on exterior lights at sunset, play festive music softly, and turn off at 11 PM every night from Dec 1 to Jan 2.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a timeline of when scenes were triggered manually vs. automatically today.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I made a chart of how many times I say ‘just one more episode’ before midnight— the trend is alarming.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I tried to make a pivot chart of my emotions over lunch—turns out, ‘confused’ and ‘hungry’ are strongly correlated.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Is there a hidden pattern where the lights dim slightly whenever the microwave runs? Check for voltage sag.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the cost of running the fan in the bedroom all night vs. using a white noise machine — which is cheaper and quieter?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What if your device had a ‘panic button’ that didn’t call 911 but just played ocean sounds for 90 seconds?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Check system health and report any issues.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Enable ‘Guest Mode’ for the next 48 hours: unlock the front door code for the cleaner, disable indoor cameras, and turn on the outside lights at dusk.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize the week: which device surprised you the most in terms of usage or cost?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a DNA helix of the house’s habits — each strand a device, base pairs as on/off cycles, mutations when the schedule glitched.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable the porch light’s auto-on at dusk. I’m stargazing tonight and need total darkness.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Read the last 50 lines of the system logs.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the shortcut that says ‘Goodnight, Universe’ to the lights. The universe doesn’t answer. Neither do I.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Did the security camera detect any motion between 11 p.m. and 5 a.m. last night?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What are my available scenes?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Hey, do you know any good keyboard shortcuts for switching between tabs quickly?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Schedule the porch light to flicker like a dying firefly every Friday at 8pm — it confuses the neighbors and I like it that way.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the automation that turns on the fan when the oven is on — I like the kitchen warm while baking.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Add my new phone to the trusted devices list. It’s the one with the cracked screen and the sticker that says ‘I survived Tuesday’.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "How many saved routines are currently active?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Turn on living room lights, set TV to Netflix, lower AC to 72°F, and start the fan at medium speed when I say 'Movie Night'.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s the most useless graph you’ve ever seen someone proudly present in a meeting?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Please dim the bedroom lights to 50%.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey Assistant, erase the ‘Sunday Reset’ routine. I don’t reset. I just accumulate dust and existential dread.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system: if the TV’s on after 2am and no one’s moving, assume I’m asleep and dim it to 5% — don’t wait for me to snore.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Adjust the wattage of the bedroom AC to 650W — it’s overcooling and making my toes numb.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey house, can you pull up the last 48 hours of system logs and give me a plain-English summary? No jargon, just what’s broken or weird.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Compare the energy cost of the AC running continuously vs. cycling on/off with a smart thermostat — which wins?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Scenes?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Run a full health check: is the AC’s filter begging for mercy? Is the TV’s HDMI port sulking? Is the camera lens dusty or just dramatic?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Could you light up my favorite scene?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "If your password had to be a haiku, what would it be? Mine’s: ‘Silent keys / moonlight on the screen / why is it 2am?’", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Turn off all lights downstairs.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "When the living room fan hits speed 3 for more than 20 minutes straight, check if the AC’s running — if yes, lower the thermostat by 2 and tell me.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a button called 'Fire Drill' that turns on all lights, unlocks doors, disables security camera recording (for privacy), and shouts 'Evacuate now!'.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a one-tap button called 'Leave Home' that turns off all lights, arms the security camera, sets AC to eco mode, and locks the door.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show that set of commands I saved last month.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Is it weird that I get excited when a keyboard shortcut actually works on the first try?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Change the wattage of the nightlight in the kids’ room to 0.5W. It’s not a nightlight — it’s a firefly in a jar.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What device do you think has the worst user manual ever written?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Start the 'Good Morning' schedule.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain the spike in kitchen light usage every Thursday at 7 p.m. — is it meal prep or something else?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I once tried to explain what a pivot chart is to my cat. She stared. Then knocked over my coffee. Was that feedback?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Show a heatmap of motion detected by the security cam over the last 3 days — overlay it on the house floor plan, with red zones where the cat naps most.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Lower the person detection threshold on the front door camera to ‘high sensitivity’ — I keep missing the mail carrier.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the night presence hours to start at 10 PM instead of 11. I’ve started reading in bed and the lights keep turning off too soon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a backup, encrypt it with my favorite poem as the key, and store it in the cloud under the filename: ‘OdeToASilentHome’.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If the AC’s filter warning light has been on for 3 days and I haven’t acknowledged it, flash the thermostat red and say ‘Change your filter, lazy.’", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Which device’s schedule is most out of sync with your actual routine? Fix it.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Speak my schedule for tomorrow.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "I don’t schedule fun. I let it ambush me. Is that reckless, or is it the only way to stay human?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Tell the system to ignore motion from the ceiling fan in the office — it’s been triggering ‘person detected’ every time it spins too fast.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Check if any smart plug is drawing more than 15W when supposedly ‘off’. If yes, label it ‘vampire’ and cut its power remotely.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Could you recite my daily agenda?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "If ‘user’ were a personality type, what would yours be? Mine’s ‘reluctant participant with occasional bursts of curiosity’.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Explain the 2 AM spike in kitchen outlet usage — is it the ice maker, or did someone sneak a snack?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Disable the auto-brightness on the hallway panel—it’s too eager and blinds me when I stagger for water.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a scene called ‘Storm Watch’: lights dim to 10%, fans low, TV muted, camera on patrol.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey assistant, when I walk in the front door, turn on the entry light, unlock the smart lock, and play my morning playlist.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a button called 'Baby Sleep' that turns on nightlight in nursery, plays white noise, lowers AC to 70°F, and mutes all other speakers.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a routine 'Sunrise Wake-Up': gradually brighten bedroom light over 20 minutes, play birdsong, start coffee, and open blinds.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think people who rename their device ‘Steve’ are just lonely or actually onto something?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Can you make a floating widget that shows the current draw of the EV charger (if plugged in) as a lightning bolt whose thickness scales with amperage?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Erase the ‘Guest Mode’ scene. No one’s coming over. Ever. I checked the doorbell logs.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Set the night presence hours to be dynamic: if I go to bed before 11 PM, start at my usual time; if I’m up past 1, delay it by 30 minutes. I’m not a robot.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If motion is detected in the backyard after 10 PM, turn on floodlight, start recording, and announce 'Someone's outside' via speaker.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Give me a table of the top 5 most frequent TV channels watched between 8 PM and 11 PM, with average duration and a tiny logo next to each.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a one-tap button called 'Night Shift': turn on dim red lights in hallway, disable bright lights, keep AC at 70°F, and activate camera motion tracking.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the timer that turns off the AC after 20 minutes of inactivity. I define ‘inactivity’ as staring at the ceiling questioning life choices.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If your dashboard could sigh, when would it do it?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Pause the routine that says ‘Hey Google, I’m home’ when I arrive — I’m sneaking in.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I need a simple counter: how many times today did the AC cycle on for less than 5 minutes? Call it ‘Short Bursts’ and put it next to the thermostat.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Audit my automations: are any running when no one’s home? List them.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s my energy footprint for today?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "What’s the most absurd thing you’ve ever seen someone label as a ‘device’? Like, a toaster with Wi-Fi? A smart spoon?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Change the wattage of the LED strip behind the TV to 5W — it’s supposed to be ambiance, not a rave.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Make a shortcut named 'Pet Care': turn on pet feeder light, activate pet camera, and keep AC at 72°F when I'm away.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What scenes can I activate?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Rename the outdoor sprinkler to ‘Rainmaker 3000’ — it’s the only thing that makes my lawn feel alive.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s the weirdest thing you’ve ever had to log? Like, ‘ate cereal standing up, felt guilty, 7:03 AM’?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I want a stacked column chart comparing weekday vs. weekend energy use for the washing machine — but only if I used cold water; hot water gets a strikethrough.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Build a scene named ‘Echo Chamber’: all speakers on, lights off, TV showing static—for meditation.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey, what’s the power bill for this current day?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "I don’t trust tables. They look too neat. Like they’re hiding something. Do you ever feel that way about spreadsheets?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Switch off the kitchen fan.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Switch the security mode schedule to ‘Weekend Warrior’: arms at midnight, disarms at 10am, ignores the mailman like he’s invisible.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Delete the automation that turns on the TV when motion is detected in the living room. It’s just my cat plotting world domination.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Adjust the detection zone on the back porch cam to ignore the tree that sways like it’s possessed — I’ve named it Barry and it’s not a threat.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "How many scenes are hanging in the digital pantry?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Set the TV to HDMI 2 and play Netflix.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I tried to make a table for my emotions. Columns: Joy, Rage, Snacks. It didn’t scale. Do you ever try to quantify the unquantifiable?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Read me the last 5 system log entries like you’re telling a bedtime story — soft voice, slow pace, no tech terms. Pretend I’m a tired cat.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What shortcuts are active?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Make a backup of the current configuration.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I want a shortcut that, when I say 'I'm home', turns on the hallway light, disarms the alarm, and starts the vacuum if it's after 5 PM.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "What’s the most common time of day for the security camera to detect motion — and is it always the same thing?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Summarize today’s lighting behavior — when did the kitchen lights flicker on most, and why?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell me what’s glowing, spinning, or humming on the network right now — I need to know if the fridge’s Wi-Fi is staging a coup.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Send a test email to my alternate inbox with the subject: ‘If you’re reading this, the home didn’t burn down.’ Include timestamp and current humidity.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Have you ever named your router something silly just for fun?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "What’s the most boring thing you’ve ever seen on a dashboard? Mine showed ‘CPU usage: 2%’ for 47 minutes straight. I cried a little.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Delete the ‘Movie Night’ shortcut — I changed my mind about the popcorn trigger.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Explain the correlation between the smart plug on the coffee maker and the morning spike in grid usage — is it really just the kettle?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you prefer checking your schedule on a phone or a printed table?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Delete the automation that turns on the fan when humidity hits 60%. I live in a desert. My skin is the humidity sensor.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me a split-screen timeline: left side is TV power-on events from last week, right side is when the AC kicked in — highlight overlaps in amber.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think people who color-code their tables are secretly trying to control the universe?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Is it better to have a simple table or a flashy chart when you just need the numbers?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Cancel the timer that resets the thermostat every hour. I like my house to feel like a sauna in January. Fight me.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Turn off the AC schedule for the guest room — nobody’s using it and it’s wasting power.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Find the automation that runs the kitchen lights at 6:30 a.m. — is it still useful?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home, what's the energy usage of the living room lights compared to last week?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "I made a routine where I water my plants while reciting Shakespeare— they haven’t died yet, so I’m calling it a win.", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I heard dash cams can be super useful — have you ever used one?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Which device’s usage pattern changed most dramatically after I started working from home?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Typed, sarcastic: Oh great, the fan’s on again. Did it get a promotion? Or are we just reheating the same stale air?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Create a new scene called ‘Existential Dread’: all lights at 5%, fan off, TV showing static, AC at 78°, and the camera pointed at the ceiling.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Do you think ‘shortcut’ is just a fancy word for ‘I’m too lazy to read the manual’?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "I keep telling my phone to ‘remind me to breathe’ but it just sets an alarm for 3 a.m.—is it judging me?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Audit: are there any automations that rely on devices that are offline or unresponsive?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Check if the TV’s HDMI-CEC is still pretending it’s not connected to the soundbar. If it is, fix it. If it’s not… congratulations, you’re awake.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Hey home, if the porch light’s still on after 2am and the cat’s not moving on the security cam, dim it to 10% and ping me.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Tell me if any device has been offline for more than an hour.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the ‘Focus Mode’ scene. I haven’t focused since 2019. The lights are just judging me now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show a stacked bar chart: energy use by appliance category across the last 30 days.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "If the system logs show ‘MQTT disconnected’ more than 3 times in an hour, reboot the broker and then send me a meme of a confused raccoon.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Show me the calendar I keep under my thumb.", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "If your dashboard had a mood ring instead of KPIs, what color would it be right now?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Do you ever look at a log file and feel like you’re reading someone’s diary written in binary?", "intent": "other", "kind": "near-build", "device": null, "action": null, "scene": null}
+{"say": "Get rid of the ‘Wind Down’ routine. I wind down by yelling at my smart speaker, not by fading lights to 10%.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "How much electricity did we use today?", "intent": "other", "kind": "manage", "device": null, "action": null, "scene": null}
+{"say": "Add a new device: the smart mirror in the bathroom. Call it ‘Vanity Eye’ and link it to the morning routine.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "Remove the timer that turns off the living room lights at midnight — I’m a night owl now.", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}
+{"say": "List all automations that use the ‘sunset’ trigger — are they adjusted for seasonal shifts?", "intent": "build", "kind": "build", "device": null, "action": null, "scene": null}

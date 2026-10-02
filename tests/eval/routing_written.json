@@ -50416,6 +50416,4727 @@
    "action": "off",
    "scene": "none",
    "kind": "mixed-language"
+  },
+  {
+   "say": "Stop the fan from auto-turning on when humidity hits 60% — I like it muggy.",
+   "devices": [
+    {
+     "id": "kettle",
+     "name": "Kettle",
+     "room": "living room"
+    },
+    {
+     "id": "speaker",
+     "name": "Speaker",
+     "room": "bedroom"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Set the living room to ‘Cinema Dusk’ — dim the TV glow, silence the AC, and let the shadows breathe.",
+   "devices": [
+    {
+     "id": "balcony_reading_lamp",
+     "name": "Balcony reading lamp",
+     "room": "balcony"
+    },
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "pooja room"
+    },
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Draw a timeline of when the TV was watched today, broken into 15-minute intervals.",
+   "devices": [
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "bathroom"
+    },
+    {
+     "id": "bedroom_window_sensor",
+     "name": "Bedroom window sensor",
+     "room": "bedroom"
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "bedroom"
+    },
+    {
+     "id": "living_room_ac",
+     "name": "Living room ac",
+     "room": "living room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "good_night",
+     "name": "Good night"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Hey home brain, flick the bedroom ceiling’s eye off while I nap.",
+   "devices": [
+    {
+     "id": "master_bedroom_geyser",
+     "name": "Master bedroom geyser",
+     "room": "master bedroom"
+    },
+    {
+     "id": "kids_room_bed_lamp",
+     "name": "Kids room bed lamp",
+     "room": "kids room"
+    },
+    {
+     "id": "room_heater",
+     "name": "Room heater",
+     "room": ""
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "garage"
+    },
+    {
+     "id": "washing_machine",
+     "name": "Washing machine",
+     "room": "office"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    },
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Remove the old tablet from the security camera’s authorized viewers. It’s been gathering dust since 2021.",
+   "devices": [
+    {
+     "id": "motor",
+     "name": "Motor",
+     "room": "store room"
+    },
+    {
+     "id": "air_purifier",
+     "name": "Air purifier",
+     "room": ""
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "kitchen"
+    },
+    {
+     "id": "study_light",
+     "name": "Study light",
+     "room": "guest room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "nap",
+     "name": "Nap"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Create a routine 'After Work Unwind': turn on ambient lighting, play chill music, set fan to medium, and lower AC by 2 degrees.",
+   "devices": [
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "porch"
+    },
+    {
+     "id": "chandelier",
+     "name": "Chandelier",
+     "room": "kids room"
+    },
+    {
+     "id": "phone_charger",
+     "name": "Phone charger",
+     "room": "guest room"
+    },
+    {
+     "id": "desk_lamp",
+     "name": "Desk lamp",
+     "room": ""
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    },
+    {
+     "id": "focus",
+     "name": "Focus"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What’s the most boring dashboard you’ve ever seen?",
+   "devices": [
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "pooja room"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "porch"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "living room"
+    }
+   ],
+   "scenes": [],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Show me a ballet of the lights — pirouettes for dimming, grand jetés for full blast, and a sad solo in the hallway when someone forgot to turn it off.",
+   "devices": [
+    {
+     "id": "treadmill",
+     "name": "Treadmill",
+     "room": "master bedroom"
+    },
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "kids room"
+    },
+    {
+     "id": "garden_sprinkler",
+     "name": "Garden sprinkler",
+     "room": "study"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Set the TV to play the nature documentary I saved yesterday at 7 PM sharp — no excuses, even if I forget.",
+   "devices": [
+    {
+     "id": "music_system",
+     "name": "Music system",
+     "room": "store room"
+    },
+    {
+     "id": "water_heater",
+     "name": "Water heater",
+     "room": "kitchen"
+    },
+    {
+     "id": "exhaust",
+     "name": "Exhaust",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "I think passwords should be passphrases — like ‘correct horse battery staple’ — agree?",
+   "devices": [
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "terrace"
+    },
+    {
+     "id": "relay_1",
+     "name": "Relay 1",
+     "room": "guest room"
+    }
+   ],
+   "scenes": [],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Generate a weathered parchment scroll of today’s AC cycles, inked in temperature gradients, with coffee stains for every time someone yelled ‘too cold!’",
+   "devices": [
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "terrace"
+    },
+    {
+     "id": "water_pump",
+     "name": "Water pump",
+     "room": "kitchen"
+    },
+    {
+     "id": "study_light",
+     "name": "Study light",
+     "room": "kids room"
+    },
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": "master bedroom"
+    },
+    {
+     "id": "master_bedroom_bed_lamp",
+     "name": "Master bedroom bed lamp",
+     "room": "master bedroom"
+    },
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "kids room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "away",
+     "name": "Away"
+    },
+    {
+     "id": "party",
+     "name": "Party"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Move the security camera feed to display on the fridge screen. I want to see who’s stealing my leftovers in real time.",
+   "devices": [
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": ""
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "garage"
+    },
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": "store room"
+    },
+    {
+     "id": "thermometer",
+     "name": "Thermometer",
+     "room": "pooja room"
+    },
+    {
+     "id": "washing_machine",
+     "name": "Washing machine",
+     "room": "master bedroom"
+    },
+    {
+     "id": "coffee_maker",
+     "name": "Coffee maker",
+     "room": ""
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "office"
+    },
+    {
+     "id": "pump",
+     "name": "Pump",
+     "room": "kitchen"
+    },
+    {
+     "id": "main_light",
+     "name": "Main light",
+     "room": ""
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "kids room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Create a shortcut 'Date Night': turn on dining candlelight effect, play romantic playlist, set AC to 72°F, and lock front door after 10 minutes.",
+   "devices": [
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": ""
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "terrace"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "dining room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    },
+    {
+     "id": "good_night",
+     "name": "Good night"
+    },
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What’s the trend in lighting usage over the past 90 days — increasing, decreasing, or flat?",
+   "devices": [
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": ""
+    },
+    {
+     "id": "thermometer",
+     "name": "Thermometer",
+     "room": ""
+    },
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "garage"
+    },
+    {
+     "id": "wall_light",
+     "name": "Wall light",
+     "room": "balcony"
+    },
+    {
+     "id": "desk_lamp",
+     "name": "Desk lamp",
+     "room": ""
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": ""
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "store room"
+    },
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "room": "terrace"
+    },
+    {
+     "id": "floor_lamp",
+     "name": "Floor lamp",
+     "room": "garage"
+    },
+    {
+     "id": "spot_light",
+     "name": "Spot light",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "I named my external hard drive ‘The Vault of Regrets’—is that too dark or just honest?",
+   "devices": [
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "hall"
+    },
+    {
+     "id": "exhaust_fan",
+     "name": "Exhaust fan",
+     "room": "garage"
+    },
+    {
+     "id": "thermometer",
+     "name": "Thermometer",
+     "room": "bathroom"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "guest room"
+    },
+    {
+     "id": "lamp",
+     "name": "Lamp",
+     "room": "pooja room"
+    },
+    {
+     "id": "electric_kettle",
+     "name": "Electric kettle",
+     "room": "office"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": ""
+    },
+    {
+     "id": "humidity_sensor",
+     "name": "Humidity sensor",
+     "room": "terrace"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "work",
+     "name": "Work"
+    },
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Can you render a sonar-like sweep across the floor plan, where each room’s current power draw is represented by a radiating pulse — brighter pulse = more watts?",
+   "devices": [
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": "study"
+    },
+    {
+     "id": "office_water_heater",
+     "name": "Office water heater",
+     "room": "office"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "kids room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "party",
+     "name": "Party"
+    },
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "If the kitchen motion sensor sees no one for 15 minutes but the stove’s still warm, turn off the burner and send a voice alert: ‘Stove’s lonely.’",
+   "devices": [
+    {
+     "id": "plug",
+     "name": "Plug",
+     "room": "kids room"
+    },
+    {
+     "id": "office_thermometer",
+     "name": "Office thermometer",
+     "room": "office"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    },
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    },
+    {
+     "id": "guests",
+     "name": "Guests"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Stop the schedule that turns on the AC at 3 p.m. — the weather changed and I’m cool now.",
+   "devices": [
+    {
+     "id": "mosquito_repellent",
+     "name": "Mosquito repellent",
+     "room": ""
+    },
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": "pooja room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What scenes are there?",
+   "devices": [
+    {
+     "id": "water_heater",
+     "name": "Water heater",
+     "room": "porch"
+    },
+    {
+     "id": "speaker",
+     "name": "Speaker",
+     "room": ""
+    },
+    {
+     "id": "cooler",
+     "name": "Cooler",
+     "room": "balcony"
+    },
+    {
+     "id": "verandah_bulb",
+     "name": "Verandah bulb",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Backing up files feels like a chore — any tips to make it less annoying?",
+   "devices": [
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "study_time",
+     "name": "Study time"
+    },
+    {
+     "id": "nap",
+     "name": "Nap"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Remove the scene called ‘Emergency Lights’. I’ve never had an emergency. Unless you count running out of oat milk.",
+   "devices": [
+    {
+     "id": "kitchen_television",
+     "name": "Kitchen television",
+     "room": "kitchen"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "verandah"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "garage"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "If the front porch light flickers twice in quick succession, assume it’s a power surge — shut down non-essential devices and email me the event log.",
+   "devices": [
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "terrace"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "nap",
+     "name": "Nap"
+    },
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    },
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Stop the kitchen camera recording immediately. I swear I saw the toaster wink. I need to review that footage before I lose my mind.",
+   "devices": [
+    {
+     "id": "bedroom_speaker",
+     "name": "Bedroom speaker",
+     "room": "bedroom"
+    },
+    {
+     "id": "water_pump",
+     "name": "Water pump",
+     "room": "verandah"
+    },
+    {
+     "id": "light",
+     "name": "Light",
+     "room": "bedroom"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Delete the shortcut called ‘Emergency Mode’ — I never used it and it’s creepy having it there.",
+   "devices": [
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Add a new appliance: the sous vide circulator. Label it ‘Precision Bath’ and tie it to my Sunday meal prep ritual.",
+   "devices": [
+    {
+     "id": "phone_charger",
+     "name": "Phone charger",
+     "room": ""
+    },
+    {
+     "id": "porch_light",
+     "name": "Porch light",
+     "room": "kitchen"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "kids room"
+    },
+    {
+     "id": "washing_machine",
+     "name": "Washing machine",
+     "room": "guest room"
+    },
+    {
+     "id": "pump",
+     "name": "Pump",
+     "room": "terrace"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Begin recording a 10-second clip from the front door camera.",
+   "devices": [
+    {
+     "id": "computer",
+     "name": "Computer",
+     "room": ""
+    },
+    {
+     "id": "relay_2",
+     "name": "Relay 2",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "workout",
+     "name": "Workout"
+    },
+    {
+     "id": "away",
+     "name": "Away"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Generate a vertical bar graph comparing yesterday’s fan runtime vs. today’s, but only if the AC was off — otherwise, hide it.",
+   "devices": [
+    {
+     "id": "mosquito_machine",
+     "name": "Mosquito machine",
+     "room": ""
+    },
+    {
+     "id": "water_pump",
+     "name": "Water pump",
+     "room": "hall"
+    },
+    {
+     "id": "study_aquarium",
+     "name": "Study aquarium",
+     "room": "study"
+    },
+    {
+     "id": "cooler",
+     "name": "Cooler",
+     "room": "living room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Turn everything off except the fridge and the security hub.",
+   "devices": [
+    {
+     "id": "socket_1",
+     "name": "Socket 1",
+     "room": "store room"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "kitchen"
+    },
+    {
+     "id": "purifier",
+     "name": "Purifier",
+     "room": "guest room"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "dining room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "away",
+     "name": "Away"
+    },
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Remove the ‘TV Timeout’ shortcut I made last Tuesday. It keeps pausing Stranger Things when I sneeze.",
+   "devices": [
+    {
+     "id": "socket_1",
+     "name": "Socket 1",
+     "room": "dining room"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "bedroom"
+    },
+    {
+     "id": "study_light",
+     "name": "Study light",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "away",
+     "name": "Away"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Build a minimalist dashboard widget that pulses green when all lights are off and the house is in sleep mode — no text, just a breathing circle.",
+   "devices": [
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "porch"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "pooja room"
+    },
+    {
+     "id": "soundbar",
+     "name": "Soundbar",
+     "room": "office"
+    },
+    {
+     "id": "printer",
+     "name": "Printer",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Pause all scheduled tasks for the next 90 minutes. I’m doing a digital detox — even the smart mirror can take a break.",
+   "devices": [
+    {
+     "id": "bed_lamp",
+     "name": "Bed lamp",
+     "room": ""
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "pooja room"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "hall"
+    },
+    {
+     "id": "humidity_sensor",
+     "name": "Humidity sensor",
+     "room": "dining room"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Recommend: if your home feels smarter than you, it’s time to simplify. Less automation, more intention.",
+   "devices": [
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "porch"
+    },
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": "verandah"
+    },
+    {
+     "id": "relay_1",
+     "name": "Relay 1",
+     "room": "living room"
+    },
+    {
+     "id": "store_room_computer",
+     "name": "Store room computer",
+     "room": "store room"
+    },
+    {
+     "id": "bathroom_smart_tv",
+     "name": "Bathroom smart tv",
+     "room": "bathroom"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "good_night",
+     "name": "Good night"
+    },
+    {
+     "id": "nap",
+     "name": "Nap"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Cancel the ‘Post-Workout Chill’ automation. I haven’t worked out since 2021 and the AC still thinks I’m sweating.",
+   "devices": [
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": ""
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "store room"
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    },
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What’s the average daily cost of running the AC in July versus June?",
+   "devices": [
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "dining room"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": ""
+    },
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Recommend: should I disable the ‘Movie Night’ scene if it’s only used once a month?",
+   "devices": [
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "hall"
+    },
+    {
+     "id": "study_speaker",
+     "name": "Study speaker",
+     "room": "study"
+    },
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "guests",
+     "name": "Guests"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    },
+    {
+     "id": "relax",
+     "name": "Relax"
+    },
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Recommend: replace the ‘All Lights On’ scene with zone-based lighting to avoid over-illumination.",
+   "devices": [
+    {
+     "id": "garage_ac",
+     "name": "Garage ac",
+     "room": "garage"
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "dining room"
+    },
+    {
+     "id": "room_heater",
+     "name": "Room heater",
+     "room": "garage"
+    },
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": "balcony"
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "terrace"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Delete the fan schedule that turns on at 3 AM. I’m not a vampire, and neither is my cat.",
+   "devices": [
+    {
+     "id": "night_lamp",
+     "name": "Night lamp",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    },
+    {
+     "id": "relax",
+     "name": "Relax"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Can you visualize the front door camera’s motion alerts as a heatmap over the last 24h?",
+   "devices": [
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "terrace"
+    },
+    {
+     "id": "humidity_sensor",
+     "name": "Humidity sensor",
+     "room": ""
+    },
+    {
+     "id": "bed_lamp",
+     "name": "Bed lamp",
+     "room": "porch"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    },
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Hey, wipe out the evening glow scene — I don’t want it triggering at sunset anymore.",
+   "devices": [
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "balcony"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What’s the system uptime? And while you’re at it, tell me if the router’s been lying about its bandwidth again.",
+   "devices": [
+    {
+     "id": "bed_lamp",
+     "name": "Bed lamp",
+     "room": ""
+    },
+    {
+     "id": "dining_room_floor_lamp",
+     "name": "Dining room floor lamp",
+     "room": "dining room"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": ""
+    },
+    {
+     "id": "motor",
+     "name": "Motor",
+     "room": "living room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Generate a report showing which rooms had lights left on longest yesterday — ranked.",
+   "devices": [
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": "study"
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "bathroom"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "verandah"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "store room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cooking",
+     "name": "Cooking"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "I want a control panel with toggles for all lights and a mini-map of the house showing which are on.",
+   "devices": [
+    {
+     "id": "speaker",
+     "name": "Speaker",
+     "room": ""
+    },
+    {
+     "id": "set_top_box",
+     "name": "Set top box",
+     "room": ""
+    },
+    {
+     "id": "relay_2",
+     "name": "Relay 2",
+     "room": "store room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "movie_night",
+     "name": "Movie night"
+    },
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "guests",
+     "name": "Guests"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "When I say 'Bedtime', dim the bedroom lights to 10%, turn off the TV, lower the fan, and set the AC to 68°F.",
+   "devices": [
+    {
+     "id": "wifi_router",
+     "name": "Wifi router",
+     "room": "kitchen"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "pooja room"
+    },
+    {
+     "id": "kettle",
+     "name": "Kettle",
+     "room": "guest room"
+    },
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Name all my scenes.",
+   "devices": [
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": ""
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "pooja room"
+    },
+    {
+     "id": "office_thermometer",
+     "name": "Office thermometer",
+     "room": "office"
+    },
+    {
+     "id": "bedroom_dehumidifier",
+     "name": "Bedroom dehumidifier",
+     "room": "bedroom"
+    },
+    {
+     "id": "bed_lamp",
+     "name": "Bed lamp",
+     "room": "bathroom"
+    },
+    {
+     "id": "lamp",
+     "name": "Lamp",
+     "room": "verandah"
+    },
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": ""
+    },
+    {
+     "id": "garage_light",
+     "name": "Garage light",
+     "room": "garage"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "guests",
+     "name": "Guests"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Which device has the longest average runtime per day? Is it necessary?",
+   "devices": [
+    {
+     "id": "kitchen_water_heater",
+     "name": "Kitchen water heater",
+     "room": "kitchen"
+    },
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": ""
+    },
+    {
+     "id": "lamp",
+     "name": "Lamp",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "good_night",
+     "name": "Good night"
+    },
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Remove the schedule that plays lo-fi beats when I say ‘start work’. I work in silence. My brain is the lo-fi beat.",
+   "devices": [
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "terrace"
+    },
+    {
+     "id": "set_top_box",
+     "name": "Set top box",
+     "room": ""
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "kitchen"
+    },
+    {
+     "id": "terrace_television",
+     "name": "Terrace television",
+     "room": "terrace"
+    },
+    {
+     "id": "study_ac",
+     "name": "Study ac",
+     "room": "study"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "office"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "pooja room"
+    },
+    {
+     "id": "office_relay_3",
+     "name": "Office relay 3",
+     "room": "office"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Get rid of the automation that dims lights when the TV turns on. I watch horror movies in the dark like a sane person.",
+   "devices": [
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": ""
+    },
+    {
+     "id": "pump",
+     "name": "Pump",
+     "room": "balcony"
+    },
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "hall"
+    },
+    {
+     "id": "water_pump",
+     "name": "Water pump",
+     "room": "kitchen"
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "guest room"
+    },
+    {
+     "id": "air_purifier",
+     "name": "Air purifier",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Give me the names of all scenes I made.",
+   "devices": [
+    {
+     "id": "socket_1",
+     "name": "Socket 1",
+     "room": "porch"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": ""
+    },
+    {
+     "id": "porch_music_system",
+     "name": "Porch music system",
+     "room": "porch"
+    },
+    {
+     "id": "balcony_kettle",
+     "name": "Balcony kettle",
+     "room": "balcony"
+    },
+    {
+     "id": "washing_machine",
+     "name": "Washing machine",
+     "room": "hall"
+    },
+    {
+     "id": "temperature_sensor",
+     "name": "Temperature sensor",
+     "room": "office"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "master bedroom"
+    },
+    {
+     "id": "strip_light",
+     "name": "Strip light",
+     "room": ""
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "verandah"
+    },
+    {
+     "id": "socket_2",
+     "name": "Socket 2",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "party",
+     "name": "Party"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    },
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    },
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    },
+    {
+     "id": "workout",
+     "name": "Workout"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Set the fan in the office to medium speed.",
+   "devices": [
+    {
+     "id": "mosquito_repellent",
+     "name": "Mosquito repellent",
+     "room": "store room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Tell me if the porch light has been left on past sunrise for the last 3 days.",
+   "devices": [
+    {
+     "id": "strip_light",
+     "name": "Strip light",
+     "room": "balcony"
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "bathroom"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "guest room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Sometimes I just want to press a button and have everything fix itself — is that too much to ask?",
+   "devices": [
+    {
+     "id": "socket_2",
+     "name": "Socket 2",
+     "room": "living room"
+    },
+    {
+     "id": "chimney",
+     "name": "Chimney",
+     "room": ""
+    },
+    {
+     "id": "kettle",
+     "name": "Kettle",
+     "room": ""
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    },
+    {
+     "id": "study_time",
+     "name": "Study time"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Summarize yesterday’s security camera alerts — how many were false positives from pets?",
+   "devices": [
+    {
+     "id": "relay_2",
+     "name": "Relay 2",
+     "room": ""
+    },
+    {
+     "id": "cooler",
+     "name": "Cooler",
+     "room": ""
+    },
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": "master bedroom"
+    },
+    {
+     "id": "soundbar",
+     "name": "Soundbar",
+     "room": "balcony"
+    },
+    {
+     "id": "socket",
+     "name": "Socket",
+     "room": "bathroom"
+    },
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "bedroom"
+    },
+    {
+     "id": "relay_1",
+     "name": "Relay 1",
+     "room": "porch"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "pooja room"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "hall"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Disable the nightly backup schedule for now.",
+   "devices": [
+    {
+     "id": "coffee_machine",
+     "name": "Coffee machine",
+     "room": "pooja room"
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "study"
+    },
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "bedroom"
+    },
+    {
+     "id": "porch_television",
+     "name": "Porch television",
+     "room": "porch"
+    },
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Remove Jake from the sign-in crew. He keeps trying to ‘test’ the voice commands with opera singing.",
+   "devices": [
+    {
+     "id": "chandelier",
+     "name": "Chandelier",
+     "room": "kitchen"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "verandah"
+    },
+    {
+     "id": "terrace_study_light",
+     "name": "Terrace study light",
+     "room": "terrace"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": ""
+    },
+    {
+     "id": "study_radio",
+     "name": "Study radio",
+     "room": "study"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cooking",
+     "name": "Cooking"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Compare fan usage in the bedroom vs. living room over the past 7 days — which gets more use?",
+   "devices": [
+    {
+     "id": "dehumidifier",
+     "name": "Dehumidifier",
+     "room": "master bedroom"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "dining room"
+    },
+    {
+     "id": "porch_computer",
+     "name": "Porch computer",
+     "room": "porch"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Set the AC to follow the sun: cool the east bedroom at dawn, the west at dusk — I’m too lazy to move, but not too lazy to optimize.",
+   "devices": [
+    {
+     "id": "living_room_pedestal_fan",
+     "name": "Living room pedestal fan",
+     "room": "living room"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "guest room"
+    },
+    {
+     "id": "thermometer",
+     "name": "Thermometer",
+     "room": ""
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "hall"
+    },
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": ""
+    },
+    {
+     "id": "porch_light",
+     "name": "Porch light",
+     "room": "kitchen"
+    },
+    {
+     "id": "night_lamp",
+     "name": "Night lamp",
+     "room": "hall"
+    },
+    {
+     "id": "porch_room_heater",
+     "name": "Porch room heater",
+     "room": "porch"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "I need a dashboard with a map of the house — click a room to see its devices and power draw.",
+   "devices": [
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "hall"
+    },
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": ""
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "guest room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "workout",
+     "name": "Workout"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Create a shortcut 'Quiet Reading': turn on floor lamp only, mute all other devices, set fan to low, and display time on TV screen.",
+   "devices": [
+    {
+     "id": "speaker",
+     "name": "Speaker",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Compare the runtime of the TV on weekdays vs. weekends — is there a behavioral shift?",
+   "devices": [
+    {
+     "id": "light",
+     "name": "Light",
+     "room": "porch"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "master bedroom"
+    },
+    {
+     "id": "desk_lamp",
+     "name": "Desk lamp",
+     "room": "balcony"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "party",
+     "name": "Party"
+    },
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Delete the ‘Guest Ready’ scene. I haven’t had guests since the pandemic and I’m not sure I remember how to be hospitable.",
+   "devices": [
+    {
+     "id": "mosquito_machine",
+     "name": "Mosquito machine",
+     "room": "garage"
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "office"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": ""
+    },
+    {
+     "id": "study_light",
+     "name": "Study light",
+     "room": "office"
+    },
+    {
+     "id": "porch_air_conditioner",
+     "name": "Porch air conditioner",
+     "room": "porch"
+    },
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "pooja room"
+    },
+    {
+     "id": "humidity_sensor",
+     "name": "Humidity sensor",
+     "room": "bedroom"
+    },
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "guests",
+     "name": "Guests"
+    },
+    {
+     "id": "chill",
+     "name": "Chill"
+    },
+    {
+     "id": "party",
+     "name": "Party"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Delete the ‘Party Start’ scene — I’m not hosting again until next year.",
+   "devices": [
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "terrace"
+    },
+    {
+     "id": "socket_1",
+     "name": "Socket 1",
+     "room": ""
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "living room"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    },
+    {
+     "id": "guests",
+     "name": "Guests"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Start recording from all cameras for the next 5 minutes.",
+   "devices": [
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "kitchen"
+    },
+    {
+     "id": "set_top_box",
+     "name": "Set top box",
+     "room": "hall"
+    },
+    {
+     "id": "garage_socket_1",
+     "name": "Garage socket 1",
+     "room": "garage"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What do you know about me?",
+   "devices": [
+    {
+     "id": "electric_kettle",
+     "name": "Electric kettle",
+     "room": ""
+    },
+    {
+     "id": "bedroom_fan",
+     "name": "Bedroom fan",
+     "room": "bedroom"
+    },
+    {
+     "id": "store_room_music_system",
+     "name": "Store room music system",
+     "room": "store room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    },
+    {
+     "id": "party",
+     "name": "Party"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Generate a visual alert log: every time the security camera detected a person, show timestamp and thumbnail.",
+   "devices": [
+    {
+     "id": "door_bell",
+     "name": "Door bell",
+     "room": "dining room"
+    },
+    {
+     "id": "humidity_sensor",
+     "name": "Humidity sensor",
+     "room": "bathroom"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Add a new device: the smart mirror in the bath—call it ‘Vanity Vue’ and give it voice feedback.",
+   "devices": [
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "dining room"
+    },
+    {
+     "id": "chandelier",
+     "name": "Chandelier",
+     "room": ""
+    },
+    {
+     "id": "music_system",
+     "name": "Music system",
+     "room": "hall"
+    },
+    {
+     "id": "air_purifier",
+     "name": "Air purifier",
+     "room": "guest room"
+    },
+    {
+     "id": "study_light",
+     "name": "Study light",
+     "room": "balcony"
+    },
+    {
+     "id": "temperature_sensor",
+     "name": "Temperature sensor",
+     "room": "bathroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "chill",
+     "name": "Chill"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    },
+    {
+     "id": "reading",
+     "name": "Reading"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Explain why the bedroom fan turns on at 2 a.m. every night — is it tied to temperature or motion?",
+   "devices": [
+    {
+     "id": "printer",
+     "name": "Printer",
+     "room": "master bedroom"
+    },
+    {
+     "id": "kids_room_fan",
+     "name": "Kids room fan",
+     "room": "kids room"
+    },
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": ""
+    },
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": "pooja room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "nap",
+     "name": "Nap"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Activate the ‘Midnight Study’ scene: ceiling fan on low, desk lamp on, security camera toggling to night vision, and mute the smart speaker until 6 a.m.",
+   "devices": [
+    {
+     "id": "hall_water_heater",
+     "name": "Hall water heater",
+     "room": "hall"
+    },
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "bathroom"
+    },
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "balcony"
+    },
+    {
+     "id": "hall_relay_2",
+     "name": "Hall relay 2",
+     "room": "hall"
+    },
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": "kids room"
+    },
+    {
+     "id": "porch_room_heater",
+     "name": "Porch room heater",
+     "room": "porch"
+    },
+    {
+     "id": "phone_charger",
+     "name": "Phone charger",
+     "room": "kids room"
+    },
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "porch"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Please turn off the fan in the attic. It’s been whirring like a dying wasp for three days.",
+   "devices": [
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "guest room"
+    },
+    {
+     "id": "printer",
+     "name": "Printer",
+     "room": "balcony"
+    },
+    {
+     "id": "relay_3",
+     "name": "Relay 3",
+     "room": "pooja room"
+    },
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "office"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "List all active scenes and their triggers.",
+   "devices": [
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": ""
+    },
+    {
+     "id": "plug",
+     "name": "Plug",
+     "room": ""
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "study"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    },
+    {
+     "id": "reading",
+     "name": "Reading"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "When the sun sets, if the outdoor cam detects no motion for 20 minutes, turn on the pathway lights at 30% brightness and log ‘quiet night’.",
+   "devices": [
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": ""
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "hall"
+    },
+    {
+     "id": "garden_sprinkler",
+     "name": "Garden sprinkler",
+     "room": ""
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "terrace"
+    },
+    {
+     "id": "computer",
+     "name": "Computer",
+     "room": "terrace"
+    },
+    {
+     "id": "bathroom_stand_fan",
+     "name": "Bathroom stand fan",
+     "room": "bathroom"
+    },
+    {
+     "id": "pooja_room_door_sensor",
+     "name": "Pooja room door sensor",
+     "room": "pooja room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    },
+    {
+     "id": "good_night",
+     "name": "Good night"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Make a backup of the camera footage from the last 7 days to my external drive, but only if the drive has more than 50GB free. If not, yell at me in German.",
+   "devices": [
+    {
+     "id": "guest_room_pump",
+     "name": "Guest room pump",
+     "room": "guest room"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": ""
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "porch"
+    },
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "kids room"
+    },
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    },
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Which automation has the highest failure rate in the last two weeks?",
+   "devices": [
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    },
+    {
+     "id": "water_heater",
+     "name": "Water heater",
+     "room": "store room"
+    },
+    {
+     "id": "desk_lamp",
+     "name": "Desk lamp",
+     "room": "master bedroom"
+    },
+    {
+     "id": "water_pump",
+     "name": "Water pump",
+     "room": "living room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Add a new schedule: ‘Sunday Silencio’ — no voice responses, no chimes, no alerts — just quiet, dim light, and the hum of the fridge as my only companion.",
+   "devices": [
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": ""
+    },
+    {
+     "id": "mosquito_machine",
+     "name": "Mosquito machine",
+     "room": ""
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "guest room"
+    },
+    {
+     "id": "set_top_box",
+     "name": "Set top box",
+     "room": "living room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    },
+    {
+     "id": "reading",
+     "name": "Reading"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "nap",
+     "name": "Nap"
+    },
+    {
+     "id": "focus",
+     "name": "Focus"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "I tried to make a graph once and it looked like a toddler drew it — any encouragement?",
+   "devices": [
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "verandah"
+    },
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": ""
+    },
+    {
+     "id": "motor",
+     "name": "Motor",
+     "room": "dining room"
+    }
+   ],
+   "scenes": [],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Compare the cost of running the AC at 72°F vs. 75°F over a 12-hour period — is 3 degrees worth it?",
+   "devices": [
+    {
+     "id": "porch_fan",
+     "name": "Porch fan",
+     "room": "porch"
+    },
+    {
+     "id": "fountain",
+     "name": "Fountain",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Tell me something you remember about my childhood hobby.",
+   "devices": [
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": ""
+    },
+    {
+     "id": "fountain",
+     "name": "Fountain",
+     "room": "bathroom"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": ""
+    },
+    {
+     "id": "mosquito_machine",
+     "name": "Mosquito machine",
+     "room": "bedroom"
+    },
+    {
+     "id": "relay_1",
+     "name": "Relay 1",
+     "room": "balcony"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    },
+    {
+     "id": "away",
+     "name": "Away"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Do you think tables are just spreadsheets that gave up on dreams?",
+   "devices": [
+    {
+     "id": "chandelier",
+     "name": "Chandelier",
+     "room": "hall"
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "guest room"
+    },
+    {
+     "id": "soundbar",
+     "name": "Soundbar",
+     "room": ""
+    },
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "office"
+    },
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "study"
+    },
+    {
+     "id": "plug",
+     "name": "Plug",
+     "room": "balcony"
+    },
+    {
+     "id": "phone_charger",
+     "name": "Phone charger",
+     "room": ""
+    },
+    {
+     "id": "mosquito_machine",
+     "name": "Mosquito machine",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Build a table comparing yesterday’s vs. today’s AC usage — include cost estimates.",
+   "devices": [
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "terrace"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "store room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What’s the current temperature and humidity in each room? Present it as a haiku. 5-7-5. No cheating.",
+   "devices": [
+    {
+     "id": "tube_light",
+     "name": "Tube light",
+     "room": "bedroom"
+    },
+    {
+     "id": "cooler",
+     "name": "Cooler",
+     "room": "porch"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Disable the smart plug powering the fish tank heater—Goldie’s on vacation with Aunt Linda.",
+   "devices": [
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "store room"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "office"
+    },
+    {
+     "id": "exhaust",
+     "name": "Exhaust",
+     "room": "hall"
+    },
+    {
+     "id": "hall_study_light",
+     "name": "Hall study light",
+     "room": "hall"
+    },
+    {
+     "id": "porch_heater",
+     "name": "Porch heater",
+     "room": "porch"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Summarize today’s system activity in plain language.",
+   "devices": [
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "bathroom"
+    },
+    {
+     "id": "purifier",
+     "name": "Purifier",
+     "room": "kids room"
+    },
+    {
+     "id": "wifi_router",
+     "name": "Wifi router",
+     "room": "master bedroom"
+    },
+    {
+     "id": "water_heater",
+     "name": "Water heater",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "I’m over the ‘Sunrise Simulator’ scene. Delete it. Please.",
+   "devices": [
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": ""
+    },
+    {
+     "id": "plug",
+     "name": "Plug",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "study_time",
+     "name": "Study time"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    },
+    {
+     "id": "party",
+     "name": "Party"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Please turn off all lights except the hallway nightlight and set the TV to sleep timer for 20 minutes. I’m falling asleep with the remote in my hand.",
+   "devices": [
+    {
+     "id": "soundbar",
+     "name": "Soundbar",
+     "room": "bedroom"
+    },
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": "kids room"
+    },
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "dining room"
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": ""
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "pooja room"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "study"
+    },
+    {
+     "id": "coffee_maker",
+     "name": "Coffee maker",
+     "room": "kitchen"
+    },
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "hall"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "chill",
+     "name": "Chill"
+    },
+    {
+     "id": "away",
+     "name": "Away"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Sometimes I just want to stare at a graph and pretend I understand it — is that okay?",
+   "devices": [
+    {
+     "id": "room_heater",
+     "name": "Room heater",
+     "room": "office"
+    },
+    {
+     "id": "porch_light",
+     "name": "Porch light",
+     "room": "porch"
+    },
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "bathroom"
+    },
+    {
+     "id": "dining_room_ac",
+     "name": "Dining room ac",
+     "room": "dining room"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    },
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Is it weird that I find satisfaction in organizing a messy table?",
+   "devices": [
+    {
+     "id": "electric_kettle",
+     "name": "Electric kettle",
+     "room": "office"
+    },
+    {
+     "id": "projector",
+     "name": "Projector",
+     "room": "garage"
+    },
+    {
+     "id": "water_pump",
+     "name": "Water pump",
+     "room": ""
+    },
+    {
+     "id": "store_room_speaker",
+     "name": "Store room speaker",
+     "room": "store room"
+    },
+    {
+     "id": "store_room_television",
+     "name": "Store room television",
+     "room": "store room"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": ""
+    },
+    {
+     "id": "porch_light",
+     "name": "Porch light",
+     "room": "dining room"
+    },
+    {
+     "id": "thermometer",
+     "name": "Thermometer",
+     "room": "pooja room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Reassign the porch camera’s AI zone to ignore the swaying oak—it keeps false-alerting on leaves.",
+   "devices": [
+    {
+     "id": "pooja_room_tv",
+     "name": "Pooja room tv",
+     "room": "pooja room"
+    },
+    {
+     "id": "terrace_water_heater",
+     "name": "Terrace water heater",
+     "room": "terrace"
+    },
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "study"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "away",
+     "name": "Away"
+    },
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Explain why the TV volume auto-lowers at 8 PM — is it tied to the baby monitor or a sleep routine?",
+   "devices": [
+    {
+     "id": "porch_wall_fan",
+     "name": "Porch wall fan",
+     "room": "porch"
+    },
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "garage"
+    },
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": "living room"
+    },
+    {
+     "id": "coffee_machine",
+     "name": "Coffee machine",
+     "room": "kitchen"
+    },
+    {
+     "id": "light",
+     "name": "Light",
+     "room": "balcony"
+    },
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "kids room"
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": ""
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "relax",
+     "name": "Relax"
+    },
+    {
+     "id": "good_night",
+     "name": "Good night"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Build a control panel with voice-activated presets: ‘Movie Night’, ‘Sleep’, ‘Away’ — each with visual feedback.",
+   "devices": [
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": "bedroom"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": ""
+    },
+    {
+     "id": "study_geyser",
+     "name": "Study geyser",
+     "room": "study"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    },
+    {
+     "id": "focus",
+     "name": "Focus"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Tell me if the smart plug for the coffee maker is still scheduled to turn on at 5 a.m. — I don’t drink coffee anymore.",
+   "devices": [
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "terrace"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "study"
+    },
+    {
+     "id": "room_heater",
+     "name": "Room heater",
+     "room": "store room"
+    },
+    {
+     "id": "hall_temperature_sensor",
+     "name": "Hall temperature sensor",
+     "room": "hall"
+    },
+    {
+     "id": "socket_1",
+     "name": "Socket 1",
+     "room": "kids room"
+    },
+    {
+     "id": "coffee_machine",
+     "name": "Coffee machine",
+     "room": "bathroom"
+    },
+    {
+     "id": "light",
+     "name": "Light",
+     "room": ""
+    },
+    {
+     "id": "guest_room_socket_2",
+     "name": "Guest room socket 2",
+     "room": "guest room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "What's your favorite morning routine to stay energized?",
+   "devices": [
+    {
+     "id": "socket",
+     "name": "Socket",
+     "room": ""
+    },
+    {
+     "id": "master_bedroom_bulb",
+     "name": "Master bedroom bulb",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Tell the fridge to stop reporting its door open every time I grab milk—it’s not a crime.",
+   "devices": [
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "garage"
+    },
+    {
+     "id": "exhaust",
+     "name": "Exhaust",
+     "room": "master bedroom"
+    },
+    {
+     "id": "pooja_room_chandelier",
+     "name": "Pooja room chandelier",
+     "room": "pooja room"
+    },
+    {
+     "id": "coffee_maker",
+     "name": "Coffee maker",
+     "room": "master bedroom"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "hall"
+    },
+    {
+     "id": "room_heater",
+     "name": "Room heater",
+     "room": "study"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "bedroom"
+    },
+    {
+     "id": "terrace_temperature_sensor",
+     "name": "Terrace temperature sensor",
+     "room": "terrace"
+    },
+    {
+     "id": "office_smart_tv",
+     "name": "Office smart tv",
+     "room": "office"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "away",
+     "name": "Away"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Report today’s energy use.",
+   "devices": [
+    {
+     "id": "kids_room_mosquito_machine",
+     "name": "Kids room mosquito machine",
+     "room": "kids room"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "dining room"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "garage"
+    },
+    {
+     "id": "computer",
+     "name": "Computer",
+     "room": "office"
+    },
+    {
+     "id": "store_room_humidity_sensor",
+     "name": "Store room humidity sensor",
+     "room": "store room"
+    },
+    {
+     "id": "ceiling_fan",
+     "name": "Ceiling fan",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "good_night",
+     "name": "Good night"
+    },
+    {
+     "id": "movie_night",
+     "name": "Movie night"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Did the AC run more during the heatwave spike on Thursday, or was it just the dehumidifier working overtime?",
+   "devices": [
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "kids room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "List all devices that have updated firmware in the last 7 days — I want to know who’s been secretly improving themselves while I slept.",
+   "devices": [
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "terrace"
+    },
+    {
+     "id": "coffee_machine",
+     "name": "Coffee machine",
+     "room": "porch"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "study"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "When I say 'Quiet Time', mute all speakers, turn off TV, dim lights to 5%, and set fan to silent mode.",
+   "devices": [
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "workout",
+     "name": "Workout"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Tell me how much energy the AC used today in kWh, and compare it to yesterday. If it’s up more than 20%, suggest I check the filter.",
+   "devices": [
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "dining room"
+    },
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": "store room"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Recommend: disable the ‘Wake Up’ scene on weekends — it’s too loud and I sleep in.",
+   "devices": [
+    {
+     "id": "speaker",
+     "name": "Speaker",
+     "room": ""
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "verandah"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "porch"
+    },
+    {
+     "id": "exhaust",
+     "name": "Exhaust",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "reading",
+     "name": "Reading"
+    },
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Make the bedroom feel like a submarine at 3 a.m.: blue AC, whisper fan, zero TV glare.",
+   "devices": [
+    {
+     "id": "humidity_sensor",
+     "name": "Humidity sensor",
+     "room": "store room"
+    },
+    {
+     "id": "electric_kettle",
+     "name": "Electric kettle",
+     "room": "hall"
+    },
+    {
+     "id": "garage_desk_lamp",
+     "name": "Garage desk lamp",
+     "room": "garage"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "reading",
+     "name": "Reading"
+    },
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    },
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Recall any personal details you’ve saved.",
+   "devices": [
+    {
+     "id": "socket_2",
+     "name": "Socket 2",
+     "room": "office"
+    },
+    {
+     "id": "reading_lamp",
+     "name": "Reading lamp",
+     "room": "porch"
+    },
+    {
+     "id": "music_system",
+     "name": "Music system",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "focus",
+     "name": "Focus"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "cooking",
+     "name": "Cooking"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "Honestly, I’ve never liked the idea of ‘shortcuts’ — feels like cheating, but I’m curious: what’s one you secretly rely on even if you pretend you don’t?",
+   "devices": [
+    {
+     "id": "motor",
+     "name": "Motor",
+     "room": "store room"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "bathroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "Give me my shortcuts list.",
+   "devices": [
+    {
+     "id": "window_sensor",
+     "name": "Window sensor",
+     "room": "bathroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "relax",
+     "name": "Relax"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "manage"
+  },
+  {
+   "say": "When I say 'Goodnight Kids', turn off their lights, turn on hallway nightlight, and play lullaby for 20 minutes.",
+   "devices": [
+    {
+     "id": "music_system",
+     "name": "Music system",
+     "room": "terrace"
+    },
+    {
+     "id": "relay_2",
+     "name": "Relay 2",
+     "room": "porch"
+    },
+    {
+     "id": "air_cooler",
+     "name": "Air cooler",
+     "room": "living room"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "dining room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cooking",
+     "name": "Cooking"
+    },
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "When I say 'I'm leaving for work', lock doors, turn off everything except fridge, arm security camera, and set AC to 80°F.",
+   "devices": [
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "kids room"
+    },
+    {
+     "id": "air_conditioner",
+     "name": "Air conditioner",
+     "room": "kitchen"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": ""
+    }
+   ],
+   "scenes": [
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    },
+    {
+     "id": "guests",
+     "name": "Guests"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    },
+    {
+     "id": "reading",
+     "name": "Reading"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Recommend one change: if I could tweak just one automation to save the most money, what should it be?",
+   "devices": [
+    {
+     "id": "mosquito_repellent",
+     "name": "Mosquito repellent",
+     "room": "pooja room"
+    },
+    {
+     "id": "ceiling_light",
+     "name": "Ceiling light",
+     "room": "pooja room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "nap",
+     "name": "Nap"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Disable the motion sensor on the pantry. I’m sneaking snacks and don’t want the house to judge me.",
+   "devices": [
+    {
+     "id": "fountain",
+     "name": "Fountain",
+     "room": "balcony"
+    },
+    {
+     "id": "mosquito_machine",
+     "name": "Mosquito machine",
+     "room": "balcony"
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    },
+    {
+     "id": "nap",
+     "name": "Nap"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Tell me the uptime of the home assistant in days, hours, minutes — and if it’s over 30 days, suggest I treat it to a virtual cup of tea.",
+   "devices": [
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "balcony"
+    },
+    {
+     "id": "dining_room_chandelier",
+     "name": "Dining room chandelier",
+     "room": "dining room"
+    },
+    {
+     "id": "treadmill",
+     "name": "Treadmill",
+     "room": "dining room"
+    },
+    {
+     "id": "pedestal_fan",
+     "name": "Pedestal fan",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "away",
+     "name": "Away"
+    },
+    {
+     "id": "study",
+     "name": "Study"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Add a new device: the cat feeder. Call it ‘Whisker Dispenser’ and trigger it when the sun hits 10° above the horizon.",
+   "devices": [
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "hall"
+    },
+    {
+     "id": "window_sensor",
+     "name": "Window sensor",
+     "room": "master bedroom"
+    },
+    {
+     "id": "fan",
+     "name": "Fan",
+     "room": "master bedroom"
+    },
+    {
+     "id": "desk_lamp",
+     "name": "Desk lamp",
+     "room": "guest room"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    },
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Change the detection threshold for the front door cam — I keep getting alerts when the squirrel does parkour on the railing.",
+   "devices": [
+    {
+     "id": "fairy_lights",
+     "name": "Fairy lights",
+     "room": "dining room"
+    },
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": ""
+    },
+    {
+     "id": "electric_kettle",
+     "name": "Electric kettle",
+     "room": ""
+    },
+    {
+     "id": "kettle",
+     "name": "Kettle",
+     "room": "bathroom"
+    },
+    {
+     "id": "wall_fan",
+     "name": "Wall fan",
+     "room": "bedroom"
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": ""
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Give me a report titled ‘Ghost Loads’: list all devices drawing >0.5W when supposedly off, with photos of each taken by the cam if they’re in view.",
+   "devices": [
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": "porch"
+    },
+    {
+     "id": "exhaust_fan",
+     "name": "Exhaust fan",
+     "room": "hall"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": ""
+    },
+    {
+     "id": "smart_tv",
+     "name": "Smart TV",
+     "room": "master bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Compare the AC’s runtime on days when the blinds were auto-closed vs. when they weren’t — any difference?",
+   "devices": [
+    {
+     "id": "dining_room_tv",
+     "name": "Dining room tv",
+     "room": "dining room"
+    },
+    {
+     "id": "ac",
+     "name": "AC",
+     "room": "bathroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "chill",
+     "name": "Chill"
+    },
+    {
+     "id": "leaving_home",
+     "name": "Leaving home"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    },
+    {
+     "id": "dinner",
+     "name": "Dinner"
+    },
+    {
+     "id": "prayer",
+     "name": "Prayer"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Do you ever just hit a random shortcut and hope it does something cool?",
+   "devices": [
+    {
+     "id": "mixer",
+     "name": "Mixer",
+     "room": "kids room"
+    },
+    {
+     "id": "living_room_led_strip",
+     "name": "Living room led strip",
+     "room": "living room"
+    },
+    {
+     "id": "television",
+     "name": "Television",
+     "room": "office"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "good_morning",
+     "name": "Good morning"
+    },
+    {
+     "id": "deep_work",
+     "name": "Deep work"
+    },
+    {
+     "id": "bedtime",
+     "name": "Bedtime"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "I need a full network scan — show me every MAC address and IP.",
+   "devices": [
+    {
+     "id": "strip_light",
+     "name": "Strip light",
+     "room": ""
+    },
+    {
+     "id": "water_heater",
+     "name": "Water heater",
+     "room": "verandah"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Remove the automation that plays jazz when I walk into the kitchen — I prefer silence now.",
+   "devices": [
+    {
+     "id": "table_fan",
+     "name": "Table fan",
+     "room": ""
+    },
+    {
+     "id": "printer",
+     "name": "Printer",
+     "room": "store room"
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "porch"
+    },
+    {
+     "id": "treadmill",
+     "name": "Treadmill",
+     "room": "bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    },
+    {
+     "id": "welcome_home",
+     "name": "Welcome home"
+    },
+    {
+     "id": "workout",
+     "name": "Workout"
+    },
+    {
+     "id": "romantic_dinner",
+     "name": "Romantic dinner"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Is it weird that I check my backup log every Sunday like it’s a horoscope for my digital soul?",
+   "devices": [
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": ""
+    },
+    {
+     "id": "door_sensor",
+     "name": "Door sensor",
+     "room": "balcony"
+    },
+    {
+     "id": "purifier",
+     "name": "Purifier",
+     "room": "kitchen"
+    },
+    {
+     "id": "charger",
+     "name": "Charger",
+     "room": "living room"
+    },
+    {
+     "id": "geyser",
+     "name": "Geyser",
+     "room": "study"
+    },
+    {
+     "id": "window_sensor",
+     "name": "Window sensor",
+     "room": "living room"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "kids room"
+    },
+    {
+     "id": "terrace_door_bell",
+     "name": "Terrace door bell",
+     "room": "terrace"
+    },
+    {
+     "id": "table_lamp",
+     "name": "Table lamp",
+     "room": "kids room"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    },
+    {
+     "id": "morning_coffee",
+     "name": "Morning coffee"
+    },
+    {
+     "id": "wake_up",
+     "name": "Wake up"
+    }
+   ],
+   "intent": "other",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "near-build"
+  },
+  {
+   "say": "List every device that’s been rebooted in the last 24 hours. I suspect the router’s having an identity crisis.",
+   "devices": [
+    {
+     "id": "lamp",
+     "name": "Lamp",
+     "room": "porch"
+    },
+    {
+     "id": "led_strip",
+     "name": "LED strip",
+     "room": "bedroom"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "movie_night",
+     "name": "Movie night"
+    },
+    {
+     "id": "workout",
+     "name": "Workout"
+    },
+    {
+     "id": "sleep",
+     "name": "Sleep"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "yoga",
+     "name": "Yoga"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Can you please make sure the front porch light turns on if someone lingers for more than 90 seconds after midnight? I had a weird noise last night.",
+   "devices": [
+    {
+     "id": "exhaust",
+     "name": "Exhaust",
+     "room": "store room"
+    },
+    {
+     "id": "stand_fan",
+     "name": "Stand fan",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "gaming",
+     "name": "Gaming"
+    },
+    {
+     "id": "sunset",
+     "name": "Sunset"
+    },
+    {
+     "id": "work",
+     "name": "Work"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Good night — activate sleep mode: lights off, fan low, AC at 72, cameras armed.",
+   "devices": [
+    {
+     "id": "kettle",
+     "name": "Kettle",
+     "room": ""
+    },
+    {
+     "id": "coffee_machine",
+     "name": "Coffee machine",
+     "room": "bathroom"
+    },
+    {
+     "id": "thermometer",
+     "name": "Thermometer",
+     "room": "garage"
+    },
+    {
+     "id": "radio",
+     "name": "Radio",
+     "room": "kids room"
+    },
+    {
+     "id": "heater",
+     "name": "Heater",
+     "room": "kitchen"
+    }
+   ],
+   "scenes": [
+    {
+     "id": "good_night",
+     "name": "Good night"
+    },
+    {
+     "id": "cinema",
+     "name": "Cinema"
+    }
+   ],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
+  },
+  {
+   "say": "Summarize the last 72 hours in three words: efficient, wasteful, or confused?",
+   "devices": [
+    {
+     "id": "tv",
+     "name": "TV",
+     "room": "hall"
+    }
+   ],
+   "scenes": [],
+   "intent": "build",
+   "device": null,
+   "action": null,
+   "scene": null,
+   "kind": "build"
   }
  ]
 }

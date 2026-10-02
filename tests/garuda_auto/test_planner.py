@@ -113,3 +113,16 @@ def test_saved_shortcuts_are_in_the_state_the_model_reads(house):
     a.handle("hello", user="mani", role="admin")
     assert "Good night" in chat.requests[0]["messages"][0]["content"]
     assert "run_shortcut" in names(chat.requests[0])
+
+
+def test_the_planner_cannot_run_a_tool_it_was_not_offered(house):
+    ctx, home = house
+    planner = ScriptedChat([
+        completion(tool_calls=[call("create_automation", {"instruction": "when empty turn off the lamp"})]),
+        completion("I will use a shortcut instead.")])
+    a = agent(ctx, home, planner, planner=planner)
+    a._wants_planner = lambda route: True
+    result = a.handle("when the room is empty turn off the lamp", user="mani", role="admin")
+    assert result["steps"] == [{"tool": "create_automation", "ok": False, "waiting": False}]
+    assert result["proposal"] is None and len(ctx.pending.all()) == 0
+    assert "create_shortcut" in json.dumps(planner.requests[1]["messages"][-1])
