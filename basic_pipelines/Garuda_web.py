@@ -176,9 +176,10 @@ FEEDBACK_BACKUP_FILE = str(_BASE / "system_logs" / "feedback.backup.json")
 # or migration script can read them without importing this module, which starts
 # GStreamer and claims GPIO pins.
 #
-# This file is imported two ways: as basic_pipelines.Garuda_web by the tests,
-# and as a plain script by scripts/run_garuda_web.sh. Relative imports only work
-# in the first case, so fall back to absolute for the second.
+# This file is loaded as a top-level module: as a script by
+# scripts/run_garuda_web.sh and as `Garuda_web` by the tests. Relative imports
+# only work when it is imported as part of the basic_pipelines package, so fall
+# back to absolute.
 try:
     from .drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
     from .drishti_config import DATA_DIR as DRISHTI_DATA_DIR
@@ -568,16 +569,11 @@ load_config()
 load_master_keys()
 _load_logs_from_disk()
 
-##############################################################################
-# HELPERS
-##############################################################################
-# ── RAM-buffered log writes ───────────────────────────────────────────────────
+# ── RAM-buffered log writes (the functions are in garuda_services/logs.py) ────
 # All text log writes (detection, system, voice, scissors, night-mode) are
 # accumulated in-memory and flushed to disk every _LOG_FLUSH_INTERVAL seconds.
 # This eliminates per-event fsync calls — the biggest source of SD card wear.
 # Critical state (users, config, alert history) still uses _atomic_json_write.
-# _log_buffer and _log_buffer_lock are declared in the GLOBALS section (above
-# load_users() so startup log calls work correctly).
 _LOG_FLUSH_INTERVAL = 60    # flush every 60 seconds
 _LOG_MAX_SIZE_BYTES = 10 * 1024 * 1024   # rotate at 10 MB
 
@@ -628,7 +624,7 @@ def mark_events_synced(up_to_id: int):
     _events.mark_synced(EVENTS_DB, up_to_id)
 
 ##############################################################################
-# OTP / EMAIL
+# EMAIL
 ##############################################################################
 
 def _send_mail(subject, body, to=None):
@@ -658,18 +654,6 @@ if _WEBRTC_AVAILABLE:
             return vf
 
 ##############################################################################
-# EVENT-DRIVEN WS HELPER
-##############################################################################
-
-##############################################################################
-# PHONE PRESENCE DETECTION
-##############################################################################
-
-##############################################################################
-# ALERTS
-##############################################################################
-
-##############################################################################
 # ENCRYPTED EVIDENCE EXFILTRATION
 ##############################################################################
 def _encrypt_clip_aes256(src_path: str) -> str | None:
@@ -686,10 +670,8 @@ def _ssh_upload(local_path: str, remote_filename: str) -> bool:
         log=log_system_update)
 
 ##############################################################################
-# GSTREAMER CALLBACK
+# CAMERA PIPELINE SETTINGS (the pipeline is in garuda_services/pipeline.py)
 ##############################################################################
-
-
 try:
     import zoneinfo as _zoneinfo
     _IST = _zoneinfo.ZoneInfo("Asia/Kolkata")
@@ -745,19 +727,6 @@ _refresh_tokens: dict = {}
 REFRESH_TOKENS_FILE = str(_BASE / "system_logs" / "refresh_tokens.json")
 _persisted_refresh: dict = {}      # sha256(token) → record, loaded at start-up
 _refresh_dirty = False
-
-##############################################################################
-# STATE HELPER
-##############################################################################
-
-
-##############################################################################
-# DEAD MAN'S SWITCH MONITOR
-##############################################################################
-
-##############################################################################
-# SCHEDULED MODES
-##############################################################################
 
 ##############################################################################
 # FASTAPI APP
@@ -837,18 +806,17 @@ fastapi_app.add_middleware(
     allow_headers=["Content-Type", "X-Garuda-Token", "X-Garuda-Refresh"],
 )
 
-# Global rate-limit middleware — applied to all API endpoints
-# Endpoints that do their own per-action rate limiting (login, OTP) keep their
-# individual checks; this catches everything else.
+# Middleware (the functions are in garuda_services/middleware.py; the order
+# of registration here is the order they were declared in).
+# The global rate limit applies to all API endpoints. Endpoints that do their
+# own per-action rate limiting (login, OTP) keep their individual checks; this
+# catches everything else.
 # Health and readiness are polled by monitors; they must not eat the budget.
 _RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
                          "/api/health", "/api/ready")
 
 fastapi_app.middleware("http")(global_rate_limit)
-
 fastapi_app.middleware("http")(product_scope)
-
-# Security headers middleware
 fastapi_app.middleware("http")(security_headers)
 
 # Request ids, the /api/v1 alias, one error shape and the access log. Added
@@ -974,8 +942,7 @@ fastapi_app.include_router(build_home_router(
     DRISHTI_CTX, HOME, AGENT, DIGEST, session_dep=require_session, admin_dep=require_admin,
     ai_configure=_ai_configure, ai_test=_ai_test))
 
-# ── Pydantic models ──────────────────────────────────────────────────────────
-# ── Routes ───────────────────────────────────────────────────────────────────
+# ── Routes (one module per area in garuda_routes/) ───────────────────────────
 
 fastapi_app.include_router(build_pages_router(sys.modules[__name__]))
 
@@ -1011,10 +978,7 @@ fastapi_app.include_router(build_presence_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_logs_router(sys.modules[__name__]))
 
-##############################################################################
-# MASTER KEY ENDPOINTS
-##############################################################################
-
+# ── Master key OTP state ─────────────────────────────────────────────────────
 _MASTER_OTP_TTL = 300
 _master_otp_ts = 0.0
 _master_otp_attempts = 0
@@ -1030,9 +994,7 @@ _FEEDBACK_MAX = 2000
 
 fastapi_app.include_router(build_feedback_router(sys.modules[__name__]))
 
-# ── MJPEG stream ─────────────────────────────────────────────────────────────
-# Uses _frame_seq to detect new frames only — avoids re-sending duplicate
-# frames and keeps per-client CPU near zero when the pipeline is idle.
+# ── MJPEG stream (mjpeg_frames is in garuda_services/support.py) ─────────────
 _STREAM_RECHECK_S = 5.0
 
 
@@ -1050,12 +1012,7 @@ fastapi_app.websocket("/ws/narada-voice")(narada_voice_ws)
 
 _WS_CONNECT_LIMIT = 60   # socket opens per client address per rate window
 
-# ── WebSocket binary JPEG stream (CF Tunnel fallback) ────────────────────────
-# ── WebSocket broadcaster (event-driven) ─────────────────────────────────────
-# Waits on _ws_trigger asyncio.Event with a 2s timeout (heartbeat).
-# push_urgent_ws() sets the event from any thread → immediate broadcast.
-# Compute state ONCE per tick and fan-out via asyncio.gather — O(1) in CPU.
-
+# ── Browser sockets (the broadcaster is in garuda_services/state.py) ─────────
 # What a non-admin does not need pushed to their browser every two seconds.
 _ADMIN_ONLY_STATE = ("known_devices", "cpu_cores", "voice_log", "voice_responses")
 _ADMIN_ONLY_LOG_TAGS = ("[SECURITY]", "Login", "login", "Master key", "master key",
@@ -1086,11 +1043,6 @@ _core_http.tag_routes(fastapi_app, [
     ("/api/clip", "Camera"), ("/api/snapshot", "Camera"), ("/stream", "Camera"),
     ("/webrtc", "Camera"), ("/api/eval", "Evaluation harness"), ("/api/", "Core"),
 ])
-
-##############################################################################
-# CAMERA AUTO-DETECT
-##############################################################################
-
 
 ##############################################################################
 # MAIN
