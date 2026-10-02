@@ -49,7 +49,7 @@ const N = (() => {
   // ── Voice session ──────────────────────────────────────────
   let conv = null, voice = 'off';     // off | connecting | on
   let clientMod = null, busy = false, lastUserAt = 0;
-  let lastReply = null, infoOpen = false, infoData = null;
+  let lastReply = null, infoOpen = false, infoData = null, keptArtifacts = [];
   // The conversation: [{who: 'you' | 'narada' | 'error', text}]; kept for the
   // tab's lifetime so a reload or a trip to another page does not lose it.
   const SESSION_KEY = 'narada-session', SESSION_MAX = 80;
@@ -785,10 +785,11 @@ const N = (() => {
       const el = bubble('extra', '');
       if (!el) continue;
       el.classList.add('nx-artifact');
+      el.classList.toggle('kept', !!a.pinned);
       el.dataset.art = a.id;
       const src = `${G._base ? G._base() : ''}/api/narada/artifacts/${encodeURIComponent(a.id)}/view?k=${encodeURIComponent(a.key)}`;
       el.innerHTML = `<div class="nx-art-h"><b>${escHtml(a.title)}</b>
-          <span class="nx-art-acts"><button type="button" data-art-act="full">Expand</button><button type="button" data-art-act="keep">Keep</button><button type="button" data-art-act="remove">Remove</button></span></div>
+          <span class="nx-art-acts"><button type="button" data-art-act="full">Expand</button><button type="button" data-art-act="keep">${a.pinned ? 'Kept' : 'Keep'}</button><button type="button" data-art-act="remove">Remove</button></span></div>
         <iframe class="nx-art-f" sandbox="allow-scripts" referrerpolicy="no-referrer" title="${escHtml(a.title)}" src="${escHtml(src)}"></iframe>`;
       if (!restoring) {
         session.push({ who: 'artifact', text: a.title, art: { id: a.id, key: a.key, title: a.title } });
@@ -1050,6 +1051,8 @@ const N = (() => {
         <span>What Narada knows</span>
         <b>${known == null ? '' : known + (known === 1 ? ' fact' : ' facts')}${waiting ? ' · ' + waiting + ' waiting' : ''} ›</b>
       </button>
+      ${keptArtifacts.length ? `<div class="nx-info-h">Kept artifacts</div>` + keptArtifacts.map(a =>
+        `<button type="button" class="nx-art-open" data-art-open="${esc(a.id)}"><span>${esc(a.title)}</span><b>Show ›</b></button>`).join('') : ''}
       <div class="nx-info-h">Brain · NVIDIA NIM</div>
       ${row('Model', esc(nim.last_model || (nim.models || [])[0] || '—'))}
       ${row('Last response', nim.last_latency_s != null ? nim.last_latency_s.toFixed(1) + ' s' : '—')}
@@ -1073,6 +1076,10 @@ const N = (() => {
     renderInfo();
     loadMemory();
     try { infoData = await G._apiFn('GET', '/api/narada/info'); renderInfo(); } catch (_) {}
+    try {
+      keptArtifacts = ((await G._apiFn('GET', '/api/narada/artifacts')).artifacts || []).filter(a => a.pinned);
+      renderInfo();
+    } catch (_) {}
   }
 
   // ── Wiring ─────────────────────────────────────────────────
@@ -1118,6 +1125,12 @@ const N = (() => {
     });
     const infoBody = $('nx-info-body');
     infoBody.addEventListener('click', e => {
+      const open = e.target.closest('[data-art-open]');
+      if (open) {                       // a kept page, shown again in the conversation
+        const a = keptArtifacts.find(x => x.id === open.dataset.artOpen);
+        if (a) { artifactFrames([a]); sheetOpen = true; userMinimised = false; syncDock(); toggleInfo(false); scrollLog(); }
+        return;
+      }
       const btn = e.target.closest('[data-mem]');
       if (!btn) return;
       const rowEl = btn.closest('[data-id]');

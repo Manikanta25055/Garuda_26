@@ -4998,3 +4998,41 @@ body { overscroll-behavior: auto; }
   content: counter(step) '.'; position: absolute; left: calc(var(--d, 0) * 16px);
   color: var(--t3); font-variant-numeric: tabular-nums;
 }
+
+/* On a phone the page itself scrolls, under the floating buttons at the top
+   and the dock at the bottom. Two veils dissolve what passes beneath them:
+   a blur that fades in toward the edge, so nothing is cut by a line and the
+   page's own background shows through untouched. Not on Narada, which has
+   no page to scroll. */
+@media (max-width: 768px) {
+  #app.logged-in::before, #app.logged-in::after {
+    content: ''; position: fixed; left: 0; right: 0; z-index: 70; pointer-events: none;
+    backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+  }
+  #app.logged-in::before {
+    top: 0; height: calc(64px + env(safe-area-inset-top));
+    -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
+            mask-image: linear-gradient(to bottom, #000 30%, transparent);
+  }
+  #app.logged-in::after {
+    bottom: 0; height: calc(112px + env(safe-area-inset-bottom));
+    -webkit-mask-image: linear-gradient(to top, #000 45%, transparent);
+            mask-image: linear-gradient(to top, #000 45%, transparent);
+  }
+  #app.logged-in:has(#page-narada.active)::before,
+  #app.logged-in:has(#page-narada.active)::after { display: none; }
+
+  /* A shortcut's buttons go under its text instead of squeezing it. */
+  .ha-row.ha-shortcut { flex-wrap: wrap; }
+  .ha-row.ha-shortcut .ha-row-main { flex: 1 1 100%; }
+  .ha-row.ha-shortcut .ha-row-actions { margin-left: auto; }
+}
+
+.nx-art-open {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%;
+  padding: 7px 0; border: 0; border-top: 1px solid var(--border); background: none;
+  color: var(--t1); font: inherit; font-size: 13px; text-align: left; cursor: pointer;
+}
+.nx-info-h + .nx-art-open { border-top: 0; }
+.nx-art-open span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nx-art-open b { font-weight: 500; color: var(--t2); white-space: nowrap; }
