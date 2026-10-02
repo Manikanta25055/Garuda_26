@@ -205,7 +205,7 @@ def test_usage_and_digest(api):
 
 
 def test_cross_origin_front_end_may_patch_and_delete():
-    Garuda_web = pytest.importorskip("basic_pipelines.Garuda_web")
+    Garuda_web = pytest.importorskip("Garuda_web")
     client = TestClient(Garuda_web.fastapi_app)
     for method in ("PATCH", "DELETE"):
         r = client.options("/api/home/scenes/x", headers={

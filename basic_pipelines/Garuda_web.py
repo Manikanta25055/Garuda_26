@@ -231,6 +231,9 @@ try:
     from .garuda_routes.sockets import build_sockets_router
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
+    from .garuda_services import presence as _svc_presence
+    from .garuda_services.presence import (  # noqa: F401
+        _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -262,6 +265,9 @@ except ImportError:
     from basic_pipelines.garuda_routes.sockets import build_sockets_router
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
+    from basic_pipelines.garuda_services import presence as _svc_presence
+    from basic_pipelines.garuda_services.presence import (  # noqa: F401
+        _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -278,6 +284,9 @@ except ImportError:
         _atomic_json_write)
     from basic_pipelines.garuda_core.validation import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
+
+# garuda_services modules read this module's state through `core`.
+_svc_presence.bind(sys.modules[__name__])
 
 import logging
 SETTINGS = Settings.load()
@@ -1137,117 +1146,6 @@ def push_urgent_ws():
 ##############################################################################
 # PHONE PRESENCE DETECTION
 ##############################################################################
-def _get_local_subnet() -> str:
-    """Return the first local subnet (e.g. '192.168.1.0/24') from ip route."""
-    try:
-        out = subprocess.check_output(['ip', 'route'], text=True, timeout=3)
-        for line in out.splitlines():
-            parts = line.split()
-            # Lines like: "192.168.1.0/24 dev wlan0 ..."
-            if parts and '/' in parts[0] and parts[0][0].isdigit():
-                return parts[0]
-    except Exception:
-        pass
-    return ''
-
-def _probe_subnet_for_arp(subnet: str):
-    """Send a UDP datagram to every host in subnet to force ARP table population.
-
-    The packets are sent to port 9 (discard service) so remote hosts ignore them,
-    but the kernel must resolve each MAC via ARP before sending — populating the
-    local ARP cache so /proc/net/arp reflects every reachable device.
-    """
-    try:
-        net = ipaddress.IPv4Network(subnet, strict=False)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setblocking(False)
-        for host in net.hosts():
-            try:
-                sock.sendto(b'\x00', (str(host), 9))
-            except Exception:
-                pass
-        sock.close()
-    except Exception:
-        pass
-
-def _device_mac(device) -> str:
-    return str((device or {}).get("mac") or "").strip().lower()
-
-def _mac_online(mac: str) -> bool:
-    """True when `mac` is in the last ARP read as a complete (0x2) entry.
-
-    A substring test over the raw table also matched stale and incomplete
-    rows, and an empty MAC matched everything, which read as "owner is home".
-    """
-    if not mac:
-        return False
-    for line in _last_arp_cache.splitlines():
-        parts = line.split()
-        if len(parts) >= 4 and parts[2] == "0x2" and parts[3] == mac:
-            return True
-    return False
-
-def _present_device():
-    """The first registered device seen on the network, or None."""
-    return next((d for d in KNOWN_DEVICES if _mac_online(_device_mac(d))), None)
-
-def _check_device_presence() -> bool:
-    """Return True if any registered device MAC appears in the kernel ARP table."""
-    global _last_arp_cache
-    try:
-        with open('/proc/net/arp') as f:
-            _last_arp_cache = f.read().lower()
-        return _present_device() is not None
-    except Exception:
-        return False
-
-def _presence_poller():
-    """Background thread: poll ARP table every 30s to detect owner's phone.
-
-    Before reading /proc/net/arp we send UDP probes to every host in the local
-    subnet.  This forces ARP resolution so the table contains all active devices,
-    not just those that have recently communicated with the Pi directly.
-    """
-    global _owner_present, _owner_last_seen
-    _subnet = ''
-    first = True
-    while True:
-        if not first:
-            time.sleep(30)
-        first = False
-        if not KNOWN_DEVICES:
-            continue
-        # One bad cycle (a malformed device entry, a failed probe) must not end
-        # the thread: presence would then stay frozen until the next restart.
-        try:
-            # Discover subnet once (lazy) and reprobe each cycle
-            if not _subnet:
-                _subnet = _get_local_subnet()
-            if _subnet:
-                _probe_subnet_for_arp(_subnet)
-                time.sleep(2)   # allow ARP responses to arrive
-            found = _check_device_presence()
-            log_system_update(
-                f"[PRESENCE] {'Match' if found else 'No match'} — "
-                f"{len([l for l in _last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
-            )
-            if found:
-                _owner_last_seen = time.time()
-                if not _owner_present:
-                    _owner_present = True
-                    seen = _present_device() or {}
-                    dev, mac = seen.get("name", "Unknown"), _device_mac(seen)
-                    _append_presence_log("arrived", dev, mac)
-                    log_system_update(f"[OWNER] {dev} arrived — device detected on network.")
-                    push_urgent_ws()
-            elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
-                _owner_present = False
-                dev = next((d.get("name", "Unknown") for d in KNOWN_DEVICES), "Unknown")
-                _append_presence_log("left", dev, "")
-                log_system_update(f"[OWNER] {dev} away — device not seen for {OWNER_AWAY_GRACE}s.")
-                push_urgent_ws()
-        except Exception as exc:
-            log_system_update(f"[PRESENCE] poll failed: {type(exc).__name__}: {exc}")
 
 ##############################################################################
 # ALERTS
@@ -2872,28 +2770,6 @@ def _set_mode_flag(global_name: str, value):
 fastapi_app.include_router(build_users_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_config_router(sys.modules[__name__]))
-
-def _do_presence_check():
-    """Blocking presence check — run in thread executor from async endpoints."""
-    global _owner_present, _owner_last_seen
-    subnet = _get_local_subnet()
-    if subnet:
-        _probe_subnet_for_arp(subnet)
-        time.sleep(2)
-    found = _check_device_presence()
-    if found:
-        _owner_last_seen = time.time()
-        if not _owner_present:
-            _owner_present = True
-            seen = _present_device() or {}
-            dev, mac = seen.get("name", "Unknown"), _device_mac(seen)
-            _append_presence_log("arrived", dev, mac)
-            log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
-    elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
-        _owner_present = False
-        dev = next((d.get("name", "Unknown") for d in KNOWN_DEVICES), "Unknown")
-        _append_presence_log("left", dev, "")
-        log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
 
 fastapi_app.include_router(build_presence_router(sys.modules[__name__]))
 

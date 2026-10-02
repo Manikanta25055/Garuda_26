@@ -145,7 +145,13 @@ def main():
               + ("\n" + "\n".join(froms) + "\n" if froms else "")
               + "\ncore = None\n\n\ndef bind(module):\n"
                 '    """Called by Garuda_web with itself, before anything here runs."""\n'
-                "    global core\n    core = module\n\n\n"
+                "    global core\n"
+                "    if core is not None and core is not module:\n"
+                "        # A second copy of Garuda_web (imported under another name) would\n"
+                "        # silently take over the state every function here reads.\n"
+                '        raise RuntimeError(f"{__name__} is already bound to {core.__name__}; "\n'
+                '                           f"refusing a second copy, {module.__name__}")\n'
+                "    core = module\n\n\n"
               + "\n\n\n".join(pieces) + "\n")
 
     left = [n for n in unresolved(module) if n not in ("core", "bind")]

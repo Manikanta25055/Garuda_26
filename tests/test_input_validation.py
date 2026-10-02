@@ -6,7 +6,7 @@ commands, and Unicode/special character handling.
 import pytest
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-import basic_pipelines.Garuda_web as gw
+import Garuda_web as gw
 
 
 # ── Helper: get admin headers ────────────────────────────────────────────────

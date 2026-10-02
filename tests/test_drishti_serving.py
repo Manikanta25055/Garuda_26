@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 pytestmark = pytest.mark.integration
 
 Garuda_web = pytest.importorskip(
-    "basic_pipelines.Garuda_web",
+    "Garuda_web",
     reason="Garuda_web needs the GStreamer/Hailo stack",
 )
 

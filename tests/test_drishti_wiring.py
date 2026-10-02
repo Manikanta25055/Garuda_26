@@ -7,7 +7,7 @@ the only ones that would catch a router that was written but never included.
 import pytest
 
 Garuda_web = pytest.importorskip(
-    "basic_pipelines.Garuda_web",
+    "Garuda_web",
     reason="Garuda_web needs the GStreamer/Hailo stack",
 )
 
