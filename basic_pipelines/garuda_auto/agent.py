@@ -24,8 +24,8 @@ import threading
 import time
 
 from ..narada_brain import Brain, guards, noticing, persona
-from ..narada_brain.memory import CATEGORIES as MEMORY_CATEGORIES
-from . import actuation_log
+from . import actuation_log, capabilities
+from .capabilities import MODE_NAMES
 from .device_types import is_actuator
 from .llm import NO_THINKING, NimUnavailable
 from .rule_schema import render_rule
@@ -48,28 +48,22 @@ HEDGE_AFTER_S = 1.5
 VOICE_MAX_TOKENS = 700
 TEXT_MAX_TOKENS = 1500
 MAX_INPUT_CHARS = 2000
-MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
 # What may be done with NIM unreachable, and only on the routing model's word:
 # the literal matcher reads "don't turn off the fan" as a command.
 OFFLINE_INTENTS = ("device_control", "all_off", "scene")
 OFFLINE_BACKEND = "router"
 # What Narada may do on the security-only product (Garuda). Home automation
 # is Drishti's; on Garuda's address the model is not even offered it.
-SECURITY_TOOLS = ("get_security_state", "set_security_mode", "remember_fact", "forget_fact")
+# (Which tools those are is each capability's `security` flag.)
+SECURITY_TOOLS = capabilities.names(security=True)
 # What changes the house or the memory. Once a turn has read text that looks
 # like an instruction to the assistant (narada_brain.guards), none of these
 # run for the rest of it: the person asks again, with nothing steering the model.
-CHANGING_TOOLS = ("set_device", "all_off", "run_scene", "create_scene", "schedule_action",
-                  "create_automation", "set_security_mode", "forget_fact")
+# (Every capability whose tier is not "read"; remember_fact is not among them
+# because such a turn holds the fact as pending instead of refusing it.)
+CHANGING_TOOLS = capabilities.names(changing=True)
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
-
-
-def _fn(name, description, properties=None, required=()):
-    return {"type": "function", "function": {
-        "name": name, "description": description,
-        "parameters": {"type": "object", "properties": properties or {},
-                       "required": list(required)}}}
 
 
 class HomeAgent:
@@ -192,48 +186,8 @@ class HomeAgent:
     # ── agent lane ────────────────────────────────────────────────────────────
 
     def _tools(self):
-        return [
-            _fn("get_security_state", "Security modes, alerts, camera, occupancy and presence."),
-            _fn("get_house_state", "Devices with state, scenes, occupancy, presence, security, modes."),
-            _fn("set_device", "Switch one device on or off.",
-                {"device": {"type": "string", "description": "device id"},
-                 "action": {"type": "string", "enum": ["on", "off"]}}, ["device", "action"]),
-            _fn("all_off", "Turn off every device, optionally only in one room.",
-                {"room": {"type": "string"}}),
-            _fn("run_scene", "Run a saved scene.", {"scene": {"type": "string"}}, ["scene"]),
-            _fn("create_scene", "Save a new scene (admin only).",
-                {"name": {"type": "string"},
-                 "actions": {"type": "array", "items": {"type": "object", "properties": {
-                     "device": {"type": "string"}, "action": {"type": "string"}}}}},
-                ["name", "actions"]),
-            _fn("schedule_action",
-                "Schedule a device action or a scene. Give in_minutes for a timer, or time "
-                "(HH:MM 24h) with repeat=true for a recurring schedule (admin only).",
-                {"device": {"type": "string"}, "action": {"type": "string", "enum": ["on", "off"]},
-                 "scene": {"type": "string"}, "in_minutes": {"type": "number"},
-                 "time": {"type": "string"}, "repeat": {"type": "boolean"},
-                 "days": {"type": "string", "enum": ["daily", "weekdays", "weekends"]}}),
-            _fn("list_schedules", "List schedules and timers."),
-            _fn("create_automation",
-                "Draft a condition-based automation from the person's own sentence.",
-                {"instruction": {"type": "string"}}, ["instruction"]),
-            _fn("list_automations", "List saved automations (rules)."),
-            _fn("set_security_mode", "Turn a Garuda security mode on or off.",
-                {"mode": {"type": "string", "enum": list(MODE_NAMES)},
-                 "on": {"type": "boolean"}}, ["mode", "on"]),
-            _fn("recent_activity", "Recent device actions with who or what caused them.",
-                {"limit": {"type": "integer"}}),
-            _fn("energy_usage", "Device on-time and estimated energy.",
-                {"days": {"type": "integer"}}),
-            _fn("remember_fact", "Keep one lasting fact about the household in memory.",
-                {"text": {"type": "string", "description": "one plain sentence that names who it is about"},
-                 "category": {"type": "string", "enum": list(MEMORY_CATEGORIES)},
-                 "replaces": {"type": "string", "description": "id of the fact this corrects, if any"}},
-                ["text"]),
-            _fn("forget_fact", "Remove a fact from memory.",
-                {"what": {"type": "string", "description": "the fact's id, or words describing it"}},
-                ["what"]),
-        ]
+        # What Narada can do is one table: capabilities.py.
+        return capabilities.tools()
 
     def _state_brief(self, scope):
         """The current state, handed over with the question.
