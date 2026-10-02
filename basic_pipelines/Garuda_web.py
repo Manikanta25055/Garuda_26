@@ -234,6 +234,9 @@ try:
     from .garuda_services import presence as _svc_presence
     from .garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
+    from .garuda_services import monitors as _svc_monitors
+    from .garuda_services.monitors import (  # noqa: F401
+        _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -268,6 +271,9 @@ except ImportError:
     from basic_pipelines.garuda_services import presence as _svc_presence
     from basic_pipelines.garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
+    from basic_pipelines.garuda_services import monitors as _svc_monitors
+    from basic_pipelines.garuda_services.monitors import (  # noqa: F401
+        _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -286,6 +292,7 @@ except ImportError:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 # garuda_services modules read this module's state through `core`.
+_svc_monitors.bind(sys.modules[__name__])
 _svc_presence.bind(sys.modules[__name__])
 
 import logging
@@ -1046,35 +1053,6 @@ def get_pending_count(max_age: float = 0.0) -> int:
 def mark_events_synced(up_to_id: int):
     """Mark all events up to and including the given ID as synced."""
     _events.mark_synced(EVENTS_DB, up_to_id)
-
-def _check_connectivity() -> bool:
-    """Quick connectivity check — try to resolve DNS."""
-    import socket
-    try:
-        socket.create_connection(("1.1.1.1", 53), timeout=3)
-        return True
-    except OSError:
-        return False
-
-def _connectivity_monitor():
-    """Background thread: monitor internet connectivity, log transitions."""
-    global _net_online
-    was_online = True
-    while True:
-        time.sleep(30)
-        online = _check_connectivity()
-        if online and not was_online:
-            # Just came back online
-            _net_online = True
-            pending = get_pending_count()
-            log_system_update(f"[NETWORK] Internet restored — {pending} queued events ready to sync")
-            push_urgent_ws()
-        elif not online and was_online:
-            # Just went offline
-            _net_online = False
-            log_system_update("[NETWORK] Internet connection lost — events will be queued locally")
-            push_urgent_ws()
-        was_online = online
 
 def stop_app():
     log_system_update("Stopping Garuda Web app.")
@@ -2234,91 +2212,10 @@ def get_state_dict():
 ##############################################################################
 # DEAD MAN'S SWITCH MONITOR
 ##############################################################################
-def _deadman_monitor():
-    """Background thread: if no /api/heartbeat in _DEADMAN_TIMEOUT seconds, send tamper alert.
-
-    Opt-in via DEADMAN_ENABLED=1. Only meaningful with an external monitor
-    hitting /api/heartbeat. Anti-spam guards: never alarms unless at least one
-    real heartbeat has been received (otherwise there is simply no heartbeat
-    source), and repeat alerts are rate-limited to _DEADMAN_REALERT_INTERVAL.
-    """
-    global _deadman_alert_sent, _deadman_last_alert
-    if not _DEADMAN_ENABLED:
-        log_system_update("[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).")
-        return
-    while True:
-        time.sleep(60)
-        # No heartbeat has ever arrived → no monitor configured, not tampering.
-        if not _heartbeat_ever:
-            continue
-        elapsed = time.time() - _last_heartbeat
-        now = time.time()
-        if elapsed > _DEADMAN_TIMEOUT and not _deadman_alert_sent \
-                and (now - _deadman_last_alert) > _DEADMAN_REALERT_INTERVAL:
-            _deadman_alert_sent = True
-            _deadman_last_alert = now
-            log_system_update(f"[TAMPER] No heartbeat in {int(elapsed)}s — possible system tampering!")
-            # Send tamper alert email
-            try:
-                body = (f"Garuda dead man's switch triggered.\n"
-                        f"No heartbeat received in {int(elapsed)} seconds.\n"
-                        f"Possible system tampering or network failure.")
-                _send_mail("TAMPER ALERT: Garuda heartbeat missed", body)
-            except Exception as e:
-                log_system_update(f"[TAMPER] Failed to send alert email: {e}")
 
 ##############################################################################
 # SCHEDULED MODES
 ##############################################################################
-
-def _schedule_monitor():
-    """Background thread: enforce scheduled mode transitions.
-
-    Checks every 30 s and immediately on first run so startup catches the
-    correct state without a 60-s blind window.  Takes a dict snapshot before
-    iterating so a concurrent update_config() call can't cause a RuntimeError.
-    """
-    mode_map = {
-        "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
-        "idle": "MODE_IDLE", "night": "MODE_NIGHT",
-    }
-    # What each schedule last asked for. A mode is only written when that
-    # changes (the window opens or closes, or the schedule is edited): writing
-    # it on every pass undid, within 30 s, any switch a person flipped by hand
-    # inside the window.
-    applied: dict = {}
-    while True:
-        try:
-            sched_snap = dict(MODE_SCHEDULE)   # snapshot outside lock — avoids racing with update_config
-            for gone in [m for m in applied if m not in sched_snap]:
-                applied.pop(gone, None)
-            if sched_snap:
-                now_str = datetime.datetime.now().strftime("%H:%M")
-                changed = False
-                with _mode_lock:
-                    for mode_name, sched in sched_snap.items():
-                        if not isinstance(sched, dict):
-                            continue
-                        start = sched.get("start", "")
-                        end   = sched.get("end", "")
-                        if not start or not end or mode_name not in mode_map:
-                            continue
-                        in_range = _time_in_range(start, end, now_str)
-                        key = (start, end, in_range)
-                        if applied.get(mode_name) == key:
-                            continue
-                        applied[mode_name] = key
-                        gkey = mode_map[mode_name]
-                        if globals().get(gkey) != in_range:
-                            globals()[gkey] = in_range
-                            changed = True
-                            log_system_update(
-                                f"[MODE] {mode_name} {'on' if in_range else 'off'} by schedule ({start}-{end})")
-                if changed:
-                    push_urgent_ws()
-        except Exception as exc:
-            log_system_update(f"[MODE] schedule check failed: {type(exc).__name__}: {exc}")
-        time.sleep(30)   # sleep AFTER check so first run is immediate; 30 s ≤ worst-case lag
 
 ##############################################################################
 # FASTAPI APP
@@ -2766,6 +2663,11 @@ def _set_mode_flag(global_name: str, value):
     file must call this, not write to its own globals.
     """
     globals()[global_name] = value
+
+
+def _get_mode_flag(global_name: str):
+    """Read one MODE_* flag of this module by name (see _set_mode_flag)."""
+    return globals().get(global_name)
 
 fastapi_app.include_router(build_users_router(sys.modules[__name__]))
 
