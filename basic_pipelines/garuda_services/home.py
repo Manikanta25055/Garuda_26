@@ -48,7 +48,7 @@ def _drishti_system_state():
         # There is no pipeline liveness flag, and app_gst is set before the
         # pipeline produces anything. Frame freshness is the honest signal:
         # what the screen wants to know is whether the camera is delivering.
-        "pipeline": "running" if (time.time() - core._frame_ts) < 5.0 else "stopped",
+        "pipeline": "running" if (time.time() - core.STATE.camera.frame_ts) < 5.0 else "stopped",
         "rule_loop": core.DRISHTI_RUNTIME.health(),
     }
 
@@ -107,4 +107,4 @@ def _home_set_mode(mode, value, actor):
 def _home_security_summary():
     return {"alert_active": core.STATE.alerts.active, "night_presence_alert": core.STATE.alerts.night_presence_active,
             "alerts_today": core.STATE.alerts.history.get(datetime.date.today().isoformat(), 0),
-            "camera_live": (time.time() - core._frame_ts) < 5.0}
+            "camera_live": (time.time() - core.STATE.camera.frame_ts) < 5.0}

@@ -61,7 +61,7 @@ def build_evaluation_router(core):
         return {
             "t": time.time(),
             "uptime": time.time() - core._app_start_time,
-            "total_frames": core._total_frames,
+            "total_frames": core.STATE.camera.total_frames,
             "modes": modes,
             "cascade": cm,
             "alert_active": core.STATE.alerts.active,

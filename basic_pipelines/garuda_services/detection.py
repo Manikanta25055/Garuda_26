@@ -90,7 +90,7 @@ def app_callback(pad, info, user_data):
         return core.Gst.PadProbeReturn.OK
 
     user_data.increment()
-    core._total_frames += 1
+    core.STATE.camera.total_frames += 1
     core._cascade_metrics.record_primary()
     frame_num = user_data.get_count()
     text_info = f"Frame: {frame_num}\n"
@@ -139,7 +139,7 @@ def app_callback(pad, info, user_data):
         if confidence >= threshold:
             det_count += 1
             text_info += f"{label} ({confidence:.2f})\n"
-            core._class_counts_today[label] = core._class_counts_today.get(label, 0) + 1
+            core.STATE.camera.class_counts_today[label] = core.STATE.camera.class_counts_today.get(label, 0) + 1
             # Privacy blur: blur any detected person (case-insensitive)
             if privacy and label.lower() == "person" and frame is not None:
                 bbox = d.get_bbox()
@@ -154,26 +154,26 @@ def app_callback(pad, info, user_data):
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
             if label.lower() in _danger_set:
-                core._label_consec_frames[label] = core._label_consec_frames.get(label, 0) + 1
-                if core._label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
+                core.STATE.camera.label_consec_frames[label] = core.STATE.camera.label_consec_frames.get(label, 0) + 1
+                if core.STATE.camera.label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
                     danger_detected = True
                 core.STATE.alerts.last_danger_conf = confidence
             elif label.lower() == "person" or (label.lower() in _watch_set and label.lower() not in _danger_set):
                 # WATCH: log silently with 30s cooldown to avoid per-frame spam
                 now_t = time.time()
-                if now_t - core._watch_last_logged.get(label, 0) >= 30:
-                    core._watch_last_logged[label] = now_t
+                if now_t - core.STATE.camera.watch_last_logged.get(label, 0) >= 30:
+                    core.STATE.camera.watch_last_logged[label] = now_t
                     core.log_system_update(f"[WATCH] {label} ({confidence:.2f})")
                     core._append_detection_perm("WATCH", label, confidence)
 
     # Reset consecutive counts for labels not seen (or below threshold) this frame
     seen_above_thr = {d.get_label() for d in detections if d.get_confidence() >= threshold}
-    for k in list(core._label_consec_frames):
+    for k in list(core.STATE.camera.label_consec_frames):
         if k not in seen_above_thr:
-            core._label_consec_frames[k] = 0
+            core.STATE.camera.label_consec_frames[k] = 0
 
     if det_count > 0:
-        core._detections_today += det_count
+        core.STATE.camera.detections_today += det_count
 
     # Find which danger labels were actually detected this frame (for logging)
     _triggered_labels = [d.get_label() for d in detections
@@ -193,8 +193,8 @@ def app_callback(pad, info, user_data):
                 core.send_email_alert()
                 _danger_key = "__danger__"
                 _now = time.time()
-                if _now - core._watch_last_logged.get(_danger_key, 0) >= 60:
-                    core._watch_last_logged[_danger_key] = _now
+                if _now - core.STATE.camera.watch_last_logged.get(_danger_key, 0) >= 60:
+                    core.STATE.camera.watch_last_logged[_danger_key] = _now
                     core.log_scissors_detection(lbl)
                     core._append_detection_perm("DANGER", lbl, conf, "alert triggered")
         with core.STATE.alerts.lock:
@@ -217,8 +217,8 @@ def app_callback(pad, info, user_data):
     # up into the video path. Throttled because the rule loop ticks at 2 Hz and
     # nothing is gained by rebuilding the descriptor thirty times a second.
     _now = time.time()
-    if _now - core._drishti_last_observe >= core._DRISHTI_OBSERVE_INTERVAL_S:
-        core._drishti_last_observe = _now
+    if _now - core.STATE.camera.drishti_last_observe >= core._DRISHTI_OBSERVE_INTERVAL_S:
+        core.STATE.camera.drishti_last_observe = _now
         try:
             _dets = []
             for d in detections:
@@ -270,27 +270,27 @@ def app_callback(pad, info, user_data):
     # evidence clip, because all three read _frame_raw.
     if frame is not None and core._frame_publisher.due():
         frame_bgr, jpeg = core.FramePublisher.encode(frame)
-        with core._frame_lock:
-            core._frame_buffer = jpeg
-            core._frame_raw    = frame_bgr
-            core._frame_seq += 1
-            core._frame_ts     = time.time()
+        with core.STATE.camera.frame_lock:
+            core.STATE.camera.frame_buffer = jpeg
+            core.STATE.camera.frame_raw    = frame_bgr
+            core.STATE.camera.frame_seq += 1
+            core.STATE.camera.frame_ts     = time.time()
         user_data.set_frame(frame_bgr)
 
         # Clip recording — write current frame if active
         _clip_autostopped = False
         _clip_autostopped_path = ""
-        with core._clip_lock:
-            if core._clip_writer is not None:
+        with core.STATE.camera.clip_lock:
+            if core.STATE.camera.clip_writer is not None:
                 try:
-                    core._clip_writer.write(frame_bgr)
+                    core.STATE.camera.clip_writer.write(frame_bgr)
                 except Exception:
                     pass
-                if time.time() - core._clip_start_time > 60:
-                    core._clip_writer.release()
-                    core._clip_writer = None
+                if time.time() - core.STATE.camera.clip_start_time > 60:
+                    core.STATE.camera.clip_writer.release()
+                    core.STATE.camera.clip_writer = None
                     _clip_autostopped = True
-                    _clip_autostopped_path = core._clip_path
+                    _clip_autostopped_path = core.STATE.camera.clip_path
         if _clip_autostopped:
             core.log_system_update("Clip auto-stopped after 60 s.")
             core.push_urgent_ws()   # notify JS so it can reset the record button
@@ -298,7 +298,7 @@ def app_callback(pad, info, user_data):
                 threading.Thread(target=core.exfiltrate_clip, args=(_clip_autostopped_path,),
                                  daemon=True).start()
 
-    core.latest_detection_info = text_info
+    core.STATE.camera.latest_detection_info = text_info
     return core.Gst.PadProbeReturn.OK
 
 

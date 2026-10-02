@@ -141,7 +141,6 @@ _EXFIL_AES_KEY: bytes | None = bytes.fromhex(_exfil_raw_key) if len(_exfil_raw_k
 ##############################################################################
 # GLOBALS & SETTINGS
 ##############################################################################
-app_gst = None  # GStreamer app instance
 
 _BASE = Path(__file__).parent
 SCISSORS_LOG_FILE    = str(_BASE / "danger_sightings.txt")
@@ -368,7 +367,6 @@ system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
 _detection_log: List[str] = []   # in-memory recent detection events (danger + watch)
-latest_detection_info = ""
 
 ADMIN_OTP = None
 _admin_otp_user: str | None = None   # server-side stored username for OTP step 2
@@ -434,10 +432,24 @@ _core_state.forward(sys.modules[__name__], {
     "_ws_broadcaster_task": ("system", "ws_broadcaster_task"),
 })
 
+_core_state.forward(sys.modules[__name__], {
+    "_frame_buffer": ("camera", "frame_buffer"), "_frame_raw": ("camera", "frame_raw"),
+    "_frame_seq": ("camera", "frame_seq"), "_frame_ts": ("camera", "frame_ts"),
+    "_frame_lock": ("camera", "frame_lock"), "_total_frames": ("camera", "total_frames"),
+    "_detections_today": ("camera", "detections_today"),
+    "latest_detection_info": ("camera", "latest_detection_info"),
+    "_class_counts_today": ("camera", "class_counts_today"),
+    "_watch_last_logged": ("camera", "watch_last_logged"),
+    "_label_consec_frames": ("camera", "label_consec_frames"),
+    "_drishti_last_observe": ("camera", "drishti_last_observe"),
+    "_clip_writer": ("camera", "clip_writer"), "_clip_lock": ("camera", "clip_lock"),
+    "_clip_start_time": ("camera", "clip_start_time"), "_clip_path": ("camera", "clip_path"),
+    "app_gst": ("camera", "app_gst"),
+})
+
 NARADA_WAKE_WORD = "narada"
 
 _app_start_time = time.time()
-_detections_today = 0
 
 # ── Dead man's switch ────────────────────────────────────
 _DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper alert
@@ -449,24 +461,16 @@ _DEADMAN_REALERT_INTERVAL = 3600   # min seconds between repeat alerts (anti-spa
 
 # ── Camera blindness detection ───────────────────────────
 _TAMPER_EMAIL_COOLDOWN = 3600      # min seconds between camera-tamper emails
-_class_counts_today = {}   # class_name → count since startup
-_total_frames = 0          # total inference frames (for avg FPS)
-_watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
 _perm_lock = threading.Lock()
 # ── RAM-buffered log write globals (buffer defined here; functions in HELPERS) ─
 _log_buffer: "defaultdict[str, list]" = defaultdict(list)
 _log_buffer_lock = threading.Lock()
 
 # ── False positive reduction ──────────────────────────────
-_label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
 
 # ── Night presence alarm (the window itself is STATE.config.night_presence_window) ──
 
 # ── Clip recording ────────────────────────────────────────
-_clip_writer     = None
-_clip_lock       = threading.Lock()
-_clip_start_time = 0.0
-_clip_path       = ""
 
 # ── Phone presence detection ──────────────────────────────
 MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
@@ -499,19 +503,13 @@ except ImportError:
     from basic_pipelines.garuda_auto.frame_publisher import FramePublisher
 
 # MJPEG / WebRTC frame buffer
-_frame_buffer = None
-_frame_raw    = None       # raw numpy BGR for WebRTC track
 # Pipeline rate in, browser rate out. The clip writer shares this gate, because
 # its VideoWriter is built at a fixed 15fps and writing faster is what made
 # saved clips play back in slow motion.
 _frame_publisher = FramePublisher()
-_frame_lock   = threading.Lock()
-_frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
-_frame_ts     = 0.0        # wall clock of the last frame; the only liveness signal we have
 
 # Drishti rebuilds its descriptor at this rate, not at frame rate.
 _DRISHTI_OBSERVE_INTERVAL_S = 0.2
-_drishti_last_observe = 0.0
 
 # ── Async secondary cascade (MobileNet + MiDaS) ─────────────────────────────
 # Non-blocking queue bridges primary YOLO callback to secondary daemon thread.
@@ -637,8 +635,8 @@ if _WEBRTC_AVAILABLE:
 
         async def recv(self):
             pts, time_base = await self.next_timestamp()
-            with _frame_lock:
-                raw = _frame_raw
+            with STATE.camera.frame_lock:
+                raw = STATE.camera.frame_raw
             if raw is not None:
                 vf = av.VideoFrame.from_ndarray(raw, format="bgr24")
             else:
@@ -1024,8 +1022,6 @@ _core_http.tag_routes(fastapi_app, [
 # MAIN
 ##############################################################################
 def run_web_app(args):
-    global app_gst
-
     # ── Resolve camera input ───────────────────────────────────────────────
     args.input = _resolve_camera(args.input)
     log_system_update(f"[CAMERA] Input resolved to: {args.input}")
@@ -1048,14 +1044,13 @@ def run_web_app(args):
     # The server must outlive any pipeline restarts, so we spin the GStreamer
     # pipeline in a background thread and keep the main thread for the server.
     def _run_pipeline():
-        global app_gst
         retry_delay = 5
         while True:
             try:
                 user_data = user_app_callback_class()
-                app_gst = GStreamerDetectionApp(args, user_data)
+                STATE.camera.app_gst = GStreamerDetectionApp(args, user_data)
                 log_system_update("Pipeline started.")
-                app_gst.run()
+                STATE.camera.app_gst.run()
                 log_system_update("Pipeline stopped. Restarting in 5s...")
             except Exception as e:
                 log_system_update(f"Pipeline error: {e}. Restarting in {retry_delay}s...")

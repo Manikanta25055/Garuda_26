@@ -95,7 +95,7 @@ def get_state_dict():
         except Exception:
             pass
 
-    inference_fps = round(core._total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
+    inference_fps = round(core.STATE.camera.total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
 
     # ── Disk usage ──
     disk_pct = None
@@ -196,7 +196,7 @@ def get_state_dict():
         "net_online": core.STATE.system.net_online,
         "pending_sync": core.get_pending_count(max_age=10.0),
         # Clip recording state (lets JS reset button when server auto-stops)
-        "clip_recording": core._clip_writer is not None,
+        "clip_recording": core.STATE.camera.clip_writer is not None,
     }
 
 
@@ -332,9 +332,9 @@ def _system_extra() -> dict:
 
 
 def _probe_camera():
-    age = time.time() - core._frame_ts
+    age = time.time() - core.STATE.camera.frame_ts
     return (age < 5.0, "delivering frames" if age < 5.0 else
-            ("no frame yet" if not core._frame_ts else f"no frame for {int(age)} s"))
+            ("no frame yet" if not core.STATE.camera.frame_ts else f"no frame for {int(age)} s"))
 
 
 def _probe_events_db():

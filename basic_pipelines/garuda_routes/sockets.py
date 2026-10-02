@@ -37,9 +37,9 @@ def build_sockets_router(core):
                         await websocket.close(code=4001)
                         return
                     next_check = time.time() + core._STREAM_RECHECK_S
-                with core._frame_lock:
-                    seq   = core._frame_seq
-                    frame = core._frame_buffer if seq != last_seq else None
+                with core.STATE.camera.frame_lock:
+                    seq   = core.STATE.camera.frame_seq
+                    frame = core.STATE.camera.frame_buffer if seq != last_seq else None
                 if frame is not None:
                     last_seq = seq
                     await websocket.send_bytes(frame)

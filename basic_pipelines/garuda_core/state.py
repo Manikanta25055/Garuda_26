@@ -119,6 +119,28 @@ class System:
     ws_broadcaster_task: object = None
 
 
+@dataclass
+class Camera:
+    """The latest frame, the detection counters, the clip being recorded and the running pipeline."""
+    frame_buffer: object = None
+    frame_raw: object = None   # raw numpy BGR for WebRTC track
+    frame_seq: int = 0   # incremented every new frame; lets MJPEG clients skip duplicates
+    frame_ts: float = 0.0   # wall clock of the last frame; the only liveness signal we have
+    frame_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
+    total_frames: int = 0   # total inference frames (for avg FPS)
+    detections_today: int = 0
+    latest_detection_info: str = ""
+    class_counts_today: dict = field(default_factory=dict)   # class_name → count since startup
+    watch_last_logged: dict = field(default_factory=dict)   # label → last log timestamp (30s cooldown)
+    label_consec_frames: dict = field(default_factory=dict)   # label → consecutive frames seen above threshold
+    drishti_last_observe: float = 0.0
+    clip_writer: object = None
+    clip_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
+    clip_start_time: float = 0.0
+    clip_path: str = ""
+    app_gst: object = None   # GStreamer app instance
+
+
 class State:
     def __init__(self):
         self.modes = Modes()
@@ -126,6 +148,7 @@ class State:
         self.alerts = Alerts()
         self.presence = Presence()
         self.system = System()
+        self.camera = Camera()
 
 
 def forward(module, names: dict) -> None:

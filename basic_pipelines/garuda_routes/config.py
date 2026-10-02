@@ -97,14 +97,14 @@ def build_config_router(core):
                 # An empty list would switch every alert off without saying so.
                 raise HTTPException(400, "At least one danger label is required.")
             core.STATE.config.danger_labels = cleaned
-            if core.app_gst and hasattr(core.app_gst, 'user_data'):
-                core.app_gst.user_data.danger_labels = list(core.STATE.config.danger_labels)
+            if core.STATE.camera.app_gst and hasattr(core.STATE.camera.app_gst, 'user_data'):
+                core.STATE.camera.app_gst.user_data.danger_labels = list(core.STATE.config.danger_labels)
         elif data.danger_label is not None:
             new_lbl = data.danger_label.strip()[:64]
             if new_lbl:
                 core.STATE.config.danger_labels = [new_lbl]
-                if core.app_gst and hasattr(core.app_gst, 'user_data'):
-                    core.app_gst.user_data.danger_labels = list(core.STATE.config.danger_labels)
+                if core.STATE.camera.app_gst and hasattr(core.STATE.camera.app_gst, 'user_data'):
+                    core.STATE.camera.app_gst.user_data.danger_labels = list(core.STATE.config.danger_labels)
         if data.watch_labels is not None:
             core.STATE.config.watch_labels = core._clean_labels(data.watch_labels)
         if data.mode_schedule is not None:

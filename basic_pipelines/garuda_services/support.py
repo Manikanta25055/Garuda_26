@@ -50,9 +50,9 @@ async def mjpeg_frames(request: Request):
             if not still_valid():
                 break                      # signed out, or the account is gone
             next_check = time.time() + core._STREAM_RECHECK_S
-        with core._frame_lock:
-            seq = core._frame_seq
-            jpeg = core._frame_buffer if seq != last_seq else None
+        with core.STATE.camera.frame_lock:
+            seq = core.STATE.camera.frame_seq
+            jpeg = core.STATE.camera.frame_buffer if seq != last_seq else None
         if jpeg is not None:
             last_seq = seq
             yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg + b"\r\n")
@@ -139,9 +139,9 @@ def _save_feedback(entries: list):
 def stop_app():
     core.log_system_update("Stopping Garuda Web app.")
     core._do_flush_logs()   # write buffered logs before exit
-    if core.app_gst is not None:
+    if core.STATE.camera.app_gst is not None:
         try:
-            core.app_gst.pipeline.set_state(core.Gst.State.NULL)
+            core.STATE.camera.app_gst.pipeline.set_state(core.Gst.State.NULL)
         except Exception:
             pass
     # This runs on a worker thread, where sys.exit() only ended that thread:
