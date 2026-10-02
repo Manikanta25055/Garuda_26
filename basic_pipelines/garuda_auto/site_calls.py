@@ -15,7 +15,7 @@ import inspect
 import threading
 import typing
 
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from fastapi.params import Depends
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, ValidationError
@@ -66,25 +66,46 @@ class SiteCaller:
         return None
 
     def call(self, method, path, args, session):
-        """Run `METHOD path` for `session`. Returns the handler's data, or {"error": why}."""
-        route = self.route(method, path)
-        if route is None:
-            return {"error": f"the site has no {method} {path}"}
+        """Run `METHOD path` for `session` from a worker thread.
+        Returns the handler's data, or {"error": why}."""
+        coro, refusal = self._prepare(method, path, args, session, None)
+        if refusal:
+            return refusal
         try:
-            kwargs = self._arguments(route, dict(args or {}), dict(session or {}))
-        except _Refused as refusal:
-            return {"error": str(refusal)}
-        try:
-            result = self._run(route.endpoint(**kwargs))
+            return self._finish(self._run(coro))
         except HTTPException as exc:
             return {"error": str(exc.detail), "status": exc.status_code}
         except TimeoutError:
             return {"error": "that took too long and was abandoned"}
+
+    async def acall(self, method, path, args, session, request=None):
+        """The same from inside a request handler, which can lend its own request
+        to an endpoint that reads cookies or headers."""
+        coro, refusal = self._prepare(method, path, args, session, request)
+        if refusal:
+            return refusal
+        try:
+            return self._finish(await coro if inspect.isawaitable(coro) else coro)
+        except HTTPException as exc:
+            return {"error": str(exc.detail), "status": exc.status_code}
+
+    def _prepare(self, method, path, args, session, request):
+        route = self.route(method, path)
+        if route is None:
+            return None, {"error": f"the site has no {method} {path}"}
+        try:
+            kwargs = self._arguments(route, dict(args or {}), dict(session or {}), request)
+        except _Refused as refusal:
+            return None, {"error": str(refusal)}
+        return route.endpoint(**kwargs), None
+
+    @staticmethod
+    def _finish(result):
         if not isinstance(result, (dict, list)):
             return {"error": "that answers with a file, not data"}
         return trim(result)
 
-    def _arguments(self, route, args, session):
+    def _arguments(self, route, args, session, request=None):
         endpoint = route.endpoint
         try:
             hints = typing.get_type_hints(endpoint)
@@ -104,6 +125,8 @@ class SiteCaller:
                 kwargs[name] = session
             elif inspect.isclass(kind) and issubclass(kind, BaseModel):
                 body_name, body_model = name, kind
+            elif kind is Request and request is not None:
+                kwargs[name] = request
             elif name in in_path:
                 if args.get(name) in (None, ""):
                     raise _Refused(f"{name} is needed")

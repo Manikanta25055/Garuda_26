@@ -833,6 +833,7 @@ AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
 # What a button can do, Narada can do the same way: by the site's own endpoint,
 # as the person who asked (garuda_auto/capabilities.py lists which).
 AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
+AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
 
 
 # ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.

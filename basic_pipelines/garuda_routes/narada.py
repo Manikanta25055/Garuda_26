@@ -28,6 +28,11 @@ class MuteRequest(BaseModel):
     key: str = Field(min_length=3, max_length=80, pattern=r"^[a-z-]+(:[A-Za-z0-9_-]+){0,2}$")
 
 
+class ActionConfirmRequest(BaseModel):
+    # What the person typed on the card (a password for a new account).
+    fields: dict[str, str] = Field(default_factory=dict, max_length=4)
+
+
 class MemoryEditRequest(BaseModel):
     text: str | None = Field(default=None, max_length=300)
     category: str | None = Field(default=None, max_length=20)
@@ -48,6 +53,7 @@ def build_narada_router(core):
                 "actions": result.get("actions", []), "proposal": result.get("proposal"),
                 "memory": result.get("memory", []), "offer": result.get("offer"),
                 "observation": result.get("observation"),
+                "confirm": result.get("confirm", []),
                 "route": result.get("route"), "model": result.get("model")}
 
 
@@ -71,7 +77,7 @@ def build_narada_router(core):
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
             meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer",
-                                               "observation", "model")}
+                                               "observation", "confirm", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
             for word in re.findall(r"\S+\s*", result["reply"]):
                 loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
@@ -208,5 +214,53 @@ def build_narada_router(core):
             raise HTTPException(400, outcome["reason"])
         core.log_system_update(f"Narada: {session['username']} muted the remark {data.key}")
         return {"ok": True, "fact": outcome["fact"]}
+
+    # ── Cards Narada asks a person to confirm ─────────────────────────────────
+    # The model proposes these; nothing happens until the person who asked taps
+    # Confirm. The action then runs as them, through the site's own endpoint,
+    # so the endpoint's guard and checks decide here too.
+
+    @router.post("/api/narada/actions/{action_id}/confirm")
+    async def narada_action_confirm(action_id: str, data: ActionConfirmRequest, request: Request,
+                                    session=Depends(core.require_session)):
+        agent = core.AGENT
+        entry = agent.confirmations.take(action_id, session["username"])
+        if entry is None:
+            raise HTTPException(404, "That card has expired. Ask Narada again.")
+        capability = core.AGENT_CAPABILITIES[entry["capability"]]
+        args = dict(entry["args"])
+        for name in capability.typed:
+            value = (data.fields.get(name) or "").strip()
+            if value:
+                args[name] = value
+            elif name in capability.required:
+                agent.confirmations.restore(entry)
+                raise HTTPException(400, f"{name.replace('_', ' ').capitalize()} is needed.")
+        method, path = capability.call.split(" ", 1)
+        out = await agent.site.acall(method, path, args, session, request)
+        words = capability.name.replace("_", " ")
+        if isinstance(out, dict) and "error" in out:
+            if out.get("status") == 400:
+                agent.confirmations.restore(entry)   # fixable on the card: try again
+            core.log_system_update(f"Narada: {session['username']} confirmed {words}; refused "
+                                   f"({out['error']})")
+            raise HTTPException(out.get("status") or 400, out["error"])
+        core.log_system_update(f"Narada: {session['username']} confirmed {words}")
+        # Narada should know its proposal was carried out when the person next speaks.
+        shown = ", ".join(f"{k}={v}" for k, v in entry["args"].items())
+        core.BRAIN.record(entry["key"] or session["username"], [{
+            "role": "assistant",
+            "content": f"(The person tapped Confirm on your card: {words} {shown}. It is done.)"}])
+        return {"ok": True, "result": out}
+
+    @router.post("/api/narada/actions/{action_id}/cancel")
+    async def narada_action_cancel(action_id: str, session=Depends(core.require_session)):
+        entry = core.AGENT.confirmations.take(action_id, session["username"])
+        if entry is not None:
+            core.BRAIN.record(entry["key"] or session["username"], [{
+                "role": "assistant",
+                "content": "(The person tapped Cancel on your card: "
+                           f"{entry['capability'].replace('_', ' ')}. It was not done.)"}])
+        return {"ok": True}
 
     return router

@@ -42,6 +42,7 @@ class Capability:
     lane: str = "fast"
     security: bool = False      # also offered on the security-only product
     routes: tuple = ()          # "METHOD /path" this stands in for
+    typed: tuple = ()           # typed by the person on the confirm card, never by the model
     call: str = ""              # the one route that carries it out (site_calls.py);
                                 # without it the agent has a handler of its own
 
@@ -50,7 +51,7 @@ class Capability:
         return {"type": "function", "function": {
             "name": self.name, "description": self.summary,
             "parameters": {"type": "object", "properties": self.params,
-                           "required": list(self.required)}}}
+                           "required": [r for r in self.required if r in self.params]}}}
 
 
 _S = {"type": "string"}
@@ -115,10 +116,11 @@ CAPABILITIES = (
 )
 
 def _site(name, summary, call, params=None, required=(), *, role="user", tier="read",
-          security=False):
+          security=False, typed=()):
     """A capability carried out by the site's own endpoint; the planner's to use."""
     return Capability(name, summary, params or {}, tuple(required), role=role, tier=tier,
-                      lane="planner", security=security, routes=(call,), call=call)
+                      lane="planner", security=security, routes=(call,), typed=tuple(typed),
+                      call=call)
 
 
 _ID = lambda what: {"type": "string", "description": f"id of the {what}"}  # noqa: E731
@@ -227,6 +229,70 @@ CAPABILITIES += (
     _site("list_users", "People who can sign in, with their roles.", "GET /api/users",
           role="admin", security=True),
 )
+# Done only after the person taps Confirm on a card (confirmations.py). The
+# model proposes; it cannot carry these out.
+CAPABILITIES += (
+    _site("confirm_proposal", "Save a drafted automation so it starts running.",
+          "POST /api/home/proposals/{proposal_id}/confirm", {"proposal_id": _ID("proposal")},
+          ["proposal_id"], role="admin", tier="confirm"),
+    _site("delete_automation", "Delete a saved automation.", "DELETE /api/home/rules/{rule_id}",
+          {"rule_id": _ID("automation")}, ["rule_id"], role="admin", tier="confirm"),
+    _site("delete_scene", "Delete a saved scene.", "DELETE /api/home/scenes/{scene_id}",
+          {"scene_id": _ID("scene")}, ["scene_id"], role="admin", tier="confirm"),
+    _site("add_device", "Add a device to the house. See list_device_types for kinds and channels.",
+          "POST /api/home/devices",
+          {"id": {"type": "string", "description": "short id, lowercase, no spaces"},
+           "name": _S, "type": _S, "room": _S,
+           "transport": {"type": "object",
+                         "description": '{"kind": "relay", "channel": n} or '
+                                        '{"kind": "mqtt", "topic": "..."}'},
+           "watts": {"type": "number"}},
+          ["id", "name", "type", "room", "transport"], role="admin", tier="confirm"),
+    _site("delete_device", "Remove a device from the house; automations using it stop.",
+          "DELETE /api/home/devices/{device_id}", {"device_id": _ID("device")}, ["device_id"],
+          role="admin", tier="confirm"),
+    _site("change_home_settings",
+          "Change home settings (see get_home_settings for the names and current values).",
+          "POST /api/home/settings",
+          {"settings": {"type": "object", "description": "only the settings to change"}},
+          ["settings"], role="admin", tier="confirm"),
+    _site("change_security_settings",
+          "Change detection and alert settings; give only what should change.",
+          "POST /api/config",
+          {"detection_threshold": {"type": "number", "description": "0.05 to 0.95"},
+           "danger_labels": {"type": "array", "items": _S},
+           "watch_labels": {"type": "array", "items": _S},
+           "email_recipients": {"type": "array", "items": _S},
+           "email_cooldown": {"type": "integer", "description": "seconds, 5 to 3600"},
+           "mode_schedule": {"type": "object",
+                             "description": '{"dnd|email_off|idle|night": {"start": "HH:MM", '
+                                            '"end": "HH:MM"}}; replaces the whole schedule'},
+           "night_presence_start": _S, "night_presence_end": _S,
+           "night_presence_enabled": {"type": "boolean"}},
+          role="admin", tier="confirm", security=True),
+    _site("add_tracked_phone", "Track a phone on the network as a sign that someone is home.",
+          "POST /api/devices/add",
+          {"name": _S, "mac": {"type": "string", "description": "aa:bb:cc:dd:ee:ff"}},
+          ["name", "mac"], role="admin", tier="confirm", security=True),
+    _site("delete_tracked_phone", "Stop tracking a phone.", "POST /api/devices/delete",
+          {"mac": _S}, ["mac"], role="admin", tier="confirm", security=True),
+    _site("emergency_stop", "Stop the whole Garuda system: camera, detection and this site.",
+          "POST /api/emergency-stop", role="admin", tier="confirm", security=True),
+    # People. A password is typed on the card; the model never sees or sets one.
+    _site("add_user", "Add a person who can sign in (never an admin).", "POST /api/users/add",
+          {"username": {"type": "string", "description": "3-32 letters, digits, _ or -"},
+           "display_name": _S,
+           "box_color": {"type": "string", "description": "like #1565c0"}},
+          ["username", "password"], role="admin", tier="confirm", security=True,
+          typed=("password",)),
+    _site("update_user", "Change a person's display name or colour; a new password, if "
+                         "wanted, is typed by the admin on the card.",
+          "POST /api/users/update",
+          {"username": _S, "display_name": _S, "box_color": _S}, ["username"],
+          role="admin", tier="confirm", security=True, typed=("new_password",)),
+    _site("delete_user", "Remove a person's sign-in.", "POST /api/users/delete",
+          {"username": _S}, ["username"], role="admin", tier="confirm", security=True),
+)
 
 BY_NAME = {c.name: c for c in CAPABILITIES}
 
@@ -253,29 +319,16 @@ def names(*, security=None, changing=None):
 # The plan for the next step, kept here so the coverage test stays honest.
 PLANNED = {
     # schedules, automations, scenes
-    "POST /api/home/proposals/{proposal_id}/confirm": ("confirm_proposal", "admin", "confirm"),
-    "DELETE /api/home/rules/{rule_id}": ("delete_automation", "admin", "confirm"),
-    "DELETE /api/home/scenes/{scene_id}": ("delete_scene", "admin", "confirm"),
     # devices
-    "POST /api/home/devices": ("add_device", "admin", "confirm"),
-    "DELETE /api/home/devices/{device_id}": ("delete_device", "admin", "confirm"),
     # what the house has been doing
     # camera
     "GET /api/snapshot": ("take_snapshot", "user", "read"),
     # memory
     # settings
-    "POST /api/home/settings": ("change_home_settings", "admin", "confirm"),
-    "POST /api/config": ("change_security_settings", "admin", "confirm"),
-    "POST /api/emergency-stop": ("emergency_stop", "admin", "confirm"),
     # presence
-    "POST /api/devices/add": ("add_tracked_phone", "admin", "confirm"),
-    "POST /api/devices/delete": ("delete_tracked_phone", "admin", "confirm"),
     # upkeep
     # people (the owner's call, 2026-10-02: reachable, behind a confirm card;
     # a password is typed into the card, never into the conversation)
-    "POST /api/users/add": ("add_user", "admin", "confirm"),
-    "POST /api/users/update": ("update_user", "admin", "confirm"),
-    "POST /api/users/delete": ("delete_user", "admin", "confirm"),
 }
 
 # Kept from the model on purpose: route -> why.
@@ -312,7 +365,8 @@ PLUMBING = frozenset({
     "GET /api/health", "GET /api/ready", "GET /api/meta", "GET /api/heartbeat",
     "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
-    "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/info",
+    "POST /api/chat", "POST /api/chat/stream",
+    "POST /api/narada/actions/{action_id}/confirm", "POST /api/narada/actions/{action_id}/cancel", "GET /api/narada/info",
     "POST /api/narada/voice/token",
 })
 

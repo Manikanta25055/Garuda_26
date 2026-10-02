@@ -25,7 +25,9 @@ def test_capabilities_are_well_formed():
     assert len(caps.BY_NAME) == len(caps.CAPABILITIES)
     for c in caps.CAPABILITIES:
         assert c.role in ("user", "admin") and c.tier in caps.TIERS and c.lane in caps.LANES
-        assert set(c.required) <= set(c.params)
+        assert set(c.required) <= set(c.params) | set(c.typed)
+        assert not set(c.typed) & set(c.params), "a typed field must not be the model's to fill"
+        assert c.tier == "confirm" or not c.typed
         assert c.routes, f"{c.name} stands in for no route"
     for name, role, tier in caps.PLANNED.values():
         assert role in ("user", "admin") and tier in caps.TIERS

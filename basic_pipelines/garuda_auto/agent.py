@@ -26,6 +26,7 @@ import time
 from ..narada_brain import Brain, guards, noticing, persona
 from . import actuation_log, capabilities
 from .capabilities import MODE_NAMES
+from .confirmations import Confirmations
 from .device_types import is_actuator
 from .llm import NO_THINKING, NimUnavailable
 from .rule_schema import render_rule
@@ -83,6 +84,8 @@ class HomeAgent:
         # Runs the site's endpoints for capabilities that name one (site_calls.py).
         # Set once the app exists; without it those capabilities say so.
         self.site = None
+        # What has been proposed and waits for a person's tap (confirmations.py).
+        self.confirmations = Confirmations(clock=clock)
         # What the person said in the turn a tool is running for: a memory
         # write is checked against it (see narada_brain.gate).
         self._turn = threading.local()
@@ -96,6 +99,9 @@ class HomeAgent:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
         route_view = route = None
         self._turn.actions = []
+        self._turn.confirms = []
+        self._turn.voice = voice
+        self._turn.key = f"security:{user}" if scope == "security" else user
         if scope != "security":
             devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
                        for d in self.ctx.registry.devices if d.get("enabled", True)]
@@ -246,6 +252,7 @@ class HomeAgent:
                     reply += "\n\n" + guards.injection_note(self._turn.injection_text)
                 return {"reply": reply, "lane": "agent", "actions": actions,
                         "proposal": proposal, "memory": memory, "model": self.chat.last_model,
+                        "confirm": self._turn.confirms,
                         "injection": self._turn.injected,
                         "_turn": messages[first:] + [{"role": "assistant", "content": reply}]}
             messages.append({"role": "assistant", "content": message.get("content") or "",
@@ -282,7 +289,7 @@ class HomeAgent:
         return {"reply": "I did what I could: " + "; ".join(actions) if actions
                 else "That took too many steps; try asking more specifically.",
                 "lane": "agent", "actions": actions, "proposal": proposal, "memory": memory,
-                "model": self.chat.last_model}
+                "confirm": self._turn.confirms, "model": self.chat.last_model}
 
     # ── tools ─────────────────────────────────────────────────────────────────
 
@@ -316,6 +323,11 @@ class HomeAgent:
         the route's guard and its checks decide, exactly as for a button."""
         if self.site is None:
             return {"error": f"{capability.name} is not available here"}
+        # Only what the capability declares: a model cannot slip an extra field
+        # (a password, say) into the endpoint's request.
+        args = {k: v for k, v in args.items() if k in capability.params}
+        if capability.tier == "confirm":
+            return self._propose(capability, args, user, role)
         method, path = capability.call.split(" ", 1)
         out = self.site.call(method, path, args, {"username": user, "role": role})
         if isinstance(out, list):
@@ -324,6 +336,23 @@ class HomeAgent:
             out["_action"] = True
             out.setdefault("result", capability.name.replace("_", " "))
         return out
+
+    def _propose(self, capability, args, user, role):
+        """A confirm-tier capability is shown to the person as a card, not done."""
+        if capability.role == "admin" and role != "admin":
+            return {"error": "only an admin can do that"}
+        if getattr(self._turn, "voice", False):
+            return {"error": "not done: this needs a tap on a card, which a spoken "
+                             "conversation cannot show. Ask them to type it in Narada's chat."}
+        missing = [r for r in capability.required if r in capability.params and r not in args]
+        if missing:
+            return {"error": f"{', '.join(missing)} needed"}
+        card = self.confirmations.add(capability, args, user, key=getattr(self._turn, "key", user))
+        if not hasattr(self._turn, "confirms"):
+            self._turn.confirms = []
+        self._turn.confirms.append(card)
+        return {"waiting": "NOT done yet. It is shown to the person as a card and happens "
+                           "only if they tap Confirm. Tell them that; do not say it is done."}
 
     def state_snapshot(self):
         d = self.ctx.descriptor
