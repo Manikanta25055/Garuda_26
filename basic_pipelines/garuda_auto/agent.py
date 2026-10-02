@@ -2,10 +2,15 @@
 
 Every request goes to NVIDIA NIM with the house's tools. The model reads
 state, switches devices, runs scenes, sets timers, changes Garuda modes and
-drafts automations, then says what it did. Nothing changes the house without
-the model: when NIM is unconfigured or unreachable, Narada says so and does
-nothing. (Until 2026-10 a local fast lane and keyword fallbacks acted without
-the model; the owner wants one intelligent path for every action.)
+drafts automations, then says what it did. While NIM answers, nothing changes
+the house without it. (Until 2026-10 a local fast lane and keyword fallbacks
+acted without the model; the owner wants one intelligent path for every
+action.)
+
+When NIM is unconfigured or unreachable, Narada says so, and does one thing
+only if the routing model on the Pi (router.py) is sure of all of it: switch
+one device, run one scene, or turn everything off. Anything else, anything it
+is unsure of, and everything on the security product is left alone.
 
 Automations are never saved by the model. create_automation compiles the
 sentence into a rule proposal; a person confirms it on the Automations page
@@ -44,6 +49,10 @@ VOICE_MAX_TOKENS = 700
 TEXT_MAX_TOKENS = 1500
 MAX_INPUT_CHARS = 2000
 MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
+# What may be done with NIM unreachable, and only on the routing model's word:
+# the literal matcher reads "don't turn off the fan" as a command.
+OFFLINE_INTENTS = ("device_control", "all_off", "scene")
+OFFLINE_BACKEND = "router"
 # What Narada may do on the security-only product (Garuda). Home automation
 # is Drishti's; on Garuda's address the model is not even offered it.
 SECURITY_TOOLS = ("get_security_state", "set_security_mode", "remember_fact", "forget_fact")
@@ -88,7 +97,8 @@ class HomeAgent:
         text = (text or "").strip()[:MAX_INPUT_CHARS]
         if not text:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
-        route_view = None
+        route_view = route = None
+        self._turn.actions = []
         if scope != "security":
             devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
                        for d in self.ctx.registry.devices if d.get("enabled", True)]
@@ -98,12 +108,12 @@ class HomeAgent:
                           for k, v in route.items()}
             route_view["backend"] = next(iter(route.values()))["backend"] if route else "local"
         if self.chat is None or not self.chat.configured:
-            result = self._unavailable("the NVIDIA NIM key is not configured")
+            result = self._offline(text, route, user, role, "the NVIDIA NIM key is not configured")
         else:
             try:
                 result = self._agent(text, user, role, scope=scope, voice=voice)
             except NimUnavailable as exc:
-                result = self._unavailable(str(exc))
+                result = self._offline(text, route, user, role, str(exc))
         if route_view is not None:
             result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
@@ -138,6 +148,46 @@ class HomeAgent:
         return {"reply": f"I can't act right now: the AI service is unavailable ({why}). "
                          "Nothing was changed.",
                 "lane": "unavailable", "actions": []}
+
+    def _offline(self, text, route, user, role, why):
+        """NIM did not answer. Do the one simple thing the routing model is sure of, or nothing."""
+        call = self._offline_call(text, route)
+        if call is None or self._turn.actions:     # the model had already acted before it dropped
+            return self._unavailable(why)
+        out = self._run_tool(call[0], call[1], user, role)
+        if not out.get("_action"):
+            return self._unavailable(why)
+        return {"reply": f"The AI service is unavailable, so I did only the simple part on my own: "
+                         f"{out.get('result', 'done')}.",
+                "lane": "local", "actions": [out.get("result", "")]}
+
+    def _offline_call(self, text, route):
+        """(tool, args) for a routed sentence, or None when it is not simple or not sure enough."""
+        if not route or any(a.get("backend") != OFFLINE_BACKEND for a in route.values()):
+            return None
+        sure = lambda *names: all(route[n]["confidence"] >= self.decision.threshold for n in names)  # noqa: E731
+        intent = route["intent"]["value"]
+        if intent not in OFFLINE_INTENTS or not sure("intent"):
+            return None
+        if intent == "device_control":
+            if route["device"]["value"] == "none" or route["action"]["value"] == "none" \
+                    or not sure("device", "action"):
+                return None
+            return "set_device", {"device": route["device"]["value"], "action": route["action"]["value"]}
+        if intent == "scene":
+            if route["scene"]["value"] == "none" or not sure("scene"):
+                return None
+            return "run_scene", {"scene": route["scene"]["value"]}
+        # Everything off. The routing model does not say where, so a sentence that
+        # names a place is only acted on when the place is one of the house's rooms.
+        lowered = text.lower()
+        rooms = {(d.get("room") or "").lower() for d in self.ctx.registry.devices} - {""}
+        named = [r for r in rooms if r in lowered]
+        if len(named) == 1:
+            return "all_off", {"room": named[0]}
+        if named or " in the " in lowered or " in my " in lowered:
+            return None
+        return "all_off", {}
 
     # ── agent lane ────────────────────────────────────────────────────────────
 
@@ -222,7 +272,7 @@ class HomeAgent:
         messages += self.brain.history(history_key)
         first = len(messages)
         messages.append({"role": "user", "content": text})
-        actions, proposal, memory = [], None, []
+        actions, proposal, memory = self._turn.actions, None, []
         for _ in range(MAX_ROUNDS):
             message = self.chat.chat(messages, tools=tools,
                                      max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,

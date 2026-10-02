@@ -317,3 +317,75 @@ def test_voice_asks_the_model_for_a_short_spoken_reply(house):
     chat = ScriptedChat([completion("All quiet.")])
     agent(ctx, home, chat).handle("anything happening", user="mani", voice=True)
     assert "speaking out loud" in chat.requests[0]["messages"][0]["content"]
+
+
+# ── with NIM unreachable: one simple thing, on the routing model's word ──────
+
+class SureRouter:
+    """A routing model that answers what it is told to, as sure as it is told to be."""
+
+    def __init__(self, intent="device_control", device="lamp", action="on", scene="none", sure=0.97, **conf):
+        self.values = {"intent": intent, "device": device, "action": action, "scene": scene}
+        self.conf = {name: conf.get(name, sure) for name in self.values}
+
+    def answer(self, say, devices, scenes):
+        return {name: (value, {value: self.conf[name]}) for name, value in self.values.items()}
+
+
+def on_ids(home):
+    return [d["id"] for d in home.on_devices()]
+
+
+def offline_agent(ctx, home, model, chat=None):
+    from basic_pipelines.garuda_auto.router import RouterBackend
+    eng = DecisionEngine(LocalBackend(lambda: ctx.registry.devices, lambda: home.scenes.scenes),
+                         router=RouterBackend(model=model))
+    return HomeAgent(ctx, home, chat, eng)
+
+
+def test_without_nim_a_sure_simple_command_is_still_done_and_said_so(house):
+    ctx, home = house
+    out = offline_agent(ctx, home, SureRouter()).handle("it's too dark in the study", user="mani")
+    assert out["lane"] == "local" and out["actions"] == ["Lamp on"]
+    assert "unavailable" in out["reply"] and on_ids(home) == ["lamp"]
+
+
+@pytest.mark.parametrize("model", [
+    SureRouter(device=0.6),                                 # not sure which device
+    SureRouter(intent=0.7),                                 # not sure what is wanted
+    SureRouter(intent="other", device="none", action="none"),
+    SureRouter(intent="timer"),                             # a timer is the model's to set
+    SureRouter(device="none"),                              # a device this house does not have
+])
+def test_without_nim_anything_unsure_or_not_simple_changes_nothing(house, model):
+    ctx, home = house
+    out = offline_agent(ctx, home, model).handle("lamp on in ten minutes maybe")
+    assert out["lane"] == "unavailable" and "Nothing was changed" in out["reply"] and home.on_devices() == []
+
+
+def test_without_nim_everything_off_keeps_to_a_room_it_knows_and_leaves_one_it_does_not(house):
+    ctx, home = house
+    home.set("lamp", "on")
+    a = offline_agent(ctx, home, SureRouter(intent="all_off", device="none", action="off"))
+    assert a.handle("turn off everything in the garage")["lane"] == "unavailable" and on_ids(home) == ["lamp"]
+    out = a.handle("turn off everything in the study")
+    assert out["lane"] == "local" and home.on_devices() == []
+
+
+def test_without_nim_the_security_product_is_never_switched_by_the_router(house):
+    ctx, home = house
+    out = offline_agent(ctx, home, SureRouter()).handle("lamp on", scope="security")
+    assert out["lane"] == "unavailable" and home.on_devices() == []
+
+
+def test_a_model_that_acted_and_then_dropped_is_not_followed_by_a_second_action(house):
+    ctx, home = house
+    replies = iter([completion(tool_calls=[call("set_device", {"device": "fan", "action": "on"})])])
+
+    def post(url, headers=None, json=None, timeout=None):
+        try:
+            return Resp(200, next(replies))
+        except StopIteration:
+            raise requests.ConnectionError("dropped")
+    out = offline_agent(ctx, home, SureRouter(), NimChat("k", ["m"], post=post)).handle("fan on and lamp on")
+    assert out["lane"] == "unavailable" and on_ids(home) == ["fan"]
