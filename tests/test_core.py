@@ -152,10 +152,10 @@ def test_health_is_public_and_cheap(app_client):
 
 
 def test_ready_reports_a_dead_camera_as_not_ready(app_client, monkeypatch):
-    monkeypatch.setattr(gw, '_frame_ts', 0.0)
+    monkeypatch.setattr(gw.STATE.camera, 'frame_ts', 0.0)
     r = app_client.get('/api/ready')
     assert r.status_code == 503 and r.json()['checks']['camera'] is False
-    monkeypatch.setattr(gw, '_frame_ts', time.time())
+    monkeypatch.setattr(gw.STATE.camera, 'frame_ts', time.time())
     r = app_client.get('/api/ready')
     assert r.json()['checks']['camera'] is True
 
@@ -182,7 +182,7 @@ def test_system_info_is_admin_only_and_holds_no_secret(app_client, user_headers,
 
 def test_native_app_mode_route_is_served(app_client, user_headers):
     r = app_client.post('/api/set-mode', json={'mode': 'dnd', 'value': True}, headers=user_headers)
-    assert r.status_code == 200 and gw.MODE_DND is True
+    assert r.status_code == 200 and gw.STATE.modes.dnd is True
 
 
 # ── refresh tokens across a restart ──────────────────────────────────────────
@@ -196,8 +196,8 @@ def test_refresh_token_survives_a_restart_and_is_stored_as_a_digest(app_client):
     assert token not in on_disk and gw._rt_digest(token) in on_disk
     assert oct(os.stat(gw.REFRESH_TOKENS_FILE).st_mode & 0o777) == '0o600'
     # "Restart": memory is empty, the file is read back.
-    gw._refresh_tokens.clear()
-    gw._sessions.clear()
+    gw.STATE.auth.refresh_tokens.clear()
+    gw.STATE.auth.sessions.clear()
     gw._load_refresh_tokens()
     assert gw._user_signed_in('user')
     r2 = app_client.post('/api/refresh', headers={'X-Garuda-Refresh': token})
@@ -209,7 +209,7 @@ def test_logout_revokes_a_token_known_only_from_disk(app_client):
                         headers={'Origin': 'https://garuda-26.vercel.app'})
     token = r.json()['refresh_token']
     gw._save_refresh_tokens()
-    gw._refresh_tokens.clear()
+    gw.STATE.auth.refresh_tokens.clear()
     gw._load_refresh_tokens()
     app_client.post('/api/logout', headers={'X-Garuda-Refresh': token})
     assert app_client.post('/api/refresh', headers={'X-Garuda-Refresh': token}).status_code == 401
@@ -217,12 +217,12 @@ def test_logout_revokes_a_token_known_only_from_disk(app_client):
 
 
 def test_tokens_of_deleted_users_are_not_loaded(app_client):
-    gw._refresh_tokens['t'] = {'username': 'ghost', 'role': 'user',
+    gw.STATE.auth.refresh_tokens['t'] = {'username': 'ghost', 'role': 'user',
                                'expires': time.time() + 60, 'created_at': time.time()}
     gw._save_refresh_tokens()
-    gw._refresh_tokens.clear()
+    gw.STATE.auth.refresh_tokens.clear()
     gw._load_refresh_tokens()
-    assert gw._persisted_refresh == {}
+    assert gw.STATE.auth.persisted_refresh == {}
 
 
 # ── events database ──────────────────────────────────────────────────────────

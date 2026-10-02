@@ -22,7 +22,7 @@ def test_master_key_verify_unlocks_logs(app_client, admin_headers):
     assert r.status_code == 200
     # Now logs should be accessible
     admin_token = admin_headers['X-Garuda-Token']
-    sess = gw._sessions.get(admin_token)
+    sess = gw.STATE.auth.sessions.get(admin_token)
     assert sess is not None
     assert sess.get('logs_unlocked') is True
 
@@ -68,12 +68,12 @@ def test_master_key_add_new_key(app_client, admin_headers, monkeypatch):
     app_client.post('/api/master_key/request_otp',
                     json={'current_key': 'test-master-key-12345'},
                     headers=admin_headers)
-    otp = gw.MASTER_KEY_OTP
+    otp = gw.STATE.auth.master_key_otp
     assert otp is not None
     r = app_client.post('/api/master_key/add',
                         json={'otp': otp, 'new_key': 'Xy7!Pk2@Qr9#Mn5'},
                         headers=admin_headers)
     assert r.status_code == 200, r.text
     # Stored hashed, never as typed.
-    assert 'Xy7!Pk2@Qr9#Mn5' not in gw.MASTER_KEYS
-    assert gw._master_key_matches('Xy7!Pk2@Qr9#Mn5', gw.MASTER_KEYS)
+    assert 'Xy7!Pk2@Qr9#Mn5' not in gw.STATE.auth.master_keys
+    assert gw._master_key_matches('Xy7!Pk2@Qr9#Mn5', gw.STATE.auth.master_keys)

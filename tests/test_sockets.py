@@ -12,12 +12,12 @@ import Garuda_web as gw
 
 @pytest.fixture
 def ws_client(monkeypatch):
-    monkeypatch.setattr(gw, '_sessions', {})
-    monkeypatch.setattr(gw, '_refresh_tokens', {})
-    monkeypatch.setattr(gw, '_persisted_refresh', {})
+    monkeypatch.setattr(gw.STATE.auth, 'sessions', {})
+    monkeypatch.setattr(gw.STATE.auth, 'refresh_tokens', {})
+    monkeypatch.setattr(gw.STATE.auth, 'persisted_refresh', {})
     monkeypatch.setattr(gw, '_ws_clients', {})
-    monkeypatch.setattr(gw, '_rate_store', gw.defaultdict(list))
-    monkeypatch.setattr(gw, 'USERS', {'user': {'password': 'x', 'role': 'user'},
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', gw.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'users', {'user': {'password': 'x', 'role': 'user'},
                                       'boss': {'password': 'x', 'role': 'admin'}})
     return TestClient(gw.fastapi_app)      # not entered: no lifespan, no background tasks
 
@@ -43,8 +43,8 @@ def test_state_socket_registers_the_signed_in_user_and_forgets_them_on_close(ws_
 
 
 def test_stream_socket_sends_the_current_frame_to_a_signed_in_user(ws_client, monkeypatch):
-    monkeypatch.setattr(gw, '_frame_buffer', b'\xff\xd8fake-jpeg\xff\xd9')
-    monkeypatch.setattr(gw, '_frame_seq', 7)
+    monkeypatch.setattr(gw.STATE.camera, 'frame_buffer', b'\xff\xd8fake-jpeg\xff\xd9')
+    monkeypatch.setattr(gw.STATE.camera, 'frame_seq', 7)
     token = gw.create_session('user')
     with ws_client.websocket_connect(f'/ws/stream?token={token}') as ws:
         assert ws.receive_bytes() == b'\xff\xd8fake-jpeg\xff\xd9'

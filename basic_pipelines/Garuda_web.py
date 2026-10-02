@@ -369,10 +369,10 @@ voice_responses: List[str] = []
 _detection_log: List[str] = []   # in-memory recent detection events (danger + watch)
 
 # Live state, grouped by concern (garuda_core/state.py): modes, config, alerts,
-# presence, system, camera, auth. The flat names the tests still use (MODE_DND,
-# USERS, ...) are forwarded to it; code in this file uses STATE directly.
+# presence, system, camera, auth. The flat globals it replaced (MODE_DND, USERS,
+# ...) are retired: using one on this module raises, naming its new home.
 STATE = _core_state.State()
-_core_state.forward(sys.modules[__name__], _core_state.FLAT_NAMES)
+_core_state.retire(sys.modules[__name__], _core_state.RETIRED_NAMES)
 
 NARADA_WAKE_WORD = "narada"
 

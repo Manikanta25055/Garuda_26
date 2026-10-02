@@ -57,12 +57,12 @@ class TestBruteForce:
         assert r.status_code == 200
 
         # Failure counter should be gone
-        assert '127.0.0.1' not in gw._login_failures
+        assert '127.0.0.1' not in gw.STATE.auth.login_failures
 
     def test_lockout_expires_after_cooldown(self, app_client, monkeypatch):
         """Lockout_until in the past → request goes through again."""
         ip = '127.0.0.1'
-        gw._login_failures[ip] = {'count': gw._LOGIN_MAX_ATTEMPTS, 'lockout_until': time.time() - 1}
+        gw.STATE.auth.login_failures[ip] = {'count': gw._LOGIN_MAX_ATTEMPTS, 'lockout_until': time.time() - 1}
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
         assert r.status_code == 200
 
@@ -98,19 +98,19 @@ class TestRefreshTokens:
         assert len(token) == 128   # 64-byte hex
 
     def test_login_creates_refresh_token_in_store(self, app_client, monkeypatch):
-        assert len(gw._refresh_tokens) == 0
+        assert len(gw.STATE.auth.refresh_tokens) == 0
         app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
-        assert len(gw._refresh_tokens) == 1
+        assert len(gw.STATE.auth.refresh_tokens) == 1
 
     def test_access_token_duration_is_15_min(self, app_client, monkeypatch):
         app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
-        token_data = list(gw._sessions.values())[0]
+        token_data = list(gw.STATE.auth.sessions.values())[0]
         duration = token_data['expires'] - token_data['created_at']
         assert abs(duration - gw._ACCESS_DURATION) < 5   # within 5s of 900
 
     def test_refresh_token_duration_is_7_days(self, app_client, monkeypatch):
         app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
-        rt = list(gw._refresh_tokens.values())[0]
+        rt = list(gw.STATE.auth.refresh_tokens.values())[0]
         duration = rt['expires'] - rt['created_at']
         assert abs(duration - gw._REFRESH_DURATION) < 5
 
@@ -120,13 +120,13 @@ class TestRefreshTokens:
         old_token = r.json()['token']
 
         # Inject refresh token directly into cookie jar for the next call
-        refresh_tok = list(gw._refresh_tokens.keys())[0]
+        refresh_tok = list(gw.STATE.auth.refresh_tokens.keys())[0]
 
         # Simulate /api/refresh by calling it with the refresh token in the store
         # (TestClient doesn't carry path-scoped cookies; call via helper)
         new_session_token = gw.create_session('user')
         assert new_session_token != old_token
-        assert new_session_token in gw._sessions
+        assert new_session_token in gw.STATE.auth.sessions
 
     def test_refresh_endpoint_returns_401_for_invalid_token(self, app_client, monkeypatch):
         # No garuda_refresh cookie → 401
@@ -136,32 +136,32 @@ class TestRefreshTokens:
     def test_expired_refresh_token_is_rejected(self, app_client, monkeypatch):
         """A refresh token whose expiry is in the past is purged and rejected."""
         fake_rt = 'a' * 128
-        gw._refresh_tokens[fake_rt] = {
+        gw.STATE.auth.refresh_tokens[fake_rt] = {
             'username': 'user', 'role': 'user',
             'expires': time.time() - 1, 'created_at': time.time() - 10,
         }
         result = gw.get_refresh_token(fake_rt)
         assert result is None
-        assert fake_rt not in gw._refresh_tokens
+        assert fake_rt not in gw.STATE.auth.refresh_tokens
 
     def test_logout_revokes_refresh_token(self, app_client, monkeypatch):
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
         token = r.json()['token']
-        assert len(gw._refresh_tokens) == 1
+        assert len(gw.STATE.auth.refresh_tokens) == 1
 
         # Inject the refresh token cookie manually for logout
-        refresh_tok = list(gw._refresh_tokens.keys())[0]
+        refresh_tok = list(gw.STATE.auth.refresh_tokens.keys())[0]
         app_client.post('/api/logout',
                         headers={'X-Garuda-Token': token},
                         cookies={'garuda_refresh': refresh_tok})
-        assert refresh_tok not in gw._refresh_tokens
+        assert refresh_tok not in gw.STATE.auth.refresh_tokens
 
     def test_admin_login_also_issues_refresh_token(self, app_client, monkeypatch):
         monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
         app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
-        otp = gw.ADMIN_OTP
+        otp = gw.STATE.auth.admin_otp
         app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': otp})
-        assert len(gw._refresh_tokens) == 1
+        assert len(gw.STATE.auth.refresh_tokens) == 1
 
     def test_get_refresh_token_returns_none_for_missing_key(self, app_client, monkeypatch):
         assert gw.get_refresh_token('nonexistent' * 10) is None
@@ -177,7 +177,7 @@ class TestAccessTokenDuration:
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
         token = r.json()['token']
         # Force-expire the session
-        gw._sessions[token]['expires'] = time.time() - 1
+        gw.STATE.auth.sessions[token]['expires'] = time.time() - 1
         r2 = app_client.get('/api/session', headers={'X-Garuda-Token': token})
         assert r2.status_code == 401
 
@@ -185,10 +185,10 @@ class TestAccessTokenDuration:
         """After our change, require_session must NOT extend expiry."""
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
         token = r.json()['token']
-        original_expiry = gw._sessions[token]['expires']
+        original_expiry = gw.STATE.auth.sessions[token]['expires']
 
         app_client.get('/api/session', headers={'X-Garuda-Token': token})
-        new_expiry = gw._sessions[token]['expires']
+        new_expiry = gw.STATE.auth.sessions[token]['expires']
         # Expiry must not have moved (no sliding window on short tokens)
         assert abs(new_expiry - original_expiry) < 1
 
@@ -441,13 +441,13 @@ class TestCameraTamper:
     def _clear_tamper_cooldown(self, monkeypatch):
         """_send_tamper_email is rate-limited to one mail per hour via module
         state. Reset it per test so cases do not suppress each other."""
-        monkeypatch.setattr(gw, '_last_tamper_email', 0.0)
+        monkeypatch.setattr(gw.STATE.alerts, 'last_tamper_email', 0.0)
 
     def test_send_tamper_email_calls_smtp(self, monkeypatch):
         """_send_tamper_email must call SMTP_SSL and send a message."""
-        monkeypatch.setattr(gw, 'EMAIL_SENDER', 'test@example.com')
-        monkeypatch.setattr(gw, 'EMAIL_SENDER_PASS', 'pass')
-        monkeypatch.setattr(gw, 'EMAIL_RECIPIENTS', ['dest@example.com'])
+        monkeypatch.setattr(gw.STATE.config, 'email_sender', 'test@example.com')
+        monkeypatch.setattr(gw.STATE.config, 'email_sender_pass', 'pass')
+        monkeypatch.setattr(gw.STATE.config, 'email_recipients', ['dest@example.com'])
 
         smtp_mock = MagicMock()
         smtp_mock.__enter__ = MagicMock(return_value=smtp_mock)
@@ -458,9 +458,9 @@ class TestCameraTamper:
         assert smtp_mock.send_message.called
 
     def test_send_tamper_email_subject_contains_critical(self, monkeypatch):
-        monkeypatch.setattr(gw, 'EMAIL_SENDER', 'test@example.com')
-        monkeypatch.setattr(gw, 'EMAIL_SENDER_PASS', 'pass')
-        monkeypatch.setattr(gw, 'EMAIL_RECIPIENTS', ['dest@example.com'])
+        monkeypatch.setattr(gw.STATE.config, 'email_sender', 'test@example.com')
+        monkeypatch.setattr(gw.STATE.config, 'email_sender_pass', 'pass')
+        monkeypatch.setattr(gw.STATE.config, 'email_recipients', ['dest@example.com'])
 
         sent_msgs = []
         smtp_mock = MagicMock()
@@ -475,7 +475,7 @@ class TestCameraTamper:
 
     def test_send_tamper_email_skips_when_no_sender(self, monkeypatch):
         """If EMAIL_SENDER is empty, must not crash or call SMTP."""
-        monkeypatch.setattr(gw, 'EMAIL_SENDER', '')
+        monkeypatch.setattr(gw.STATE.config, 'email_sender', '')
         smtp_mock = MagicMock()
         monkeypatch.setattr(gw.smtplib, 'SMTP_SSL', smtp_mock)
         gw._send_tamper_email()   # must not raise
@@ -483,12 +483,12 @@ class TestCameraTamper:
 
     def test_send_tamper_email_bypasses_mode_flags(self, app_client, monkeypatch):
         """Tamper alert ignores DND, idle, email_off — it's unconditional."""
-        monkeypatch.setattr(gw, 'MODE_DND',       True)
-        monkeypatch.setattr(gw, 'MODE_IDLE',      True)
-        monkeypatch.setattr(gw, 'MODE_EMAIL_OFF', True)
-        monkeypatch.setattr(gw, 'EMAIL_SENDER',   'test@example.com')
-        monkeypatch.setattr(gw, 'EMAIL_SENDER_PASS', 'pass')
-        monkeypatch.setattr(gw, 'EMAIL_RECIPIENTS', ['dest@example.com'])
+        monkeypatch.setattr(gw.STATE.modes, 'dnd',       True)
+        monkeypatch.setattr(gw.STATE.modes, 'idle',      True)
+        monkeypatch.setattr(gw.STATE.modes, 'email_off', True)
+        monkeypatch.setattr(gw.STATE.config, 'email_sender',   'test@example.com')
+        monkeypatch.setattr(gw.STATE.config, 'email_sender_pass', 'pass')
+        monkeypatch.setattr(gw.STATE.config, 'email_recipients', ['dest@example.com'])
 
         smtp_mock = MagicMock()
         smtp_mock.__enter__ = MagicMock(return_value=smtp_mock)
@@ -500,9 +500,9 @@ class TestCameraTamper:
 
     def test_send_tamper_email_is_rate_limited(self, monkeypatch):
         """A flickering camera must not produce a mail per frame."""
-        monkeypatch.setattr(gw, 'EMAIL_SENDER', 'test@example.com')
-        monkeypatch.setattr(gw, 'EMAIL_SENDER_PASS', 'pass')
-        monkeypatch.setattr(gw, 'EMAIL_RECIPIENTS', ['dest@example.com'])
+        monkeypatch.setattr(gw.STATE.config, 'email_sender', 'test@example.com')
+        monkeypatch.setattr(gw.STATE.config, 'email_sender_pass', 'pass')
+        monkeypatch.setattr(gw.STATE.config, 'email_recipients', ['dest@example.com'])
 
         smtp_mock = MagicMock()
         smtp_mock.__enter__ = MagicMock(return_value=smtp_mock)
@@ -531,8 +531,8 @@ class TestClipStopExfiltration:
         import cv2
         writer_mock = MagicMock(spec=cv2.VideoWriter)
         writer_mock.isOpened.return_value = True
-        monkeypatch.setattr(gw, '_clip_writer', writer_mock)
-        monkeypatch.setattr(gw, '_clip_path', '/tmp/fake_clip.mp4')
+        monkeypatch.setattr(gw.STATE.camera, 'clip_writer', writer_mock)
+        monkeypatch.setattr(gw.STATE.camera, 'clip_path', '/tmp/fake_clip.mp4')
 
         calls = []
         monkeypatch.setattr(gw, 'exfiltrate_clip', lambda p: calls.append(p))
@@ -554,7 +554,7 @@ class TestWebSocketRateLimit:
         """Filling _rate_store for an IP beyond _RATE_LIMIT simulates ws block."""
         ip = '10.0.0.1'
         rate_store = collections.defaultdict(list)
-        monkeypatch.setattr(gw, '_rate_store', rate_store)
+        monkeypatch.setattr(gw.STATE.auth, 'rate_store', rate_store)
         monkeypatch.setattr(gw, '_RATE_LIMIT', 5)
         monkeypatch.setattr(gw, '_RATE_WINDOW', 60)
 
@@ -570,7 +570,7 @@ class TestWebSocketRateLimit:
     def test_rate_store_clears_old_timestamps(self, monkeypatch):
         ip = '10.0.0.2'
         rate_store = collections.defaultdict(list)
-        monkeypatch.setattr(gw, '_rate_store', rate_store)
+        monkeypatch.setattr(gw.STATE.auth, 'rate_store', rate_store)
 
         # All timestamps are stale (older than window)
         rate_store[ip] = [time.time() - 3700] * 30
@@ -600,12 +600,12 @@ class TestEndToEndAuthFlow:
         assert r.json()['username'] == 'user'
 
         # 3. Force-expire the access token
-        gw._sessions[token]['expires'] = time.time() - 1
+        gw.STATE.auth.sessions[token]['expires'] = time.time() - 1
         r = app_client.get('/api/session', headers={'X-Garuda-Token': token})
         assert r.status_code == 401
 
         # 4. Issue a fresh access token via the refresh store directly
-        refresh_tok = list(gw._refresh_tokens.keys())[0]
+        refresh_tok = list(gw.STATE.auth.refresh_tokens.keys())[0]
         rs = gw.get_refresh_token(refresh_tok)
         assert rs is not None
         new_token = gw.create_session(rs['username'])
@@ -617,8 +617,8 @@ class TestEndToEndAuthFlow:
         # 6. Logout clears the session
         app_client.post('/api/logout', headers={'X-Garuda-Token': new_token},
                         cookies={'garuda_refresh': refresh_tok})
-        assert new_token not in gw._sessions
-        assert refresh_tok not in gw._refresh_tokens
+        assert new_token not in gw.STATE.auth.sessions
+        assert refresh_tok not in gw.STATE.auth.refresh_tokens
 
     def test_state_endpoint_accessible_after_login(self, app_client, monkeypatch):
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})

@@ -44,8 +44,8 @@ def test_admin_otp_lockout_after_3_wrong_attempts(app_client, monkeypatch):
     # 4th attempt (even with real OTP) must fail — state cleared
     r = app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': '000000'})
     assert r.status_code == 401
-    assert gw.ADMIN_OTP is None
-    assert gw._admin_otp_attempts == 0
+    assert gw.STATE.auth.admin_otp is None
+    assert gw.STATE.auth.admin_otp_attempts == 0
 
 
 def test_admin_otp_attempt_counter_resets_on_success(app_client, monkeypatch):
@@ -53,7 +53,7 @@ def test_admin_otp_attempt_counter_resets_on_success(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     r0 = app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
     assert r0.status_code == 200
-    saved_otp = gw.ADMIN_OTP
+    saved_otp = gw.STATE.auth.admin_otp
     assert saved_otp is not None
     # 2 wrong attempts
     app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': '000000'})
@@ -61,7 +61,7 @@ def test_admin_otp_attempt_counter_resets_on_success(app_client, monkeypatch):
     # Correct OTP succeeds
     r = app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': saved_otp})
     assert r.status_code == 200
-    assert gw._admin_otp_attempts == 0
+    assert gw.STATE.auth.admin_otp_attempts == 0
 
 
 def test_forgot_otp_lockout_after_3_wrong_attempts(app_client, monkeypatch):
@@ -69,7 +69,7 @@ def test_forgot_otp_lockout_after_3_wrong_attempts(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     r = app_client.post('/api/forgot/send-otp', json={'username': 'user'})
     assert r.status_code == 200
-    assert gw.USER_FORGOT_OTP is not None
+    assert gw.STATE.auth.user_forgot_otp is not None
 
     for _ in range(3):
         r = app_client.post('/api/forgot/reset',
@@ -80,7 +80,7 @@ def test_forgot_otp_lockout_after_3_wrong_attempts(app_client, monkeypatch):
     r = app_client.post('/api/forgot/reset',
                         json={'username': 'user', 'otp': '000000', 'new_password': 'Ignored1!'})
     assert r.status_code == 401
-    assert gw.USER_FORGOT_OTP is None
+    assert gw.STATE.auth.user_forgot_otp is None
 
 
 # ── Account enumeration prevention ───────────────────────────────────────────
@@ -92,7 +92,7 @@ def test_forgot_send_otp_nonexistent_user_returns_200(app_client):
     data = r.json()
     assert data.get('ok') is True
     # No OTP should have been set
-    assert gw.USER_FORGOT_OTP is None
+    assert gw.STATE.auth.user_forgot_otp is None
 
 
 def test_forgot_send_otp_existing_user_returns_200(app_client, monkeypatch):
@@ -153,7 +153,7 @@ def test_forgot_reset_password_complexity(app_client, monkeypatch, password, exp
     """forgot/reset enforces password complexity for new_password."""
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/forgot/send-otp', json={'username': 'user'})
-    otp = gw.USER_FORGOT_OTP
+    otp = gw.STATE.auth.user_forgot_otp
 
     r = app_client.post('/api/forgot/reset',
                         json={'username': 'user', 'otp': otp, 'new_password': password})
@@ -260,23 +260,23 @@ def test_add_command_max_100_commands(app_client, admin_token):
     """Cannot add more than 100 custom commands."""
     headers = {'X-Garuda-Token': admin_token}
     # Fill up to 100
-    gw.CUSTOM_VOICE_COMMANDS.clear()
+    gw.STATE.config.custom_voice_commands.clear()
     for i in range(100):
-        gw.CUSTOM_VOICE_COMMANDS[f'cmd_{i}'] = 'response'
+        gw.STATE.config.custom_voice_commands[f'cmd_{i}'] = 'response'
     # 101st should fail
     r = app_client.post('/api/config/command/add',
                         json={'phrase': 'new unique phrase', 'response': 'ok'},
                         headers=headers)
     assert r.status_code == 400
-    assert len(gw.CUSTOM_VOICE_COMMANDS) == 100
+    assert len(gw.STATE.config.custom_voice_commands) == 100
 
 
 def test_update_existing_command_ignores_count_limit(app_client, admin_token):
     """Updating an existing command phrase is allowed even at 100-command limit."""
     headers = {'X-Garuda-Token': admin_token}
-    gw.CUSTOM_VOICE_COMMANDS.clear()
+    gw.STATE.config.custom_voice_commands.clear()
     for i in range(100):
-        gw.CUSTOM_VOICE_COMMANDS[f'cmd_{i}'] = 'response'
+        gw.STATE.config.custom_voice_commands[f'cmd_{i}'] = 'response'
     # Overwriting cmd_0 should succeed
     r = app_client.post('/api/config/command/add',
                         json={'phrase': 'cmd_0', 'response': 'updated'},
@@ -322,7 +322,7 @@ def test_forgot_reset_invalidates_user_sessions(app_client, monkeypatch, user_to
     """Password reset via forgot flow invalidates existing sessions for that user."""
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/forgot/send-otp', json={'username': 'user'})
-    otp = gw.USER_FORGOT_OTP
+    otp = gw.STATE.auth.user_forgot_otp
 
     user_hdrs = {'X-Garuda-Token': user_token}
     r = app_client.get('/api/session', headers=user_hdrs)
@@ -393,7 +393,7 @@ def test_generate_otp_code_respects_length():
 def test_global_rate_limit_applies_to_modes_endpoint(app_client, admin_token, monkeypatch):
     """The /api/modes endpoint is covered by the global rate-limit middleware."""
     monkeypatch.setattr(gw, '_RATE_LIMIT_SESSION', 5)
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     headers = {'X-Garuda-Token': admin_token}
     statuses = []
     for _ in range(8):
@@ -405,7 +405,7 @@ def test_global_rate_limit_applies_to_modes_endpoint(app_client, admin_token, mo
 def test_global_rate_limit_applies_to_config_endpoint(app_client, admin_token, monkeypatch):
     """The /api/config endpoint is covered by the global rate-limit middleware."""
     monkeypatch.setattr(gw, '_RATE_LIMIT_SESSION', 5)
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     headers = {'X-Garuda-Token': admin_token}
     statuses = []
     for _ in range(8):
@@ -417,7 +417,7 @@ def test_global_rate_limit_applies_to_config_endpoint(app_client, admin_token, m
 def test_global_rate_limit_applies_to_users_endpoint(app_client, admin_token, monkeypatch):
     """The /api/users endpoint is covered by the global rate-limit middleware."""
     monkeypatch.setattr(gw, '_RATE_LIMIT_SESSION', 5)
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     headers = {'X-Garuda-Token': admin_token}
     statuses = []
     for _ in range(8):
@@ -430,7 +430,7 @@ def test_signed_in_pages_do_not_share_the_anonymous_budget(app_client, admin_tok
     """Ordinary use of a signed-in page must not hit "Too many requests":
     it has its own, larger budget than anonymous traffic from the same address."""
     monkeypatch.setattr(gw, '_RATE_LIMIT', 5)
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     anonymous = {'X-Garuda-Token': 'not-a-session'}   # the test client keeps a login cookie
     for _ in range(8):
         app_client.get('/api/users-public', headers=anonymous)

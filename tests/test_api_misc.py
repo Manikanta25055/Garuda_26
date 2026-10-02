@@ -44,7 +44,7 @@ def test_chat_stream_emits_sse_tokens(app_client, user_headers, monkeypatch):
 
 def test_presence_refresh_reports_result(app_client, admin_headers, monkeypatch):
     def fake_refresh():
-        gw._owner_present = True
+        gw.STATE.presence.owner_present = True
 
     monkeypatch.setattr(gw, '_do_presence_check', fake_refresh)
     r = app_client.post('/api/presence_refresh', headers=admin_headers)
@@ -77,8 +77,8 @@ def test_master_key_login_rejects_invalid_key(app_client):
 
 
 def test_master_keys_are_masked_for_admin(app_client, admin_headers):
-    original = list(gw.MASTER_KEYS)
-    gw.MASTER_KEYS[:] = ['Abcd-1234-Secret!']
+    original = list(gw.STATE.auth.master_keys)
+    gw.STATE.auth.master_keys[:] = ['Abcd-1234-Secret!']
     try:
         r = app_client.get('/api/master_keys', headers=admin_headers)
         assert r.status_code == 200
@@ -87,22 +87,22 @@ def test_master_keys_are_masked_for_admin(app_client, admin_headers):
         assert data['keys'][0].endswith('ret!')
         assert 'Abcd' not in data['keys'][0]
     finally:
-        gw.MASTER_KEYS[:] = original
+        gw.STATE.auth.master_keys[:] = original
 
 
 def test_master_key_delete_rejects_last_remaining_key(app_client, admin_headers):
-    gw.MASTER_KEYS[:] = ['Only-Key-123!']
+    gw.STATE.auth.master_keys[:] = ['Only-Key-123!']
     r = app_client.post('/api/master_key/delete', json={'index': 0}, headers=admin_headers)
     assert r.status_code == 400
 
 
 def test_master_key_delete_removes_requested_index(app_client, admin_headers):
-    gw.MASTER_KEYS[:] = ['First-Key-123!', 'Second-Key-456!']
+    gw.STATE.auth.master_keys[:] = ['First-Key-123!', 'Second-Key-456!']
     r = app_client.post('/api/master_key/delete', json={'index': 0}, headers=admin_headers)
     assert r.status_code == 200
-    assert len(gw.MASTER_KEYS) == 1
-    assert gw._master_key_matches('Second-Key-456!', gw.MASTER_KEYS)
-    assert not gw._master_key_matches('First-Key-123!', gw.MASTER_KEYS)
+    assert len(gw.STATE.auth.master_keys) == 1
+    assert gw._master_key_matches('Second-Key-456!', gw.STATE.auth.master_keys)
+    assert not gw._master_key_matches('First-Key-123!', gw.STATE.auth.master_keys)
 
 
 def test_stream_requires_authenticated_session(app_client):

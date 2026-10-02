@@ -12,13 +12,13 @@ def test_heartbeat_with_wrong_key_doesnt_reset_deadman(app_client, monkeypatch):
     """TC-SEC01: Heartbeat with wrong key does NOT reset the deadman timer."""
     # Freeze _last_heartbeat at a known value (long in the past)
     frozen_time = time.time() - 300
-    monkeypatch.setattr(gw, '_last_heartbeat', frozen_time)
+    monkeypatch.setattr(gw.STATE.system, 'last_heartbeat', frozen_time)
     monkeypatch.setenv('HEARTBEAT_KEY', 'correct-key')
     # Wrong key — timer should NOT update
     r = app_client.get('/api/heartbeat?key=wrong-key')
     assert r.status_code == 200
     # _last_heartbeat must remain at the frozen value (not updated to now)
-    assert gw._last_heartbeat < frozen_time + 1.0  # unchanged
+    assert gw.STATE.system.last_heartbeat < frozen_time + 1.0  # unchanged
 
 
 def test_heartbeat_with_correct_key_resets_deadman(app_client, monkeypatch):
@@ -27,7 +27,7 @@ def test_heartbeat_with_correct_key_resets_deadman(app_client, monkeypatch):
     before = time.time()
     r = app_client.get('/api/heartbeat?key=correct-key')
     assert r.status_code == 200
-    assert gw._last_heartbeat >= before
+    assert gw.STATE.system.last_heartbeat >= before
 
 
 def test_heartbeat_public_when_no_key_configured(app_client, monkeypatch):
@@ -36,7 +36,7 @@ def test_heartbeat_public_when_no_key_configured(app_client, monkeypatch):
     before = time.time()
     r = app_client.get('/api/heartbeat')
     assert r.status_code == 200
-    assert gw._last_heartbeat >= before
+    assert gw.STATE.system.last_heartbeat >= before
 
 
 def test_session_token_format(app_client, user_token):
@@ -103,7 +103,7 @@ def test_bypass_otp_absent_from_responses(app_client, monkeypatch):
 def test_expired_token_rejected(app_client):
     """TC-SEC09: Expired session token → 401."""
     token = gw.create_session('user', duration=3600)
-    gw._sessions[token]['expires'] = time.time() - 1  # back-date, no sleep
+    gw.STATE.auth.sessions[token]['expires'] = time.time() - 1  # back-date, no sleep
     r = app_client.get('/api/state', headers={'X-Garuda-Token': token})
     assert r.status_code == 401
 
@@ -111,15 +111,15 @@ def test_expired_token_rejected(app_client):
 def test_rate_limit_resets_after_window(app_client, monkeypatch):
     """TC-SEC10 variant: Rate store is per-IP and expires after window."""
     import collections
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     # Exhaust the limit
     for _ in range(31):
         app_client.post('/api/login', json={'username': 'x', 'password': 'y'})
     # Force-expire all timestamps to simulate window passing
-    for ip in list(gw._rate_store.keys()):
-        gw._rate_store[ip] = []
+    for ip in list(gw.STATE.auth.rate_store.keys()):
+        gw.STATE.auth.rate_store[ip] = []
     # Also clear brute-force lockout so we're only testing rate-limit expiry
-    gw._login_failures.clear()
+    gw.STATE.auth.login_failures.clear()
     # Now a fresh request should succeed (not 429)
     r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
     assert r.status_code in (200, 401)  # Not 429

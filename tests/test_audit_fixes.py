@@ -56,13 +56,13 @@ def test_admin_name_is_not_revealed_without_the_password(app_client):
 
 def test_password_change_revokes_refresh_tokens(app_client, admin_headers):
     app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
-    assert any(s['username'] == 'user' for s in gw._refresh_tokens.values())
+    assert any(s['username'] == 'user' for s in gw.STATE.auth.refresh_tokens.values())
     r = app_client.post('/api/users/update',
                         json={'username': 'user', 'new_password': 'NewPass123'},
                         headers=admin_headers)
     assert r.status_code == 200
-    assert not any(s['username'] == 'user' for s in gw._refresh_tokens.values())
-    assert not any(s['username'] == 'user' for s in gw._sessions.values())
+    assert not any(s['username'] == 'user' for s in gw.STATE.auth.refresh_tokens.values())
+    assert not any(s['username'] == 'user' for s in gw.STATE.auth.sessions.values())
 
 
 def test_deleting_a_user_ends_their_sessions(app_client, admin_headers, user_headers):
@@ -107,8 +107,8 @@ def test_cookies_are_secure_when_the_proxy_reports_https(app_client, monkeypatch
 # ── one-time codes ───────────────────────────────────────────────────────────
 
 def test_master_key_otp_expires(app_client, admin_headers, monkeypatch):
-    monkeypatch.setattr(gw, 'MASTER_KEY_OTP', '123456')
-    monkeypatch.setattr(gw, '_master_otp_ts', time.time() - 400)
+    monkeypatch.setattr(gw.STATE.auth, 'master_key_otp', '123456')
+    monkeypatch.setattr(gw.STATE.auth, 'master_otp_ts', time.time() - 400)
     r = app_client.post('/api/master_key/add',
                         json={'otp': '123456', 'new_key': 'Zx9!kQ2#vLm8@pTr'},
                         headers=admin_headers)
@@ -116,15 +116,15 @@ def test_master_key_otp_expires(app_client, admin_headers, monkeypatch):
 
 
 def test_master_key_otp_allows_three_guesses(app_client, admin_headers, monkeypatch):
-    monkeypatch.setattr(gw, 'MASTER_KEY_OTP', '123456')
-    monkeypatch.setattr(gw, '_master_otp_ts', time.time())
-    monkeypatch.setattr(gw, '_master_otp_attempts', 0)
+    monkeypatch.setattr(gw.STATE.auth, 'master_key_otp', '123456')
+    monkeypatch.setattr(gw.STATE.auth, 'master_otp_ts', time.time())
+    monkeypatch.setattr(gw.STATE.auth, 'master_otp_attempts', 0)
     for _ in range(3):
         r = app_client.post('/api/master_key/add',
                             json={'otp': '000000', 'new_key': 'Zx9!kQ2#vLm8@pTr'},
                             headers=admin_headers)
         assert r.status_code == 401
-    assert gw.MASTER_KEY_OTP is None
+    assert gw.STATE.auth.master_key_otp is None
 
 
 def test_master_key_guessing_locks_the_caller_out(app_client):
@@ -136,9 +136,9 @@ def test_master_key_guessing_locks_the_caller_out(app_client):
 
 def test_a_new_admin_otp_gets_fresh_attempts(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
-    monkeypatch.setattr(gw, '_admin_otp_attempts', 2)
+    monkeypatch.setattr(gw.STATE.auth, 'admin_otp_attempts', 2)
     app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
-    assert gw._admin_otp_attempts == 0
+    assert gw.STATE.auth.admin_otp_attempts == 0
 
 
 # ── events ───────────────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ def test_state_endpoint_applies_the_role_filter(app_client, user_headers, admin_
 # ── presence ─────────────────────────────────────────────────────────────────
 
 def test_empty_or_stale_mac_is_not_presence(monkeypatch):
-    monkeypatch.setattr(gw, '_last_arp_cache',
+    monkeypatch.setattr(gw.STATE.presence, 'last_arp_cache',
                         "ip address hw type flags hw address mask device\n"
                         "192.168.1.5 0x1 0x0 aa:bb:cc:dd:ee:ff * wlan0\n"
                         "192.168.1.6 0x1 0x2 11:22:33:44:55:66 * wlan0\n")
@@ -200,42 +200,42 @@ def test_impossible_schedule_times_are_dropped(app_client, admin_headers):
     app_client.post('/api/config', json={'mode_schedule': {
         'night': {'start': '99:99', 'end': '06:00'},
         'dnd': {'start': '22:00', 'end': '06:30'}}}, headers=admin_headers)
-    assert gw.MODE_SCHEDULE == {'dnd': {'start': '22:00', 'end': '06:30'}}
+    assert gw.STATE.modes.schedule == {'dnd': {'start': '22:00', 'end': '06:30'}}
 
 
 def test_empty_danger_labels_are_refused(app_client, admin_headers):
-    before = list(gw.DANGER_LABELS)
+    before = list(gw.STATE.config.danger_labels)
     r = app_client.post('/api/config', json={'danger_labels': []}, headers=admin_headers)
     assert r.status_code == 400
-    assert gw.DANGER_LABELS == before
+    assert gw.STATE.config.danger_labels == before
 
 
 def test_email_password_is_saved_to_the_env_file(app_client, admin_headers):
-    saved = gw.EMAIL_SENDER_PASS
+    saved = gw.STATE.config.email_sender_pass
     try:
         app_client.post('/api/config', json={'email_sender_pass': 'abcd efgh ijkl mnop'},
                         headers=admin_headers)
         assert 'EMAIL_SENDER_PASS=abcd efgh ijkl mnop' in open(gw.HOME_ENV_PATH).read()
     finally:
-        gw.EMAIL_SENDER_PASS = saved
+        gw.STATE.config.email_sender_pass = saved
 
 
 def test_admin_accounts_cannot_be_deleted(app_client, admin_headers):
-    gw.USERS['second'] = {'password': 'x', 'role': 'admin', 'history': {}}
+    gw.STATE.auth.users['second'] = {'password': 'x', 'role': 'admin', 'history': {}}
     r = app_client.post('/api/users/delete', json={'username': 'second'}, headers=admin_headers)
-    assert r.status_code == 400 and 'second' in gw.USERS
+    assert r.status_code == 400 and 'second' in gw.STATE.auth.users
 
 
 # ── housekeeping ─────────────────────────────────────────────────────────────
 
 def test_rate_and_lockout_tables_are_pruned(monkeypatch):
     old = time.time() - 7200
-    monkeypatch.setattr(gw, '_rate_store', gw.defaultdict(list, {"1.1.1.1": [old], "2.2.2.2": [time.time()]}))
-    monkeypatch.setattr(gw, '_login_failures', {"1.1.1.1": {"count": 9, "lockout_until": old},
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', gw.defaultdict(list, {"1.1.1.1": [old], "2.2.2.2": [time.time()]}))
+    monkeypatch.setattr(gw.STATE.auth, 'login_failures', {"1.1.1.1": {"count": 9, "lockout_until": old},
                                                 "2.2.2.2": {"count": 1, "lockout_until": 0.0, "last": time.time()}})
     gw._prune_rate_state()
-    assert list(gw._rate_store) == ["2.2.2.2"]
-    assert list(gw._login_failures) == ["2.2.2.2"]
+    assert list(gw.STATE.auth.rate_store) == ["2.2.2.2"]
+    assert list(gw.STATE.auth.login_failures) == ["2.2.2.2"]
 
 
 def test_voice_responses_are_bounded(monkeypatch):
@@ -257,11 +257,11 @@ def test_master_keys_file_is_migrated_to_hashes(tmp_path, monkeypatch):
     path = tmp_path / 'master_keys.json'
     path.write_text(json.dumps({"keys": ["Plain-Key-9876!"]}))
     monkeypatch.setattr(gw, 'MASTER_KEYS_FILE', str(path))
-    monkeypatch.setattr(gw, 'MASTER_KEYS', [])
+    monkeypatch.setattr(gw.STATE.auth, 'master_keys', [])
     gw.load_master_keys()
     on_disk = json.loads(path.read_text())["keys"]
     assert all(k.startswith('mk1$') for k in on_disk) and 'Plain-Key-9876!' not in path.read_text()
-    assert gw._master_key_matches('Plain-Key-9876!', gw.MASTER_KEYS)
+    assert gw._master_key_matches('Plain-Key-9876!', gw.STATE.auth.master_keys)
     assert gw._mk_mask(on_disk[0]).endswith('876!')
 
 

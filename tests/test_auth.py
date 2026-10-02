@@ -54,7 +54,7 @@ def test_admin_send_otp_wrong_password(app_client):
 def test_admin_verify_otp_correct(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
-    otp = gw.ADMIN_OTP
+    otp = gw.STATE.auth.admin_otp
     r = app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': otp})
     assert r.status_code == 200
     d = r.json()
@@ -74,7 +74,7 @@ def test_admin_verify_otp_wrong(app_client, monkeypatch):
 def test_admin_otp_single_use(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
-    otp = gw.ADMIN_OTP
+    otp = gw.STATE.auth.admin_otp
     # First use succeeds
     r1 = app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': otp})
     assert r1.status_code == 200
@@ -87,7 +87,7 @@ def test_admin_otp_single_use(app_client, monkeypatch):
 def test_rate_limiting_login(app_client, monkeypatch):
     # Reset rate store to ensure clean state
     import collections
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     codes = []
     for _ in range(32):
         r = app_client.post('/api/login', json={'username': 'user', 'password': 'wrong'})
@@ -113,7 +113,7 @@ def test_session_with_invalid_token(app_client):
 def test_session_expired(app_client):
     # Create session then back-date its expiry to the past (no sleep needed)
     token = gw.create_session('user', duration=3600)
-    gw._sessions[token]['expires'] = time.time() - 1
+    gw.STATE.auth.sessions[token]['expires'] = time.time() - 1
     r = app_client.get('/api/session', headers={'X-Garuda-Token': token})
     assert r.status_code == 401
 
@@ -138,7 +138,7 @@ def test_forgot_send_otp_valid_user(app_client, monkeypatch):
 def test_forgot_reset_correct_otp(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/forgot/send-otp', json={'username': 'user'})
-    otp = gw.USER_FORGOT_OTP
+    otp = gw.STATE.auth.user_forgot_otp
     r = app_client.post('/api/forgot/reset', json={'otp': otp, 'new_password': 'NewPass123'})
     assert r.status_code == 200
     # Now login with new password should work

@@ -1,30 +1,29 @@
-"""The state object and the flat names that forward to it are one value, not two."""
+"""The state object is the only home of live state; the flat globals it replaced are gone."""
 import pytest
 
 import Garuda_web as gw
-
-MODES = {"MODE_DND": "dnd", "MODE_EMAIL_OFF": "email_off", "MODE_IDLE": "idle",
-         "MODE_NIGHT": "night", "MODE_EMERGENCY": "emergency", "MODE_PRIVACY": "privacy"}
+from garuda_core.state import RETIRED_NAMES, State
 
 
-@pytest.mark.parametrize("old,field", sorted(MODES.items()))
-def test_flat_mode_name_and_state_field_are_the_same_value(old, field, monkeypatch):
-    assert old not in vars(gw), "a module global would shadow nothing but go stale"
-    before = getattr(gw.STATE.modes, field)
-    monkeypatch.setattr(gw, old, not before)
-    assert getattr(gw.STATE.modes, field) is (not before)
-    monkeypatch.undo()
-    assert getattr(gw.STATE.modes, field) is before
-    monkeypatch.setattr(gw.STATE.modes, field, not before)
-    assert getattr(gw, old) is (not before)
+def test_every_retired_name_points_at_a_real_field():
+    fresh = State()
+    assert len(RETIRED_NAMES) == 91
+    for old, (group, field) in RETIRED_NAMES.items():
+        assert hasattr(getattr(fresh, group), field), (old, group, field)
+        assert hasattr(getattr(gw.STATE, group), field), (old, group, field)
 
 
-def test_schedule_custom_and_lock_forward(monkeypatch):
-    monkeypatch.setattr(gw, "MODE_SCHEDULE", {"night": {"start": "22:00", "end": "06:00"}})
-    monkeypatch.setattr(gw, "CUSTOM_MODES", {"movie": {}})
-    assert gw.STATE.modes.schedule == {"night": {"start": "22:00", "end": "06:00"}}
-    assert gw.STATE.modes.custom == {"movie": {}}
-    assert gw._mode_lock is gw.STATE.modes.lock
+@pytest.mark.parametrize("old", sorted(RETIRED_NAMES))
+def test_retired_name_cannot_be_read_or_set(old, monkeypatch):
+    group, field = RETIRED_NAMES[old]
+    assert old not in vars(gw)
+    with pytest.raises(AttributeError, match=f"moved to STATE.{group}.{field}"):
+        getattr(gw, old)
+    with pytest.raises(AttributeError, match="moved to STATE"):
+        setattr(gw, old, object())
+    with pytest.raises(AttributeError):
+        monkeypatch.setattr(gw, old, object())
+    assert old not in vars(gw), "a failed write must not leave a stale copy behind"
 
 
 def test_unknown_mode_is_refused():
@@ -34,44 +33,17 @@ def test_unknown_mode_is_refused():
         gw.STATE.modes.get("lock")
 
 
-CONFIG = {"EMAIL_SENDER": "email_sender", "EMAIL_SENDER_PASS": "email_sender_pass",
-          "EMAIL_RECIPIENTS": "email_recipients", "EMAIL_COOLDOWN": "email_cooldown",
-          "DETECTION_THRESHOLD": "detection_threshold", "DANGER_LABELS": "danger_labels",
-          "WATCH_LABELS": "watch_labels", "KNOWN_DEVICES": "known_devices",
-          "NIGHT_PRESENCE_WINDOW": "night_presence_window",
-          "CUSTOM_VOICE_COMMANDS": "custom_voice_commands"}
-
-
-@pytest.mark.parametrize("old,field", sorted(CONFIG.items()))
-def test_flat_config_name_and_state_field_are_the_same_value(old, field, monkeypatch):
-    assert old not in vars(gw)
-    marker = object()
-    monkeypatch.setattr(gw, old, marker)
-    assert getattr(gw.STATE.config, field) is marker
-    monkeypatch.undo()
-    assert getattr(gw.STATE.config, field) is getattr(gw, old) is not marker
+def test_mode_set_and_get_by_name(monkeypatch):
+    monkeypatch.setattr(gw.STATE.modes, "night", False)
+    gw.STATE.modes.set("night", True)
+    assert gw.STATE.modes.get("night") is True and gw.STATE.modes.night is True
 
 
 def test_mail_wrapper_reads_the_state(monkeypatch):
     sent = {}
     monkeypatch.setattr(gw._mailer, "send", lambda subject, body, **kw: sent.update(kw))
-    monkeypatch.setattr(gw, "EMAIL_SENDER", "pi@example.com")
+    monkeypatch.setattr(gw.STATE.config, "email_sender", "pi@example.com")
     monkeypatch.setattr(gw.STATE.config, "email_sender_pass", "secret")
-    monkeypatch.setattr(gw, "EMAIL_RECIPIENTS", ["a@example.com"])
+    monkeypatch.setattr(gw.STATE.config, "email_recipients", ["a@example.com"])
     gw._send_mail("s", "b")
     assert sent == {"sender": "pi@example.com", "password": "secret", "to": ["a@example.com"]}
-
-
-def test_every_forwarded_name_is_one_value_with_its_state_field(monkeypatch):
-    """Covers every group, including ones added after this test was written."""
-    forwards = type(gw)._forwards
-    assert len(forwards) >= 19
-    for old, (group, attr) in sorted(forwards.items()):
-        assert old not in vars(gw), old
-        holder = getattr(gw.STATE, group)
-        original = getattr(holder, attr)
-        marker = object()
-        monkeypatch.setattr(gw, old, marker)
-        assert getattr(holder, attr) is marker, old
-        monkeypatch.undo()
-        assert getattr(holder, attr) is original and getattr(gw, old) is original, old

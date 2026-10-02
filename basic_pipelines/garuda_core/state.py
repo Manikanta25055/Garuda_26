@@ -1,15 +1,12 @@
 """The live state of the service, grouped by concern.
 
-Garuda_web holds one `STATE`; every other module reaches it as
-`core.STATE.<group>.<field>`. The flat names the service grew up with
-(`MODE_DND`, ...) still work on the Garuda_web module, for the tests and for
-anything not yet moved over: forward() turns each one into a property that
-reads and writes the field here, so there is one value, not two.
+Garuda_web holds one `STATE`; every module reaches it as
+`core.STATE.<group>.<field>` (inside Garuda_web: `STATE.<group>.<field>`).
 
-A forwarded name must not also exist in the module's own globals. Code inside
-Garuda_web therefore uses STATE directly: a bare `MODE_DND` there is a
-NameError, and `global MODE_DND` / `globals()[...]` would write a private copy
-nothing else reads.
+Until 2026-10 each field was a flat global of Garuda_web (`MODE_DND`, `USERS`,
+...). Those names are retired: retire() makes reading or assigning one on the
+module an error that says where the value lives now, so old code or an old
+test fails loudly instead of quietly working on a private copy.
 """
 import os
 import threading
@@ -177,10 +174,8 @@ class State:
         self.auth = Auth()
 
 
-# The flat names Garuda_web grew up with, and where each one lives now. Garuda_web
-# forwards them (see forward() below) so the test suite, which patches these
-# names, and the state object are one value.
-FLAT_NAMES = {
+# The flat names Garuda_web grew up with, and where each value lives now.
+RETIRED_NAMES = {
     # modes
     "MODE_DND": ("modes", "dnd"), "MODE_EMAIL_OFF": ("modes", "email_off"),
     "MODE_IDLE": ("modes", "idle"), "MODE_NIGHT": ("modes", "night"),
@@ -249,25 +244,31 @@ FLAT_NAMES = {
 }
 
 
-def forward(module, names: dict) -> None:
-    """Make `module.<old name>` read and write `module.STATE.<group>.<field>`.
+def retire(module, names: dict) -> None:
+    """Make `module.<old name>` an error that points at `STATE.<group>.<field>`.
 
-    `names` maps each old flat name to (group, field). May be called again for
-    another group; the module keeps one class and gains the new properties.
+    `names` maps each old flat name to (group, field). The module must not
+    define any of them: a leftover global would be a second, stale value.
     """
     cls = type(module)
     if cls is types.ModuleType:
-        cls = type("_StateForwardingModule", (types.ModuleType,), {"_forwards": {}})
+        cls = type("_RetiredNamesModule", (types.ModuleType,), {})
         module.__class__ = cls
     for old, (group, attr) in names.items():
         if old in vars(module):
-            raise RuntimeError(f"{old} is still a global of {module.__name__}; remove it before forwarding")
+            raise RuntimeError(f"{old} is still a global of {module.__name__}; it lives in STATE.{group}.{attr}")
 
-        def fget(self, _g=group, _a=attr):
-            return getattr(getattr(self.STATE, _g), _a)
+        def moved(self, *_value, _old=old, _g=group, _a=attr):
+            raise AttributeError(f"{_old} moved to STATE.{_g}.{_a}")
 
-        def fset(self, value, _g=group, _a=attr):
-            setattr(getattr(self.STATE, _g), _a, value)
+        setattr(cls, old, property(moved, moved))
 
-        setattr(cls, old, property(fget, fset))
-        cls._forwards[old] = (group, attr)
+    # A read that fails on a module is reported by Python as a plain "has no
+    # attribute"; the module-level __getattr__ (PEP 562) is asked afterwards,
+    # and only for names that are missing, so it can give the real answer.
+    def missing(name, _names=dict(names), _module=module.__name__):
+        if name in _names:
+            raise AttributeError(f"{name} moved to STATE.{_names[name][0]}.{_names[name][1]}")
+        raise AttributeError(f"module {_module!r} has no attribute {name!r}")
+
+    vars(module)["__getattr__"] = missing

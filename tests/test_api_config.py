@@ -86,7 +86,7 @@ def test_update_danger_labels_round_trips(app_client, admin_headers):
     assert r.status_code == 200
     cfg = app_client.get('/api/config', headers=admin_headers).json()
     assert cfg['danger_labels'] == ['knife', 'hammer']
-    assert gw.DANGER_LABELS == ['knife', 'hammer']
+    assert gw.STATE.config.danger_labels == ['knife', 'hammer']
 
 
 def test_legacy_single_danger_label_still_accepted(app_client, admin_headers):
@@ -95,12 +95,12 @@ def test_legacy_single_danger_label_still_accepted(app_client, admin_headers):
     assert r.status_code == 200
     cfg = app_client.get('/api/config', headers=admin_headers).json()
     assert cfg['danger_labels'] == ['knife']
-    assert gw.DANGER_LABELS == ['knife']
+    assert gw.STATE.config.danger_labels == ['knife']
 
 
 def test_update_secret_backed_config_fields(app_client, admin_headers):
     """The app password is accepted; a stale groq_api_key field is ignored."""
-    saved_pass = gw.EMAIL_SENDER_PASS
+    saved_pass = gw.STATE.config.email_sender_pass
     try:
         r = app_client.post(
             '/api/config',
@@ -108,9 +108,9 @@ def test_update_secret_backed_config_fields(app_client, admin_headers):
             headers=admin_headers,
         )
         assert r.status_code == 200
-        assert gw.EMAIL_SENDER_PASS == 'app-pass-1234'
+        assert gw.STATE.config.email_sender_pass == 'app-pass-1234'
         assert not hasattr(gw, 'GROQ_API_KEY')
         cfg = app_client.get('/api/config', headers=admin_headers).json()
         assert 'groq_configured' not in cfg
     finally:
-        gw.EMAIL_SENDER_PASS = saved_pass
+        gw.STATE.config.email_sender_pass = saved_pass
