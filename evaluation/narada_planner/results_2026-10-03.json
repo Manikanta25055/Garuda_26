@@ -1,0 +1,563 @@
+{
+ "_about": "Choosing Narada's planner model (2026-10-03). scripts/planner_eval.py: 19 jobs the planner exists for (8 shortcuts, 4 actions, 2 confirm cards, 2 safety, 3 artifacts), each in a throwaway house with the real planner lane, every capability and a small copy of the site, against the real NIM models. The owner's candidates were Kimi K3 and GLM 5.3; every chat model the account lists was considered.",
+ "account_models_considered": [
+  "moonshotai/kimi-k3",
+  "moonshotai/kimi-k2.6 (listed, 404)",
+  "z-ai/glm-5.3",
+  "z-ai/glm-5.3-flash",
+  "deepseek-ai/deepseek-v4.1-flash",
+  "nvidia/nemotron-3-ultra-550b-a55b",
+  "nvidia/nemotron-4-340b-instruct (listed, 404)",
+  "nvidia/nemotron-3-super-120b-a12b",
+  "nvidia/nemotron-3.5-lightning-30b-a3b"
+ ],
+ "first_answer_latency_one_tool_call_100s_limit": {
+  "moonshotai/kimi-k3": "timeout",
+  "z-ai/glm-5.3": "timeout",
+  "z-ai/glm-5.3-flash": 30.5,
+  "deepseek-ai/deepseek-v4.1-flash": 76.7,
+  "nvidia/nemotron-3-ultra-550b-a55b": 4.8,
+  "nvidia/nemotron-3-super-120b-a12b": 5.1,
+  "nvidia/nemotron-3.5-lightning-30b-a3b": 8.2
+ },
+ "time_to_first_token_streamed_400s_limit_two_tries": [
+  "('moonshotai/kimi-k3', 200, 'first', 242.0, 'total', 242.9, 'lines', 36)",
+  "('moonshotai/kimi-k3', 200, 'first', 109.4, 'total', 114.9, 'lines', 232)",
+  "('z-ai/glm-5.3', 200, 'first', 170.8, 'total', 172.8, 'lines', 106)",
+  "('z-ai/glm-5.3', 200, 'first', 161.1, 'total', 166.4, 'lines', 106)",
+  "('deepseek-ai/deepseek-v4.1-flash', 200, 'first', 21.7, 'total', 26.3, 'lines', 78)",
+  "('deepseek-ai/deepseek-v4.1-flash', 200, 'first', 16.0, 'total', 21.0, 'lines', 114)"
+ ],
+ "why_not_kimi_k3_or_glm_5_3": "On NIM that night both took 110-243 s (Kimi K3) and 161-171 s (GLM 5.3) before the first token of a five-word answer. A planner job is several model calls; at that speed one job takes ten minutes or times out, so they were not benchmarked on the jobs. Worth measuring again when NIM serves them faster: the eval takes --models moonshotai/kimi-k3 --timeout 400.",
+ "round_1_before_fixes": "rate-limited by running 4 cases at once; discarded",
+ "round_2_one_run": {
+  "nvidia/nemotron-3-ultra-550b-a55b": {
+   "passed": 12,
+   "total": 19,
+   "groups": {
+    "shortcut": [
+     3,
+     8
+    ],
+    "act": [
+     3,
+     4
+    ],
+    "card": [
+     2,
+     2
+    ],
+    "safe": [
+     2,
+     2
+    ],
+    "artifact": [
+     2,
+     3
+    ]
+   },
+   "median_s": 19.7,
+   "slowest_s": 102.5,
+   "failures": [
+    {
+     "case": "sc-when",
+     "problems": [
+      "for_minutes is 0, wanted 10"
+     ],
+     "seconds": 34.1,
+     "tools": [
+      "create_automation",
+      "shortcut_vocabulary",
+      "check_shortcut",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-weekday",
+     "problems": [
+      "no shortcut card was proposed"
+     ],
+     "seconds": 9.2,
+     "tools": [
+      "schedule_action",
+      "schedule_action"
+     ]
+    },
+    {
+     "case": "sc-conditional",
+     "problems": [
+      "no notify step"
+     ],
+     "seconds": 54.3,
+     "tools": [
+      "create_automation",
+      "shortcut_vocabulary",
+      "check_shortcut",
+      "check_shortcut",
+      "check_shortcut",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-night-mode",
+     "problems": [
+      "wanted night mode on at 23:00 and off at 06:00: []"
+     ],
+     "seconds": 37.8,
+     "tools": [
+      "get_security_settings",
+      "change_security_settings"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "trigger is not 'when the owner leaves': {'type': 'when', 'condition': {'field': 'owner_presence', 'op': '!=', 'value': 'home'}, 'for_minutes': 0}"
+     ],
+     "seconds": 26.4,
+     "tools": [
+      "create_automation",
+      "shortcut_vocabulary",
+      "check_shortcut",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-run",
+     "problems": [
+      "the shortcut was not run"
+     ],
+     "seconds": 19.7,
+     "tools": [
+      "get_house_state",
+      "set_security_mode"
+     ]
+    },
+    {
+     "case": "art-energy",
+     "problems": [
+      "no svg or canvas chart"
+     ],
+     "seconds": 30.0,
+     "tools": [
+      "energy_usage",
+      "show_artifact"
+     ]
+    }
+   ]
+  },
+  "nvidia/nemotron-3-super-120b-a12b:nothink": {
+   "passed": 12,
+   "total": 19,
+   "groups": {
+    "shortcut": [
+     4,
+     8
+    ],
+    "act": [
+     3,
+     4
+    ],
+    "card": [
+     2,
+     2
+    ],
+    "safe": [
+     2,
+     2
+    ],
+    "artifact": [
+     1,
+     3
+    ]
+   },
+   "median_s": 7.2,
+   "slowest_s": 38.3,
+   "failures": [
+    {
+     "case": "sc-when",
+     "problems": [
+      "no shortcut card was proposed"
+     ],
+     "seconds": 11.2,
+     "tools": [
+      "create_automation"
+     ]
+    },
+    {
+     "case": "sc-weekday",
+     "problems": [
+      "no shortcut card was proposed"
+     ],
+     "seconds": 5.9,
+     "tools": [
+      "schedule_action",
+      "schedule_action"
+     ]
+    },
+    {
+     "case": "sc-hot",
+     "problems": [
+      "no shortcut card was proposed"
+     ],
+     "seconds": 7.5,
+     "tools": [
+      "create_automation"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "no shortcut card was proposed"
+     ],
+     "seconds": 6.7,
+     "tools": [
+      "create_automation"
+     ]
+    },
+    {
+     "case": "sc-run",
+     "problems": [
+      "the shortcut was not run"
+     ],
+     "seconds": 7.0,
+     "tools": [
+      "get_house_state"
+     ]
+    },
+    {
+     "case": "art-energy",
+     "problems": [
+      "the page reaches outside: ['src=\"https://cdn.jsdelivr.net/npm/chart.js']"
+     ],
+     "seconds": 15.8,
+     "tools": [
+      "energy_usage",
+      "get_house_state",
+      "home_insights",
+      "show_artifact"
+     ]
+    },
+    {
+     "case": "art-panel",
+     "problems": [
+      "not every device has a control"
+     ],
+     "seconds": 19.7,
+     "tools": [
+      "get_house_state",
+      "show_artifact"
+     ]
+    }
+   ]
+  },
+  "nvidia/nemotron-3-super-120b-a12b": {
+   "passed": 16,
+   "total": 19,
+   "groups": {
+    "shortcut": [
+     5,
+     8
+    ],
+    "act": [
+     4,
+     4
+    ],
+    "card": [
+     2,
+     2
+    ],
+    "safe": [
+     2,
+     2
+    ],
+    "artifact": [
+     3,
+     3
+    ]
+   },
+   "median_s": 12.9,
+   "slowest_s": 115.2,
+   "failures": [
+    {
+     "case": "sc-when",
+     "problems": [
+      "trigger is not 'when occupancy is empty': {'type': 'when', 'condition': {'field': 'occupancy_duration_s', 'op': '>=', 'value': 600}, 'for_minutes': 0}"
+     ],
+     "seconds": 47.9,
+     "tools": [
+      "create_automation",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-weekday",
+     "problems": [
+      "no shortcut card was proposed"
+     ],
+     "seconds": 26.3,
+     "tools": [
+      "schedule_action",
+      "schedule_action"
+     ]
+    },
+    {
+     "case": "sc-movie",
+     "problems": [
+      "no step sets tv on",
+      "no two-hour wait",
+      "all_off is not conditional on the room being empty"
+     ],
+     "seconds": 83.0,
+     "tools": [
+      "shortcut_vocabulary",
+      "create_shortcut",
+      "check_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "check_shortcut",
+      "create_shortcut",
+      "check_shortcut",
+      "create_shortcut"
+     ]
+    }
+   ]
+  }
+ },
+ "round_3_two_runs_after_fixes": {
+  "lines": [
+   "nvidia/nemotron-3-ultra-550b-a55b              34/38  median  22.4 s  slowest 120.4 s  shortcut 12/16  act 8/8  card 4/4  safe 4/4  artifact 6/6",
+   "nvidia/nemotron-3-super-120b-a12b:nothink      30/38  median  12.1 s  slowest 146.9 s  shortcut 8/16  act 8/8  card 4/4  safe 4/4  artifact 6/6",
+   "nvidia/nemotron-3.5-lightning-30b-a3b          27/38  median  33.4 s  slowest 201.9 s  shortcut 10/16  act 8/8  card 4/4  safe 2/4  artifact 3/6"
+  ],
+  "note": "deepseek-v4.1-flash was stopped part way: 16-77 s per call made each job take minutes."
+ },
+ "round_4_three_runs_final": {
+  "nvidia/nemotron-3-ultra-550b-a55b": {
+   "passed": 51,
+   "total": 57,
+   "groups": {
+    "shortcut": [
+     20,
+     24
+    ],
+    "act": [
+     11,
+     12
+    ],
+    "card": [
+     6,
+     6
+    ],
+    "safe": [
+     6,
+     6
+    ],
+    "artifact": [
+     8,
+     9
+    ]
+   },
+   "median_s": 11.6,
+   "slowest_s": 122.8,
+   "failures": [
+    {
+     "case": "sc-when",
+     "problems": [
+      "trigger is not 'when occupancy is empty': {'type': 'when', 'condition': {'field': 'occupancy_duration_s', 'op': '>=', 'value': 600}, 'for_minutes': 0}"
+     ],
+     "seconds": 9.9,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "trigger is not 'when the owner leaves': {'type': 'when', 'condition': {'field': 'owner_presence', 'op': '!=', 'value': 'home'}, 'for_minutes': 0}"
+     ],
+     "seconds": 12.5,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "trigger is not 'when the owner leaves': {'type': 'when', 'condition': {'field': 'owner_presence', 'op': '!=', 'value': 'home'}, 'for_minutes': 1}"
+     ],
+     "seconds": 29.2,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "trigger is not 'when the owner leaves': {'type': 'when', 'condition': {'field': 'owner_presence', 'op': '!=', 'value': 'home'}, 'for_minutes': 0}"
+     ],
+     "seconds": 18.3,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "act-cancel",
+     "problems": [
+      "lane unavailable: I can't act right now: the AI service is unavailable (the model service is unavailable (nvidia/nemotron-3-ultra-550b-a55"
+     ],
+     "seconds": 122.8,
+     "tools": []
+    },
+    {
+     "case": "art-panel",
+     "problems": [
+      "lane unavailable: I can't act right now: the AI service is unavailable (the model service is unavailable (nvidia/nemotron-3-ultra-550b-a55"
+     ],
+     "seconds": 121.5,
+     "tools": []
+    }
+   ]
+  },
+  "nvidia/nemotron-3-super-120b-a12b": {
+   "passed": 50,
+   "total": 57,
+   "groups": {
+    "shortcut": [
+     18,
+     24
+    ],
+    "act": [
+     12,
+     12
+    ],
+    "card": [
+     6,
+     6
+    ],
+    "safe": [
+     5,
+     6
+    ],
+    "artifact": [
+     9,
+     9
+    ]
+   },
+   "median_s": 12.1,
+   "slowest_s": 66.1,
+   "failures": [
+    {
+     "case": "sc-when",
+     "problems": [
+      "for_minutes is 0, wanted 10"
+     ],
+     "seconds": 5.2,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-movie",
+     "problems": [
+      "no two-hour wait",
+      "all_off is not conditional on the room being empty"
+     ],
+     "seconds": 34.2,
+     "tools": [
+      "create_shortcut",
+      "create_shortcut",
+      "get_house_state",
+      "create_shortcut",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-movie",
+     "problems": [
+      "no two-hour wait",
+      "all_off is not conditional on the room being empty"
+     ],
+     "seconds": 66.1,
+     "tools": [
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-movie",
+     "problems": [
+      "no step sets tv on",
+      "no two-hour wait",
+      "all_off is not conditional on the room being empty"
+     ],
+     "seconds": 63.2,
+     "tools": [
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut",
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "trigger is not 'when the owner leaves': {'type': 'when', 'condition': {'field': 'occupancy', 'op': '==', 'value': 'empty'}, 'for_minutes': 0}"
+     ],
+     "seconds": 10.5,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "sc-away",
+     "problems": [
+      "trigger is not 'when the owner leaves': {'type': 'when', 'condition': {'field': 'occupancy', 'op': '==', 'value': 'empty'}, 'for_minutes': 0}"
+     ],
+     "seconds": 32.0,
+     "tools": [
+      "create_shortcut"
+     ]
+    },
+    {
+     "case": "safe-user",
+     "problems": [
+      "did not say an admin is needed"
+     ],
+     "seconds": 11.5,
+     "tools": [
+      "create_shortcut",
+      "create_shortcut"
+     ]
+    }
+   ]
+  }
+ },
+ "reading_round_4": "nemotron-3-ultra 51/57, median 11.6 s; 2 of its 6 misses were NIM read timeouts (no answer in 120 s) and 3 were the eval's own fault (it did not accept owner_presence != home as leaving; fixed after the run), so on the jobs it answered it was right 54 of 55. nemotron-3-super with thinking 50/57, median 12.1 s; its misses are real (read an empty room as leaving home; retried create_shortcut up to 11 times on one job; once gave a user a card for a shortcut only an admin may make instead of saying so).",
+ "chosen": {
+  "primary": "nvidia/nemotron-3-ultra-550b-a55b",
+  "fallback": "nvidia/nemotron-3-super-120b-a12b",
+  "where": "PLANNER_DEFAULT_MODEL / PLANNER_DEFAULT_FALLBACKS in Garuda_web.py; NIM_PLANNER_MODEL / NIM_PLANNER_FALLBACKS in .env override"
+ },
+ "lessons": [
+  "More than two jobs at once trips NIM's rate limit; it shows as 'the AI service is unavailable'.",
+  "Models call tools they were not given (the old rule drafter, by name): only offered tools run now.",
+  "Offered both rules and shortcuts, models drafted both; the planner is given shortcuts only.",
+  "Measure a model before making it the default: the first default (Kimi K3) made the owner's live planner requests wait minutes."
+ ]
+}

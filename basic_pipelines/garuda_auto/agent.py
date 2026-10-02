@@ -84,6 +84,7 @@ Shortcuts. Nothing is prebuilt: you compose a shortcut from capabilities when on
   A step's capability is any of your tools that changes or reads something, except ones that need a card.
   "for 10 minutes" in a request is for_minutes: 10 on a when trigger. To tell the person something from a shortcut, use a notify step. A wait is at most six hours: two things at two clock times are two shortcuts, or one schedule each.
   Fields a condition can test, with their values now: %(facts)s
+  What the less obvious ones mean: occupancy is empty/occupied as the camera sees the room; occupancy_duration_s is how long the room has been in its present state (empty or occupied), so "empty for 10 minutes" is occupancy == empty with for_minutes 10; owner_presence is home/away from the tracked phones and owner_event says arrived or left just after it changes; <device>_state is on/off; mode_<name> is on/off; time is HH:MM, weekday is 0 for Monday.
 
 Artifacts. When a chart, table, timeline, dashboard or small interactive tool would answer better than sentences, call show_artifact with one complete HTML document written for this request.
   - First get the real data with tools; put it in the page as JSON. Never invent numbers.

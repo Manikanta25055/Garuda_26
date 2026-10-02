@@ -272,8 +272,11 @@ def check_away(ph, r, p):
     prog = one_program(ph, r, p)
     if prog:
         t = prog["trigger"]
-        if t["type"] != "when" or not (mentions(t.get("condition"), "owner_presence", "away")
-                                      or mentions(t.get("condition"), "owner_event", "left")):
+        cond = json.dumps(t.get("condition") or {})
+        away = (mentions(t.get("condition"), "owner_presence", "away")
+                or mentions(t.get("condition"), "owner_event", "left")
+                or ('"owner_presence"' in cond and '"!="' in cond and '"home"' in cond))
+        if t["type"] != "when" or not away:
             p.append(f"trigger is not 'when the owner leaves': {t}")
         if not everything_off(prog["steps"]):
             p.append("nothing turns everything off")
