@@ -13,7 +13,9 @@ nothing else reads.
 """
 import os
 import threading
+import time
 import types
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import ClassVar
 
@@ -67,10 +69,33 @@ class Config:
     custom_voice_commands: dict = field(default_factory=dict)
 
 
+@dataclass
+class Alerts:
+    """The danger alert, the night-presence alarm, camera tamper and their anti-spam clocks."""
+    active: bool = False
+    end_time: float = 0.0   # epoch when current alert expires (3s visual banner)
+    danger_trigger_info: str = ""   # detection text snapshot that fired the alert
+    last_danger_conf: float = 0.0   # confidence of last danger detection (for logging)
+    danger_active: bool = False   # True while danger label is continuously detected
+    last_alert_time: object = None
+    history: dict = field(default_factory=dict)   # {ISO-date: alert_count} — persisted to disk
+    lock: object = field(default_factory=threading.Lock, repr=False, compare=False)   # guards active, end_time and danger_trigger_info
+    last_email_sent_time: int = 0
+    email_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
+    last_tamper_email: float = 0.0   # last camera-tamper email time (anti-spam)
+    night_presence_active: bool = False
+    night_presence_end_time: float = 0.0
+    night_presence_last_check: float = 0.0
+    night_presence_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
+    blind_frame_count: int = 0
+    blind_alert_sent: bool = False
+
+
 class State:
     def __init__(self):
         self.modes = Modes()
         self.config = Config()
+        self.alerts = Alerts()
 
 
 def forward(module, names: dict) -> None:
@@ -81,7 +106,7 @@ def forward(module, names: dict) -> None:
     """
     cls = type(module)
     if cls is types.ModuleType:
-        cls = type("_StateForwardingModule", (types.ModuleType,), {})
+        cls = type("_StateForwardingModule", (types.ModuleType,), {"_forwards": {}})
         module.__class__ = cls
     for old, (group, attr) in names.items():
         if old in vars(module):
@@ -94,3 +119,4 @@ def forward(module, names: dict) -> None:
             setattr(getattr(self.STATE, _g), _a, value)
 
         setattr(cls, old, property(fget, fset))
+        cls._forwards[old] = (group, attr)

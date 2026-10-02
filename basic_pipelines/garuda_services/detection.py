@@ -66,7 +66,7 @@ def _secondary_worker_loop():
 
 def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
-    with core._np_lock:
+    with core.STATE.alerts.night_presence_lock:
         win = dict(core.STATE.config.night_presence_window)   # snapshot — avoids race with config update
     if not win.get("enabled", True):
         return
@@ -79,9 +79,9 @@ def _check_night_presence():
     else:
         in_window = now_hm >= start or now_hm < end
     if in_window:
-        with core._np_lock:
-            core._night_presence_alert_active = True
-            core._night_presence_alert_end_time = time.time() + 10
+        with core.STATE.alerts.night_presence_lock:
+            core.STATE.alerts.night_presence_active = True
+            core.STATE.alerts.night_presence_end_time = time.time() + 10
 
 
 def app_callback(pad, info, user_data):
@@ -108,17 +108,17 @@ def app_callback(pad, info, user_data):
         gray = cv2.cvtColor(np.ascontiguousarray(frame[::4, ::4]), cv2.COLOR_RGB2GRAY)
         variance = float(np.var(gray))
         if variance < 50:   # nearly uniform → blocked/covered
-            core._blind_frame_count += 1
-            if core._blind_frame_count >= 300 and not core._blind_alert_sent:   # ~10s at 30fps
-                core._blind_alert_sent = True
+            core.STATE.alerts.blind_frame_count += 1
+            if core.STATE.alerts.blind_frame_count >= 300 and not core.STATE.alerts.blind_alert_sent:   # ~10s at 30fps
+                core.STATE.alerts.blind_alert_sent = True
                 core.log_system_update("[TAMPER] Camera blindness detected — lens may be covered!")
                 core._append_detection_perm("TAMPER", "camera_blind", 0.0, "camera appears blocked")
                 core.push_urgent_ws()
                 # Max-priority: bypass DND/idle and send alert email immediately
                 threading.Thread(target=core._send_tamper_email, daemon=True).start()
         else:
-            core._blind_frame_count = 0
-            core._blind_alert_sent = False
+            core.STATE.alerts.blind_frame_count = 0
+            core.STATE.alerts.blind_alert_sent = False
 
     roi = core.hailo.get_roi_from_buffer(buffer)
     detections = roi.get_objects_typed(core.hailo.HAILO_DETECTION)
@@ -157,7 +157,7 @@ def app_callback(pad, info, user_data):
                 core._label_consec_frames[label] = core._label_consec_frames.get(label, 0) + 1
                 if core._label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
                     danger_detected = True
-                core._last_danger_conf = confidence
+                core.STATE.alerts.last_danger_conf = confidence
             elif label.lower() == "person" or (label.lower() in _watch_set and label.lower() not in _danger_set):
                 # WATCH: log silently with 30s cooldown to avoid per-frame spam
                 now_t = time.time()
@@ -180,12 +180,12 @@ def app_callback(pad, info, user_data):
                          if d.get_label().lower() in _danger_set
                          and d.get_confidence() >= threshold]
     if danger_detected:
-        core._danger_trigger_info = text_info   # snapshot the frame that triggered
-        _captured_conf = core._last_danger_conf
+        core.STATE.alerts.danger_trigger_info = text_info   # snapshot the frame that triggered
+        _captured_conf = core.STATE.alerts.last_danger_conf
         _captured_label = _triggered_labels[0] if _triggered_labels else "danger"
-        _is_rising_edge = not core._danger_active
+        _is_rising_edge = not core.STATE.alerts.danger_active
         if _is_rising_edge:
-            core._danger_active = True
+            core.STATE.alerts.danger_active = True
         # Batch all danger work into ONE daemon thread per frame (not 4-5 separate ones)
         def _danger_work(lbl=_captured_label, conf=_captured_conf, rising=_is_rising_edge):
             core.trigger_software_alert()
@@ -197,8 +197,8 @@ def app_callback(pad, info, user_data):
                     core._watch_last_logged[_danger_key] = _now
                     core.log_scissors_detection(lbl)
                     core._append_detection_perm("DANGER", lbl, conf, "alert triggered")
-        with core._alert_lock:
-            _already_alerting = core._alert_active
+        with core.STATE.alerts.lock:
+            _already_alerting = core.STATE.alerts.active
         if _already_alerting and not _is_rising_edge:
             # The alert is up: keeping it up is two lock grabs, done here. A
             # new thread for each of the 60 frames a second a knife stays in
@@ -209,7 +209,7 @@ def app_callback(pad, info, user_data):
     elif not _triggered_labels:
         # Only reset when NO danger labels are seen at all this frame.
         # Avoids false reset during the 2-frame ramp-up period.
-        core._danger_active = False
+        core.STATE.alerts.danger_active = False
 
     # ── Drishti: one descriptor per observation ──────────────────────────────
     # observe() is pure arithmetic. Every piece of I/O a rule causes happens on
@@ -239,8 +239,8 @@ def app_callback(pad, info, user_data):
         # Cheap and thread-safe, so it runs here; once a second is plenty for
         # a banner that stays up ten seconds (it used to start a thread on
         # every frame with a person in it).
-        if _now - core._np_last_check >= 1.0:
-            core._np_last_check = _now
+        if _now - core.STATE.alerts.night_presence_last_check >= 1.0:
+            core.STATE.alerts.night_presence_last_check = _now
             try:
                 core._check_night_presence()
             except Exception as exc:

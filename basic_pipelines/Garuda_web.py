@@ -118,9 +118,6 @@ from hailo_rpi_common import (
 # Set SECURE_COOKIES=1 in .env when serving behind HTTPS (Cloudflare tunnel).
 # Leave unset for direct http://localhost access — secure=True drops cookies on plain HTTP.
 _COOKIE_SECURE = os.environ.get("SECURE_COOKIES", "0").lower() in ("1", "true", "yes")
-last_email_sent_time = 0
-_email_lock = threading.Lock()
-_danger_active = False   # True while danger label is continuously detected
 
 # ── Encrypted evidence exfiltration (AES-256-GCM + SSH) ─────────────────────
 # Set these in .env to enable off-site encrypted clip backup:
@@ -403,16 +400,26 @@ _core_state.forward(sys.modules[__name__], {
     "CUSTOM_VOICE_COMMANDS": ("config", "custom_voice_commands"),
 })
 
+_core_state.forward(sys.modules[__name__], {
+    "_alert_active": ("alerts", "active"), "_alert_end_time": ("alerts", "end_time"),
+    "_danger_trigger_info": ("alerts", "danger_trigger_info"),
+    "_last_danger_conf": ("alerts", "last_danger_conf"),
+    "_danger_active": ("alerts", "danger_active"),
+    "_last_alert_time": ("alerts", "last_alert_time"), "_alert_history": ("alerts", "history"),
+    "_alert_lock": ("alerts", "lock"), "last_email_sent_time": ("alerts", "last_email_sent_time"),
+    "_email_lock": ("alerts", "email_lock"), "_last_tamper_email": ("alerts", "last_tamper_email"),
+    "_night_presence_alert_active": ("alerts", "night_presence_active"),
+    "_night_presence_alert_end_time": ("alerts", "night_presence_end_time"),
+    "_np_last_check": ("alerts", "night_presence_last_check"),
+    "_np_lock": ("alerts", "night_presence_lock"),
+    "_blind_frame_count": ("alerts", "blind_frame_count"),
+    "_blind_alert_sent": ("alerts", "blind_alert_sent"),
+})
+
 NARADA_WAKE_WORD = "narada"
 
-_alert_active = False
-_alert_end_time     = 0.0   # epoch when current alert expires (3s visual banner)
-_danger_trigger_info = ""   # detection text snapshot that fired the alert
-_last_danger_conf    = 0.0  # confidence of last danger detection (for logging)
 _app_start_time = time.time()
 _detections_today = 0
-_last_alert_time = None
-_alert_lock = threading.Lock()   # guards _alert_active/_alert_end_time/_danger_trigger_info
 
 # ── Dead man's switch ────────────────────────────────────
 _last_heartbeat = time.time()      # updated by GET /api/heartbeat
@@ -427,9 +434,6 @@ _DEADMAN_REALERT_INTERVAL = 3600   # min seconds between repeat alerts (anti-spa
 _deadman_last_alert = 0.0
 
 # ── Camera blindness detection ───────────────────────────
-_blind_frame_count = 0
-_blind_alert_sent = False
-_last_tamper_email = 0.0            # last camera-tamper email time (anti-spam)
 _TAMPER_EMAIL_COOLDOWN = 3600      # min seconds between camera-tamper emails
 _class_counts_today = {}   # class_name → count since startup
 _total_frames = 0          # total inference frames (for avg FPS)
@@ -443,9 +447,6 @@ _log_buffer_lock = threading.Lock()
 _label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
 
 # ── Night presence alarm (the window itself is STATE.config.night_presence_window) ──
-_night_presence_alert_active = False
-_night_presence_alert_end_time = 0.0
-_np_lock = threading.Lock()
 
 # ── Clip recording ────────────────────────────────────────
 _clip_writer     = None
@@ -454,7 +455,6 @@ _clip_start_time = 0.0
 _clip_path       = ""
 
 # ── Phone presence detection ──────────────────────────────
-_alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
 _presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
 MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
 MASTER_KEY_OTP: str | None = None
@@ -670,7 +670,6 @@ try:
 except Exception:
     _IST = None   # no timezone data: fall back to the system clock
 
-_np_last_check = 0.0
 
 
 PI_CAMERA_SIZE = (1280, 720)
@@ -926,7 +925,7 @@ NARADA_VOICE = NaradaVoice(
     voice_id=os.environ.get("ELEVENLABS_VOICE_ID", ""),
 )
 DIGEST = Digest(HOME, NIM_CHAT,
-                alerts_fn=lambda: _alert_history.get(datetime.date.today().isoformat(), 0))
+                alerts_fn=lambda: STATE.alerts.history.get(datetime.date.today().isoformat(), 0))
 HOME.digest_fn = DIGEST.text
 
 

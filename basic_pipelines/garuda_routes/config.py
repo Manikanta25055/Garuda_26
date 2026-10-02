@@ -120,7 +120,7 @@ def build_config_router(core):
             core.STATE.modes.schedule = clean
         # Night presence window
         if data.night_presence_start is not None or data.night_presence_end is not None or data.night_presence_enabled is not None:
-            with core._np_lock:
+            with core.STATE.alerts.night_presence_lock:
                 if data.night_presence_start is not None:
                     if core._HHMM_RE.match(data.night_presence_start):
                         core.STATE.config.night_presence_window["start"] = data.night_presence_start

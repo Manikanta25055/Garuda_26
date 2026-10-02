@@ -37,17 +37,17 @@ def _home_state_summary():
 
 def _recent_alert_history(days: int = 120) -> dict:
     cutoff = (datetime.date.today() - datetime.timedelta(days=days)).isoformat()
-    return {day: n for day, n in core._alert_history.items() if str(day) >= cutoff}
+    return {day: n for day, n in core.STATE.alerts.history.items() if str(day) >= cutoff}
 
 
 def get_state_dict():
     # Expire alert once the wall-clock timer runs out
     _just_cleared = False
-    with core._alert_lock:
-        if core._alert_active and core._alert_end_time > 0 and time.time() >= core._alert_end_time:
-            core._alert_active = False
-            core._alert_end_time = 0.0
-            core._danger_trigger_info = ""
+    with core.STATE.alerts.lock:
+        if core.STATE.alerts.active and core.STATE.alerts.end_time > 0 and time.time() >= core.STATE.alerts.end_time:
+            core.STATE.alerts.active = False
+            core.STATE.alerts.end_time = 0.0
+            core.STATE.alerts.danger_trigger_info = ""
             _just_cleared = True
     if _just_cleared:
         core.push_urgent_ws()   # push cleared state outside lock to avoid deadlock
@@ -133,13 +133,13 @@ def get_state_dict():
     # If no HEARTBEAT_KEY is configured, watchdog is N/A (always OK)
     _hb_key = os.environ.get("HEARTBEAT_KEY", "")
     watchdog_ok = True if not _hb_key else (time.time() - core._last_heartbeat) < core._DEADMAN_TIMEOUT
-    camera_blind = core._blind_alert_sent
+    camera_blind = core.STATE.alerts.blind_alert_sent
 
     # Expire night presence alert if window ended
-    with core._np_lock:
-        if core._night_presence_alert_active and time.time() > core._night_presence_alert_end_time:
-            core._night_presence_alert_active = False
-    np_alert = core._night_presence_alert_active
+    with core.STATE.alerts.night_presence_lock:
+        if core.STATE.alerts.night_presence_active and time.time() > core.STATE.alerts.night_presence_end_time:
+            core.STATE.alerts.night_presence_active = False
+    np_alert = core.STATE.alerts.night_presence_active
 
     return {
         "modes": {
@@ -150,10 +150,10 @@ def get_state_dict():
             "emergency": core.STATE.modes.emergency,
             "privacy": core.STATE.modes.privacy,
         },
-        "alert_active": core._alert_active,
+        "alert_active": core.STATE.alerts.active,
         "night_presence_alert": np_alert,
-        "danger_info": core._danger_trigger_info,   # only non-empty during a danger alert
-        "last_alert": core._last_alert_time.isoformat() if core._last_alert_time else None,
+        "danger_info": core.STATE.alerts.danger_trigger_info,   # only non-empty during a danger alert
+        "last_alert": core.STATE.alerts.last_alert_time.isoformat() if core.STATE.alerts.last_alert_time else None,
         "uptime": uptime_str,
         "uptime_seconds": uptime,
         "system_log": core.system_updates_log[-50:],

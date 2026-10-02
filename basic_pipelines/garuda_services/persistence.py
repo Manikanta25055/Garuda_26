@@ -101,7 +101,7 @@ def _load_alert_history():
             with open(core.ALERT_HISTORY_FILE) as f:
                 data = json.load(f)
             if isinstance(data, dict):
-                core._alert_history = data
+                core.STATE.alerts.history = data
             elif isinstance(data, list):
                 # Legacy list format — migrate to {date: count} by counting entries per day
                 migrated: dict = {}
@@ -109,20 +109,20 @@ def _load_alert_history():
                     if isinstance(entry, dict) and "timestamp" in entry:
                         day = entry["timestamp"][:10]
                         migrated[day] = migrated.get(day, 0) + 1
-                core._alert_history = migrated
-                core._atomic_json_write(core.ALERT_HISTORY_FILE, core._alert_history)
+                core.STATE.alerts.history = migrated
+                core._atomic_json_write(core.ALERT_HISTORY_FILE, core.STATE.alerts.history)
             else:
-                core._alert_history = {}
+                core.STATE.alerts.history = {}
     except Exception:
-        core._alert_history = {}
+        core.STATE.alerts.history = {}
 
 
 def _record_alert_activity():
     """Increment today's alert count and persist to disk."""
     today = datetime.date.today().isoformat()
-    core._alert_history[today] = core._alert_history.get(today, 0) + 1
+    core.STATE.alerts.history[today] = core.STATE.alerts.history.get(today, 0) + 1
     try:
-        core._atomic_json_write(core.ALERT_HISTORY_FILE, core._alert_history)
+        core._atomic_json_write(core.ALERT_HISTORY_FILE, core.STATE.alerts.history)
     except Exception:
         pass
 

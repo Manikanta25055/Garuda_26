@@ -31,18 +31,18 @@ def trigger_software_alert():
         night = core.STATE.modes.night
     if dnd or idle:
         return
-    with core._alert_lock:
-        was_active = core._alert_active
+    with core.STATE.alerts.lock:
+        was_active = core.STATE.alerts.active
         # Extend the 3s window every frame scissors is visible — alert stays on
         # while scissors is in frame and expires 3s after it disappears.
-        core._alert_active = True
-        core._alert_end_time = time.time() + 3
+        core.STATE.alerts.active = True
+        core.STATE.alerts.end_time = time.time() + 3
     if not was_active:
         # New alert starting: log, record, sound, email
         if night:
             core._perm_write(core.NIGHT_MODE_LOG_FILE,
                              datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        core._last_alert_time = datetime.datetime.now()
+        core.STATE.alerts.last_alert_time = datetime.datetime.now()
         core._record_alert_activity()
         core.log_system_update("Alert triggered.")
         core.push_urgent_ws()
@@ -61,11 +61,11 @@ def send_email_alert():
         night = core.STATE.modes.night
     if email_off or idle:
         return
-    with core._email_lock:
+    with core.STATE.alerts.email_lock:
         current_time = time.time()
-        if (current_time - core.last_email_sent_time) < core.STATE.config.email_cooldown:
+        if (current_time - core.STATE.alerts.last_email_sent_time) < core.STATE.config.email_cooldown:
             return
-        core.last_email_sent_time = current_time
+        core.STATE.alerts.last_email_sent_time = current_time
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     label_str = ", ".join(core.STATE.config.danger_labels)
     subject = f"Danger Object Detected — {label_str}"
@@ -95,9 +95,9 @@ def _send_tamper_email():
     if not core.STATE.config.email_sender or not core.STATE.config.email_recipients:
         return
     now = time.time()
-    if (now - core._last_tamper_email) < core._TAMPER_EMAIL_COOLDOWN:
+    if (now - core.STATE.alerts.last_tamper_email) < core._TAMPER_EMAIL_COOLDOWN:
         return
-    core._last_tamper_email = now
+    core.STATE.alerts.last_tamper_email = now
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     body = (
         f"CRITICAL: Camera tamper detected at {now_str}.\n"

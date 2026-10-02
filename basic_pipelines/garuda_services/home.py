@@ -69,9 +69,9 @@ def _home_presence():
 
 
 def _home_security():
-    if core._alert_active:
+    if core.STATE.alerts.active:
         return "danger"
-    if core._night_presence_alert_active:
+    if core.STATE.alerts.night_presence_active:
         return "night_presence"
     return "clear"
 
@@ -105,6 +105,6 @@ def _home_set_mode(mode, value, actor):
 
 
 def _home_security_summary():
-    return {"alert_active": core._alert_active, "night_presence_alert": core._night_presence_alert_active,
-            "alerts_today": core._alert_history.get(datetime.date.today().isoformat(), 0),
+    return {"alert_active": core.STATE.alerts.active, "night_presence_alert": core.STATE.alerts.night_presence_active,
+            "alerts_today": core.STATE.alerts.history.get(datetime.date.today().isoformat(), 0),
             "camera_live": (time.time() - core._frame_ts) < 5.0}

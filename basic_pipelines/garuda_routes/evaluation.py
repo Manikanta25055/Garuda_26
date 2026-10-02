@@ -64,7 +64,7 @@ def build_evaluation_router(core):
             "total_frames": core._total_frames,
             "modes": modes,
             "cascade": cm,
-            "alert_active": core._alert_active,
+            "alert_active": core.STATE.alerts.active,
         }
 
     return router

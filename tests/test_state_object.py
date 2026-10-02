@@ -60,3 +60,18 @@ def test_mail_wrapper_reads_the_state(monkeypatch):
     monkeypatch.setattr(gw, "EMAIL_RECIPIENTS", ["a@example.com"])
     gw._send_mail("s", "b")
     assert sent == {"sender": "pi@example.com", "password": "secret", "to": ["a@example.com"]}
+
+
+def test_every_forwarded_name_is_one_value_with_its_state_field(monkeypatch):
+    """Covers every group, including ones added after this test was written."""
+    forwards = type(gw)._forwards
+    assert len(forwards) >= 19
+    for old, (group, attr) in sorted(forwards.items()):
+        assert old not in vars(gw), old
+        holder = getattr(gw.STATE, group)
+        original = getattr(holder, attr)
+        marker = object()
+        monkeypatch.setattr(gw, old, marker)
+        assert getattr(holder, attr) is marker, old
+        monkeypatch.undo()
+        assert getattr(holder, attr) is original and getattr(gw, old) is original, old
