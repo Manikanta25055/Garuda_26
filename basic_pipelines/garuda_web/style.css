@@ -5036,3 +5036,6 @@ body { overscroll-behavior: auto; }
 .nx-info-h + .nx-art-open { border-top: 0; }
 .nx-art-open span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nx-art-open b { font-weight: 500; color: var(--t2); white-space: nowrap; }
+
+.nx-msg.nx-shot { flex-shrink: 0; display: grid; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.55); }
+.nx-shot img { display: block; width: 100%; border-radius: 12px; background: rgba(255,255,255,0.06); aspect-ratio: 16 / 9; object-fit: cover; }

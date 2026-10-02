@@ -154,6 +154,7 @@ class HomeAgent:
         self._turn.actions = []
         self._turn.confirms = []
         self._turn.artifacts = []
+        self._turn.images = []
         self._turn.steps = []
         self._turn.progress = progress
         self._turn.voice = voice
@@ -363,6 +364,7 @@ class HomeAgent:
             return {"reply": reply, "lane": "agent", "actions": actions,
                     "proposal": proposal, "memory": memory, "model": chat.last_model,
                     "confirm": self._turn.confirms, "artifacts": self._turn.artifacts,
+                    "images": self._turn.images,
                     "steps": self._turn.steps, "planner": planner,
                     "injection": self._turn.injected}
 
@@ -499,6 +501,21 @@ class HomeAgent:
     def _tool_hand_to_planner(self, args, user, role):
         # Reached only when the planner is the one calling, or there is none.
         return {"error": "there is no planner to hand this to; do what you can with your tools"}
+
+    def _tool_take_snapshot(self, args, user, role):
+        if getattr(self._turn, "voice", False):
+            return {"error": "a spoken conversation cannot show a picture; they can open the "
+                             "camera on the dashboard"}
+        security = self.security_fn() or {}
+        if isinstance(security, dict) and security.get("camera_live") is False:
+            return {"error": "the camera is not delivering frames right now"}
+        if not hasattr(self._turn, "images"):
+            self._turn.images = []
+        # The chat page asks the camera for the picture itself, as the signed-in
+        # person; nothing of it passes through the model.
+        self._turn.images.append({"kind": "snapshot", "at": self._clock()})
+        return {"ok": True, "result": "Showed the camera's view",
+                "note": "The picture is on their screen. You cannot see it: do not describe it."}
 
     def _tool_show_artifact(self, args, user, role):
         if self.artifacts is None:

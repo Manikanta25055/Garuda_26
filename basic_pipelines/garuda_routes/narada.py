@@ -55,6 +55,7 @@ def build_narada_router(core):
                 "observation": result.get("observation"),
                 "confirm": result.get("confirm", []),
                 "artifacts": result.get("artifacts", []), "steps": result.get("steps", []),
+                "images": result.get("images", []),
                 "planner": bool(result.get("planner")),
                 "route": result.get("route"), "model": result.get("model")}
 
@@ -83,8 +84,8 @@ def build_narada_router(core):
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
             meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer",
-                                               "observation", "confirm", "artifacts", "steps",
-                                               "planner", "model")}
+                                               "observation", "confirm", "artifacts", "images",
+                                               "steps", "planner", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
             for word in re.findall(r"\S+\s*", result["reply"]):
                 loop.call_soon_threadsafe(queue.put_nowait, ("token", word))

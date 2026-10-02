@@ -302,7 +302,8 @@ def test_security_scope_never_touches_devices(house):
     assert home.on_devices() == []
     offered = {t["function"]["name"] for t in chat.requests[0]["tools"]}
     # Memory is the one thing both products share: the same household is talking.
-    assert offered == {"get_security_state", "set_security_mode", "remember_fact", "forget_fact"}
+    assert offered == {"get_security_state", "set_security_mode", "remember_fact", "forget_fact",
+                       "take_snapshot"}          # the camera's view is Garuda's own
     assert "not available in Garuda" in chat.requests[1]["messages"][-1]["content"]
 
 

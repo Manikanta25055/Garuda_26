@@ -2593,6 +2593,7 @@ const G = (() => {
     _apiFn: api,
     _apiStream: apiStream,
     _base: () => (getBackend() || '').replace(/\/$/, ''),
+    _authQuery: () => (_token ? 'token=' + encodeURIComponent(_token) : ''),
   };
 })();
 window.G = G;

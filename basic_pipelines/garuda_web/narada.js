@@ -578,6 +578,7 @@ const N = (() => {
         const card = bubble('extra', '');
         if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
       }
+      snapshots(res.images);
       artifactFrames(res.artifacts);
       confirmCards(res.confirm);
       memoryChips(res.memory);
@@ -772,6 +773,27 @@ const N = (() => {
       if (!/expired/i.test(msg.textContent)) buttons.forEach(b => { b.disabled = false; });
       haptic('error');
     }
+  }
+
+  // The camera's view, asked for in words. This page fetches the picture as
+  // the signed-in person; the model never sees it.
+  function snapshots(list) {
+    for (const im of list || []) {
+      if (im.kind !== 'snapshot') continue;
+      const el = bubble('extra', '');
+      if (!el) continue;
+      el.classList.add('nx-shot');
+      const auth = G._authQuery ? G._authQuery() : '';
+      const img = new Image();
+      img.alt = 'What the camera sees now';
+      img.onload = scrollLog;
+      img.onerror = () => { el.textContent = 'The camera has no picture to show right now.'; };
+      img.src = `${G._base ? G._base() : ''}/api/snapshot?t=${Date.now()}${auth ? '&' + auth : ''}`;
+      const cap = document.createElement('span');
+      cap.textContent = 'Camera · ' + new Date((im.at || Date.now() / 1000) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      el.append(img, cap);
+    }
+    if ((list || []).length) scrollLog();
   }
 
   // ── Artifacts: pages Narada writes ─────────────────────────

@@ -141,3 +141,15 @@ def test_reaching_for_a_tool_it_does_not_have_is_a_handover_too(house):
     b = agent(ctx, home, alone)
     assert not b.handle("rename the lamp", user="mani", role="admin")["planner"]
     assert "call hand_to_planner" not in alone.requests[0]["messages"][0]["content"]
+
+
+def test_asking_for_the_cameras_view_shows_a_picture_the_model_never_sees(house):
+    ctx, home = house
+    chat = ScriptedChat([completion(tool_calls=[call("take_snapshot", {})]), completion("Here it is.")])
+    a = agent(ctx, home, chat, security_fn=lambda: {"camera_live": True})
+    result = a.handle("show me the camera", user="mani", role="user")
+    assert result["images"] and result["images"][0]["kind"] == "snapshot"
+    assert "cannot see it" in json.dumps(chat.requests[1]["messages"][-1])
+    down = agent(ctx, home, ScriptedChat([]), security_fn=lambda: {"camera_live": False})
+    down._turn.voice = False
+    assert "not delivering" in down._run_tool("take_snapshot", {}, "mani", "user")["error"]

@@ -240,6 +240,10 @@ CAPABILITIES += (
                "devices, people or settings, or showing a chart, table or small tool.",
                {"why": {"type": "string", "description": "a few words on what is needed"}},
                security=True),
+    Capability("take_snapshot",
+               "Show the person what the camera sees right now, as a still picture in the chat. "
+               "You cannot see the picture yourself.",
+               security=True, routes=("GET /api/snapshot",)),
     Capability("show_artifact",
                "Show the person a page you write: a chart, table, dashboard or small tool. "
                "Give one complete, self-contained HTML document.",
@@ -382,19 +386,7 @@ def names(*, security=None, changing=None):
 
 # Routes that will become capabilities: route -> (capability, least role, tier).
 # The plan for the next step, kept here so the coverage test stays honest.
-PLANNED = {
-    # schedules, automations, scenes
-    # devices
-    # what the house has been doing
-    # camera
-    "GET /api/snapshot": ("take_snapshot", "user", "read"),
-    # memory
-    # settings
-    # presence
-    # upkeep
-    # people (the owner's call, 2026-10-02: reachable, behind a confirm card;
-    # a password is typed into the card, never into the conversation)
-}
+PLANNED = {}
 
 # Kept from the model on purpose: route -> why.
 NEVER = {
