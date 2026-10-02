@@ -214,6 +214,7 @@ try:
     from .garuda_routes.sockets import build_sockets_router
     from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from .garuda_routes.events import build_events_router
+    from .garuda_routes.shortcuts import build_shortcuts_router
     from .garuda_services import presence as _svc_presence
     from .garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
@@ -246,7 +247,8 @@ try:
         voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from .garuda_services import home as _svc_home
     from .garuda_services.home import (  # noqa: F401
-        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary)
+        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _shortcut_facts, _shortcut_role_of, _shortcut_notify)
     from .garuda_services import middleware as _svc_middleware
     from .garuda_services.middleware import (  # noqa: F401
         global_rate_limit, product_scope, security_headers)
@@ -285,6 +287,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.sockets import build_sockets_router
     from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
     from basic_pipelines.garuda_routes.events import build_events_router
+    from basic_pipelines.garuda_routes.shortcuts import build_shortcuts_router
     from basic_pipelines.garuda_services import presence as _svc_presence
     from basic_pipelines.garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
@@ -317,7 +320,8 @@ except ImportError:
         voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from basic_pipelines.garuda_services import home as _svc_home
     from basic_pipelines.garuda_services.home import (  # noqa: F401
-        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary)
+        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _shortcut_facts, _shortcut_role_of, _shortcut_notify)
     from basic_pipelines.garuda_services import middleware as _svc_middleware
     from basic_pipelines.garuda_services.middleware import (  # noqa: F401
         global_rate_limit, product_scope, security_headers)
@@ -644,6 +648,7 @@ async def _lifespan(app):
     _drishti_auth.prune_expired()
     DRISHTI_RUNTIME.start()
     HOME.start()
+    SHORTCUTS.start()
     log_system_update(
         f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
         f"{len(DRISHTI_CTX.registry.devices)} devices")
@@ -657,6 +662,7 @@ async def _lifespan(app):
     SUPERVISOR.spawn("mode-schedule", _schedule_monitor)
     SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
+    SHORTCUTS.stop()
     HOME.stop()
     DRISHTI_RUNTIME.stop()
     # Flush any remaining buffered log lines before exit
@@ -778,6 +784,7 @@ try:
     from .garuda_auto.router import RouterBackend
     from .garuda_auto.agent import HomeAgent
     from .garuda_auto.site_calls import SiteCaller
+    from .garuda_auto import shortcuts as _shortcuts_mod
     from .narada_brain import Brain
     from .garuda_auto.digest import Digest
     from .garuda_auto.narada_voice import NaradaVoice
@@ -790,6 +797,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.router import RouterBackend
     from basic_pipelines.garuda_auto.agent import HomeAgent
     from basic_pipelines.garuda_auto.site_calls import SiteCaller
+    from basic_pipelines.garuda_auto import shortcuts as _shortcuts_mod
     from basic_pipelines.narada_brain import Brain
     from basic_pipelines.garuda_auto.digest import Digest
     from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
@@ -835,6 +843,13 @@ AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
 AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
 AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
 
+# Shortcuts: programs made of those capabilities, written by Narada on request
+# (garuda_auto/shortcuts.py). One runs as its maker, with the role they have now.
+SHORTCUTS = _shortcuts_mod.ShortcutEngine(
+    _shortcuts_mod.ShortcutStore(os.path.join(DRISHTI_DATA_DIR, "shortcuts.json")),
+    do_fn=AGENT._run_tool, facts_fn=_shortcut_facts, role_of=_shortcut_role_of,
+    notify_fn=_shortcut_notify, on_change=lambda: push_urgent_ws())
+
 
 # ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.
 NARADA_VOICE = NaradaVoice(
@@ -859,6 +874,8 @@ fastapi_app.include_router(build_home_router(
 # ── Routes (one module per area in garuda_routes/) ───────────────────────────
 
 fastapi_app.include_router(build_pages_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_shortcuts_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 

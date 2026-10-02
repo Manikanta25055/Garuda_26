@@ -229,6 +229,40 @@ CAPABILITIES += (
     _site("list_users", "People who can sign in, with their roles.", "GET /api/users",
           role="admin", security=True),
 )
+_PROGRAM = {"type": "object", "description":
+            'the shortcut: {"name", "description", "trigger", "conditions"?, "steps", '
+            '"cooldown_s"?}. See shortcut_vocabulary for the grammar\'s facts and steps.'}
+
+CAPABILITIES += (
+    _site("list_shortcuts", "Saved shortcuts with their steps, and any that are running now.",
+          "GET /api/home/shortcuts"),
+    _site("shortcut_vocabulary",
+          "What a shortcut can be built from: every fact a condition may test, with its value "
+          "now, and every capability a step may use.",
+          "GET /api/home/shortcuts/vocabulary"),
+    _site("check_shortcut", "Check a shortcut without saving it; returns the problem, or the "
+                            "shortcut said back in plain lines.",
+          "POST /api/home/shortcuts/check", {"program": _PROGRAM}, ["program"]),
+    _site("run_shortcut", "Run a saved shortcut now.", "POST /api/home/shortcuts/{shortcut_id}/run",
+          {"shortcut_id": {"type": "string", "description": "the shortcut's id or its name"}},
+          ["shortcut_id"], tier="change"),
+    _site("cancel_shortcut", "Stop a shortcut that is running.",
+          "POST /api/home/shortcuts/{shortcut_id}/cancel", {"shortcut_id": _ID("shortcut")},
+          ["shortcut_id"], tier="change"),
+    _site("pause_shortcut", "Pause a shortcut's trigger, or resume a paused one.",
+          "POST /api/home/shortcuts/{shortcut_id}/toggle", {"shortcut_id": _ID("shortcut")},
+          ["shortcut_id"], tier="change"),
+    # A shortcut is saved, changed or removed only after the person has read it on a card.
+    _site("create_shortcut", "Save a new shortcut. The person sees it on a card and confirms.",
+          "POST /api/home/shortcuts", {"program": _PROGRAM}, ["program"], tier="confirm"),
+    _site("update_shortcut", "Replace a saved shortcut with a changed version.",
+          "PATCH /api/home/shortcuts/{shortcut_id}",
+          {"shortcut_id": _ID("shortcut"), "program": _PROGRAM}, ["shortcut_id", "program"],
+          tier="confirm"),
+    _site("delete_shortcut", "Delete a saved shortcut.", "DELETE /api/home/shortcuts/{shortcut_id}",
+          {"shortcut_id": _ID("shortcut")}, ["shortcut_id"], tier="confirm"),
+)
+
 # Done only after the person taps Confirm on a card (confirmations.py). The
 # model proposes; it cannot carry these out.
 CAPABILITIES += (

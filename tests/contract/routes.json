@@ -362,6 +362,60 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/home/shortcuts",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/shortcuts",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/shortcuts/check",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/home/shortcuts/vocabulary",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/home/shortcuts/{shortcut_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "PATCH",
+  "path": "/api/home/shortcuts/{shortcut_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/shortcuts/{shortcut_id}/cancel",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/shortcuts/{shortcut_id}/run",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/home/shortcuts/{shortcut_id}/toggle",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/home/suggestions",
   "guard": "require_session"
  },

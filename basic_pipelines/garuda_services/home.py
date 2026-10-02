@@ -108,3 +108,36 @@ def _home_security_summary():
     return {"alert_active": core.STATE.alerts.active, "night_presence_alert": core.STATE.alerts.night_presence_active,
             "alerts_today": core.STATE.alerts.history.get(datetime.date.today().isoformat(), 0),
             "camera_live": (time.time() - core.STATE.camera.frame_ts) < 5.0}
+
+
+def _shortcut_facts():
+    """What a shortcut's condition may test: the room as the camera and sensors
+    report it, each device's state, modes, alerts, presence and the camera."""
+    facts = {k: v for k, v in dict(core.DRISHTI_CTX.descriptor).items()
+             if isinstance(v, (str, int, float, bool))}
+    for device in core.HOME.devices():
+        facts[f"{device['id']}_state"] = device["state"]
+    for name in core.STATE.modes.FLAGS:
+        facts[f"mode_{name}"] = "on" if core.STATE.modes.get(name) else "off"
+    facts["alert"] = "active" if core.STATE.alerts.active else "clear"
+    facts["alert_reason"] = core.STATE.alerts.danger_trigger_info or "none"
+    facts["night_presence_alert"] = "on" if core.STATE.alerts.night_presence_active else "off"
+    facts["camera"] = "live" if (time.time() - core.STATE.camera.frame_ts) < 5.0 else "down"
+    facts["internet"] = "online" if core.STATE.system.net_online else "offline"
+    facts["recording"] = "on" if core.STATE.camera.clip_writer is not None else "off"
+    for phone in core.STATE.config.known_devices:
+        slug = "".join(c if c.isalnum() else "_" for c in phone.get("name", "").lower()).strip("_")
+        if slug:
+            facts[f"phone_{slug}"] = "home" if core._mac_online(core._device_mac(phone)) else "away"
+    return facts
+
+
+def _shortcut_role_of(username):
+    """The role a shortcut's maker has now; None once they can no longer sign in."""
+    user = core.STATE.auth.users.get(username)
+    return user.get("role", "user") if user else None
+
+
+def _shortcut_notify(text, email=False):
+    core.HOME.notice("shortcut", text, email=email)
+    core.log_system_update(f"[SHORTCUT] {text}")

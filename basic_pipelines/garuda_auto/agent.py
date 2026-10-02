@@ -347,7 +347,21 @@ class HomeAgent:
         missing = [r for r in capability.required if r in capability.params and r not in args]
         if missing:
             return {"error": f"{', '.join(missing)} needed"}
+        rendered = None
+        if "program" in capability.params:
+            # Checked now, so the model hears the problem and can fix it; and the
+            # card shows the shortcut in words, not as the model's JSON.
+            checked = self.site.call("POST", "/api/home/shortcuts/check",
+                                     {"program": args.get("program")},
+                                     {"username": user, "role": role})
+            if "error" in checked:
+                return {"error": checked["error"]}
+            args = {**args, "program": checked["program"]}
+            rendered = {"name": checked["program"]["name"], **checked["rendered"]}
         card = self.confirmations.add(capability, args, user, key=getattr(self._turn, "key", user))
+        if rendered:
+            card["shortcut"] = rendered
+            card["lines"] = [l for l in card["lines"] if l["name"] != "program"]
         if not hasattr(self._turn, "confirms"):
             self._turn.confirms = []
         self._turn.confirms.append(card)
