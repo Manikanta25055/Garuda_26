@@ -63,9 +63,9 @@ def build_control_router(core):
         provided = key or request.headers.get("X-Heartbeat-Key", "")
         # Only reset dead-man's switch if key matches (or no key configured)
         if not _HEARTBEAT_KEY or hmac.compare_digest(str(provided).encode(), _HEARTBEAT_KEY.encode()):
-            core._last_heartbeat = time.time()
-            core._deadman_alert_sent = False
-            core._heartbeat_ever = True
+            core.STATE.system.last_heartbeat = time.time()
+            core.STATE.system.deadman_alert_sent = False
+            core.STATE.system.heartbeat_ever = True
         return {"ok": True, "uptime": int(time.time() - core._app_start_time)}
 
     @router.post("/api/emergency-stop")

@@ -40,13 +40,13 @@ def _connectivity_monitor():
         online = core._check_connectivity()
         if online and not was_online:
             # Just came back online
-            core._net_online = True
+            core.STATE.system.net_online = True
             pending = core.get_pending_count()
             core.log_system_update(f"[NETWORK] Internet restored — {pending} queued events ready to sync")
             core.push_urgent_ws()
         elif not online and was_online:
             # Just went offline
-            core._net_online = False
+            core.STATE.system.net_online = False
             core.log_system_update("[NETWORK] Internet connection lost — events will be queued locally")
             core.push_urgent_ws()
         was_online = online
@@ -66,14 +66,14 @@ def _deadman_monitor():
     while True:
         time.sleep(60)
         # No heartbeat has ever arrived → no monitor configured, not tampering.
-        if not core._heartbeat_ever:
+        if not core.STATE.system.heartbeat_ever:
             continue
-        elapsed = time.time() - core._last_heartbeat
+        elapsed = time.time() - core.STATE.system.last_heartbeat
         now = time.time()
-        if elapsed > core._DEADMAN_TIMEOUT and not core._deadman_alert_sent \
-                and (now - core._deadman_last_alert) > core._DEADMAN_REALERT_INTERVAL:
-            core._deadman_alert_sent = True
-            core._deadman_last_alert = now
+        if elapsed > core._DEADMAN_TIMEOUT and not core.STATE.system.deadman_alert_sent \
+                and (now - core.STATE.system.deadman_last_alert) > core._DEADMAN_REALERT_INTERVAL:
+            core.STATE.system.deadman_alert_sent = True
+            core.STATE.system.deadman_last_alert = now
             core.log_system_update(f"[TAMPER] No heartbeat in {int(elapsed)}s — possible system tampering!")
             # Send tamper alert email
             try:

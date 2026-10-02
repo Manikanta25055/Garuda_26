@@ -18,7 +18,7 @@ def build_logs_router(core):
             "system_log": core.system_updates_log,
             "voice_log": core.voice_assistant_log,
             "voice_responses": core.voice_responses,
-            "presence_log": core._presence_log[-200:],
+            "presence_log": core.STATE.presence.log[-200:],
             "detection_log": core._detection_log[-200:],
         }
 

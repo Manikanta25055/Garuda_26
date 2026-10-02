@@ -416,22 +416,36 @@ _core_state.forward(sys.modules[__name__], {
     "_blind_alert_sent": ("alerts", "blind_alert_sent"),
 })
 
+_core_state.forward(sys.modules[__name__], {
+    "_owner_present": ("presence", "owner_present"),
+    "_owner_last_seen": ("presence", "owner_last_seen"),
+    "_last_arp_cache": ("presence", "last_arp_cache"), "_presence_log": ("presence", "log"),
+})
+
+_core_state.forward(sys.modules[__name__], {
+    "_net_online": ("system", "net_online"), "_last_heartbeat": ("system", "last_heartbeat"),
+    "_heartbeat_ever": ("system", "heartbeat_ever"),
+    "_deadman_alert_sent": ("system", "deadman_alert_sent"),
+    "_deadman_last_alert": ("system", "deadman_last_alert"), "_cpu_ema": ("system", "cpu_ema"),
+    "_ram_ema": ("system", "ram_ema"), "_temp_ema": ("system", "temp_ema"),
+    "_cpu_cores_ema": ("system", "cpu_cores_ema"), "_voice_mic_ok": ("system", "voice_mic_ok"),
+    "_voice_mic_detail": ("system", "voice_mic_detail"), "_event_loop": ("system", "event_loop"),
+    "_ws_trigger": ("system", "ws_trigger"),
+    "_ws_broadcaster_task": ("system", "ws_broadcaster_task"),
+})
+
 NARADA_WAKE_WORD = "narada"
 
 _app_start_time = time.time()
 _detections_today = 0
 
 # ── Dead man's switch ────────────────────────────────────
-_last_heartbeat = time.time()      # updated by GET /api/heartbeat
 _DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper alert
-_deadman_alert_sent = False
-_heartbeat_ever = False            # True only after a real heartbeat is received
 # Opt-in: the dead-man switch is only meaningful when an external monitor
 # (e.g. UptimeRobot) is hitting /api/heartbeat. Disabled by default so a
 # deployment WITHOUT such a monitor does not spam "missed heartbeat" alerts.
 _DEADMAN_ENABLED = os.environ.get("DEADMAN_ENABLED", "0") == "1"
 _DEADMAN_REALERT_INTERVAL = 3600   # min seconds between repeat alerts (anti-spam)
-_deadman_last_alert = 0.0
 
 # ── Camera blindness detection ───────────────────────────
 _TAMPER_EMAIL_COOLDOWN = 3600      # min seconds between camera-tamper emails
@@ -455,13 +469,9 @@ _clip_start_time = 0.0
 _clip_path       = ""
 
 # ── Phone presence detection ──────────────────────────────
-_presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
 MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
 MASTER_KEY_OTP: str | None = None
-_owner_present   = False
-_owner_last_seen = 0.0
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
-_last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_poller)
 
 # ── Password hashing (PBKDF2-SHA256) ────────────────────
 
@@ -528,9 +538,6 @@ _pc_set: set = set()
 _MAX_PEER_CONNECTIONS = 4
 
 # Event-driven WS broadcaster
-_event_loop  = None        # asyncio loop ref (set in lifespan)
-_ws_trigger  = None        # asyncio.Event — set to push WS immediately
-_ws_broadcaster_task = None
 
 # Session store: token → {username, role, expires}
 _sessions = {}
@@ -539,10 +546,6 @@ _sessions = {}
 _ws_clients: dict = {}
 
 # EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
-_cpu_ema       = 0.0
-_ram_ema       = 0.0
-_temp_ema      = 0.0
-_cpu_cores_ema: list = []   # per-core EMA values (populated on first psutil call)
 _EMA_A         = 0.25
 
 # Voice stop event
@@ -579,7 +582,6 @@ _EVENTS_KEEP_DAYS = _events.KEEP_DAYS
 # The same objects the queue uses, still reachable under their old names.
 _pending_cache = _events._pending_cache
 _eq_lock = _events._lock
-_net_online = True          # tracked by connectivity monitor
 
 # The queue itself lives in garuda_core/events.py. These keep the names the
 # rest of this module, the camera callback and the tests call, and pass the
@@ -698,8 +700,6 @@ BUILT_IN_COMMANDS = {
 
 # None until the voice thread has tried the microphone; then True or False.
 # The web app shows one clear notice instead of a pile of repeated errors.
-_voice_mic_ok = None
-_voice_mic_detail = ""
 
 
 ##############################################################################
@@ -726,9 +726,8 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def _lifespan(app):
-    global _event_loop, _ws_trigger, _ws_broadcaster_task
-    _event_loop = asyncio.get_running_loop()
-    _ws_trigger = asyncio.Event()
+    STATE.system.event_loop = asyncio.get_running_loop()
+    STATE.system.ws_trigger = asyncio.Event()
     _init_event_db()
     _load_alert_history()
     _load_presence_log()
@@ -743,7 +742,7 @@ async def _lifespan(app):
     log_system_update(
         f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
         f"{len(DRISHTI_CTX.registry.devices)} devices")
-    _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
+    STATE.system.ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
     _load_refresh_tokens()
     # Supervised: a loop that raises is logged, restarted with a pause, and
     # shows on /api/system/info instead of vanishing until the next restart.
@@ -758,10 +757,10 @@ async def _lifespan(app):
     # Flush any remaining buffered log lines before exit
     _do_flush_logs()
     _save_refresh_tokens()
-    if _ws_broadcaster_task is not None:
-        _ws_broadcaster_task.cancel()
-        await asyncio.gather(_ws_broadcaster_task, return_exceptions=True)
-        _ws_broadcaster_task = None
+    if STATE.system.ws_broadcaster_task is not None:
+        STATE.system.ws_broadcaster_task.cancel()
+        await asyncio.gather(STATE.system.ws_broadcaster_task, return_exceptions=True)
+        STATE.system.ws_broadcaster_task = None
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
         await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)

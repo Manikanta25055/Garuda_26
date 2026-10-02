@@ -143,14 +143,14 @@ def _load_presence_log():
         if os.path.exists(core.PRESENCE_LOG_FILE):
             with open(core.PRESENCE_LOG_FILE) as f:
                 data = json.load(f)
-            core._presence_log = data[-core._PRESENCE_LOG_MAX:] if isinstance(data, list) else []
+            core.STATE.presence.log = data[-core._PRESENCE_LOG_MAX:] if isinstance(data, list) else []
     except Exception:
-        core._presence_log = []
+        core.STATE.presence.log = []
 
 
 def _append_presence_log(event: str, device: str, mac: str):
     """Append one presence event, persist to disk, and queue for sync."""
-    core._presence_log.append({
+    core.STATE.presence.log.append({
         "ts":     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "event":  event,
         "device": device,
@@ -158,10 +158,10 @@ def _append_presence_log(event: str, device: str, mac: str):
     })
     # The whole list is rewritten on every event; without a cap that write
     # (and the file) grew for ever.
-    if len(core._presence_log) > core._PRESENCE_LOG_MAX:
-        core._presence_log[:] = core._presence_log[-core._PRESENCE_LOG_MAX:]
+    if len(core.STATE.presence.log) > core._PRESENCE_LOG_MAX:
+        core.STATE.presence.log[:] = core.STATE.presence.log[-core._PRESENCE_LOG_MAX:]
     try:
-        core._atomic_json_write(core.PRESENCE_LOG_FILE, core._presence_log)
+        core._atomic_json_write(core.PRESENCE_LOG_FILE, core.STATE.presence.log)
     except Exception:
         pass
     core.queue_event("PRESENCE", device, 0.0, f"{event} (mac={mac})")

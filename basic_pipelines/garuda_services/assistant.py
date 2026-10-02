@@ -27,10 +27,10 @@ def voice_assistant_loop(stop_event, current_user=None):
     recognizer = core.sr.Recognizer()
     try:
         mic = core.sr.Microphone()
-        core._voice_mic_ok, core._voice_mic_detail = True, ""
+        core.STATE.system.voice_mic_ok, core.STATE.system.voice_mic_detail = True, ""
         core.append_voice_log("Microphone connected.", user_name=current_user)
     except Exception as e:
-        core._voice_mic_ok, core._voice_mic_detail = False, str(e)
+        core.STATE.system.voice_mic_ok, core.STATE.system.voice_mic_detail = False, str(e)
         core.append_voice_log(f"Error accessing microphone: {e}", user_name=current_user)
         return
 

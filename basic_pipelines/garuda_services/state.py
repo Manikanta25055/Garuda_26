@@ -68,29 +68,29 @@ def get_state_dict():
         raw_cpu = core.psutil.cpu_percent(interval=None)
         vm = core.psutil.virtual_memory()
         raw_ram = vm.percent
-        core._cpu_ema = core._EMA_A * raw_cpu + (1 - core._EMA_A) * core._cpu_ema
-        core._ram_ema = core._EMA_A * raw_ram + (1 - core._EMA_A) * core._ram_ema
-        cpu_pct = round(core._cpu_ema, 1)
-        ram_pct = round(core._ram_ema, 1)
+        core.STATE.system.cpu_ema = core._EMA_A * raw_cpu + (1 - core._EMA_A) * core.STATE.system.cpu_ema
+        core.STATE.system.ram_ema = core._EMA_A * raw_ram + (1 - core._EMA_A) * core.STATE.system.ram_ema
+        cpu_pct = round(core.STATE.system.cpu_ema, 1)
+        ram_pct = round(core.STATE.system.ram_ema, 1)
         ram_used_gb  = round(vm.used  / (1024 ** 3), 1)
         ram_total_gb = round(vm.total / (1024 ** 3), 1)
         # Per-core EMA
         raw_cores = core.psutil.cpu_percent(percpu=True, interval=None)
-        if not core._cpu_cores_ema:
-            core._cpu_cores_ema.extend(raw_cores)
+        if not core.STATE.system.cpu_cores_ema:
+            core.STATE.system.cpu_cores_ema.extend(raw_cores)
         else:
             for i, v in enumerate(raw_cores):
-                if i < len(core._cpu_cores_ema):
-                    core._cpu_cores_ema[i] = core._EMA_A * v + (1 - core._EMA_A) * core._cpu_cores_ema[i]
-        cpu_cores = [round(v, 1) for v in core._cpu_cores_ema]
+                if i < len(core.STATE.system.cpu_cores_ema):
+                    core.STATE.system.cpu_cores_ema[i] = core._EMA_A * v + (1 - core._EMA_A) * core.STATE.system.cpu_cores_ema[i]
+        cpu_cores = [round(v, 1) for v in core.STATE.system.cpu_cores_ema]
         try:
             temps = core.psutil.sensors_temperatures()
             if temps:
                 for sensor_name in ('cpu_thermal', 'coretemp', 'k10temp', 'acpitz'):
                     if sensor_name in temps and temps[sensor_name]:
                         raw_temp = temps[sensor_name][0].current
-                        core._temp_ema = core._EMA_A * raw_temp + (1 - core._EMA_A) * core._temp_ema
-                        cpu_temp = round(core._temp_ema, 1)
+                        core.STATE.system.temp_ema = core._EMA_A * raw_temp + (1 - core._EMA_A) * core.STATE.system.temp_ema
+                        cpu_temp = round(core.STATE.system.temp_ema, 1)
                         break
         except Exception:
             pass
@@ -132,7 +132,7 @@ def get_state_dict():
     # ── Security health ──
     # If no HEARTBEAT_KEY is configured, watchdog is N/A (always OK)
     _hb_key = os.environ.get("HEARTBEAT_KEY", "")
-    watchdog_ok = True if not _hb_key else (time.time() - core._last_heartbeat) < core._DEADMAN_TIMEOUT
+    watchdog_ok = True if not _hb_key else (time.time() - core.STATE.system.last_heartbeat) < core._DEADMAN_TIMEOUT
     camera_blind = core.STATE.alerts.blind_alert_sent
 
     # Expire night presence alert if window ended
@@ -158,7 +158,7 @@ def get_state_dict():
         "uptime_seconds": uptime,
         "system_log": core.system_updates_log[-50:],
         "voice_log": core.voice_assistant_log[-30:],
-        "voice_mic": {"ok": core._voice_mic_ok, "detail": core._voice_mic_detail},
+        "voice_mic": {"ok": core.STATE.system.voice_mic_ok, "detail": core.STATE.system.voice_mic_detail},
         "voice_responses": core.voice_responses[-30:],
         "detection_threshold": core.STATE.config.detection_threshold,
         "cpu_percent": cpu_pct,
@@ -168,7 +168,7 @@ def get_state_dict():
         "ram_total_gb": ram_total_gb,
         "cpu_temp": cpu_temp,
         "inference_fps": inference_fps,
-        "owner_present": core._owner_present,
+        "owner_present": core.STATE.presence.owner_present,
         "home": core._home_state_summary(),
         "owner_name": (core._present_device() or {}).get("name"),
         "known_devices": [
@@ -191,9 +191,9 @@ def get_state_dict():
         "net_iface": net_iface,
         # Log counts for badge display (avoid sending full arrays over WS)
         "detection_log_count": len(core._detection_log),
-        "presence_log_count": len(core._presence_log),
+        "presence_log_count": len(core.STATE.presence.log),
         # Offline queue
-        "net_online": core._net_online,
+        "net_online": core.STATE.system.net_online,
         "pending_sync": core.get_pending_count(max_age=10.0),
         # Clip recording state (lets JS reset button when server auto-stops)
         "clip_recording": core._clip_writer is not None,
@@ -217,8 +217,8 @@ def _state_for_role(payload: dict, role: str) -> dict:
 
 def push_urgent_ws():
     """Signal the WS broadcaster to push state immediately (cross-thread safe)."""
-    if core._event_loop and core._ws_trigger:
-        core._event_loop.call_soon_threadsafe(core._ws_trigger.set)
+    if core.STATE.system.event_loop and core.STATE.system.ws_trigger:
+        core.STATE.system.event_loop.call_soon_threadsafe(core.STATE.system.ws_trigger.set)
 
 
 def _ws_connect_allowed(websocket) -> bool:
@@ -250,10 +250,10 @@ async def _ws_broadcaster():
     _maintenance_counter = 0
     while True:
         try:
-            await asyncio.wait_for(core._ws_trigger.wait(), timeout=2.0)
+            await asyncio.wait_for(core.STATE.system.ws_trigger.wait(), timeout=2.0)
         except asyncio.TimeoutError:
             pass
-        core._ws_trigger.clear()
+        core.STATE.system.ws_trigger.clear()
         # Anything raised in here used to end this task for good: no client
         # got another update until the service was restarted. One bad tick is
         # now logged and the next one runs.

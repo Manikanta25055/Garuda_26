@@ -91,11 +91,41 @@ class Alerts:
     blind_alert_sent: bool = False
 
 
+@dataclass
+class Presence:
+    """Whether the owner's phone is on the network, and the record of arrivals and departures."""
+    owner_present: bool = False
+    owner_last_seen: float = 0.0
+    last_arp_cache: str = ""   # last raw ARP table read (refreshed by _presence_poller)
+    log: list = field(default_factory=list)   # [{ts, event, device, mac}] — permanent presence record
+
+
+@dataclass
+class System:
+    """The service's own health: connectivity, the dead man's switch, smoothed load figures, the microphone and the event loop."""
+    net_online: bool = True   # tracked by connectivity monitor
+    last_heartbeat: object = field(default_factory=time.time)   # updated by GET /api/heartbeat
+    heartbeat_ever: bool = False   # True only after a real heartbeat is received
+    deadman_alert_sent: bool = False
+    deadman_last_alert: float = 0.0
+    cpu_ema: float = 0.0
+    ram_ema: float = 0.0
+    temp_ema: float = 0.0
+    cpu_cores_ema: list = field(default_factory=list)   # per-core EMA values (populated on first psutil call)
+    voice_mic_ok: object = None
+    voice_mic_detail: str = ""
+    event_loop: object = None   # asyncio loop ref (set in lifespan)
+    ws_trigger: object = None   # asyncio.Event — set to push WS immediately
+    ws_broadcaster_task: object = None
+
+
 class State:
     def __init__(self):
         self.modes = Modes()
         self.config = Config()
         self.alerts = Alerts()
+        self.presence = Presence()
+        self.system = System()
 
 
 def forward(module, names: dict) -> None:

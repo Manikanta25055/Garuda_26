@@ -65,7 +65,7 @@ def _drishti_set_privacy(on):
 
 def _home_presence():
     """True home / False away / None when no phone is registered to watch."""
-    return core._owner_present if core.STATE.config.known_devices else None
+    return core.STATE.presence.owner_present if core.STATE.config.known_devices else None
 
 
 def _home_security():

@@ -30,6 +30,6 @@ def build_events_router(core):
         """Return queue statistics."""
         pending = core.get_pending_count()
         total = core._events.total(core.EVENTS_DB)
-        return {"pending": pending, "total": total, "online": core._net_online}
+        return {"pending": pending, "total": total, "online": core.STATE.system.net_online}
 
     return router

@@ -23,7 +23,7 @@ def build_presence_router(core):
 
     @router.get("/api/devices")
     async def get_devices(session=Depends(core.require_admin)):
-        return {"devices": core.STATE.config.known_devices, "owner_present": core._owner_present}
+        return {"devices": core.STATE.config.known_devices, "owner_present": core.STATE.presence.owner_present}
 
     @router.get("/api/arp")
     async def get_arp_table(session=Depends(core.require_admin)):
@@ -48,7 +48,7 @@ def build_presence_router(core):
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, core._do_presence_check)
         core.push_urgent_ws()
-        return {"owner_present": core._owner_present}
+        return {"owner_present": core.STATE.presence.owner_present}
 
     @router.post("/api/devices/add")
     async def add_device(data: DeviceAddRequest, session=Depends(core.require_admin)):

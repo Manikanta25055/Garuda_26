@@ -71,7 +71,7 @@ def _mac_online(mac: str) -> bool:
     """
     if not mac:
         return False
-    for line in core._last_arp_cache.splitlines():
+    for line in core.STATE.presence.last_arp_cache.splitlines():
         parts = line.split()
         if len(parts) >= 4 and parts[2] == "0x2" and parts[3] == mac:
             return True
@@ -87,7 +87,7 @@ def _check_device_presence() -> bool:
     """Return True if any registered device MAC appears in the kernel ARP table."""
     try:
         with open('/proc/net/arp') as f:
-            core._last_arp_cache = f.read().lower()
+            core.STATE.presence.last_arp_cache = f.read().lower()
         return core._present_device() is not None
     except Exception:
         return False
@@ -120,19 +120,19 @@ def _presence_poller():
             found = core._check_device_presence()
             core.log_system_update(
                 f"[PRESENCE] {'Match' if found else 'No match'} — "
-                f"{len([l for l in core._last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
+                f"{len([l for l in core.STATE.presence.last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
             )
             if found:
-                core._owner_last_seen = time.time()
-                if not core._owner_present:
-                    core._owner_present = True
+                core.STATE.presence.owner_last_seen = time.time()
+                if not core.STATE.presence.owner_present:
+                    core.STATE.presence.owner_present = True
                     seen = core._present_device() or {}
                     dev, mac = seen.get("name", "Unknown"), core._device_mac(seen)
                     core._append_presence_log("arrived", dev, mac)
                     core.log_system_update(f"[OWNER] {dev} arrived — device detected on network.")
                     core.push_urgent_ws()
-            elif core._owner_present and (time.time() - core._owner_last_seen > core.OWNER_AWAY_GRACE):
-                core._owner_present = False
+            elif core.STATE.presence.owner_present and (time.time() - core.STATE.presence.owner_last_seen > core.OWNER_AWAY_GRACE):
+                core.STATE.presence.owner_present = False
                 dev = next((d.get("name", "Unknown") for d in core.STATE.config.known_devices), "Unknown")
                 core._append_presence_log("left", dev, "")
                 core.log_system_update(f"[OWNER] {dev} away — device not seen for {core.OWNER_AWAY_GRACE}s.")
@@ -149,15 +149,15 @@ def _do_presence_check():
         time.sleep(2)
     found = core._check_device_presence()
     if found:
-        core._owner_last_seen = time.time()
-        if not core._owner_present:
-            core._owner_present = True
+        core.STATE.presence.owner_last_seen = time.time()
+        if not core.STATE.presence.owner_present:
+            core.STATE.presence.owner_present = True
             seen = core._present_device() or {}
             dev, mac = seen.get("name", "Unknown"), core._device_mac(seen)
             core._append_presence_log("arrived", dev, mac)
             core.log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
-    elif core._owner_present and (time.time() - core._owner_last_seen > core.OWNER_AWAY_GRACE):
-        core._owner_present = False
+    elif core.STATE.presence.owner_present and (time.time() - core.STATE.presence.owner_last_seen > core.OWNER_AWAY_GRACE):
+        core.STATE.presence.owner_present = False
         dev = next((d.get("name", "Unknown") for d in core.STATE.config.known_devices), "Unknown")
         core._append_presence_log("left", dev, "")
         core.log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
