@@ -372,6 +372,52 @@ const N = (() => {
     syncDock();
   }
 
+  // ── Formatting a reply ─────────────────────────────────────
+  // The models write Markdown (**bold**, lists, `code`). Shown raw it was a
+  // row of asterisks. Everything is escaped first and only these few marks
+  // become tags, so a reply can never put markup of its own on the page.
+  const mdEsc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function mdInline(text) {
+    return mdEsc(text)
+      .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+      .replace(/__([^_\n]+)__/g, '<b>$1</b>')
+      .replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=[\s).,;:!?]|$)/g, '$1<i>$2</i>')
+      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  }
+  function mdHtml(text) {
+    const out = [];
+    let list = null;
+    const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+    for (const raw of String(text || '').split('\n')) {
+      const line = raw.replace(/\s+$/, '');
+      const bullet = line.match(/^\s*[-*•]\s+(.*)$/), number = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      const head = line.match(/^\s*#{1,4}\s+(.*)$/);
+      if (bullet || number) {
+        const kind = bullet ? 'ul' : 'ol';
+        if (list !== kind) { close(); out.push(`<${kind}>`); list = kind; }
+        out.push(`<li>${mdInline((bullet || number)[1])}</li>`);
+      } else if (head) {
+        close(); out.push(`<p class="md-h">${mdInline(head[1])}</p>`);
+      } else if (!line.trim()) {
+        close();
+      } else if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
+        close();                               // a rule: the gap says enough
+      } else {
+        close(); out.push(`<p>${mdInline(line)}</p>`);
+      }
+    }
+    close();
+    return out.join('');
+  }
+  // The same reply as plain words: for the line above the bar and while it types.
+  const mdPlain = text => String(text || '').replace(/\*\*|__|`/g, '').replace(/^\s*#{1,4}\s+/gm, '')
+    .replace(/^\s*[-*]\s+/gm, '• ').replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1');
+  function setReply(el, text) {
+    el.classList.add('md');
+    el.innerHTML = mdHtml(text);
+  }
+
   function scrollLog() {
     const log = $('nx-log');
     if (log) log.scrollTop = log.scrollHeight;
@@ -381,7 +427,7 @@ const N = (() => {
     if (!log) return null;
     const el = document.createElement('div');
     el.className = 'nx-msg ' + (who === 'error' ? 'narada error' : who);
-    el.textContent = text || '';
+    if (who === 'narada' && text) setReply(el, text); else el.textContent = text || '';
     log.appendChild(el);
     return el;
   }
@@ -416,7 +462,7 @@ const N = (() => {
     dock.classList.toggle('has-log', session.length > 0);
     dock.classList.toggle('open', sheetOpen);
     dock.classList.toggle('has-peek', !!last && last.who !== 'you');
-    if (peek) peek.textContent = last ? last.text : '';
+    if (peek) peek.textContent = last ? mdPlain(last.text).replace(/\s*\n\s*/g, ' ') : '';
     measureDock();
     if (exp) {
       exp.setAttribute('aria-expanded', String(sheetOpen));
@@ -441,14 +487,16 @@ const N = (() => {
   }
 
   function typeInto(el, text) {
+    // Typed out as plain words, then set in its formatting: half a bold mark
+    // or a list still being typed would flicker.
+    const plain = mdPlain(text), step = Math.max(3, Math.ceil(plain.length / 240));
     let i = 0;
-    synthTalkUntil = performance.now() + Math.min(6000, 400 + text.length * 22);
+    synthTalkUntil = performance.now() + Math.min(6000, 400 + plain.length * 22);
     setState('talking');
     (function tick() {
-      i = Math.min(i + 3, text.length);
-      el.textContent = text.slice(0, i);
-      scrollLog();
-      if (i < text.length) requestAnimationFrame(tick);
+      i = Math.min(i + step, plain.length);
+      if (i < plain.length) { el.textContent = plain.slice(0, i); scrollLog(); requestAnimationFrame(tick); }
+      else { setReply(el, text); scrollLog(); }
     })();
   }
 

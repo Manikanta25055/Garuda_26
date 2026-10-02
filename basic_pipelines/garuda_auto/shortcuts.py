@@ -33,6 +33,7 @@ A shortcut runs as the person who made it, with the role they have at that
 moment; run by hand it runs as whoever pressed the button. Capabilities that
 need a person's tap (the confirm tier) cannot be steps.
 """
+import json
 import logging
 import re
 import secrets
@@ -56,10 +57,11 @@ OPS = {"==": lambda a, b: a == b, "!=": lambda a, b: a != b,
        ">": lambda a, b: a > b, ">=": lambda a, b: a >= b}
 CLOCK_FIELDS = ("time", "weekday", "hour", "minute")
 _HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_PLACEHOLDER = re.compile(r"\{([A-Za-z0-9_]+)\}")
 # Not steps: these build or remove shortcuts and memories, or call a model.
 NOT_STEPS = frozenset({"create_shortcut", "update_shortcut", "delete_shortcut", "check_shortcut",
                        "run_shortcut", "remember_fact", "forget_fact", "create_automation",
-                       "hand_to_planner", "show_artifact"})
+                       "hand_to_planner", "show_artifact", "take_snapshot"})
 STEP_KINDS = ("do", "wait", "if", "repeat", "notify", "run", "stop")
 
 
@@ -422,9 +424,13 @@ class _Stop(Exception):
     pass
 
 
-class _Facts(dict):
-    def __missing__(self, key):
-        return "{" + key + "}"
+def fill(text, facts):
+    """`{field}` replaced by the fact's value; anything else is left as written.
+
+    Not str.format: the text is the model's, and a format string can walk an
+    object's attributes ("{time.__class__}").
+    """
+    return _PLACEHOLDER.sub(lambda m: str(facts[m.group(1)]) if m.group(1) in facts else m.group(0), text)
 
 
 class ShortcutEngine:
@@ -453,6 +459,7 @@ class ShortcutEngine:
         self._fired = {}            # when-trigger: already fired for this stretch
         self._last_auto = {}        # shortcut id -> time of its last automatic run
         self._last_minute = ""
+        self._seen_when = set()     # when-triggers this run of the service has looked at
         self._thread = None
         self.last_error = ""
 
@@ -489,7 +496,9 @@ class ShortcutEngine:
             due = False
             if trigger["type"] == "time":
                 due = (new_minute and facts["time"] == trigger["at"]
-                       and facts["weekday"] in trigger["days"])
+                       and facts["weekday"] in trigger["days"]
+                       # Restarted inside its minute, having already run in it.
+                       and not self._ran_this_minute(shortcut, now))
             elif trigger["type"] == "every":
                 last = self._last_auto.get(sid)
                 if last is None:
@@ -497,6 +506,15 @@ class ShortcutEngine:
                 else:
                     due = now - last >= trigger["minutes"] * 60
             elif trigger["type"] == "when":
+                first_look = (sid, json.dumps(trigger, sort_keys=True)) not in self._seen_when
+                self._seen_when.add((sid, json.dumps(trigger, sort_keys=True)))
+                if first_look and shortcut.get("last_run") and holds(trigger["condition"], facts):
+                    # The service has just started and the condition already
+                    # holds for a shortcut that has run before: that stretch is
+                    # not new. Without this every restart ran it again ("when I
+                    # am away, turn everything off", each time the Pi restarted).
+                    self._true_since[sid] = now
+                    self._fired[sid] = True
                 if holds(trigger["condition"], facts):
                     since = self._true_since.setdefault(sid, now)
                     if not self._fired.get(sid) and now - since >= trigger["for_minutes"] * 60:
@@ -516,6 +534,12 @@ class ShortcutEngine:
                 continue
             self._last_auto[sid] = now
             self.run(sid, by=shortcut.get("created_by", ""), cause=trigger["type"])
+
+    @staticmethod
+    def _ran_this_minute(shortcut, now):
+        last = shortcut.get("last_run")
+        return bool(last) and time.strftime("%Y%m%d%H%M", time.localtime(last)) == \
+            time.strftime("%Y%m%d%H%M", time.localtime(now))
 
     # ── one run ───────────────────────────────────────────────────────────────
 
@@ -610,7 +634,7 @@ class ShortcutEngine:
                 for _ in range(step["repeat"]):
                     self._steps(step["steps"], progress, by, role, depth)
             elif "notify" in step:
-                text = step["notify"].format_map(_Facts(self.facts()))
+                text = fill(step["notify"], self.facts())
                 self.notify_fn(text, bool(step.get("email")))
                 self._note(progress, "notify", detail=text)
             elif "run" in step:

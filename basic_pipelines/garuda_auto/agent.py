@@ -57,6 +57,7 @@ PLANNER_ROUNDS = 14
 PLANNER_TIMEOUT_S = 120
 PLANNER_MAX_TOKENS = 8000
 PLANNER_RESULT_CHARS = 12000
+PLANNER_BUDGET_S = 300          # one job, all its model calls together
 PLANNER_EXTRA = None            # request fields for the planner model (see llm.NO_THINKING)
 # The routing model's word for "this needs the planner", and how sure it must be.
 PLANNER_INTENTS = ("build", "automation_rule")
@@ -90,7 +91,7 @@ Artifacts. When a chart, table, timeline, dashboard or small interactive tool wo
   - First get the real data with tools; put it in the page as JSON. Never invent numbers.
   - Self-contained: inline <style> and <script> only. No external URLs, fonts, images or libraries (a page that names one is refused): draw charts yourself with SVG, canvas or plain CSS.
   - It is shown in the chat, 320 to 680 px wide. Use a transparent background, `color-scheme: light dark`, system-ui font, CSS variables with light-dark() for colours, and no fixed widths.
-  - Inside the page, `await garuda.call("<capability>", {args})` runs a capability for live data or a button (not ones that need a card). `garuda.resize()` refits the frame after the content changes.
+  - Inside the page, `await garuda.call("<capability>", {args})` runs a capability for live data or a button: anything that only reads, and to change things only set_device, all_off, run_scene, run_shortcut, cancel_shortcut and schedule_action. `garuda.resize()` refits the frame after the content changes.
   - Then say in one or two sentences what the artifact shows.
 """
 # What may be done with NIM unreachable, and only on the routing model's word:
@@ -159,6 +160,8 @@ class HomeAgent:
         self._turn.progress = progress
         self._turn.voice = voice
         self._turn.user = user
+        self._turn.in_planner = False
+        self._turn.no_planner = False
         self._live.pop(user, None)
         self._turn.key = f"security:{user}" if scope == "security" else user
         if scope != "security":
@@ -176,7 +179,9 @@ class HomeAgent:
                 result = self._agent(text, user, role, scope=scope, voice=voice,
                                      planner=self._wants_planner(route))
             except NimUnavailable as exc:
-                result = self._offline(text, route, user, role, str(exc))
+                result = self._after_failure(text, route, user, role, scope, voice, str(exc))
+            finally:
+                self._live.pop(user, None)
         if route_view is not None:
             result["route"] = route_view
         self.stats[result["lane"]] = self.stats.get(result["lane"], 0) + 1
@@ -207,6 +212,33 @@ class HomeAgent:
                         + f"\n\n(A note shown beside this reply, from you: \"{shown}\")"}
         if result["lane"] == "agent" and turn:
             self.brain.record(f"security:{user}" if scope == "security" else user, turn)
+        return result
+
+    def _after_failure(self, text, route, user, role, scope, voice, why):
+        """A model stopped answering. If it was the planner, the quick model is
+        still there: it answers what it can, and says the planner did not."""
+        if not self._turn.in_planner:
+            return self._offline(text, route, user, role, why)
+        done = [a for a in self._turn.actions if a]
+        waiting = len(self._turn.confirms)
+        if done or waiting or self._turn.artifacts:
+            # Part-way through a job: starting again would do things twice.
+            parts = (["I did: " + "; ".join(done) + "."] if done else []) \
+                + ([f"{waiting} card(s) are waiting for your tap."] if waiting else [])
+            return {"reply": "The planner model stopped answering part-way through. "
+                             + " ".join(parts) + " Ask again for the rest.",
+                    "lane": "agent", "actions": done, "confirm": self._turn.confirms,
+                    "artifacts": self._turn.artifacts, "images": self._turn.images,
+                    "steps": self._turn.steps, "planner": True}
+        self._turn.no_planner = True
+        self._turn.in_planner = False
+        try:
+            result = self._agent(text, user, role, scope=scope, voice=voice)
+        except NimUnavailable as exc:
+            return self._offline(text, route, user, role, str(exc))
+        if not voice:
+            result["reply"] += ("\n\n(The planner model did not answer just now, so this is from the "
+                                "quick model, which cannot build things. Try again in a minute.)")
         return result
 
     @staticmethod
@@ -259,7 +291,8 @@ class HomeAgent:
 
     def _planner_ready(self):
         planner = getattr(self, "planner", None)
-        return planner is not None and planner.configured
+        return (planner is not None and planner.configured
+                and not getattr(self._turn, "no_planner", False))
 
     def _wants_planner(self, route):
         """The routing model's call: is this a job for the planner?"""
@@ -269,10 +302,13 @@ class HomeAgent:
         return (intent.get("backend") == OFFLINE_BACKEND and intent.get("value") in PLANNER_INTENTS
                 and intent.get("confidence", 0) >= self.decision.threshold)
 
-    def _tools(self, planner=False):
+    def _tools(self, planner=False, role="admin"):
         # What Narada can do is one table: capabilities.py.
         if planner:
-            return capabilities.tools("planner")
+            # Not offered what this person may not do: it only cost rounds, each
+            # ending in "only an admin can do that".
+            return [t for t in capabilities.tools("planner")
+                    if role == "admin" or capabilities.BY_NAME[t["function"]["name"]].role != "admin"]
         tools = capabilities.tools()
         if self is None or not self._planner_ready():
             # Nothing to hand over to.
@@ -348,7 +384,7 @@ class HomeAgent:
         if voice:
             system += persona.VOICE_STYLE
         chat = self.planner if planner else self.chat
-        tools = self._tools(planner)
+        tools = self._tools(planner, role)
         if scope == "security":
             tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]
         offered = {t["function"]["name"] for t in tools}
@@ -357,7 +393,10 @@ class HomeAgent:
         first = len(messages)
         messages.append({"role": "user", "content": text})
         actions, proposal, memory = self._turn.actions, None, []
+        deadline = None
         if planner:
+            self._turn.in_planner = True
+            deadline = time.monotonic() + PLANNER_BUDGET_S
             self._emit(type="lane", lane="planner", model=(chat.models or [""])[0])
 
         def finish(reply):
@@ -370,8 +409,12 @@ class HomeAgent:
 
         for _ in range(PLANNER_ROUNDS if planner else MAX_ROUNDS):
             if planner:
+                left = deadline - time.monotonic()
+                if left < 5:
+                    break                       # out of time: say what was done
                 message = chat.chat(messages, tools=tools, max_tokens=PLANNER_MAX_TOKENS,
-                                    temperature=0.2, timeout=PLANNER_TIMEOUT_S, extra=PLANNER_EXTRA)
+                                    temperature=0.2, timeout=min(PLANNER_TIMEOUT_S, left),
+                                    extra=PLANNER_EXTRA)
             else:
                 message = chat.chat(messages, tools=tools,
                                     max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
@@ -450,7 +493,7 @@ class HomeAgent:
         return finish(("I did what I could: " + "; ".join(done) + "."
                        + (f" {waiting} card(s) are waiting for your tap." if waiting else ""))
                       if done or waiting
-                      else "That took too many steps; try asking more specifically.")
+                      else "That took too long; try asking for one part of it at a time.")
 
     # ── tools ─────────────────────────────────────────────────────────────────
 

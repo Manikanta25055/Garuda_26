@@ -235,3 +235,52 @@ def test_names_are_unique_and_found_by_words(house):
     with pytest.raises(sc.Invalid, match="already"):
         house.add(program(name="movie night"))
     assert house.engine.store.find("movie")["name"] == "Movie Night"
+
+
+def test_a_restart_does_not_run_a_when_shortcut_again(house, tmp_path):
+    """The service restarts; the condition has held all along. That is not a new moment."""
+    sid = house.add(program(cooldown_s=5, trigger={
+        "type": "when", "condition": {"field": "occupancy", "op": "==", "value": "empty"}}))
+    house.facts["occupancy"] = "empty"
+    house.engine.tick()
+    time.sleep(0.15)
+    assert len(house.done) == 1
+    again = sc.ShortcutEngine(sc.ShortcutStore(house.engine.store._path, clock=lambda: house.now),
+                              do_fn=house.do, facts_fn=lambda: house.facts, role_of=house.roles.get,
+                              clock=lambda: house.now, sleep=house.sleep)
+    for _ in range(5):
+        again.tick()
+        house.now += 1
+    time.sleep(0.15)
+    assert len(house.done) == 1
+    house.facts["occupancy"] = "occupied"
+    again.tick()
+    house.facts["occupancy"] = "empty"
+    house.now += 10
+    again.tick()
+    time.sleep(0.15)
+    assert len(house.done) == 2 and again.store.get(sid)["runs"]
+
+
+def test_a_restart_inside_its_minute_does_not_run_a_timed_shortcut_twice(house):
+    house.add(program(trigger={"type": "time", "at": "22:00", "days": [0]}))
+    house.now += 31                                  # 22:00:01
+    house.engine.tick()
+    time.sleep(0.15)
+    again = sc.ShortcutEngine(sc.ShortcutStore(house.engine.store._path, clock=lambda: house.now),
+                              do_fn=house.do, facts_fn=lambda: house.facts, role_of=house.roles.get,
+                              clock=lambda: house.now, sleep=house.sleep)
+    house.now += 20
+    again.tick()
+    time.sleep(0.15)
+    assert len(house.done) == 1
+
+
+def test_a_notice_fills_in_facts_and_nothing_else():
+    facts = {"temperature_c": 27, "time": "22:00"}
+    assert sc.fill("It is {temperature_c} at {time}", facts) == "It is 27 at 22:00"
+    assert sc.fill("{time.__class__} {0} {nope} {{time}}", facts) == "{time.__class__} {0} {nope} {22:00}"
+
+
+def test_what_cannot_be_a_step():
+    assert {"take_snapshot", "show_artifact", "hand_to_planner", "create_shortcut"} <= sc.NOT_STEPS

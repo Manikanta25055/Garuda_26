@@ -6,7 +6,9 @@ house only by asking the chat page (a message), which calls /call below as the
 signed-in person. So a page can do what that person's own buttons can, never a
 thing that needs a confirm card, and nothing at all if nobody has it open.
 """
+import collections
 import hmac
+import time
 
 import anyio.to_thread
 from fastapi import APIRouter, Depends, HTTPException
@@ -58,6 +60,16 @@ BOOTSTRAP = """<script>
 </script>"""
 
 
+# What a page may change. It runs with no tap from anyone, the moment it is
+# opened, so it gets the things a page of buttons is for: switching devices,
+# running a scene or a shortcut, a timer. Everything else that changes the
+# house (modes that silence alerts, memory, settings, emails, recordings) is
+# asked of Narada in words.
+PAGE_MAY_CHANGE = frozenset({"set_device", "all_off", "run_scene", "run_shortcut",
+                             "cancel_shortcut", "schedule_action"})
+CALLS_PER_MINUTE = 40       # for one page: a loop in it must not chatter a relay
+
+
 class ArtifactCallRequest(BaseModel):
     capability: str = Field(min_length=1, max_length=64)
     args: dict = Field(default_factory=dict, max_length=16)
@@ -83,6 +95,7 @@ def with_bootstrap(html):
 
 def build_artifacts_router(core):
     router = APIRouter(prefix="/api/narada/artifacts")
+    recent = collections.defaultdict(collections.deque)      # artifact id -> times of its calls
 
     def _mine(artifact_id, session):
         entry = core.ARTIFACTS.get(artifact_id)
@@ -123,6 +136,14 @@ def build_artifacts_router(core):
             raise HTTPException(400, f"A page cannot use {data.capability}.")
         if capability.tier == "confirm":
             raise HTTPException(400, f"{data.capability} needs a card; ask Narada for it.")
+        if capability.tier != "read" and capability.name not in PAGE_MAY_CHANGE:
+            raise HTTPException(400, f"A page cannot use {data.capability}; ask Narada for it.")
+        calls, now = recent[artifact_id], time.monotonic()
+        while calls and now - calls[0] > 60:
+            calls.popleft()
+        if len(calls) >= CALLS_PER_MINUTE:
+            raise HTTPException(429, "This page is asking too often. Wait a minute.")
+        calls.append(now)
         out = await anyio.to_thread.run_sync(
             lambda: core.AGENT._run_tool(capability.name, dict(data.args), session["username"],
                                          session["role"]))

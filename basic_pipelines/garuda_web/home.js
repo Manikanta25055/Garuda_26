@@ -488,7 +488,7 @@ const H = (() => {
         </div>
         ${isAdmin() ? `<div class="ha-row-actions">
           <div class="toggle ${r.enabled === false ? '' : 'on'}" onclick="H.toggleRule('${esc(r.id)}', this)"></div>
-          <button class="ha-x" aria-label="Delete rule" onclick="H.deleteRule('${esc(r.id)}')">&times;</button></div>` : ''}
+          <button class="ha-x" aria-label="Delete rule" data-name="${esc(r.source_utterance)}" onclick="H.deleteRule('${esc(r.id)}', this.dataset.name)">&times;</button></div>` : ''}
       </div>`).join('')
       + (rules.orphaned.length ? `<div class="ha-sub warn">${rules.orphaned.length} rule(s) paused because a device they use was removed.</div>` : '')
       : '<div class="ha-empty">No rules yet. Try: “when nobody is in the room for 10 minutes, turn the lamp off”.</div>';
@@ -504,7 +504,7 @@ const H = (() => {
         </div>
         ${isAdmin() || e.created_by === me ? `<div class="ha-row-actions">
           ${e.kind === 'daily' ? `<div class="toggle ${e.enabled === false ? '' : 'on'}" onclick="H.toggleSchedule('${esc(e.id)}', this)"></div>` : ''}
-          <button class="ha-x" aria-label="Delete schedule" onclick="H.deleteSchedule('${esc(e.id)}')">&times;</button></div>` : ''}
+          <button class="ha-x" aria-label="Delete schedule" data-name="${esc(e.describe)}" onclick="H.deleteSchedule('${esc(e.id)}', this.dataset.name)">&times;</button></div>` : ''}
       </div>`).join('') : '<div class="ha-empty">Nothing scheduled.</div>';
 
     loadShortcuts();
@@ -555,7 +555,7 @@ const H = (() => {
           ${live ? `<button class="btn btn-ghost btn-sm" onclick="H.cancelShortcut('${esc(sc.id)}')">Stop</button>`
                  : `<button class="btn btn-primary btn-sm" onclick="H.runShortcut('${esc(sc.id)}')">Run</button>`}
           ${mine && sc.trigger.type !== 'manual' ? `<div class="toggle ${sc.enabled === false ? '' : 'on'}" onclick="H.toggleShortcut('${esc(sc.id)}')"></div>` : ''}
-          ${mine ? `<button class="ha-x" aria-label="Delete shortcut" onclick="H.deleteShortcut('${esc(sc.id)}')">&times;</button>` : ''}
+          ${mine ? `<button class="ha-x" aria-label="Delete shortcut" data-name="${esc(sc.name)}" onclick="H.deleteShortcut('${esc(sc.id)}', this.dataset.name)">&times;</button>` : ''}
         </div>
       </div>`;
     }).join('') : '<div class="ha-empty">No shortcuts yet. Ask Narada: “make a movie night button that turns the lamp off and the TV on”.</div>';
@@ -571,7 +571,7 @@ const H = (() => {
   const runShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/run`, 'Shortcut started');
   const cancelShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/cancel`);
   const toggleShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/toggle`);
-  const deleteShortcut = id => shortcutCall('DELETE', encodeURIComponent(id), 'Shortcut deleted');
+  const deleteShortcut = async (id, name) => (await sureDelete('shortcut', name)) && shortcutCall('DELETE', encodeURIComponent(id), 'Shortcut deleted');
 
   let _days = [0, 1, 2, 3, 4, 5, 6];
   function renderDays() {
@@ -611,9 +611,13 @@ const H = (() => {
   const discardProposal = id => reloadAuto(api('DELETE', `/api/home/proposals/${encodeURIComponent(id)}`));
   const flip = sw => { if (sw) { sw.classList.toggle('on'); sw.closest('.ha-row')?.classList.toggle('off'); } };
   const toggleRule = (id, sw) => { flip(sw); return reloadAuto(settle(api('POST', `/api/home/rules/${encodeURIComponent(id)}/toggle`))); };
-  const deleteRule = async id => (await G.confirmAction({ title: 'Delete this rule?', confirmLabel: 'Delete' })) && reloadAuto(api('DELETE', `/api/home/rules/${encodeURIComponent(id)}`));
+  // Nothing saved on this page is removed without being asked first.
+  const sureDelete = (what, name, body) => G.confirmAction({
+    title: name ? `Delete ${what} “${name}”?` : `Delete this ${what}?`,
+    body: body || 'It stops running and cannot be brought back.', confirmLabel: 'Delete' });
+  const deleteRule = async (id, name) => (await sureDelete('automation', name)) && reloadAuto(api('DELETE', `/api/home/rules/${encodeURIComponent(id)}`));
   const toggleSchedule = (id, sw) => { flip(sw); return reloadAuto(settle(api('POST', `/api/home/schedules/${encodeURIComponent(id)}/toggle`))); };
-  const deleteSchedule = id => reloadAuto(api('DELETE', `/api/home/schedules/${encodeURIComponent(id)}`));
+  const deleteSchedule = async (id, name) => (await sureDelete('schedule', name)) && reloadAuto(api('DELETE', `/api/home/schedules/${encodeURIComponent(id)}`));
   const acceptSuggestion = id => reloadAuto(api('POST', `/api/home/suggestions/${encodeURIComponent(id)}/accept`)
     .then(() => G.showToast('Schedule created', 'success')));
   const dismissSuggestion = id => reloadAuto(api('POST', `/api/home/suggestions/${encodeURIComponent(id)}/dismiss`));

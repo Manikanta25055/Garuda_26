@@ -47,16 +47,21 @@ def test_logs_stay_behind_the_master_key(app_client):
     assert "master key" in run("read_logs", role="admin")["error"]
 
 
-def test_a_change_goes_through_the_endpoints_own_checks(app_client, monkeypatch):
-    monkeypatch.setattr(gw.STATE.config, "custom_voice_commands", {})
-    assert "error" in run("add_voice_command", {"phrase": "  ", "response": "x"}, role="admin")
-    done = run("add_voice_command", {"phrase": "Good Night", "response": "Sleep well."},
-               role="admin")
-    assert done["ok"] and done["_action"]
-    assert run("get_security_settings", role="admin")["custom_voice_commands"] == {
-        "good night": "Sleep well."}
-    # The request model is the check: a missing field is refused with its name.
-    assert "response" in run("add_voice_command", {"phrase": "hello"}, role="admin")["error"]
+def test_a_change_goes_through_the_endpoints_own_checks(app_client):
+    lamp = gw.DRISHTI_CTX.registry.get("lamp")
+    before = lamp["name"]
+    try:
+        assert "unknown" in run("edit_device", {"device_id": "nope", "name": "x"}, role="admin")["error"]
+        done = run("edit_device", {"device_id": "lamp", "name": "Desk lamp"}, role="admin")
+        assert done["ok"] and done["_action"]
+        assert gw.DRISHTI_CTX.registry.get("lamp")["name"] == "Desk lamp"
+        # The request model is the check: a wrong kind of value is refused with its name.
+        assert "watts" in run("edit_device", {"device_id": "lamp", "watts": "plenty"}, role="admin")["error"]
+        # A field the capability does not declare never reaches the endpoint.
+        run("edit_device", {"device_id": "lamp", "name": "Desk lamp", "type": "fan"}, role="admin")
+        assert gw.DRISHTI_CTX.registry.get("lamp")["type"] == "light"
+    finally:
+        gw.DRISHTI_CTX.registry.update("lamp", {"name": before})
 
 
 def test_only_its_creator_or_an_admin_removes_a_timer(app_client):

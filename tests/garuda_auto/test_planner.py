@@ -153,3 +153,67 @@ def test_asking_for_the_cameras_view_shows_a_picture_the_model_never_sees(house)
     down = agent(ctx, home, ScriptedChat([]), security_fn=lambda: {"camera_live": False})
     down._turn.voice = False
     assert "not delivering" in down._run_tool("take_snapshot", {}, "mani", "user")["error"]
+
+
+class Dead(ScriptedChat):
+    """A planner that never answers."""
+
+    def __init__(self):
+        super().__init__([])
+
+    def chat(self, *a, **kw):
+        from basic_pipelines.garuda_auto.llm import NimUnavailable
+        raise NimUnavailable("the model service is unavailable (m1: ReadTimeout)")
+
+
+def test_when_the_planner_does_not_answer_the_quick_model_still_does(house):
+    ctx, home = house
+    quick = ScriptedChat([completion("I can switch things, but building that needs the planner.")])
+    a = agent(ctx, home, quick, planner=Dead())
+    a._wants_planner = lambda route: True
+    result = a.handle("make me a bedtime routine", user="mani", role="admin")
+    assert result["lane"] == "agent" and "planner model did not answer" in result["reply"]
+    # No way back to the planner in that turn, and it is whole again for the next.
+    assert "hand_to_planner" not in names(quick.requests[0])
+    assert a._turn.no_planner and a.live_for("mani") is None
+
+
+def test_a_planner_that_stops_part_way_says_what_was_done(house):
+    ctx, home = house
+
+    class Half(ScriptedChat):
+        def chat(self, messages, **kw):
+            from basic_pipelines.garuda_auto.llm import NimUnavailable
+            if len(self.requests) >= 1:
+                raise NimUnavailable("gone")
+            return super().chat(messages, **kw)
+    planner = Half([completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})])])
+    a = agent(ctx, home, ScriptedChat([]), planner=planner)
+    a._wants_planner = lambda route: True
+    result = a.handle("lamp on then build a routine", user="mani", role="admin")
+    assert "part-way" in result["reply"] and result["actions"] == ["Lamp on"]
+    assert [d["id"] for d in home.on_devices()] == ["lamp"]
+
+
+def test_the_planner_is_not_offered_what_this_person_may_not_do(house):
+    ctx, home = house
+    planner = ScriptedChat([completion("ok"), completion("ok")])
+    a = agent(ctx, home, planner, planner=planner)
+    a._wants_planner = lambda route: True
+    a.handle("build something", user="asha", role="user")
+    a.handle("build something", user="mani", role="admin")
+    as_user, as_admin = set(names(planner.requests[0])), set(names(planner.requests[1]))
+    assert {"create_shortcut", "set_device", "show_artifact"} <= as_user
+    assert not {"delete_device", "add_user", "create_backup", "list_users"} & as_user
+    assert {"delete_device", "add_user", "create_backup", "list_users"} <= as_admin
+
+
+def test_a_planner_job_has_a_time_budget(house, monkeypatch):
+    ctx, home = house
+    from basic_pipelines.garuda_auto import agent as mod
+    monkeypatch.setattr(mod, "PLANNER_BUDGET_S", 0)
+    planner = ScriptedChat([completion("never asked")])
+    a = agent(ctx, home, planner, planner=planner)
+    a._wants_planner = lambda route: True
+    result = a.handle("build something", user="mani", role="admin")
+    assert planner.requests == [] and "too long" in result["reply"]

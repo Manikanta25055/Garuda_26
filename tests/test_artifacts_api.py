@@ -44,6 +44,24 @@ def test_a_page_may_use_what_its_owner_may_and_nothing_that_needs_a_card(
     for name in ("delete_device", "create_shortcut", "remember_fact", "show_artifact", "nope"):
         r = app_client.post(url, json={"capability": name, "args": {}}, headers=admin_headers)
         assert r.status_code == 400, name
+    # Of the things that change the house, only what a page of buttons is for.
+    for name in ("set_security_mode", "mute_observation", "edit_device", "send_test_email",
+                 "start_clip"):
+        r = app_client.post(url, json={"capability": name, "args": {}}, headers=admin_headers)
+        assert r.status_code == 400 and "ask Narada" in r.json()["detail"], name
+    try:
+        switched = app_client.post(url, headers=admin_headers, json={
+            "capability": "set_device", "args": {"device": "lamp", "action": "on"}})
+        assert switched.status_code == 200 and switched.json()["result"]["ok"]
+    finally:
+        # A (mock) pin is reserved for the whole process once claimed: give it
+        # back, or the next test that builds a relay bank of its own cannot.
+        gw.DRISHTI_CTX.relay_bank.close()
+    # A page in a loop is stopped before it can chatter a relay.
+    from basic_pipelines.garuda_routes import artifacts as routes
+    codes = [app_client.post(url, json={"capability": "get_house_state"}, headers=admin_headers).status_code
+             for _ in range(routes.CALLS_PER_MINUTE + 2)]
+    assert codes[0] == 200 and codes[-1] == 429
     # Someone else's page is not theirs to drive.
     assert app_client.post(url, json={"capability": "get_house_state"},
                            headers=user_headers).status_code == 403

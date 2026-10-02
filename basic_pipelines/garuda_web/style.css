@@ -5039,3 +5039,23 @@ body { overscroll-behavior: auto; }
 
 .nx-msg.nx-shot { flex-shrink: 0; display: grid; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.55); }
 .nx-shot img { display: block; width: 100%; border-radius: 12px; background: rgba(255,255,255,0.06); aspect-ratio: 16 / 9; object-fit: cover; }
+
+/* No scroll indicators anywhere: what scrolls shows it by fading at its edge
+   (see "Scroll fades"), not with a bar. Scrolling itself is untouched. */
+* { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+*::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+
+/* A reply's formatting (narada.js turns the model's Markdown into these). */
+.nx-msg.md { white-space: normal; }
+.nx-msg.md p { margin: 0 0 0.55em; }
+.nx-msg.md > :last-child { margin-bottom: 0; }
+.nx-msg.md .md-h { font-weight: 650; margin-top: 0.2em; }
+.nx-msg.md ul, .nx-msg.md ol { margin: 0 0 0.55em; padding-left: 1.25em; display: grid; gap: 0.3em; }
+.nx-msg.md li { padding-left: 0.15em; }
+.nx-msg.md li::marker { color: rgba(255,255,255,0.5); }
+.nx-msg.md b { font-weight: 650; }
+.nx-msg.md code {
+  font: 0.88em/1.3 var(--mono, ui-monospace, monospace); padding: 0.1em 0.4em; border-radius: 5px;
+  background: rgba(255,255,255,0.12);
+}
+.nx-msg.md a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }

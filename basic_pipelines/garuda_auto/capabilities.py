@@ -207,11 +207,6 @@ CAPABILITIES += (
           "Detection threshold, watched and danger labels, alert email, mode schedule, "
           "night presence window, taught voice commands.",
           "GET /api/config", role="admin", security=True),
-    _site("add_voice_command", "Teach a phrase and the fixed reply Narada gives to it.",
-          "POST /api/config/command/add", {"phrase": _S, "response": _S},
-          ["phrase", "response"], role="admin", tier="change", security=True),
-    _site("delete_voice_command", "Remove a taught phrase.", "POST /api/config/command/delete",
-          {"phrase": _S}, ["phrase"], role="admin", tier="change", security=True),
     # presence
     _site("list_tracked_phones", "Phones whose presence means someone is home.",
           "GET /api/devices", role="admin", security=True),
@@ -337,6 +332,13 @@ CAPABILITIES += (
           {"mac": _S}, ["mac"], role="admin", tier="confirm", security=True),
     _site("emergency_stop", "Stop the whole Garuda system: camera, detection and this site.",
           "POST /api/emergency-stop", role="admin", tier="confirm", security=True),
+    # A taught phrase answers in Narada's place whenever a sentence contains it:
+    # one badly chosen ("turn") would silence the assistant.
+    _site("add_voice_command", "Teach a phrase and the fixed reply Narada gives to it.",
+          "POST /api/config/command/add", {"phrase": _S, "response": _S},
+          ["phrase", "response"], role="admin", tier="confirm", security=True),
+    _site("delete_voice_command", "Remove a taught phrase.", "POST /api/config/command/delete",
+          {"phrase": _S}, ["phrase"], role="admin", tier="confirm", security=True),
     # People. A password is typed on the card; the model never sees or sets one.
     _site("add_user", "Add a person who can sign in (never an admin).", "POST /api/users/add",
           {"username": {"type": "string", "description": "3-32 letters, digits, _ or -"},
