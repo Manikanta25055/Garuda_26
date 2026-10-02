@@ -258,6 +258,9 @@ try:
     from .garuda_services import state as _svc_state
     from .garuda_services.state import (  # noqa: F401
         _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
+    from .garuda_services import assistant as _svc_assistant
+    from .garuda_services.assistant import (  # noqa: F401
+        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -316,6 +319,9 @@ except ImportError:
     from basic_pipelines.garuda_services import state as _svc_state
     from basic_pipelines.garuda_services.state import (  # noqa: F401
         _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
+    from basic_pipelines.garuda_services import assistant as _svc_assistant
+    from basic_pipelines.garuda_services.assistant import (  # noqa: F401
+        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -334,6 +340,7 @@ except ImportError:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 # garuda_services modules read this module's state through `core`.
+_svc_assistant.bind(sys.modules[__name__])
 _svc_state.bind(sys.modules[__name__])
 _svc_sessions.bind(sys.modules[__name__])
 _svc_pipeline.bind(sys.modules[__name__])
@@ -743,47 +750,6 @@ _voice_mic_ok = None
 _voice_mic_detail = ""
 
 
-def voice_assistant_loop(stop_event, current_user=None):
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    global DETECTION_THRESHOLD, _voice_mic_ok, _voice_mic_detail
-
-    recognizer = sr.Recognizer()
-    try:
-        mic = sr.Microphone()
-        _voice_mic_ok, _voice_mic_detail = True, ""
-        append_voice_log("Microphone connected.", user_name=current_user)
-    except Exception as e:
-        _voice_mic_ok, _voice_mic_detail = False, str(e)
-        append_voice_log(f"Error accessing microphone: {e}", user_name=current_user)
-        return
-
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source)
-        append_voice_log("Calibrated for ambient noise.", user_name=current_user)
-
-    while not stop_event.is_set():
-        with mic as source:
-            append_voice_log("Listening...", user_name=current_user)
-            try:
-                audio = recognizer.listen(source, timeout=10, phrase_time_limit=10)
-            except sr.WaitTimeoutError:
-                continue
-
-        try:
-            user_input = recognizer.recognize_google(audio)
-            append_voice_log(f"You said: {user_input}", user_name=current_user)
-        except sr.UnknownValueError:
-            append_voice_log("Could not understand audio.", user_name=current_user)
-            continue
-        except sr.RequestError as e:
-            append_voice_log(f"Speech recognition error: {e}", user_name=current_user)
-            continue
-
-        response = _assistant_reply(user_input, current_user or "voice", "user")["reply"]
-
-        append_voice_response(response, user_name=current_user)
-        time.sleep(0.5)
-
 ##############################################################################
 # SESSION MANAGEMENT
 ##############################################################################
@@ -1146,9 +1112,6 @@ DECISION = DecisionEngine(
 )
 AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
                   set_mode_fn=_home_set_mode, security_fn=_home_security_summary)
-def _voice_turn_logged(user, heard, said):
-    append_voice_log(f"You said: {heard}", user_name=user)
-    append_voice_response(said, user_name=user)
 
 
 # ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.
@@ -1162,52 +1125,6 @@ NARADA_VOICE = NaradaVoice(
 DIGEST = Digest(HOME, NIM_CHAT,
                 alerts_fn=lambda: _alert_history.get(datetime.date.today().isoformat(), 0))
 HOME.digest_fn = DIGEST.text
-
-
-def _ai_configure(fields, actor):
-    """Apply AI settings now and persist them to .env for the next start."""
-    persist = {}
-    if fields.get("nim_api_key"):
-        NIM_CHAT.configure(api_key=fields["nim_api_key"])
-        persist["NIM_API_KEY"] = NIM_CHAT.api_key
-    if fields.get("nim_model") is not None or fields.get("nim_fallback_models") is not None:
-        primary = fields.get("nim_model") or os.environ.get("NIM_MODEL", "")
-        fallbacks = fields.get("nim_fallback_models")
-        if fallbacks is None:
-            fallbacks = os.environ.get("NIM_FALLBACK_MODELS", "")
-        NIM_CHAT.configure(models=parse_models(primary, fallbacks))
-        persist["NIM_MODEL"] = primary
-        persist["NIM_FALLBACK_MODELS"] = fallbacks
-    if fields.get("jev_api_key") is not None:
-        DECISION.jev.api_key = fields["jev_api_key"].strip()
-        persist["JEV_API_KEY"] = DECISION.jev.api_key
-    if fields.get("jev_base_url"):
-        DECISION.jev.base_url = fields["jev_base_url"].strip().rstrip("/")
-        persist["JEV_BASE_URL"] = DECISION.jev.base_url
-    if fields.get("decision_threshold") is not None:
-        DECISION.threshold = float(fields["decision_threshold"])
-        persist["DECISION_THRESHOLD"] = str(DECISION.threshold)
-    for name, value in persist.items():
-        os.environ[name] = value
-    if persist:
-        try:
-            _set_env_vars(HOME_ENV_PATH, persist)
-        except OSError as exc:
-            log_system_update(f"[HOME] AI settings applied but not saved: {exc}")
-    log_system_update(f"[HOME] AI settings changed by {actor}: {', '.join(sorted(persist)) or 'none'}")
-
-
-def _ai_test():
-    """One tiny request, so the settings page can say whether the key works."""
-    started = time.time()
-    try:
-        message = NIM_CHAT.chat([{"role": "user", "content": "Reply with the single word: ready"}],
-                                max_tokens=200, temperature=0, timeout=30)
-    except NimUnavailable as exc:
-        return {"ok": False, "error": str(exc)}
-    return {"ok": True, "model": NIM_CHAT.last_model,
-            "latency_s": round(time.time() - started, 2),
-            "reply": (message.get("content") or "").strip()[:80]}
 
 
 fastapi_app.include_router(build_home_router(
@@ -1233,20 +1150,6 @@ def _require_eval_token(request: Request):
         raise HTTPException(403, "Bad eval token")
 
 fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
-
-def _assistant_reply(msg, user="", role="user", scope="home", voice=False):
-    """Narada's one brain for chat and voice.
-
-    Phrases the owner taught on the Commands page return their fixed reply
-    (they never change anything). Everything else goes to the NIM agent;
-    without NIM nothing is changed and Narada says why.
-    """
-    lower = msg.lower()
-    for phrase, resp in CUSTOM_VOICE_COMMANDS.items():
-        if phrase in lower:
-            return {"reply": resp, "lane": "custom", "actions": []}
-    return AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice)
-
 
 fastapi_app.include_router(build_narada_router(sys.modules[__name__]))
 
