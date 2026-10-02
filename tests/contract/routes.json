@@ -463,6 +463,42 @@
  },
  {
   "kind": "http",
+  "method": "GET",
+  "path": "/api/narada/memory",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/memory",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/narada/memory/{fact_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "PATCH",
+  "path": "/api/narada/memory/{fact_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/memory/{fact_id}/confirm",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/memory/{fact_id}/restore",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
   "method": "POST",
   "path": "/api/narada/voice/token",
   "guard": "require_session"

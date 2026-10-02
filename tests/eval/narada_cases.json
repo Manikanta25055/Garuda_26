@@ -487,7 +487,10 @@
      "any": [
       "no|don.t|do not|not any more|no longer"
      ],
-     "knows": true
+     "none": [
+      "\\byes\\b",
+      "you have a dog"
+     ]
     }
    ]
   },

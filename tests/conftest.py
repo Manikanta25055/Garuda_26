@@ -234,6 +234,8 @@ def app_client(tmp_data, monkeypatch, shared_client):
     # Narada's saved conversation: never the live file, and empty for each test.
     monkeypatch.setattr(gw.BRAIN.conversations, 'path', str(tmp_data / 'system_logs/narada_conversations.json'))
     monkeypatch.setattr(gw.BRAIN.conversations, '_data', {'conversations': {}})
+    monkeypatch.setattr(gw.BRAIN.memory, 'path', str(tmp_data / 'system_logs/narada_memory.json'))
+    monkeypatch.setattr(gw.BRAIN.memory, '_facts', [])
 
     # ── In-memory state reset ──
     monkeypatch.setattr(gw.STATE.auth, 'sessions',    {})

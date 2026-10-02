@@ -4361,6 +4361,60 @@ body:has(#page-narada.active) .fb-wrap { display: none !important; }
 .nx-info-row b { font-weight: 600; color: var(--t1); text-align: right; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .nx-info-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .nx-info-acts span { font-size: 12px; padding: 3px 9px; border-radius: 99px; background: var(--accent-d); color: var(--t1); }
+/* ── Narada's memory ──────────────────────────────────────────
+   Chips in the conversation (white on the black dock) and the "What Narada
+   knows" view inside the "i" panel. */
+.nx-msg.nx-memchip {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  padding: 8px 12px; border-radius: 12px;
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+  font-size: 13px; line-height: 1.4; color: rgba(255,255,255,0.86);
+}
+.nx-memchip-l { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+.nx-memchip-t { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.nx-memchip-b { display: inline-flex; gap: 12px; margin-left: auto; font-size: 12.5px; color: rgba(255,255,255,0.6); }
+.nx-memchip-b button {
+  background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: #fff;
+  text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.nx-memchip-b button:disabled { opacity: 0.4; cursor: default; }
+.nx-memchip.undone .nx-memchip-t { text-decoration: line-through; opacity: 0.55; }
+.nx-info-body { max-height: min(62vh, 560px); overflow-y: auto; overscroll-behavior: contain; }
+.nx-info.mem { width: 380px; }
+.nx-mem-open {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%;
+  margin: 0 0 6px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--accent-d); color: var(--t1); font: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; text-align: left;
+}
+.nx-mem-open b { font-weight: 500; color: var(--t2); white-space: nowrap; }
+.nx-mem-open:active { transform: scale(0.98); }
+.nx-mem-head { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--t1); }
+.nx-mem-back, .nx-mem-acts button, .nx-mem-add button {
+  background: none; border: 0; padding: 2px 0; font: inherit; font-size: 12.5px; font-weight: 600;
+  color: var(--t2); text-decoration: underline; text-underline-offset: 3px; cursor: pointer;
+}
+.nx-mem-back:hover, .nx-mem-acts button:hover, .nx-mem-add button:hover { color: var(--t1); }
+.nx-mem-note { margin: 6px 0 2px; font-size: 12px; line-height: 1.45; color: var(--t3); }
+.nx-mem-err { margin: 6px 0; font-size: 12.5px; color: var(--danger, #d93025); }
+.nx-mem-empty { padding: 14px 0; font-size: 13px; color: var(--t3); }
+.nx-mem-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding: 7px 0; border-top: 1px solid var(--border); font-size: 13px; color: var(--t1);
+}
+.nx-info-h + .nx-mem-row { border-top: 0; }
+.nx-mem-text { flex: 1; min-width: 0; overflow-wrap: anywhere; line-height: 1.4; }
+.nx-mem-text small { display: block; margin-top: 1px; font-size: 11px; color: var(--t3); }
+.nx-mem-acts { display: inline-flex; gap: 10px; flex-shrink: 0; }
+.nx-mem-in {
+  flex: 1; min-width: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid var(--border);
+  background: transparent; color: var(--t1); font: inherit; font-size: 13px;
+}
+.nx-mem-in:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.nx-mem-add { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+.nx-mem-old { margin-top: 12px; font-size: 12.5px; color: var(--t2); }
+.nx-mem-old summary { cursor: pointer; padding: 4px 0; font-weight: 600; }
+.nx-mem-old .nx-mem-row { color: var(--t2); }
 /* Toasts clear the Narada bar on desktop (phones show them at the top). */
 body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-area-inset-bottom)); }
 @media (max-width: 768px) {
@@ -4370,7 +4424,7 @@ body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-a
     right: 14px; width: 36px; height: 36px;
     bottom: calc(88px + env(safe-area-inset-bottom) + var(--nx-dock-h, 52px) + 14px);
   }
-  .nx-info {
+  .nx-info, .nx-info.mem {
     left: 12px; right: 12px; width: auto;
     bottom: calc(88px + env(safe-area-inset-bottom) + var(--nx-dock-h, 52px) + 60px);
   }
@@ -4385,6 +4439,7 @@ body:has(#page-narada.active) .toast-container { bottom: calc(176px + env(safe-a
   /* The "i" button would sit on top of an open conversation. */
   body:has(.nx-dock.open) .nx-info-btn { opacity: 0; pointer-events: none; }
   .nx-input { font-size: 16px !important; }
+  .nx-mem-in { font-size: 16px; }   /* below 16px iOS zooms the page on focus */
 }
 
 /* Black and white: an "on" switch is ink, so its knob takes the paper colour. */

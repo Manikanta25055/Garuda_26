@@ -508,6 +508,7 @@ const N = (() => {
             setPending(true);
           } else if (m.message) {
             say('narada', m.message);
+            pollMemory();                 // a spoken reply carries no chips of its own
           }
         },
         onError: (message) => voiceError(typeof message === 'string' ? message : 'Voice connection failed'),
@@ -560,6 +561,7 @@ const N = (() => {
         const card = bubble('extra', '');
         if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
       }
+      memoryChips(res.memory);
       if (infoOpen) renderInfo();
     } catch (e) {
       const msg = (e && e.detail) || 'Connection error. Please try again.';
@@ -570,17 +572,157 @@ const N = (() => {
     }
   }
 
-  // ── "i" panel: models and usage ────────────────────────────
+  // ── Memory: what Narada knows about the household ──────────
+  // Every change memory makes shows as a chip in the conversation ("Saved to
+  // memory", with Undo). The whole memory is one tap away in the "i" panel.
+  const escHtml = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const CHIP_LABEL = { saved: 'Saved to memory', updated: 'Memory updated', forgotten: 'Removed from memory', pending: 'Keep this in memory?' };
+  const ORIGIN_LABEL = { asked: 'you asked', noticed: 'picked up in conversation', distilled: 'from a past conversation', manual: 'added by hand' };
+  const shownEvents = new Set();
+  let memSince = Date.now() / 1000;
+  let memOpen = false, memData = null, memEditing = null, memError = '';
+
+  function memoryChips(events) {
+    let added = false;
+    for (const e of events || []) {
+      const key = e.id + ':' + e.status;
+      if (shownEvents.has(key)) continue;
+      shownEvents.add(key);
+      if (e.at) memSince = Math.max(memSince, e.at);
+      const card = bubble('extra', '');
+      if (!card) continue;
+      card.classList.add('nx-memchip');
+      card.dataset.id = e.id;
+      card.dataset.status = e.status;
+      if (e.replaced_id) card.dataset.replaced = e.replaced_id;
+      const buttons = e.status === 'pending'
+        ? '<button type="button" data-chip="confirm">Keep</button><button type="button" data-chip="dismiss">No</button>'
+        : '<button type="button" data-chip="undo">Undo</button>';
+      card.innerHTML = `<span class="nx-memchip-l">${CHIP_LABEL[e.status] || 'Memory'}</span>`
+        + `<span class="nx-memchip-t">${escHtml(e.text)}</span><span class="nx-memchip-b">${buttons}</span>`;
+      added = true;
+    }
+    if (added) { scrollLog(); haptic('tap'); if (memOpen) loadMemory(); }
+  }
+
+  async function pollMemory() {
+    try {
+      const res = await G._apiFn('GET', '/api/narada/memory?since=' + encodeURIComponent(memSince));
+      memoryChips(res.recent);
+    } catch (_) {}
+  }
+
+  // Undo means "as if it had not happened": a new fact goes for good, a
+  // corrected one comes back, a removed one is restored.
+  async function chipAction(card, what) {
+    const id = card.dataset.id, status = card.dataset.status, mem = '/api/narada/memory/';
+    const done = (label, note) => {
+      const b = card.querySelector('.nx-memchip-b'), l = card.querySelector('.nx-memchip-l');
+      if (l && label) l.textContent = label;
+      if (b) b.textContent = note || '';
+      card.classList.toggle('undone', !!label && label !== 'Saved to memory' && label !== 'Back in memory');
+    };
+    card.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    try {
+      if (what === 'confirm') { await G._apiFn('POST', mem + id + '/confirm'); done('Saved to memory'); }
+      else if (what === 'dismiss') { await G._apiFn('DELETE', mem + id + '?forever=1'); done('Not kept'); }
+      else if (status === 'forgotten') { await G._apiFn('POST', mem + id + '/restore'); done('Back in memory'); }
+      else {
+        await G._apiFn('DELETE', mem + id + '?forever=1');
+        if (card.dataset.replaced) await G._apiFn('POST', mem + card.dataset.replaced + '/restore');
+        done(card.dataset.replaced ? 'Change undone' : 'Not saved');
+      }
+      haptic('tap');
+      if (memOpen) loadMemory();
+    } catch (e) {
+      done('', (e && e.detail) || 'That did not work');
+    }
+  }
+
+  async function loadMemory() {
+    // An error from the action that led here stays on screen: only a failed load replaces it.
+    try { memData = await G._apiFn('GET', '/api/narada/memory'); }
+    catch (e) { memError = (e && e.detail) || 'Could not load the memory.'; }
+    if (infoOpen) renderInfo();
+  }
+
+  function memoryHtml() {
+    const d = memData;
+    if (!d) return `<div class="nx-mem-empty">${escHtml(memError || 'Loading…')}</div>`;
+    const row = f => memEditing === f.id
+      ? `<form class="nx-mem-row editing" data-form="edit" data-id="${f.id}">
+           <input class="nx-mem-in" name="text" maxlength="200" value="${escHtml(f.text)}" aria-label="Fact"/>
+           <span class="nx-mem-acts"><button type="submit">Save</button><button type="button" data-mem="cancel">Cancel</button></span>
+         </form>`
+      : `<div class="nx-mem-row" data-id="${f.id}">
+           <span class="nx-mem-text">${escHtml(f.text)}<small>${escHtml(ORIGIN_LABEL[f.origin] || f.origin || '')}${f.by ? ' · ' + escHtml(f.by) : ''}</small></span>
+           <span class="nx-mem-acts"><button type="button" data-mem="edit">Edit</button><button type="button" data-mem="remove">Remove</button></span>
+         </div>`;
+    const groups = (d.categories || []).map(c => {
+      const facts = d.facts.filter(f => f.category === c);
+      return facts.length ? `<div class="nx-info-h">${escHtml(c)}</div>${facts.map(row).join('')}` : '';
+    }).join('');
+    const pending = (d.pending || []).length ? `<div class="nx-info-h">Waiting for you</div>` + d.pending.map(f =>
+      `<div class="nx-mem-row" data-id="${f.id}"><span class="nx-mem-text">${escHtml(f.text)}<small>Narada was not sure you said this</small></span>
+       <span class="nx-mem-acts"><button type="button" data-mem="confirm">Keep</button><button type="button" data-mem="purge">No</button></span></div>`).join('') : '';
+    const archived = (d.archived || []).length ? `<details class="nx-mem-old"><summary>Removed (${d.archived.length})</summary>` + d.archived.map(f =>
+      `<div class="nx-mem-row" data-id="${f.id}"><span class="nx-mem-text">${escHtml(f.text)}<small>${escHtml({ corrected: 'replaced by a newer fact', forgotten: 'removed' }[f.archived && f.archived.reason] || 'removed')}</small></span>
+       <span class="nx-mem-acts"><button type="button" data-mem="restore">Restore</button><button type="button" data-mem="purge">Delete</button></span></div>`).join('') + '</details>' : '';
+    return `
+      <div class="nx-mem-head"><button type="button" class="nx-mem-back" data-mem="back">Back</button><b>What Narada knows</b></div>
+      <p class="nx-mem-note">Things you have told Narada, kept between conversations. Nobody checked them: edit or remove anything that is wrong.</p>
+      ${memError ? `<div class="nx-mem-err">${escHtml(memError)}</div>` : ''}
+      ${pending}
+      ${groups || (pending ? '' : '<div class="nx-mem-empty">Nothing yet. Tell Narada something about yourself, or add it here.</div>')}
+      <form class="nx-mem-add" data-form="add">
+        <input class="nx-mem-in" name="text" maxlength="200" placeholder="Add a fact, one sentence" aria-label="Add a fact"/>
+        <button type="submit">Add</button>
+      </form>
+      ${archived}`;
+  }
+
+  async function memoryAct(what, id, form) {
+    const mem = '/api/narada/memory';
+    try {
+      memError = '';
+      if (what === 'open') { memOpen = true; memEditing = null; $('nx-info').classList.add('mem'); renderInfo(); return loadMemory(); }
+      if (what === 'back') { memOpen = false; $('nx-info').classList.remove('mem'); return renderInfo(); }
+      if (what === 'edit') { memEditing = id; return renderInfo(); }
+      if (what === 'cancel') { memEditing = null; return renderInfo(); }
+      if (what === 'remove') await G._apiFn('DELETE', `${mem}/${id}`);
+      else if (what === 'purge') await G._apiFn('DELETE', `${mem}/${id}?forever=1`);
+      else if (what === 'restore') await G._apiFn('POST', `${mem}/${id}/restore`);
+      else if (what === 'confirm') await G._apiFn('POST', `${mem}/${id}/confirm`);
+      else if (what === 'save') { await G._apiFn('PATCH', `${mem}/${id}`, { text: form.text.value.trim() }); memEditing = null; }
+      else if (what === 'add') {
+        const text = form.text.value.trim();
+        if (!text) return;
+        await G._apiFn('POST', mem, { text });
+      }
+      haptic('tap');
+    } catch (e) {
+      memError = (e && e.detail) || 'That did not work.';
+    }
+    return loadMemory();
+  }
+
+  // ── "i" panel: memory, models and usage ────────────────────
   const fmt = n => (n == null ? '—' : Number(n).toLocaleString());
   function renderInfo() {
     const box = $('nx-info-body');
     if (!box) return;
+    if (memOpen) { box.innerHTML = memoryHtml(); return; }
     const nim = (infoData && infoData.nim) || {}, v = (infoData && infoData.voice) || {};
     const r = lastReply;
     const row = (k, val) => `<div class="nx-info-row"><span>${k}</span><b>${val}</b></div>`;
     const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     const used = v.character_limit ? `${fmt(v.characters_used)} / ${fmt(v.character_limit)}` : '—';
+    const known = memData ? memData.facts.length : null, waiting = memData ? (memData.pending || []).length : 0;
     box.innerHTML = `
+      <button type="button" class="nx-mem-open" data-mem="open">
+        <span>What Narada knows</span>
+        <b>${known == null ? '' : known + (known === 1 ? ' fact' : ' facts')}${waiting ? ' · ' + waiting + ' waiting' : ''} ›</b>
+      </button>
       <div class="nx-info-h">Brain · NVIDIA NIM</div>
       ${row('Model', esc(nim.last_model || (nim.models || [])[0] || '—'))}
       ${row('Last response', nim.last_latency_s != null ? nim.last_latency_s.toFixed(1) + ' s' : '—')}
@@ -602,6 +744,7 @@ const N = (() => {
     haptic('tap');
     if (!infoOpen) return;
     renderInfo();
+    loadMemory();
     try { infoData = await G._apiFn('GET', '/api/narada/info'); renderInfo(); } catch (_) {}
   }
 
@@ -630,6 +773,24 @@ const N = (() => {
     input.addEventListener('focus', () => $('nx-dock').classList.add('focus'));
     input.addEventListener('blur', () => $('nx-dock').classList.remove('focus'));
     restore();
+    // Memory: chips in the conversation, and the panel's buttons and forms.
+    $('nx-log').addEventListener('click', e => {
+      const btn = e.target.closest('[data-chip]'), card = btn && btn.closest('.nx-memchip');
+      if (card) chipAction(card, btn.dataset.chip);
+    });
+    const infoBody = $('nx-info-body');
+    infoBody.addEventListener('click', e => {
+      const btn = e.target.closest('[data-mem]');
+      if (!btn) return;
+      const rowEl = btn.closest('[data-id]');
+      memoryAct(btn.dataset.mem, rowEl && rowEl.dataset.id);
+    });
+    infoBody.addEventListener('submit', e => {
+      const form = e.target.closest('[data-form]');
+      if (!form) return;
+      e.preventDefault();
+      memoryAct(form.dataset.form === 'edit' ? 'save' : 'add', form.dataset.id, form);
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) stop(); else if (window.G && $('page-narada').classList.contains('active')) start();
     });

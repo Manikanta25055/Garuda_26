@@ -116,3 +116,70 @@ def test_a_long_message_is_not_cut_at_500_characters(house):
     text = "word " * 300
     make(ctx, home, chat, data_dir).handle(text, user="mani")
     assert chat.requests[0]["messages"][-1]["content"] == text.strip()
+
+
+def tool_call(name, args):
+    return {"choices": [{"message": {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "c1", "type": "function", "function": {"name": name, "arguments": json.dumps(args)}}]},
+        "finish_reason": "tool_calls"}], "usage": {"total_tokens": 10}}
+
+
+def test_a_stated_fact_is_saved_and_reported_for_the_chip(house):
+    ctx, home, data_dir = house
+    chat = ScriptedChat([tool_call("remember_fact", {"text": "Mani is vegetarian"}),
+                         completion("Noted. How about a paneer wrap?")])
+    a = make(ctx, home, chat, data_dir)
+    out = a.handle("I'm vegetarian, by the way. Suggest a dinner?", user="mani")
+    event = out["memory"][0]
+    assert (event["text"], event["status"], event["replaced"]) == ("Mani is vegetarian.", "saved", None)
+    assert a.brain.events_since(0) == [event] and a.brain.events_since(event["at"]) == []
+    assert out["actions"] == []                      # remembering is not a house action
+    assert [f["text"] for f in a.brain.memory.facts()] == ["Mani is vegetarian."]
+    assert json.loads(chat.requests[1]["messages"][-1]["content"])["saved"] is True
+
+
+def test_the_next_conversation_is_told_what_is_known(house):
+    ctx, home, data_dir = house
+    make(ctx, home, ScriptedChat([]), data_dir).brain.memory.remember("Mani is vegetarian")
+    chat = ScriptedChat([completion("Roasted chickpeas.")])
+    make(ctx, home, chat, data_dir).handle("suggest a snack", user="mani")
+    assert "Mani is vegetarian." in chat.requests[0]["messages"][0]["content"]
+
+
+def test_a_fact_the_person_did_not_say_is_held_not_saved(house):
+    ctx, home, data_dir = house
+    chat = ScriptedChat([tool_call("remember_fact", {"text": "Mani is diabetic and takes insulin"}),
+                         completion("I need you to confirm that on screen.")])
+    a = make(ctx, home, chat, data_dir)
+    out = a.handle("suggest a dessert for tonight", user="mani")
+    assert out["memory"][0]["status"] == "pending" and a.brain.memory.facts() == []
+    assert json.loads(chat.requests[1]["messages"][-1]["content"])["saved"] is False
+
+
+def test_a_secret_is_refused_and_the_model_is_told_why(house):
+    ctx, home, data_dir = house
+    chat = ScriptedChat([tool_call("remember_fact", {"text": "Mani's email password is hunter2"}),
+                         completion("I do not keep passwords.")])
+    a = make(ctx, home, chat, data_dir)
+    out = a.handle("my email password is hunter2, keep that in mind", user="mani")
+    assert out["memory"] == [] and a.brain.memory.facts() == []
+    assert "never kept" in json.loads(chat.requests[1]["messages"][-1]["content"])["reason"]
+
+
+def test_forget_fact_archives_and_reports(house):
+    ctx, home, data_dir = house
+    chat = ScriptedChat([tool_call("forget_fact", {"what": "favourite colour"}), completion("Forgotten.")])
+    a = make(ctx, home, chat, data_dir)
+    a.brain.memory.remember("Mani's favourite colour is green")
+    out = a.handle("forget my favourite colour", user="mani")
+    assert out["memory"][0]["status"] == "forgotten" and a.brain.memory.facts() == []
+    assert len(a.brain.memory.archived()) == 1
+
+
+def test_memory_tools_work_on_the_security_product_too(house):
+    ctx, home, data_dir = house
+    chat = ScriptedChat([tool_call("remember_fact", {"text": "Mani prefers email alerts off at night"}),
+                         completion("Noted.")])
+    a = make(ctx, home, chat, data_dir)
+    out = a.handle("remember that I prefer email alerts off at night", user="mani", scope="security")
+    assert out["memory"][0]["status"] == "saved"

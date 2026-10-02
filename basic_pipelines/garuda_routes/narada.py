@@ -8,6 +8,7 @@ import asyncio
 import json
 import re
 import threading
+import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -16,6 +17,16 @@ from pydantic import BaseModel, Field
 
 class ChatRequest(BaseModel):
     message: str = Field(max_length=2000)
+
+
+class MemoryFactRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+    category: str | None = Field(default=None, max_length=20)
+
+
+class MemoryEditRequest(BaseModel):
+    text: str | None = Field(default=None, max_length=300)
+    category: str | None = Field(default=None, max_length=20)
 
 
 def build_narada_router(core):
@@ -31,6 +42,7 @@ def build_narada_router(core):
             lambda: core._assistant_reply(msg, session["username"], session["role"], scope))
         return {"response": result["reply"], "lane": result.get("lane"),
                 "actions": result.get("actions", []), "proposal": result.get("proposal"),
+                "memory": result.get("memory", []),
                 "route": result.get("route"), "model": result.get("model")}
 
 
@@ -53,7 +65,7 @@ def build_narada_router(core):
                 result = core._assistant_reply(msg, user, role, scope)
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
-            meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "model")}
+            meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
             for word in re.findall(r"\S+\s*", result["reply"]):
                 loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
@@ -105,5 +117,77 @@ def build_narada_router(core):
         return {"nim": {k: nim.get(k) for k in ("configured", "models", "last_model",
                                                 "last_latency_s", "calls", "tokens_used")},
                 "voice": voice}
+
+    # ── What Narada knows ─────────────────────────────────────────────────────
+    # One memory for the household: anyone signed in may read and correct it.
+    # Every change is written to the system log with who made it.
+
+    def _memory_view():
+        memory = core.BRAIN.memory
+        newest = lambda facts: sorted(facts, key=lambda f: f.get("updated", 0), reverse=True)  # noqa: E731
+        return {"facts": newest(memory.facts()), "pending": newest(memory.pending()),
+                "archived": sorted(memory.archived(), key=lambda f: f["archived"]["at"], reverse=True),
+                "categories": list(core.BRAIN.memory_categories)}
+
+    @router.get("/api/narada/memory")
+    async def narada_memory(since: float | None = None, session=Depends(core.require_session)):
+        """Everything Narada knows; with ?since=<time> only what memory did after it
+        (how a spoken conversation gets its "Saved to memory" chips)."""
+        if since is not None:
+            return {"recent": core.BRAIN.events_since(since), "now": time.time()}
+        return {**_memory_view(), "now": time.time()}
+
+    @router.post("/api/narada/memory")
+    async def narada_memory_add(data: MemoryFactRequest, session=Depends(core.require_session)):
+        outcome = core.BRAIN.memory.remember(data.text, category=data.category,
+                                             origin="manual", by=session["username"])
+        if outcome["status"] == "rejected":
+            raise HTTPException(400, outcome["reason"])
+        core.log_system_update(f"Narada memory: {session['username']} added a fact ({outcome['status']})")
+        return {"status": outcome["status"], "fact": outcome["fact"]}
+
+    @router.patch("/api/narada/memory/{fact_id}")
+    async def narada_memory_edit(fact_id: str, data: MemoryEditRequest,
+                                 session=Depends(core.require_session)):
+        if data.text is None and data.category is None:
+            raise HTTPException(400, "Nothing to change")
+        fact, reason = core.BRAIN.memory.edit(fact_id, text=data.text, category=data.category)
+        if fact is None:
+            raise HTTPException(404 if reason == "no such fact" else 400, reason)
+        core.log_system_update(f"Narada memory: {session['username']} edited a fact")
+        return {"fact": fact}
+
+    @router.delete("/api/narada/memory/{fact_id}")
+    async def narada_memory_remove(fact_id: str, forever: bool = False,
+                                   session=Depends(core.require_session)):
+        """Archive a fact (it can be restored), or with ?forever=1 remove it for good."""
+        memory = core.BRAIN.memory
+        existing = memory.get(fact_id)
+        if existing is None:
+            raise HTTPException(404, "No such fact")
+        if forever:
+            memory.purge(fact_id)
+        elif not existing.get("archived"):
+            memory.forget(fact_id)
+        core.log_system_update(f"Narada memory: {session['username']} "
+                               f"{'deleted' if forever else 'removed'} a fact")
+        return {"ok": True}
+
+    @router.post("/api/narada/memory/{fact_id}/restore")
+    async def narada_memory_restore(fact_id: str, session=Depends(core.require_session)):
+        fact = core.BRAIN.memory.restore(fact_id)
+        if fact is None:
+            raise HTTPException(404, "No such removed fact")
+        core.log_system_update(f"Narada memory: {session['username']} restored a fact")
+        return {"fact": fact}
+
+    @router.post("/api/narada/memory/{fact_id}/confirm")
+    async def narada_memory_confirm(fact_id: str, session=Depends(core.require_session)):
+        """Keep a fact Narada was holding because the person had not said it in so many words."""
+        fact = core.BRAIN.memory.confirm(fact_id)
+        if fact is None:
+            raise HTTPException(404, "Nothing is waiting under that id")
+        core.log_system_update(f"Narada memory: {session['username']} confirmed a fact")
+        return {"fact": fact}
 
     return router

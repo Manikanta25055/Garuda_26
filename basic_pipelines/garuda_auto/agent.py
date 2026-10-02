@@ -15,9 +15,11 @@ the same power the dashboard buttons already give them.
 """
 import json
 import logging
+import threading
 import time
 
 from ..narada_brain import Brain, persona
+from ..narada_brain.memory import CATEGORIES as MEMORY_CATEGORIES
 from . import actuation_log
 from .device_types import is_actuator
 from .llm import NO_THINKING, NimUnavailable
@@ -44,7 +46,7 @@ MAX_INPUT_CHARS = 2000
 MODE_NAMES = ("dnd", "night", "idle", "emergency", "privacy", "email_off")
 # What Narada may do on the security-only product (Garuda). Home automation
 # is Drishti's; on Garuda's address the model is not even offered it.
-SECURITY_TOOLS = ("get_security_state", "set_security_mode")
+SECURITY_TOOLS = ("get_security_state", "set_security_mode", "remember_fact", "forget_fact")
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -70,6 +72,9 @@ class HomeAgent:
         # Who Narada is and what it carries between turns. Without one given,
         # a brain that keeps the conversation in memory only.
         self.brain = brain or Brain(clock=clock)
+        # What the person said in the turn a tool is running for: a memory
+        # write is checked against it (see narada_brain.gate).
+        self._turn = threading.local()
         self.stats = {"agent": 0, "unavailable": 0}
 
     # ── entry point ───────────────────────────────────────────────────────────
@@ -144,6 +149,14 @@ class HomeAgent:
                 {"limit": {"type": "integer"}}),
             _fn("energy_usage", "Device on-time and estimated energy.",
                 {"days": {"type": "integer"}}),
+            _fn("remember_fact", "Keep one lasting fact about the household in memory.",
+                {"text": {"type": "string", "description": "one plain sentence that names who it is about"},
+                 "category": {"type": "string", "enum": list(MEMORY_CATEGORIES)},
+                 "replaces": {"type": "string", "description": "id of the fact this corrects, if any"}},
+                ["text"]),
+            _fn("forget_fact", "Remove a fact from memory.",
+                {"what": {"type": "string", "description": "the fact's id, or words describing it"}},
+                ["what"]),
         ]
 
     def _state_brief(self, scope):
@@ -168,7 +181,8 @@ class HomeAgent:
     def _agent(self, text, user, role, scope="home", voice=False):
         # Separate conversations, so a Drishti one never leaks into Garuda's.
         history_key = f"security:{user}" if scope == "security" else user
-        system = self.brain.system_prompt(user, role, scope=scope, key=history_key)
+        system = self.brain.system_prompt(user, role, scope=scope, key=history_key, query=text)
+        self._turn.said = text
         system += self._state_brief(scope)
         if voice:
             system += persona.VOICE_STYLE
@@ -179,7 +193,7 @@ class HomeAgent:
         messages += self.brain.history(history_key)
         first = len(messages)
         messages.append({"role": "user", "content": text})
-        actions, proposal = [], None
+        actions, proposal, memory = [], None, []
         for _ in range(MAX_ROUNDS):
             message = self.chat.chat(messages, tools=tools,
                                      max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
@@ -191,7 +205,7 @@ class HomeAgent:
                 reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.",
                                                voice=voice)
                 return {"reply": reply, "lane": "agent", "actions": actions,
-                        "proposal": proposal, "model": self.chat.last_model,
+                        "proposal": proposal, "memory": memory, "model": self.chat.last_model,
                         "_turn": messages[first:] + [{"role": "assistant", "content": reply}]}
             messages.append({"role": "assistant", "content": message.get("content") or "",
                              "tool_calls": calls})
@@ -206,6 +220,8 @@ class HomeAgent:
                     out = {"error": f"{name} is not available in Garuda"}
                 else:
                     out = self._run_tool(name, args if isinstance(args, dict) else {}, user, role)
+                if out.get("_memory"):
+                    memory.append(out.pop("_memory"))
                 if out.pop("_action", None):
                     actions.append(out.get("result", ""))
                 if out.get("proposal"):
@@ -214,7 +230,7 @@ class HomeAgent:
                                  "content": json.dumps(out, default=str)[:4000]})
         return {"reply": "I did what I could: " + "; ".join(actions) if actions
                 else "That took too many steps; try asking more specifically.",
-                "lane": "agent", "actions": actions, "proposal": proposal,
+                "lane": "agent", "actions": actions, "proposal": proposal, "memory": memory,
                 "model": self.chat.last_model}
 
     # ── tools ─────────────────────────────────────────────────────────────────
@@ -393,6 +409,28 @@ class HomeAgent:
                             for r in u["devices"]]}
 
     # ── memory ────────────────────────────────────────────────────────────────
+
+    def _tool_remember_fact(self, args, user, role):
+        outcome = self.brain.remember_fact(
+            str(args.get("text") or ""), said=getattr(self._turn, "said", ""), user=user,
+            category=args.get("category"), replaces=args.get("replaces"))
+        status, fact = outcome["status"], outcome["fact"]
+        if status == "rejected":
+            return {"saved": False, "reason": outcome["reason"]}
+        if status == "duplicate":
+            return {"saved": True, "result": "already known", "id": fact["id"]}
+        # `_memory` is what the chat shows: "Saved to memory" with Undo, or a
+        # question when the fact is being held.
+        if status == "pending":
+            return {"saved": False, "result": "waiting for the person to confirm it on screen",
+                    "id": fact["id"], "_memory": outcome["event"]}
+        return {"saved": True, "result": status, "id": fact["id"], "_memory": outcome["event"]}
+
+    def _tool_forget_fact(self, args, user, role):
+        fact, event = self.brain.forget_fact(str(args.get("what") or ""))
+        if fact is None:
+            return {"forgotten": False, "reason": "nothing in memory matches that"}
+        return {"forgotten": True, "text": fact["text"], "_memory": event}
 
     def forget(self, user):
         """End a conversation: the next thing this person says starts a new one."""

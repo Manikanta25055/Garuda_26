@@ -167,10 +167,6 @@ def test_a_long_spoken_reply_is_cut_to_whole_sentences():
     assert len(one) <= guards.SPOKEN_CHARS + 1 and one.endswith(".")
 
 
-def test_persona_does_not_promise_a_memory_it_does_not_have():
-    assert "this conversation only" in persona.system_prompt("mani", "admin", now=0)
-
-
 # ── brain ─────────────────────────────────────────────────────────────────────
 
 def test_brain_prompt_carries_the_summary_and_checks_replies(tmp_path):

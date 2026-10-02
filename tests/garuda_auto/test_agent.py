@@ -301,7 +301,8 @@ def test_security_scope_never_touches_devices(house):
     assert out["lane"] == "agent"                       # no fast lane on Garuda
     assert home.on_devices() == []
     offered = {t["function"]["name"] for t in chat.requests[0]["tools"]}
-    assert offered == {"get_security_state", "set_security_mode"}
+    # Memory is the one thing both products share: the same household is talking.
+    assert offered == {"get_security_state", "set_security_mode", "remember_fact", "forget_fact"}
     assert "not available in Garuda" in chat.requests[1]["messages"][-1]["content"]
 
 
