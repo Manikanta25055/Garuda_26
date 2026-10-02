@@ -22,7 +22,8 @@ class Resp:
 
 def answers(intent="device_control", device="lamp", action="on", scene="none", conf=0.91):
     return {"answers": {
-        "intent": {"choice": intent, "confidence": conf, "probabilities": {intent: conf}},
+        "intent": {"choice": intent, "confidence": 0.5, "answer_confidence": conf,
+                   "probabilities": {intent: conf}},
         "device": {"choice": device, "confidence": 0.97},
         "action": {"choice": action, "probabilities": {action: 0.88, "none": 0.12}},
         "scene": {"choice": scene, "confidence": 0.9}}}
@@ -50,7 +51,8 @@ def test_questions_are_sent_the_way_laya_reads_them_and_no_key_is_sent():
     assert q["intent"]["type"] == "choice" and "switch one named device" in q["intent"]["criteria"]["device_control"]
     assert set(q["action"]["criteria"]) == {"on", "off", "none"} and q["action"]["instructions"]
     assert out["intent"]["value"] == "device_control" and out["intent"]["backend"] == "laya"
-    assert out["action"]["confidence"] == 0.88            # taken from the probabilities when no confidence is given
+    assert out["intent"]["confidence"] == 0.91            # answer_confidence, not the entropy figure
+    assert out["action"]["confidence"] == 0.88            # from the probabilities when it is absent
 
 
 def test_an_answer_outside_the_options_or_a_dead_server_falls_back_to_local():

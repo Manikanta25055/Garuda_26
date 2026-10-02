@@ -67,16 +67,15 @@ def camera_fps(seconds=3.0):
 def server_memory_mb(url):
     """Resident memory of whatever is listening on the URL's port, or None."""
     try:
-        import psutil
-        port = int(url.rsplit(":", 1)[1].split("/")[0])
-        for conn in psutil.net_connections(kind="tcp"):
-            if conn.status == "LISTEN" and conn.laddr.port == port and conn.pid:
-                proc = psutil.Process(conn.pid)
-                total = proc.memory_info().rss + sum(c.memory_info().rss for c in proc.children(recursive=True))
-                return round(total / 1e6)
+        port = url.rsplit(":", 1)[1].split("/")[0]
+        listing = subprocess.run(["ss", "-ltnp"], capture_output=True, text=True, timeout=5).stdout
+        line = next(l for l in listing.splitlines() if f":{port} " in l and "pid=" in l)
+        pid = line.split("pid=")[1].split(",")[0]
+        rss_kb = subprocess.run(["ps", "-o", "rss=", "-p", pid], capture_output=True, text=True,
+                                timeout=5).stdout.strip()
+        return round(int(rss_kb) / 1024)
     except Exception:
-        pass
-    return None
+        return None
 
 
 def run(backend, data):
@@ -150,6 +149,8 @@ def main():
     results["local"] = report("local matcher", *run(local, data))
 
     if args.url:
+        # On 2026-10-02 this run took the Pi 5 from 64 to 85 C in fifteen minutes.
+        # Watch `vcgencmd measure_temp` and stop the server if it nears 85.
         before = {"temp_c": cpu_temp(), "camera_fps": camera_fps(), "load": os.getloadavg()[0]}
         print(f"\nbefore Laya works: {before}")
         laya = LayaBackend(args.url, timeout=args.timeout)

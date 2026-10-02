@@ -219,6 +219,13 @@ class LayaBackend(JevBackend):
     the questions are sent the way Laya reads them, with a description for
     every option. An experiment, off unless LAYA_URL is set: see
     scripts/laya_experiment.py for what it costs on a Pi and how it scores.
+
+    Measured on this Pi 5 on 2026-10-02 (laya 0.3.23, CPU, two threads, base
+    checkpoints, no fine-tuning), on tests/eval/routing_cases.json: 14 of 49
+    whole decisions right against the local matcher's 30 of 50, about 15 s a
+    decision, 5.5 GB resident with its three checkpoints loaded, and the CPU
+    went from 64 to 85 C and hit its soft temperature limit within fifteen
+    minutes. Do not point the live service at it as it stands.
     """
     name = "laya"
 
@@ -270,9 +277,14 @@ class LayaBackend(JevBackend):
             probs = raw.get("probabilities") or raw.get("probs") or {}
             if isinstance(probs, list):
                 probs = dict(zip(q.get("options", []), probs))
-            confidence = raw.get("confidence")
-            if confidence is None and isinstance(probs, dict):
-                confidence = probs.get(value, 0.0)
+            # Laya's `confidence` is one minus the normalised entropy, not the chance
+            # of being right; `answer_confidence` is the probability of the answer
+            # it gave, which is what a threshold here means.
+            confidence = raw.get("answer_confidence")
+            if confidence is None and isinstance(probs, dict) and value in probs:
+                confidence = probs[value]
+            if confidence is None:
+                confidence = raw.get("confidence")
             out[name] = Answer(value=value, probs=probs, confidence=float(confidence or 0.0),
                                backend=self.name)
         return out
