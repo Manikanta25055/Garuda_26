@@ -264,6 +264,9 @@ try:
     from .garuda_services import home as _svc_home
     from .garuda_services.home import (  # noqa: F401
         _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary)
+    from .garuda_services import middleware as _svc_middleware
+    from .garuda_services.middleware import (  # noqa: F401
+        global_rate_limit, product_scope, security_headers)
     from .garuda_core import API_VERSION, BUILD
     from .garuda_core.settings import Settings
     from .garuda_core.workers import Supervisor
@@ -328,6 +331,9 @@ except ImportError:
     from basic_pipelines.garuda_services import home as _svc_home
     from basic_pipelines.garuda_services.home import (  # noqa: F401
         _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary)
+    from basic_pipelines.garuda_services import middleware as _svc_middleware
+    from basic_pipelines.garuda_services.middleware import (  # noqa: F401
+        global_rate_limit, product_scope, security_headers)
     from basic_pipelines.garuda_core import API_VERSION, BUILD
     from basic_pipelines.garuda_core.settings import Settings
     from basic_pipelines.garuda_core.workers import Supervisor
@@ -346,6 +352,7 @@ except ImportError:
         _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
 
 # garuda_services modules read this module's state through `core`.
+_svc_middleware.bind(sys.modules[__name__])
 _svc_home.bind(sys.modules[__name__])
 _svc_assistant.bind(sys.modules[__name__])
 _svc_state.bind(sys.modules[__name__])
@@ -872,55 +879,11 @@ fastapi_app.add_middleware(
 _RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
                          "/api/health", "/api/ready")
 
-async def global_rate_limit(request: Request, call_next):
-    path = request.url.path
-    _eval_tok = os.environ.get("GARUDA_EVAL_TOKEN", "")
-    _tok_hdr = request.headers.get("X-Eval-Token", "")
-    _eval_bypass = bool(_eval_tok) and hmac.compare_digest(_tok_hdr.encode(), _eval_tok.encode())
-    if not _eval_bypass and not any(path.startswith(p) for p in _RATE_EXEMPT_PREFIXES):
-        token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-        signed_in = bool(token) and get_session(token) is not None
-        allowed = (_check_rate_limit(request, "session", _RATE_LIMIT_SESSION) if signed_in
-                   else _check_rate_limit(request))
-        if not allowed:
-            from fastapi.responses import JSONResponse
-            return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
-    return await call_next(request)
 fastapi_app.middleware("http")(global_rate_limit)
 
-async def product_scope(request: Request, call_next):
-    """The security-only product has no home automation, on the server too."""
-    if (request.url.path.startswith("/api/home")
-            and _product_for_host(request.headers.get("host")) == "security"):
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"detail": "Not Found"}, status_code=404)
-    return await call_next(request)
 fastapi_app.middleware("http")(product_scope)
 
 # Security headers middleware
-async def security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        # blob:/data: scripts are the voice client's audio worklets; the
-        # ElevenLabs hosts carry Narada's WebRTC voice session.
-        "script-src 'self' 'unsafe-inline' blob: data:; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' blob: data:; "
-        "media-src 'self' blob: mediastream:; "
-        "font-src 'self'; "
-        "connect-src 'self' wss: ws: https://*.elevenlabs.io; "
-        "frame-ancestors 'none'"
-    )
-    # Answers from the API describe this moment and this user; nothing between
-    # the Pi and the browser should keep a copy.
-    if request.url.path.startswith("/api/") and "cache-control" not in response.headers:
-        response.headers["Cache-Control"] = "no-store"
-    return response
 fastapi_app.middleware("http")(security_headers)
 
 # Request ids, the /api/v1 alias, one error shape and the access log. Added
