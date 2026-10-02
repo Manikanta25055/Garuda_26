@@ -29,7 +29,7 @@ def build_feedback_router(core):
         now = time.time()
         # Reuse _rate_store but with a separate key to avoid conflating with API limits
         fb_key = f"fb:{ip}"
-        stamps = core._rate_store[fb_key]
+        stamps = core.STATE.auth.rate_store[fb_key]
         stamps[:] = [t for t in stamps if now - t < 3600]
         if len(stamps) >= 5:
             raise HTTPException(429, "Too many feedback submissions. Try again later.")

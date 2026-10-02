@@ -43,7 +43,7 @@ def build_auth_router(core):
     async def users_public():
         """Return non-sensitive user info for login screen profile cards."""
         result = []
-        for uname, udata in core.USERS.items():
+        for uname, udata in core.STATE.auth.users.items():
             if udata.get("role") == "user":
                 result.append({
                     "username": uname,
@@ -61,7 +61,7 @@ def build_auth_router(core):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()[:64]
         p = data.password.strip()[:256]
-        user = core.USERS.get(u)
+        user = core.STATE.auth.users.get(u)
         # PBKDF2 at 600k rounds takes a noticeable fraction of a second on the Pi;
         # on the event loop it froze the state socket and every camera stream for
         # that long. The same work is done for an unknown name, so the answer
@@ -110,8 +110,8 @@ def build_auth_router(core):
         return {
             "role": session["role"],
             "username": u,
-            "display_name": core.USERS.get(u, {}).get("display_name", u),
-            "box_color": core.USERS.get(u, {}).get("box_color", "#1565c0"),
+            "display_name": core.STATE.auth.users.get(u, {}).get("display_name", u),
+            "box_color": core.STATE.auth.users.get(u, {}).get("box_color", "#1565c0"),
             "logs_unlocked": session.get("logs_unlocked", False),
         }
 
@@ -119,7 +119,7 @@ def build_auth_router(core):
     async def logout(request: Request, response: Response):
         token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
         if token:
-            core._sessions.pop(token, None)
+            core.STATE.auth.sessions.pop(token, None)
         # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
         for refresh in (request.cookies.get("garuda_refresh"), request.headers.get("X-Garuda-Refresh")):
             if refresh:
@@ -141,14 +141,14 @@ def build_auth_router(core):
         if not rs:
             raise HTTPException(401, "Refresh token expired or invalid. Please log in again.")
         u = rs["username"]
-        if u not in core.USERS:
+        if u not in core.STATE.auth.users:
             core._revoke_refresh(refresh)
             raise HTTPException(401, "User no longer exists.")
         access_token = core.create_session(u)
         core._set_session_cookies(request, response, access_token)
         return {
             "token": access_token,
-            "role": core.USERS[u]["role"],
+            "role": core.STATE.auth.users[u]["role"],
             "username": u,
         }
 
@@ -162,7 +162,7 @@ def build_auth_router(core):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()[:64]
         p = data.password.strip()[:256]
-        user = core.USERS.get(u)
+        user = core.STATE.auth.users.get(u)
         stored = user["password"] if user else core._DUMMY_PASSWORD_HASH
         password_ok = await asyncio.to_thread(core._verify_password, p, stored)
         if user is None or not password_ok or user.get("role") != "admin":
@@ -172,13 +172,13 @@ def build_auth_router(core):
         if not user["password"].startswith("pbkdf2:"):
             user["password"] = await asyncio.to_thread(core._hash_password, p)
             await asyncio.to_thread(core.save_users)
-        core.ADMIN_OTP = core.generate_otp_code(6)
-        core._admin_otp_user = u          # store server-side so step 2 cannot be hijacked
-        core._admin_otp_ts = time.time()  # for expiry check
-        core._admin_otp_attempts = 0      # a new code gets its own three tries
+        core.STATE.auth.admin_otp = core.generate_otp_code(6)
+        core.STATE.auth.admin_otp_user = u          # store server-side so step 2 cannot be hijacked
+        core.STATE.auth.admin_otp_ts = time.time()  # for expiry check
+        core.STATE.auth.admin_otp_attempts = 0      # a new code gets its own three tries
         dest = core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender
         # SMTP can take ten seconds; off the event loop so nothing else waits on it.
-        ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, core.ADMIN_OTP)
+        ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, core.STATE.auth.admin_otp)
         if not ok:
             return {"ok": False, "error": err}
         return {"ok": True}
@@ -188,20 +188,20 @@ def build_auth_router(core):
         """Admin login step 2: verify OTP, issue session."""
         if not core._check_rate_limit(request):
             raise HTTPException(429, "Too many requests. Try again later.")
-        if not core.ADMIN_OTP or not core._admin_otp_user:
+        if not core.STATE.auth.admin_otp or not core.STATE.auth.admin_otp_user:
             raise HTTPException(401, "No OTP pending. Please restart login.")
-        if time.time() - core._admin_otp_ts > 300:
-            core.ADMIN_OTP = None; core._admin_otp_user = None; core._admin_otp_attempts = 0
+        if time.time() - core.STATE.auth.admin_otp_ts > 300:
+            core.STATE.auth.admin_otp = None; core.STATE.auth.admin_otp_user = None; core.STATE.auth.admin_otp_attempts = 0
             raise HTTPException(401, "OTP expired. Please request a new one.")
-        if core._admin_otp_attempts >= 3:
-            core.ADMIN_OTP = None; core._admin_otp_user = None; core._admin_otp_attempts = 0
+        if core.STATE.auth.admin_otp_attempts >= 3:
+            core.STATE.auth.admin_otp = None; core.STATE.auth.admin_otp_user = None; core.STATE.auth.admin_otp_attempts = 0
             raise HTTPException(401, "Too many incorrect attempts. Please restart login.")
-        if not hmac.compare_digest(data.otp.strip().encode(), str(core.ADMIN_OTP).encode()):
-            core._admin_otp_attempts += 1
+        if not hmac.compare_digest(data.otp.strip().encode(), str(core.STATE.auth.admin_otp).encode()):
+            core.STATE.auth.admin_otp_attempts += 1
             raise HTTPException(401, "Invalid OTP.")
-        u = core._admin_otp_user   # use server-stored username, not client-supplied
-        core.ADMIN_OTP = None; core._admin_otp_user = None; core._admin_otp_ts = 0; core._admin_otp_attempts = 0
-        if u not in core.USERS or core.USERS[u]["role"] != "admin":
+        u = core.STATE.auth.admin_otp_user   # use server-stored username, not client-supplied
+        core.STATE.auth.admin_otp = None; core.STATE.auth.admin_otp_user = None; core.STATE.auth.admin_otp_ts = 0; core.STATE.auth.admin_otp_attempts = 0
+        if u not in core.STATE.auth.users or core.STATE.auth.users[u]["role"] != "admin":
             raise HTTPException(401, "Account not authorised.")
         ip = core._get_client_ip(request)
         core._clear_login_failure(ip)
@@ -212,7 +212,7 @@ def build_auth_router(core):
         body = {
             "role": "admin",
             "username": u,
-            "display_name": core.USERS[u].get("display_name", u),
+            "display_name": core.STATE.auth.users[u].get("display_name", u),
             "token": access_token,   # for cross-origin clients
         }
         if core._is_cross_site(request):
@@ -225,16 +225,16 @@ def build_auth_router(core):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()
         # Always return the same response regardless of whether user exists (anti-enumeration)
-        if u not in core.USERS:
+        if u not in core.STATE.auth.users:
             return {"ok": True}
         otp = core.generate_otp_code(6)
-        core._forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
-        core.USER_FORGOT_OTP = otp   # test-facing alias
+        core.STATE.auth.forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
+        core.STATE.auth.user_forgot_otp = otp   # test-facing alias
         # Send to the user's own email if stored, else fall back to admin recipient
-        dest = core.USERS[u].get("email") or (core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender)
+        dest = core.STATE.auth.users[u].get("email") or (core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender)
         ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, otp)
         if not ok:
-            core._forgot_otp_store.pop(u, None)
+            core.STATE.auth.forgot_otp_store.pop(u, None)
             return {"ok": False, "error": err}
         return {"ok": True}
 
@@ -250,44 +250,44 @@ def build_auth_router(core):
             u = data.username.strip()
         else:
             guess = data.otp.strip()
-            u = next((k for k, v in list(core._forgot_otp_store.items())
+            u = next((k for k, v in list(core.STATE.auth.forgot_otp_store.items())
                       if hmac.compare_digest(str(v.get("otp", "")).encode(), guess.encode())), None)
             if not u:
                 # A guess with no username used to cost nothing: no attempt was
                 # counted against anyone. It now counts against the caller.
-                if core._forgot_otp_store:
+                if core.STATE.auth.forgot_otp_store:
                     core._record_login_failure(ip)
                 raise HTTPException(401, "No OTP pending.")
-        state = core._forgot_otp_store.get(u)
+        state = core.STATE.auth.forgot_otp_store.get(u)
         if not state:
-            core.USER_FORGOT_OTP = None
+            core.STATE.auth.user_forgot_otp = None
             raise HTTPException(401, "No OTP pending.")
         if time.time() - state["ts"] > 300:
-            core._forgot_otp_store.pop(u, None)
-            core.USER_FORGOT_OTP = None
+            core.STATE.auth.forgot_otp_store.pop(u, None)
+            core.STATE.auth.user_forgot_otp = None
             raise HTTPException(401, "OTP expired. Please request a new one.")
         if state["attempts"] >= 3:
-            core._forgot_otp_store.pop(u, None)
-            core.USER_FORGOT_OTP = None
+            core.STATE.auth.forgot_otp_store.pop(u, None)
+            core.STATE.auth.user_forgot_otp = None
             raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
         if not hmac.compare_digest(data.otp.strip().encode(), str(state["otp"]).encode()):
             state["attempts"] += 1
             core._record_login_failure(ip)
             if state["attempts"] >= 3:
-                core._forgot_otp_store.pop(u, None)
-                core.USER_FORGOT_OTP = None
+                core.STATE.auth.forgot_otp_store.pop(u, None)
+                core.STATE.auth.user_forgot_otp = None
             raise HTTPException(401, "Invalid OTP.")
         err = core._validate_password_strength(data.new_password)
         if err:
             raise HTTPException(400, err)
-        if u not in core.USERS:
+        if u not in core.STATE.auth.users:
             raise HTTPException(404, "User not found.")
-        core.USERS[u]["password"] = await asyncio.to_thread(core._hash_password, data.new_password.strip())
+        core.STATE.auth.users[u]["password"] = await asyncio.to_thread(core._hash_password, data.new_password.strip())
         core._invalidate_user_sessions(u)
         await asyncio.to_thread(core.save_users)
         core.log_system_update(f"Password reset for {u}.")
-        core._forgot_otp_store.pop(u, None)
-        core.USER_FORGOT_OTP = None
+        core.STATE.auth.forgot_otp_store.pop(u, None)
+        core.STATE.auth.user_forgot_otp = None
         return {"ok": True}
 
     return router

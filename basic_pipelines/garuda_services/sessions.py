@@ -35,20 +35,20 @@ def _invalidate_user_sessions(username: str, except_token: str | None = None,
     holding an old refresh cookie keep minting sessions for another week.
     """
     to_delete = [
-        t for t, s in list(core._sessions.items())
+        t for t, s in list(core.STATE.auth.sessions.items())
         if s.get("username") == username and t != except_token
     ]
     for t in to_delete:
-        core._sessions.pop(t, None)
+        core.STATE.auth.sessions.pop(t, None)
     keep_digest = core._rt_digest(except_refresh) if except_refresh else None
-    for t in [t for t, s in list(core._refresh_tokens.items())
+    for t in [t for t, s in list(core.STATE.auth.refresh_tokens.items())
               if s.get("username") == username and t != except_refresh]:
-        core._refresh_tokens.pop(t, None)
-        core._refresh_dirty = True
-    for d in [d for d, s in list(core._persisted_refresh.items())
+        core.STATE.auth.refresh_tokens.pop(t, None)
+        core.STATE.auth.refresh_dirty = True
+    for d in [d for d, s in list(core.STATE.auth.persisted_refresh.items())
               if s.get("username") == username and d != keep_digest]:
-        core._persisted_refresh.pop(d, None)
-        core._refresh_dirty = True
+        core.STATE.auth.persisted_refresh.pop(d, None)
+        core.STATE.auth.refresh_dirty = True
     return len(to_delete)
 
 
@@ -76,7 +76,7 @@ def _check_rate_limit(request, bucket: str = "", limit: Optional[int] = None) ->
     limit = core._RATE_LIMIT if limit is None else limit
     ip = core._get_client_ip(request)
     now = time.time()
-    stamps = core._rate_store[f"{bucket}:{ip}" if bucket else ip]
+    stamps = core.STATE.auth.rate_store[f"{bucket}:{ip}" if bucket else ip]
     stamps[:] = [t for t in stamps if now - t < core._RATE_WINDOW]
     if len(stamps) >= limit:
         return False
@@ -92,20 +92,20 @@ def _prune_rate_state():
     process.
     """
     now = time.time()
-    for key in list(core._rate_store.keys()):
-        stamps = core._rate_store.get(key)
+    for key in list(core.STATE.auth.rate_store.keys()):
+        stamps = core.STATE.auth.rate_store.get(key)
         if not stamps or now - max(stamps) > 3600:
-            core._rate_store.pop(key, None)
-    for ip in list(core._login_failures.keys()):
-        entry = core._login_failures.get(ip) or {}
+            core.STATE.auth.rate_store.pop(key, None)
+    for ip in list(core.STATE.auth.login_failures.keys()):
+        entry = core.STATE.auth.login_failures.get(ip) or {}
         until = entry.get("lockout_until", 0.0)
         if (until and now >= until) or (not until and now - entry.get("last", now) > 3600):
-            core._login_failures.pop(ip, None)
+            core.STATE.auth.login_failures.pop(ip, None)
 
 
 def _is_login_locked(ip: str) -> bool:
     """Return True if the IP is currently locked out from login attempts."""
-    entry = core._login_failures.get(ip)
+    entry = core.STATE.auth.login_failures.get(ip)
     if not entry:
         return False
     if entry["lockout_until"] == 0.0:
@@ -114,13 +114,13 @@ def _is_login_locked(ip: str) -> bool:
     if time.time() < entry["lockout_until"]:
         return True
     # Lockout expired — clear it
-    core._login_failures.pop(ip, None)
+    core.STATE.auth.login_failures.pop(ip, None)
     return False
 
 
 def _record_login_failure(ip: str):
     """Increment failure count; trigger lockout after _LOGIN_MAX_ATTEMPTS."""
-    entry = core._login_failures.setdefault(ip, {"count": 0, "lockout_until": 0.0})
+    entry = core.STATE.auth.login_failures.setdefault(ip, {"count": 0, "lockout_until": 0.0})
     entry["count"] += 1
     entry["last"] = time.time()
     if entry["count"] >= core._LOGIN_MAX_ATTEMPTS:
@@ -133,7 +133,7 @@ def _record_login_failure(ip: str):
 
 def _clear_login_failure(ip: str):
     """Clear failure record after a successful login."""
-    core._login_failures.pop(ip, None)
+    core.STATE.auth.login_failures.pop(ip, None)
 
 
 def _load_refresh_tokens():
@@ -145,18 +145,18 @@ def _load_refresh_tokens():
     except Exception:
         data = {}
     now = time.time()
-    core._persisted_refresh = {
+    core.STATE.auth.persisted_refresh = {
         d: rec for d, rec in (data.items() if isinstance(data, dict) else [])
-        if isinstance(rec, dict) and rec.get("expires", 0) > now and rec.get("username") in core.USERS
+        if isinstance(rec, dict) and rec.get("expires", 0) > now and rec.get("username") in core.STATE.auth.users
     }
 
 
 def _save_refresh_tokens():
     """Write the digests of every live refresh token. Blocking (fsync)."""
-    core._refresh_dirty = False
+    core.STATE.auth.refresh_dirty = False
     now = time.time()
-    snapshot = {d: rec for d, rec in list(core._persisted_refresh.items()) if rec.get("expires", 0) > now}
-    for token, rec in list(core._refresh_tokens.items()):
+    snapshot = {d: rec for d, rec in list(core.STATE.auth.persisted_refresh.items()) if rec.get("expires", 0) > now}
+    for token, rec in list(core.STATE.auth.refresh_tokens.items()):
         if rec.get("expires", 0) > now:
             snapshot[core._rt_digest(token)] = rec
     try:
@@ -169,34 +169,34 @@ def _save_refresh_tokens():
 def _revoke_refresh(token) -> bool:
     if not token:
         return False
-    hit = core._refresh_tokens.pop(token, None) is not None
-    hit = (core._persisted_refresh.pop(core._rt_digest(token), None) is not None) or hit
+    hit = core.STATE.auth.refresh_tokens.pop(token, None) is not None
+    hit = (core.STATE.auth.persisted_refresh.pop(core._rt_digest(token), None) is not None) or hit
     if hit:
-        core._refresh_dirty = True
+        core.STATE.auth.refresh_dirty = True
     return hit
 
 
 def create_refresh_token(username: str) -> str:
     token = secrets.token_hex(64)
     now = time.time()
-    core._refresh_tokens[token] = {
+    core.STATE.auth.refresh_tokens[token] = {
         "username": username,
-        "role": core.USERS[username]["role"],
+        "role": core.STATE.auth.users[username]["role"],
         "expires": now + core._REFRESH_DURATION,
         "created_at": now,
     }
-    core._refresh_dirty = True
+    core.STATE.auth.refresh_dirty = True
     return token
 
 
 def _prune_expired_refresh_tokens():
     now = time.time()
-    for t in [t for t, s in list(core._refresh_tokens.items()) if s.get("expires", 0) <= now]:
-        core._refresh_tokens.pop(t, None)
-        core._refresh_dirty = True
-    for d in [d for d, s in list(core._persisted_refresh.items()) if s.get("expires", 0) <= now]:
-        core._persisted_refresh.pop(d, None)
-        core._refresh_dirty = True
+    for t in [t for t, s in list(core.STATE.auth.refresh_tokens.items()) if s.get("expires", 0) <= now]:
+        core.STATE.auth.refresh_tokens.pop(t, None)
+        core.STATE.auth.refresh_dirty = True
+    for d in [d for d, s in list(core.STATE.auth.persisted_refresh.items()) if s.get("expires", 0) <= now]:
+        core.STATE.auth.persisted_refresh.pop(d, None)
+        core.STATE.auth.refresh_dirty = True
 
 
 def _user_signed_in(username: str) -> bool:
@@ -209,10 +209,10 @@ def _user_signed_in(username: str) -> bool:
     """
     now = time.time()
     if any(s.get("username") == username and s.get("expires", 0) > now
-           for s in list(core._sessions.values())):
+           for s in list(core.STATE.auth.sessions.values())):
         return True
     return any(s.get("username") == username and s.get("expires", 0) > now
-               for s in list(core._refresh_tokens.values()) + list(core._persisted_refresh.values()))
+               for s in list(core.STATE.auth.refresh_tokens.values()) + list(core.STATE.auth.persisted_refresh.values()))
 
 
 def _is_cross_site(request) -> bool:
@@ -257,12 +257,12 @@ def _set_session_cookies(request, response, access_token, refresh_token=None, pe
 
 
 def get_refresh_token(token: str) -> dict | None:
-    s = core._refresh_tokens.get(token)
+    s = core.STATE.auth.refresh_tokens.get(token)
     if not s and token:
         # Issued before the last restart: known only by its digest.
-        s = core._persisted_refresh.pop(core._rt_digest(token), None)
+        s = core.STATE.auth.persisted_refresh.pop(core._rt_digest(token), None)
         if s:
-            core._refresh_tokens[token] = s
+            core.STATE.auth.refresh_tokens[token] = s
     if not s:
         return None
     if s["expires"] <= time.time():
@@ -276,9 +276,9 @@ def create_session(username, duration=None):
         duration = core._ACCESS_DURATION
     token = secrets.token_hex(64)
     now = time.time()
-    core._sessions[token] = {
+    core.STATE.auth.sessions[token] = {
         "username": username,
-        "role": core.USERS[username]["role"],
+        "role": core.STATE.auth.users[username]["role"],
         "expires": now + duration,
         "created_at": now,
         "max_lifetime": now + 86400,  # absolute 24-hour hard limit
@@ -291,7 +291,7 @@ def create_master_session(duration=3600):
     """Create an admin session via master key — logs unlocked immediately."""
     token = secrets.token_hex(64)
     now = time.time()
-    core._sessions[token] = {
+    core.STATE.auth.sessions[token] = {
         "username": "admin",
         "role": "admin",
         "expires": now + duration,
@@ -305,12 +305,12 @@ def create_master_session(duration=3600):
 def get_session(token):
     if not token:
         return None
-    s = core._sessions.get(token)
+    s = core.STATE.auth.sessions.get(token)
     if not s:
         return None
     now = time.time()
     if s["expires"] <= now or now >= s.get("max_lifetime", now + 1):
-        core._sessions.pop(token, None)   # pop: another thread may have pruned it already
+        core.STATE.auth.sessions.pop(token, None)   # pop: another thread may have pruned it already
         return None
     return s
 
@@ -318,10 +318,10 @@ def get_session(token):
 def _prune_expired_sessions():
     """Remove sessions that have expired or exceeded their absolute lifetime."""
     now = time.time()
-    dead = [t for t, s in list(core._sessions.items())
+    dead = [t for t, s in list(core.STATE.auth.sessions.items())
             if s["expires"] <= now or now >= s.get("max_lifetime", now + 1)]
     for t in dead:
-        core._sessions.pop(t, None)
+        core.STATE.auth.sessions.pop(t, None)
     core._prune_expired_refresh_tokens()
 
 

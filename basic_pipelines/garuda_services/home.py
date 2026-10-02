@@ -30,7 +30,7 @@ def _drishti_authenticate(username, password):
     second copy whose USERS is still the empty dict it starts as. Passing the
     function in keeps the one live table.
     """
-    user = core.USERS.get(username)
+    user = core.STATE.auth.users.get(username)
     if user is None or not core._verify_password(password, user["password"]):
         return None
     return user.get("role", "user")
@@ -92,7 +92,7 @@ def _home_set_mode(mode, value, actor):
     """The assistant's way into the same switch as POST /api/modes."""
     if mode not in core.STATE.modes.FLAGS:
         raise ValueError(f"unknown mode: {mode!r}")
-    if mode in core.ADMIN_ONLY_MODES and value and core.USERS.get(actor, {}).get("role") != "admin":
+    if mode in core.ADMIN_ONLY_MODES and value and core.STATE.auth.users.get(actor, {}).get("role") != "admin":
         raise PermissionError("only an admin can turn this mode on: it silences alerts")
     with core.STATE.modes.lock:
         core.STATE.modes.set(mode, bool(value))

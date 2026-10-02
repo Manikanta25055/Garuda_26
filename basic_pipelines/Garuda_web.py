@@ -368,16 +368,7 @@ voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
 _detection_log: List[str] = []   # in-memory recent detection events (danger + watch)
 
-ADMIN_OTP = None
-_admin_otp_user: str | None = None   # server-side stored username for OTP step 2
-_admin_otp_ts: float = 0             # epoch when admin OTP was generated
-_admin_otp_attempts: int = 0         # failed verify attempts; cleared on success or expiry
-_forgot_otp_store: dict = {}  # username → {otp, ts, attempts}  (per-user, no race condition)
-USER_FORGOT_OTP: str | None = None   # test-facing alias: last generated forgot OTP string
 # Flat test-facing aliases (conftest monkeypatches these directly)
-_forgot_otp_user: str | None = None
-_forgot_otp_ts: float = 0.0
-_forgot_otp_attempts: int = 0
 
 # Live state, grouped by concern (garuda_core/state.py). The flat names the
 # tests still use are forwarded to it; code in this file uses STATE directly.
@@ -447,6 +438,22 @@ _core_state.forward(sys.modules[__name__], {
     "app_gst": ("camera", "app_gst"),
 })
 
+_core_state.forward(sys.modules[__name__], {
+    "USERS": ("auth", "users"), "MASTER_KEYS": ("auth", "master_keys"),
+    "_sessions": ("auth", "sessions"), "_refresh_tokens": ("auth", "refresh_tokens"),
+    "_persisted_refresh": ("auth", "persisted_refresh"),
+    "_refresh_dirty": ("auth", "refresh_dirty"), "_login_failures": ("auth", "login_failures"),
+    "_rate_store": ("auth", "rate_store"), "ADMIN_OTP": ("auth", "admin_otp"),
+    "_admin_otp_user": ("auth", "admin_otp_user"), "_admin_otp_ts": ("auth", "admin_otp_ts"),
+    "_admin_otp_attempts": ("auth", "admin_otp_attempts"),
+    "_forgot_otp_store": ("auth", "forgot_otp_store"),
+    "USER_FORGOT_OTP": ("auth", "user_forgot_otp"), "_forgot_otp_user": ("auth", "forgot_otp_user"),
+    "_forgot_otp_ts": ("auth", "forgot_otp_ts"),
+    "_forgot_otp_attempts": ("auth", "forgot_otp_attempts"),
+    "MASTER_KEY_OTP": ("auth", "master_key_otp"), "_master_otp_ts": ("auth", "master_otp_ts"),
+    "_master_otp_attempts": ("auth", "master_otp_attempts"),
+})
+
 NARADA_WAKE_WORD = "narada"
 
 _app_start_time = time.time()
@@ -473,8 +480,6 @@ _log_buffer_lock = threading.Lock()
 # ── Clip recording ────────────────────────────────────────
 
 # ── Phone presence detection ──────────────────────────────
-MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
-MASTER_KEY_OTP: str | None = None
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
 
 # ── Password hashing (PBKDF2-SHA256) ────────────────────
@@ -482,7 +487,6 @@ OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking awa
 # ── Atomic JSON write ────────────────────────────────────
 
 # ── Rate limiter (in-memory, per-IP) ────────────────────
-_rate_store: dict = defaultdict(list)   # IP → [timestamps]
 _RATE_LIMIT = 30     # max requests
 _RATE_WINDOW = 60    # per N seconds
 # A signed-in page is not an attacker: one page load fires several API calls
@@ -491,11 +495,9 @@ _RATE_WINDOW = 60    # per N seconds
 _RATE_LIMIT_SESSION = 300
 
 # ── Brute-force login lockout ────────────────────────────
-_login_failures: dict = {}   # IP → {"count": int, "lockout_until": float}
 _LOGIN_MAX_ATTEMPTS = 5
 _LOGIN_LOCKOUT_SECONDS = 300  # 5 minutes
 
-USERS: dict = {}  # populated from users.json at startup; no hardcoded defaults
 
 try:
     from .garuda_auto.frame_publisher import FramePublisher
@@ -538,7 +540,6 @@ _MAX_PEER_CONNECTIONS = 4
 # Event-driven WS broadcaster
 
 # Session store: token → {username, role, expires}
-_sessions = {}
 
 # WebSocket clients (all connected devices): socket -> {username, role}
 _ws_clients: dict = {}
@@ -707,15 +708,12 @@ _ACCESS_DURATION  = 900           # 15 minutes — short-lived access token
 _REFRESH_DURATION = 7 * 24 * 3600  # 7 days — refresh token
 
 # Refresh token store: token → {username, role, expires, created_at}
-_refresh_tokens: dict = {}
 
 # Every restart used to sign the whole house out: the store above lived only
 # in memory. It is now mirrored to disk, as SHA-256 digests (the file is no
 # use to someone who reads it), and a token that arrives after a restart is
 # recognised by its digest and adopted back into the store above.
 REFRESH_TOKENS_FILE = str(_BASE / "system_logs" / "refresh_tokens.json")
-_persisted_refresh: dict = {}      # sha256(token) → record, loaded at start-up
-_refresh_dirty = False
 
 ##############################################################################
 # FASTAPI APP
@@ -954,8 +952,6 @@ fastapi_app.include_router(build_logs_router(sys.modules[__name__]))
 
 # ── Master key OTP state ─────────────────────────────────────────────────────
 _MASTER_OTP_TTL = 300
-_master_otp_ts = 0.0
-_master_otp_attempts = 0
 
 fastapi_app.include_router(build_master_keys_router(sys.modules[__name__]))
 

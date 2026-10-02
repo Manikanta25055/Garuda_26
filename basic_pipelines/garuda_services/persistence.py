@@ -47,7 +47,7 @@ def load_users():
                             idx += 1
                         if "history" not in udata:
                             udata["history"] = {"logins": [], "narada_activity": []}
-                    core.USERS = data
+                    core.STATE.auth.users = data
                     return
             except Exception as e:
                 print(f"Warning: failed to load users from {path}: {e}")
@@ -55,7 +55,7 @@ def load_users():
 
 def save_users():
     try:
-        core._atomic_json_write(core.USERS_FILE, core.USERS)
+        core._atomic_json_write(core.USERS_FILE, core.STATE.auth.users)
     except Exception as e:
         core.log_system_update(f"Failed to save users: {e}")
 
@@ -129,7 +129,7 @@ def _record_alert_activity():
 
 def _remember_user_activity(user_name, kind, entry):
     """Append to a user's history list, keeping only the recent entries."""
-    user = core.USERS.get(user_name) if user_name else None
+    user = core.STATE.auth.users.get(user_name) if user_name else None
     if not isinstance(user, dict):
         return
     items = user.setdefault("history", {}).setdefault(kind, [])
@@ -177,25 +177,25 @@ def load_master_keys():
                 if any(not core._mk_is_hashed(k) for k in keys):
                     # One-time migration of a file written before hashing.
                     keys = [k if core._mk_is_hashed(k) else core._mk_hash(k) for k in keys]
-                    core.MASTER_KEYS[:] = keys
+                    core.STATE.auth.master_keys[:] = keys
                     core.save_master_keys()
                 else:
-                    core.MASTER_KEYS[:] = keys
+                    core.STATE.auth.master_keys[:] = keys
                 return
     except Exception:
         pass
     # If no key file, seed from MASTER_KEY env var (set in .env)
     bootstrap = os.environ.get("MASTER_KEY", "").strip()
     if bootstrap:
-        core.MASTER_KEYS[:] = [core._mk_hash(bootstrap)]
+        core.STATE.auth.master_keys[:] = [core._mk_hash(bootstrap)]
         core.save_master_keys()  # persist to file for future runs
 
 
 def save_master_keys():
     try:
         # Never write a key as typed, whatever put it in the list.
-        core.MASTER_KEYS[:] = [k if core._mk_is_hashed(k) else core._mk_hash(k) for k in core.MASTER_KEYS]
-        core._atomic_json_write(core.MASTER_KEYS_FILE, {"keys": core.MASTER_KEYS})
+        core.STATE.auth.master_keys[:] = [k if core._mk_is_hashed(k) else core._mk_hash(k) for k in core.STATE.auth.master_keys]
+        core._atomic_json_write(core.MASTER_KEYS_FILE, {"keys": core.STATE.auth.master_keys})
         try:
             os.chmod(core.MASTER_KEYS_FILE, 0o600)
         except OSError:

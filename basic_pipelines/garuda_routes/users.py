@@ -34,7 +34,7 @@ def build_users_router(core):
     @router.get("/api/users")
     async def list_users(session=Depends(core.require_admin)):
         result = {}
-        for uname, udata in core.USERS.items():
+        for uname, udata in core.STATE.auth.users.items():
             result[uname] = {
                 "role": udata.get("role"),
                 "display_name": udata.get("display_name", uname),
@@ -47,7 +47,7 @@ def build_users_router(core):
         un = (data.username or "").strip()
         if not un:
             raise HTTPException(400, "Username required.")
-        if un in core.USERS:
+        if un in core.STATE.auth.users:
             raise HTTPException(400, "Username already exists.")
         if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', un):
             raise HTTPException(400, "Username must be 3-32 chars, alphanumeric, underscore or hyphen only.")
@@ -58,7 +58,7 @@ def build_users_router(core):
             raise HTTPException(400, err)
         if not core._COLOR_RE.match(data.box_color or ""):
             raise HTTPException(400, "Colour must look like #1565c0.")
-        core.USERS[un] = {
+        core.STATE.auth.users[un] = {
             "password": await asyncio.to_thread(core._hash_password, data.password.strip()),
             "role": "user",
             "display_name": (data.display_name or un.capitalize()).strip()[:64],
@@ -73,24 +73,24 @@ def build_users_router(core):
     async def delete_user(data: DeleteUserRequest, session=Depends(core.require_admin)):
         if data.username == "admin":
             raise HTTPException(400, "Cannot delete the admin account.")
-        if data.username not in core.USERS:
+        if data.username not in core.STATE.auth.users:
             raise HTTPException(404, "User not found.")
-        if core.USERS[data.username].get("role") == "admin":
+        if core.STATE.auth.users[data.username].get("role") == "admin":
             # Includes the caller: an admin deleting the last admin (or themselves)
             # would leave the master key as the only way back in.
             raise HTTPException(400, "Admin accounts cannot be deleted here.")
-        del core.USERS[data.username]
+        del core.STATE.auth.users[data.username]
         # The account is gone; so are its sessions, refresh tokens and any reset
         # code in flight. They used to stay valid until they expired by themselves.
         core._invalidate_user_sessions(data.username)
-        core._forgot_otp_store.pop(data.username, None)
+        core.STATE.auth.forgot_otp_store.pop(data.username, None)
         await asyncio.to_thread(core.save_users)
         core.log_system_update(f"User deleted: {data.username}")
         return {"ok": True}
 
     @router.post("/api/users/update")
     async def update_user(data: UpdateUserRequest, request: Request, session=Depends(core.require_admin)):
-        if data.username not in core.USERS:
+        if data.username not in core.STATE.auth.users:
             raise HTTPException(404, "User not found.")
         if data.box_color is not None and not core._COLOR_RE.match(data.box_color):
             raise HTTPException(400, "Colour must look like #1565c0.")
@@ -98,7 +98,7 @@ def build_users_router(core):
             err = core._validate_password_strength(data.new_password)
             if err:
                 raise HTTPException(400, err)
-            core.USERS[data.username]["password"] = await asyncio.to_thread(core._hash_password, data.new_password.strip())
+            core.STATE.auth.users[data.username]["password"] = await asyncio.to_thread(core._hash_password, data.new_password.strip())
             current_token = session.get("token")
             # The admin doing the change keeps their own way back in; every other
             # session and refresh token of that account is revoked.
@@ -106,9 +106,9 @@ def build_users_router(core):
             core._invalidate_user_sessions(data.username, except_token=current_token,
                                       except_refresh=own_refresh)
         if data.display_name is not None:
-            core.USERS[data.username]["display_name"] = data.display_name.strip()[:64]
+            core.STATE.auth.users[data.username]["display_name"] = data.display_name.strip()[:64]
         if data.box_color is not None:
-            core.USERS[data.username]["box_color"] = data.box_color
+            core.STATE.auth.users[data.username]["box_color"] = data.box_color
         await asyncio.to_thread(core.save_users)
         core.log_system_update(f"User updated: {data.username}")
         return {"ok": True}

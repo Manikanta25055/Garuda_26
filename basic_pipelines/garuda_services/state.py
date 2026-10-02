@@ -231,7 +231,7 @@ def _ws_connect_allowed(websocket) -> bool:
     """
     ip = core._get_client_ip(websocket)
     now = time.time()
-    stamps = core._rate_store[f"ws:{ip}"]
+    stamps = core.STATE.auth.rate_store[f"ws:{ip}"]
     stamps[:] = [t for t in stamps if now - t < core._RATE_WINDOW]
     if len(stamps) >= core._WS_CONNECT_LIMIT:
         return False
@@ -258,7 +258,7 @@ async def _ws_broadcaster():
         # got another update until the service was restarted. One bad tick is
         # now logged and the next one runs.
         try:
-            if core._refresh_dirty:
+            if core.STATE.auth.refresh_dirty:
                 await asyncio.to_thread(core._save_refresh_tokens)
             # Prune expired sessions every ~5 minutes (150 ticks × 2s)
             _prune_counter += 1
@@ -325,8 +325,8 @@ def _client_meta(request: Request) -> dict:
 
 
 def _system_extra() -> dict:
-    return {"sessions": {"active": len(core._sessions),
-                         "refresh_tokens": len(core._refresh_tokens) + len(core._persisted_refresh),
+    return {"sessions": {"active": len(core.STATE.auth.sessions),
+                         "refresh_tokens": len(core.STATE.auth.refresh_tokens) + len(core.STATE.auth.persisted_refresh),
                          "websockets": len(core._ws_clients), "video_peers": len(core._pc_set)},
             "log_file": getattr(core._core_logging.configure, "path", None)}
 

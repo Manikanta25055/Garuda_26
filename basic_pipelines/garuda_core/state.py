@@ -141,6 +141,31 @@ class Camera:
     app_gst: object = None   # GStreamer app instance
 
 
+@dataclass
+class Auth:
+    """Accounts, master keys, sign-in sessions, refresh tokens, one-time codes and the limits that guard them."""
+    users: dict = field(default_factory=dict)   # populated from users.json at startup; no hardcoded defaults
+    master_keys: list = field(default_factory=list)   # loaded from MASTER_KEYS_FILE at startup
+    sessions: dict = field(default_factory=dict)
+    refresh_tokens: dict = field(default_factory=dict)
+    persisted_refresh: dict = field(default_factory=dict)   # sha256(token) → record, loaded at start-up
+    refresh_dirty: bool = False
+    login_failures: dict = field(default_factory=dict)   # IP → {"count": int, "lockout_until": float}
+    rate_store: dict = field(default_factory=lambda: defaultdict(list))   # IP → [timestamps]
+    admin_otp: object = None
+    admin_otp_user: str | None = None   # server-side stored username for OTP step 2
+    admin_otp_ts: float = 0   # epoch when admin OTP was generated
+    admin_otp_attempts: int = 0   # failed verify attempts; cleared on success or expiry
+    forgot_otp_store: dict = field(default_factory=dict)   # username → {otp, ts, attempts}  (per-user, no race condition)
+    user_forgot_otp: str | None = None   # test-facing alias: last generated forgot OTP string
+    forgot_otp_user: str | None = None
+    forgot_otp_ts: float = 0.0
+    forgot_otp_attempts: int = 0
+    master_key_otp: str | None = None
+    master_otp_ts: float = 0.0
+    master_otp_attempts: int = 0
+
+
 class State:
     def __init__(self):
         self.modes = Modes()
@@ -149,6 +174,7 @@ class State:
         self.presence = Presence()
         self.system = System()
         self.camera = Camera()
+        self.auth = Auth()
 
 
 def forward(module, names: dict) -> None:
