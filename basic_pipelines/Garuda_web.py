@@ -777,6 +777,7 @@ try:
     from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
     from .garuda_auto.router import RouterBackend
     from .garuda_auto.agent import HomeAgent
+    from .garuda_auto.site_calls import SiteCaller
     from .narada_brain import Brain
     from .garuda_auto.digest import Digest
     from .garuda_auto.narada_voice import NaradaVoice
@@ -788,6 +789,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
     from basic_pipelines.garuda_auto.router import RouterBackend
     from basic_pipelines.garuda_auto.agent import HomeAgent
+    from basic_pipelines.garuda_auto.site_calls import SiteCaller
     from basic_pipelines.narada_brain import Brain
     from basic_pipelines.garuda_auto.digest import Digest
     from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
@@ -828,6 +830,9 @@ DECISION = DecisionEngine(
 BRAIN = Brain(DRISHTI_DATA_DIR, NIM_CHAT)
 AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
                   set_mode_fn=_home_set_mode, security_fn=_home_security_summary, brain=BRAIN)
+# What a button can do, Narada can do the same way: by the site's own endpoint,
+# as the person who asked (garuda_auto/capabilities.py lists which).
+AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
 
 
 # ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.

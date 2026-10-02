@@ -32,19 +32,37 @@ def test_capabilities_are_well_formed():
         assert name not in caps.BY_NAME
 
 
-def test_every_capability_has_a_handler_and_every_handler_a_capability():
+def test_every_capability_can_be_carried_out_one_way():
     handlers = {n[len("_tool_"):] for n in dir(HomeAgent) if n.startswith("_tool_")}
-    assert handlers == set(caps.BY_NAME)
+    by_route = {c.name for c in caps.CAPABILITIES if c.call}
+    assert handlers | by_route == set(caps.BY_NAME)
+    assert handlers & by_route == set(), "a capability has both a handler and a route"
+    for c in caps.CAPABILITIES:
+        if c.call:
+            assert c.routes == (c.call,) and c.lane == "planner"
 
 
-def test_the_agent_offers_the_table():
+def test_a_route_backed_capability_asks_for_the_role_its_route_asks_for():
+    guards = {f"{r['method']} {r['path']}": r["guard"] for r in json.loads(ROUTES.read_text())}
+    for c in caps.CAPABILITIES:
+        if c.call:
+            wanted = "user" if guards[c.call] == "require_session" else "admin"
+            assert c.role == wanted, f"{c.name}: the route wants {guards[c.call]}"
+
+
+def test_the_quick_model_is_offered_what_it_always_was():
     offered = [t["function"]["name"] for t in HomeAgent._tools(None)]
-    assert offered == [c.name for c in caps.CAPABILITIES if c.lane == "fast"]
-    assert SECURITY_TOOLS == ("get_security_state", "set_security_mode", "remember_fact",
-                              "forget_fact")
-    assert set(CHANGING_TOOLS) == {"set_device", "all_off", "run_scene", "create_scene",
-                                   "schedule_action", "create_automation", "set_security_mode",
-                                   "forget_fact"}
+    assert offered == ["get_security_state", "get_house_state", "set_device", "all_off",
+                       "run_scene", "create_scene", "schedule_action", "list_schedules",
+                       "create_automation", "list_automations", "set_security_mode",
+                       "recent_activity", "energy_usage", "remember_fact", "forget_fact"]
+    assert [n for n in offered if n in SECURITY_TOOLS] == [
+        "get_security_state", "set_security_mode", "remember_fact", "forget_fact"]
+    assert {"set_device", "all_off", "run_scene", "create_scene", "schedule_action",
+            "create_automation", "set_security_mode", "forget_fact"} <= set(CHANGING_TOOLS)
+    assert "remember_fact" not in CHANGING_TOOLS
+    # The planner is offered everything, the quick model's tools included.
+    assert len(caps.tools("planner")) == len(caps.CAPABILITIES)
 
 
 def test_nothing_about_sign_in_or_keys_is_planned():

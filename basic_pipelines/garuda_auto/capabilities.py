@@ -11,6 +11,11 @@ can reach is read here and not pieced together from handlers.
     lane  fast     offered on every turn to the quick model
           planner  offered to the bigger model that builds multi-step work
 
+A capability either has a handler in the agent (the first ones, which act on
+the house directly) or names the route that carries it out: `call`. The second
+kind runs the site's own endpoint as the person who asked, so there is one
+copy of each rule about who may do what.
+
 Every route of the site is accounted for exactly once: by a capability, in
 PLANNED (will become one), in NEVER (kept from the model on purpose) or in
 PLUMBING (pages, streams, the conversation itself). tests/garuda_auto/
@@ -37,6 +42,8 @@ class Capability:
     lane: str = "fast"
     security: bool = False      # also offered on the security-only product
     routes: tuple = ()          # "METHOD /path" this stands in for
+    call: str = ""              # the one route that carries it out (site_calls.py);
+                                # without it the agent has a handler of its own
 
     def tool(self):
         """The function description sent to the model."""
@@ -107,12 +114,127 @@ CAPABILITIES = (
                routes=("DELETE /api/narada/memory/{fact_id}",)),
 )
 
+def _site(name, summary, call, params=None, required=(), *, role="user", tier="read",
+          security=False):
+    """A capability carried out by the site's own endpoint; the planner's to use."""
+    return Capability(name, summary, params or {}, tuple(required), role=role, tier=tier,
+                      lane="planner", security=security, routes=(call,), call=call)
+
+
+_ID = lambda what: {"type": "string", "description": f"id of the {what}"}  # noqa: E731
+_N = {"type": "integer"}
+
+CAPABILITIES += (
+    # schedules, automations, suggestions
+    _site("delete_schedule", "Delete a schedule or timer (its creator or an admin).",
+          "DELETE /api/home/schedules/{schedule_id}", {"schedule_id": _ID("schedule")},
+          ["schedule_id"], tier="change"),
+    _site("pause_schedule", "Pause a schedule, or resume a paused one.",
+          "POST /api/home/schedules/{schedule_id}/toggle", {"schedule_id": _ID("schedule")},
+          ["schedule_id"], tier="change"),
+    _site("discard_proposal", "Throw away a drafted automation that is waiting to be confirmed.",
+          "DELETE /api/home/proposals/{proposal_id}", {"proposal_id": _ID("proposal")},
+          ["proposal_id"], tier="change"),
+    _site("pause_automation", "Pause a saved automation, or resume a paused one.",
+          "POST /api/home/rules/{rule_id}/toggle", {"rule_id": _ID("automation")},
+          ["rule_id"], role="admin", tier="change"),
+    _site("list_suggestions", "Routines the house has noticed and could turn into schedules.",
+          "GET /api/home/suggestions"),
+    _site("accept_suggestion", "Turn a noticed routine into a recurring schedule.",
+          "POST /api/home/suggestions/{suggestion_id}/accept",
+          {"suggestion_id": _ID("suggestion")}, ["suggestion_id"], role="admin", tier="change"),
+    _site("dismiss_suggestion", "Stop offering a noticed routine.",
+          "POST /api/home/suggestions/{suggestion_id}/dismiss",
+          {"suggestion_id": _ID("suggestion")}, ["suggestion_id"], tier="change"),
+    _site("dismiss_notice", "Clear a notice from the Home page.",
+          "POST /api/home/notices/{notice_id}/dismiss", {"notice_id": _ID("notice")},
+          ["notice_id"], tier="change"),
+    # devices
+    _site("list_device_types", "Kinds of device that can be added, and the free relay channels.",
+          "GET /api/home/device-types"),
+    _site("edit_device", "Rename a device, move it to a room, set its wattage, or enable/disable it.",
+          "PATCH /api/home/devices/{device_id}",
+          {"device_id": _ID("device"), "name": _S, "room": _S, "watts": {"type": "number"},
+           "enabled": {"type": "boolean"}}, ["device_id"], role="admin", tier="change"),
+    # what the house has been doing
+    _site("daily_digest", "Today's summary of the house in words.", "GET /api/home/digest",
+          {"refresh": {"type": "boolean"}}),
+    _site("home_insights", "Energy use per device and the recent activity, over some days.",
+          "GET /api/home/insights", {"days": _N, "limit": _N}),
+    _site("get_home_settings", "Home settings: tariff, away and vacation behaviour, digest time.",
+          "GET /api/home/settings"),
+    _site("event_stats", "How many security events are stored and how many wait to be synced.",
+          "GET /api/events/stats", security=True),
+    _site("recent_events", "Security events (detections, alerts) after a time.",
+          "GET /api/events/since",
+          {"since": {"type": "string", "description": "ISO time; empty for the oldest"},
+           "limit": _N}, security=True),
+    _site("camera_health", "The camera pipeline's speed and health figures.",
+          "GET /api/cascade_metrics", security=True),
+    _site("read_logs", "The system, voice, presence and detection logs (newest lines).",
+          "GET /api/logs", role="admin", security=True),
+    _site("read_feedback", "Feedback people have sent from the site.", "GET /api/feedback",
+          role="admin", security=True),
+    _site("system_info", "Build, uptime, health checks, background workers and backups.",
+          "GET /api/system/info", role="admin", security=True),
+    # camera
+    _site("start_clip", "Start recording a video clip from the camera.", "POST /api/clip/start",
+          tier="change", security=True),
+    _site("stop_clip", "Stop the clip that is recording and save it.", "POST /api/clip/stop",
+          tier="change", security=True),
+    # memory
+    _site("list_memory", "Everything in memory: facts, ones waiting to be confirmed, removed ones.",
+          "GET /api/narada/memory", security=True),
+    _site("edit_fact", "Reword a fact in memory or move it to another category.",
+          "PATCH /api/narada/memory/{fact_id}",
+          {"fact_id": _ID("fact"), "text": _S,
+           "category": {"type": "string", "enum": list(MEMORY_CATEGORIES)}},
+          ["fact_id"], tier="change", security=True),
+    _site("restore_fact", "Bring back a fact that was removed from memory.",
+          "POST /api/narada/memory/{fact_id}/restore", {"fact_id": _ID("fact")}, ["fact_id"],
+          tier="change", security=True),
+    _site("confirm_fact", "Keep a fact that is waiting for the person's confirmation.",
+          "POST /api/narada/memory/{fact_id}/confirm", {"fact_id": _ID("fact")}, ["fact_id"],
+          tier="change", security=True),
+    _site("mute_observation", "Stop making one kind of unprompted remark.",
+          "POST /api/narada/observations/mute",
+          {"key": {"type": "string", "description": "the remark's key"}}, ["key"],
+          tier="change", security=True),
+    # settings
+    _site("get_security_settings",
+          "Detection threshold, watched and danger labels, alert email, mode schedule, "
+          "night presence window, taught voice commands.",
+          "GET /api/config", role="admin", security=True),
+    _site("add_voice_command", "Teach a phrase and the fixed reply Narada gives to it.",
+          "POST /api/config/command/add", {"phrase": _S, "response": _S},
+          ["phrase", "response"], role="admin", tier="change", security=True),
+    _site("delete_voice_command", "Remove a taught phrase.", "POST /api/config/command/delete",
+          {"phrase": _S}, ["phrase"], role="admin", tier="change", security=True),
+    # presence
+    _site("list_tracked_phones", "Phones whose presence means someone is home.",
+          "GET /api/devices", role="admin", security=True),
+    _site("refresh_presence", "Check right now who is home.", "POST /api/presence_refresh",
+          role="admin", tier="change", security=True),
+    _site("network_neighbours", "Devices seen on the home network, with their addresses.",
+          "GET /api/arp", role="admin", security=True),
+    # upkeep
+    _site("send_test_email", "Send a test alert email.", "POST /api/email/test",
+          role="admin", tier="change", security=True),
+    _site("list_backups", "Saved backups of the house's data.", "GET /api/system/backups",
+          role="admin", security=True),
+    _site("create_backup", "Make a backup of the house's data now.", "POST /api/system/backups",
+          role="admin", tier="change", security=True),
+    _site("list_users", "People who can sign in, with their roles.", "GET /api/users",
+          role="admin", security=True),
+)
+
 BY_NAME = {c.name: c for c in CAPABILITIES}
 
 
 def tools(lane="fast", security_only=False):
+    """What one lane is offered. The planner also gets everything the fast lane has."""
     return [c.tool() for c in CAPABILITIES
-            if c.lane == lane and (c.security or not security_only)]
+            if (c.lane == lane or lane == "planner") and (c.security or not security_only)]
 
 
 def names(*, security=None, changing=None):
@@ -131,63 +253,26 @@ def names(*, security=None, changing=None):
 # The plan for the next step, kept here so the coverage test stays honest.
 PLANNED = {
     # schedules, automations, scenes
-    "DELETE /api/home/schedules/{schedule_id}": ("delete_schedule", "user", "change"),
-    "POST /api/home/schedules/{schedule_id}/toggle": ("pause_schedule", "user", "change"),
-    "DELETE /api/home/proposals/{proposal_id}": ("discard_proposal", "user", "change"),
     "POST /api/home/proposals/{proposal_id}/confirm": ("confirm_proposal", "admin", "confirm"),
-    "POST /api/home/rules/{rule_id}/toggle": ("pause_automation", "admin", "change"),
     "DELETE /api/home/rules/{rule_id}": ("delete_automation", "admin", "confirm"),
     "DELETE /api/home/scenes/{scene_id}": ("delete_scene", "admin", "confirm"),
-    "GET /api/home/suggestions": ("list_suggestions", "user", "read"),
-    "POST /api/home/suggestions/{suggestion_id}/accept": ("accept_suggestion", "admin", "change"),
-    "POST /api/home/suggestions/{suggestion_id}/dismiss": ("dismiss_suggestion", "user", "change"),
-    "POST /api/home/notices/{notice_id}/dismiss": ("dismiss_notice", "user", "change"),
     # devices
-    "GET /api/home/device-types": ("list_device_types", "user", "read"),
     "POST /api/home/devices": ("add_device", "admin", "confirm"),
-    "PATCH /api/home/devices/{device_id}": ("edit_device", "admin", "change"),
     "DELETE /api/home/devices/{device_id}": ("delete_device", "admin", "confirm"),
     # what the house has been doing
-    "GET /api/home/digest": ("daily_digest", "user", "read"),
-    "GET /api/home/insights": ("home_insights", "user", "read"),
-    "GET /api/events/stats": ("event_stats", "user", "read"),
-    "GET /api/events/since": ("recent_events", "user", "read"),
-    "GET /api/events/pending": ("event_stats", "user", "read"),
-    "GET /api/cascade_metrics": ("camera_health", "user", "read"),
-    "GET /api/logs": ("read_logs", "admin", "read"),
-    "GET /api/feedback": ("read_feedback", "admin", "read"),
-    "GET /api/system/info": ("system_info", "admin", "read"),
     # camera
     "GET /api/snapshot": ("take_snapshot", "user", "read"),
-    "POST /api/clip/start": ("start_clip", "user", "change"),
-    "POST /api/clip/stop": ("stop_clip", "user", "change"),
     # memory
-    "GET /api/narada/memory": ("list_memory", "user", "read"),
-    "PATCH /api/narada/memory/{fact_id}": ("edit_fact", "user", "change"),
-    "POST /api/narada/memory/{fact_id}/restore": ("restore_fact", "user", "change"),
-    "POST /api/narada/memory/{fact_id}/confirm": ("confirm_fact", "user", "change"),
-    "POST /api/narada/observations/mute": ("mute_observation", "user", "change"),
     # settings
-    "GET /api/home/settings": ("get_home_settings", "user", "read"),
     "POST /api/home/settings": ("change_home_settings", "admin", "confirm"),
-    "GET /api/config": ("get_security_settings", "admin", "read"),
     "POST /api/config": ("change_security_settings", "admin", "confirm"),
-    "POST /api/config/command/add": ("add_voice_command", "admin", "change"),
-    "POST /api/config/command/delete": ("delete_voice_command", "admin", "change"),
     "POST /api/emergency-stop": ("emergency_stop", "admin", "confirm"),
     # presence
-    "GET /api/devices": ("list_tracked_phones", "admin", "read"),
     "POST /api/devices/add": ("add_tracked_phone", "admin", "confirm"),
     "POST /api/devices/delete": ("delete_tracked_phone", "admin", "confirm"),
-    "POST /api/presence_refresh": ("refresh_presence", "admin", "change"),
-    "GET /api/arp": ("network_neighbours", "admin", "read"),
     # upkeep
-    "POST /api/email/test": ("send_test_email", "admin", "change"),
-    "GET /api/system/backups": ("list_backups", "admin", "read"),
-    "POST /api/system/backups": ("create_backup", "admin", "change"),
     # people (the owner's call, 2026-10-02: reachable, behind a confirm card;
     # a password is typed into the card, never into the conversation)
-    "GET /api/users": ("list_users", "admin", "read"),
     "POST /api/users/add": ("add_user", "admin", "confirm"),
     "POST /api/users/update": ("update_user", "admin", "confirm"),
     "POST /api/users/delete": ("delete_user", "admin", "confirm"),
@@ -226,6 +311,7 @@ PLUMBING = frozenset({
     "GET /", "GET /favicon.ico", "GET /manifest.json", "GET /sw.js", "- /static",
     "GET /api/health", "GET /api/ready", "GET /api/meta", "GET /api/heartbeat",
     "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
+    "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
     "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/info",
     "POST /api/narada/voice/token",
 })

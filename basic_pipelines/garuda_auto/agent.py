@@ -80,6 +80,9 @@ class HomeAgent:
         # Who Narada is and what it carries between turns. Without one given,
         # a brain that keeps the conversation in memory only.
         self.brain = brain or Brain(clock=clock)
+        # Runs the site's endpoints for capabilities that name one (site_calls.py).
+        # Set once the app exists; without it those capabilities say so.
+        self.site = None
         # What the person said in the turn a tool is running for: a memory
         # write is checked against it (see narada_brain.gate).
         self._turn = threading.local()
@@ -296,15 +299,31 @@ class HomeAgent:
             now=self._clock())
 
     def _run_tool(self, name, args, user, role):
-        try:
-            handler = getattr(self, f"_tool_{name}")
-        except AttributeError:
+        handler = getattr(self, f"_tool_{name}", None)
+        capability = capabilities.BY_NAME.get(name)
+        if handler is None and (capability is None or not capability.call):
             return {"error": f"unknown tool {name}"}
         try:
-            return handler(args, user, role)
+            if handler is not None:
+                return handler(args, user, role)
+            return self._site_call(capability, args, user, role)
         except Exception as exc:
             log.exception("tool %s", name)
             return {"error": f"{type(exc).__name__}: {exc}"}
+
+    def _site_call(self, capability, args, user, role):
+        """Carry out a capability by running the site's own endpoint as this person:
+        the route's guard and its checks decide, exactly as for a button."""
+        if self.site is None:
+            return {"error": f"{capability.name} is not available here"}
+        method, path = capability.call.split(" ", 1)
+        out = self.site.call(method, path, args, {"username": user, "role": role})
+        if isinstance(out, list):
+            out = {"items": out}
+        if capability.tier != "read" and "error" not in out:
+            out["_action"] = True
+            out.setdefault("result", capability.name.replace("_", " "))
+        return out
 
     def state_snapshot(self):
         d = self.ctx.descriptor
