@@ -1,0 +1,341 @@
+{
+ "_about": "Narada's routing decision, measured 2026-10-02 on the Raspberry Pi 5 (16 GB) that runs Garuda. 'shipped' is the raw output of scripts/router_eval.py for the model in resources/models/narada_router (commit 722f691). 'candidates' are the other models tried that day, recorded by hand from the training and Pi runs. Scores are whole decisions right: intent, device, action and scene together.",
+ "sets": {
+  "routing_cases": "tests/eval/routing_cases.json: 50 sentences in one house, written by hand before any model was trained.",
+  "routing_written (test half)": "tests/eval/routing_written.json, odd-numbered cases: 658 sentences NIM wrote to narrow briefs, each in a made-up house. Never trained on; the even half set the confidence temperatures. Contains wrong labels, mostly among the indirect requests, so 100% is not reachable.",
+  "own_script": "200 template commands in Telugu and Devanagari script (scripts/router_data.py, seed 991); not kept as a file."
+ },
+ "candidates": [
+  {
+   "name": "literal matcher (decision.LocalBackend)",
+   "routing_cases": "30/50",
+   "routing_written": "99/658",
+   "sure_and_wrong_intent": "2/21 and 30/128",
+   "ms_per_decision": 0.1,
+   "ram_mb": 0
+  },
+  {
+   "name": "Laya 0.3.23, base checkpoints, CPU, 2 threads (removed)",
+   "routing_cases": "14/49",
+   "routing_written": null,
+   "sure_and_wrong_intent": "4",
+   "ms_per_decision": 15400,
+   "ram_mb": 5500,
+   "note": "CPU 63.7 -> 85.1 C and the soft temperature limit in about 15 minutes; camera stayed at 52 fps."
+  },
+  {
+   "name": "all-MiniLM-L6-v2, templates only (70k)",
+   "routing_cases": "49/50",
+   "routing_written": "373/658",
+   "sure_and_wrong_intent": "145/530 (no calibration)",
+   "ms_per_decision": 10.4,
+   "ram_mb": 70,
+   "file_mb": 22.9
+  },
+  {
+   "name": "multilingual MiniLM-L12, templates only (70k)",
+   "routing_cases": "49/50",
+   "routing_written": "342/658",
+   "file_mb": 118.1
+  },
+  {
+   "name": "all-MiniLM-L6-v2, templates + NIM-written (90k)",
+   "routing_cases": "49/50",
+   "routing_written": "580/658",
+   "own_script": "122/200",
+   "sure_and_wrong_intent": "8/641",
+   "ms_per_decision": 11,
+   "ram_mb": 78,
+   "file_mb": 22.9
+  },
+  {
+   "name": "multilingual MiniLM-L12, full vocabulary, templates + NIM-written (90k)",
+   "routing_cases": "50/50",
+   "routing_written": "592/658",
+   "own_script": "200/200",
+   "sure_and_wrong_intent": "11/651",
+   "ms_per_decision": 18,
+   "ram_mb": 450,
+   "file_mb": 118.1,
+   "note": "tokenizer alone holds 287 MB"
+  },
+  {
+   "name": "SHIPPED: multilingual MiniLM-L12, vocabulary cut to Latin/Telugu/Devanagari (250002 -> 94076 pieces), templates + NIM-written (90k)",
+   "routing_cases": "49/50",
+   "routing_written": "590/658",
+   "own_script": "200/200",
+   "sure_and_wrong_intent": "13/649",
+   "ms_per_decision": "18 to 23 median",
+   "ram_mb": 190,
+   "file_mb": 58.2,
+   "load_s": 0.8,
+   "by_kind_written": {
+    "plain": "271/288",
+    "mixed-language": "119/121",
+    "paraphrase": "133/173",
+    "negation": "33/39",
+    "offtopic": "30/33",
+    "compound": "4/4"
+   }
+  }
+ ],
+ "training": {
+  "where": "Google Colab, free T4",
+  "epochs": 4,
+  "batch": 64,
+  "lr": 4e-05,
+  "seconds_per_epoch": {
+   "all-MiniLM-L6-v2": 45,
+   "multilingual MiniLM-L12": 121
+  },
+  "data": "90,000 lines from scripts/router_data.py --seed 7: three quarters templates, one quarter the 6,590 NIM-written sentences in datasets/narada_router/written.jsonl, each set in made-up houses",
+  "temperatures": {
+   "intent": 0.85,
+   "device": 1.85,
+   "action": 1.15,
+   "scene": 0.5
+  }
+ },
+ "lessons": [
+  "The hand-written set alone flatters a model whose templates were written after reading it: templates-only scored 49/50 there and about half on NIM's sentences.",
+  "8-bit weights cost nothing measurable (589 vs 589 of 658).",
+  "Cutting the vocabulary to the scripts in use halved the file and the memory and cost nothing measurable.",
+  "The English-only model cannot read Telugu or Hindi in their own script (122/200)."
+ ],
+ "shipped": {
+  "local / routing_cases": {
+   "fields": {
+    "intent": [
+     35,
+     50
+    ],
+    "device": [
+     36,
+     44
+    ],
+    "action": [
+     31,
+     44
+    ],
+    "scene": [
+     49,
+     50
+    ]
+   },
+   "kinds": {
+    "plain": [
+     24,
+     29
+    ],
+    "paraphrase": [
+     0,
+     7
+    ],
+    "negation": [
+     1,
+     4
+    ],
+    "offtopic": [
+     2,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     1,
+     4
+    ]
+   },
+   "whole": 30,
+   "answered": 50,
+   "errors": 0,
+   "sure": 21,
+   "sure_wrong": 2,
+   "latency_ms": {
+    "median": 0.056639008107595146,
+    "max": 0.38833299186080694
+   }
+  },
+  "local / routing_written (test half)": {
+   "fields": {
+    "intent": [
+     182,
+     658
+    ],
+    "device": [
+     152,
+     615
+    ],
+    "action": [
+     310,
+     615
+    ],
+    "scene": [
+     653,
+     654
+    ]
+   },
+   "kinds": {
+    "plain": [
+     29,
+     288
+    ],
+    "mixed-language": [
+     14,
+     121
+    ],
+    "paraphrase": [
+     0,
+     173
+    ],
+    "offtopic": [
+     21,
+     33
+    ],
+    "negation": [
+     31,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ]
+   },
+   "whole": 99,
+   "answered": 658,
+   "errors": 0,
+   "sure": 128,
+   "sure_wrong": 30,
+   "latency_ms": {
+    "median": 0.06767649028915912,
+    "max": 0.7944820099510252
+   }
+  },
+  "router / routing_cases": {
+   "fields": {
+    "intent": [
+     50,
+     50
+    ],
+    "device": [
+     44,
+     44
+    ],
+    "action": [
+     43,
+     44
+    ],
+    "scene": [
+     50,
+     50
+    ]
+   },
+   "kinds": {
+    "plain": [
+     29,
+     29
+    ],
+    "paraphrase": [
+     6,
+     7
+    ],
+    "negation": [
+     4,
+     4
+    ],
+    "offtopic": [
+     4,
+     4
+    ],
+    "compound": [
+     2,
+     2
+    ],
+    "mixed-language": [
+     4,
+     4
+    ]
+   },
+   "whole": 49,
+   "answered": 50,
+   "errors": 0,
+   "sure": 50,
+   "sure_wrong": 0,
+   "latency_ms": {
+    "median": 17.655409013968892,
+    "max": 28.555336000863463
+   }
+  },
+  "router / routing_written (test half)": {
+   "fields": {
+    "intent": [
+     641,
+     658
+    ],
+    "device": [
+     592,
+     615
+    ],
+    "action": [
+     576,
+     615
+    ],
+    "scene": [
+     654,
+     654
+    ]
+   },
+   "kinds": {
+    "plain": [
+     271,
+     288
+    ],
+    "mixed-language": [
+     119,
+     121
+    ],
+    "paraphrase": [
+     133,
+     173
+    ],
+    "offtopic": [
+     30,
+     33
+    ],
+    "negation": [
+     33,
+     39
+    ],
+    "compound": [
+     4,
+     4
+    ]
+   },
+   "whole": 590,
+   "answered": 658,
+   "errors": 0,
+   "sure": 649,
+   "sure_wrong": 13,
+   "latency_ms": {
+    "median": 23.14515900798142,
+    "max": 90.81284099374898
+   }
+  },
+  "cost": {
+   "before": {
+    "temp_c": 60.4,
+    "camera_fps": 52.3,
+    "load": 1.41552734375,
+    "memory_mb": 47
+   },
+   "after": {
+    "temp_c": 73.0,
+    "camera_fps": 52.5,
+    "load": 2.17431640625,
+    "memory_mb": 243
+   }
+  }
+ }
+}

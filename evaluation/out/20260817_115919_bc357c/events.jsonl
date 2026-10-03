@@ -1,0 +1,54 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8ae56a50>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.8168848}
+{"kind": "login", "ok": false, "t": 1786948159.8171675}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8acd48d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.8207963}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8acd1790>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.8210583}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8acd2dd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.821307}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8acd6b10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.8232632}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8acd7390>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.8252244}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8ace0f10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1786948159.8284569}
+{"kind": "sys_log", "ts": 1786948163.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1786948223.875676}
+{"kind": "sys_log", "ts": 1786948163.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1786948223.8758755}
+{"kind": "sys_log", "ts": 1786948163.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1786948223.8759563}
+{"kind": "sys_log", "ts": 1786948163.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1786948223.876033}
+{"kind": "sys_log", "ts": 1786948163.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1786948223.8761225}
+{"kind": "sys_log", "ts": 1786948164.0, "msg": "Pipeline started.", "t": 1786948223.8763807}
+{"kind": "sys_log", "ts": 1786948193.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1786948223.8764489}
+{"kind": "sys_log", "ts": 1786948500.0, "msg": "[NETWORK] Internet restored \u2014 3673 queued events ready to sync", "t": 1786948531.0901783}
+{"kind": "sys_log", "ts": 1786948561.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1786948591.1391907}
+{"kind": "sys_log", "ts": 1786948651.0, "msg": "[NETWORK] Internet restored \u2014 3673 queued events ready to sync", "t": 1786948711.225686}
+{"kind": "sys_log", "ts": 1786951821.0, "msg": "[WATCH] Person (0.83)", "t": 1786951831.1513226}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 17.44, "resp": {"ok": true, "t_request": 1786951886.8741777, "t_alert": 1786951886.8800874, "latency_ms": 5.91, "label": "Knife", "confidence": 0.9}, "t": 1786951886.884948}
+{"kind": "sys_log", "ts": 1786951886.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1786951891.1838405}
+{"kind": "sys_log", "ts": 1786951886.0, "msg": "Alert triggered.", "t": 1786951891.1840413}
+{"kind": "sys_log", "ts": 1786952464.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1786952491.1139443}
+{"kind": "sys_log", "ts": 1786953595.0, "msg": "[WATCH] Person (0.84)", "t": 1786953631.429648}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 9.12, "resp": {"ok": true, "t_request": 1786955486.8880348, "t_alert": 1786955486.8906856, "latency_ms": 2.65, "label": "scissors", "confidence": 0.9}, "t": 1786955486.8945606}
+{"kind": "sys_log", "ts": 1786955486.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1786955491.1453836}
+{"kind": "sys_log", "ts": 1786955486.0, "msg": "Alert triggered.", "t": 1786955491.1455553}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 14.23, "resp": {"ok": true, "t_request": 1786959086.8989089, "t_alert": 1786959086.9021893, "latency_ms": 3.28, "label": "Hammer", "confidence": 0.9}, "t": 1786959086.910975}
+{"kind": "sys_log", "ts": 1786959086.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1786959091.1896052}
+{"kind": "sys_log", "ts": 1786959086.0, "msg": "Alert triggered.", "t": 1786959091.1898592}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 14.78, "resp": {"ok": true, "t_request": 1786962686.916403, "t_alert": 1786962686.9196758, "latency_ms": 3.27, "label": "Knife", "confidence": 0.9}, "t": 1786962686.9260626}
+{"kind": "sys_log", "ts": 1786962686.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1786962691.0975943}
+{"kind": "sys_log", "ts": 1786962686.0, "msg": "Alert triggered.", "t": 1786962691.0977955}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 12.02, "resp": {"ok": true, "t_request": 1786966286.9318068, "t_alert": 1786966286.9352071, "latency_ms": 3.4, "label": "scissors", "confidence": 0.9}, "t": 1786966286.9413283}
+{"kind": "sys_log", "ts": 1786966286.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1786966291.1976}
+{"kind": "sys_log", "ts": 1786966286.0, "msg": "Alert triggered.", "t": 1786966291.1979127}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 12.21, "resp": {"ok": true, "t_request": 1786969886.947574, "t_alert": 1786969886.9502215, "latency_ms": 2.65, "label": "Hammer", "confidence": 0.9}, "t": 1786969886.9538717}
+{"kind": "sys_log", "ts": 1786969886.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1786969891.169076}
+{"kind": "sys_log", "ts": 1786969886.0, "msg": "Alert triggered.", "t": 1786969891.1693087}
+{"kind": "sys_log", "ts": 1786970729.0, "msg": "[WATCH] Person (0.86)", "t": 1786970731.2668767}
+{"kind": "sys_log", "ts": 1786970759.0, "msg": "[WATCH] Person (0.88)", "t": 1786970791.3074532}
+{"kind": "sys_log", "ts": 1786970820.0, "msg": "[WATCH] Person (0.86)", "t": 1786970851.3828828}
+{"kind": "sys_log", "ts": 1786970850.0, "msg": "[WATCH] Person (0.85)", "t": 1786970851.3836002}
+{"kind": "sys_log", "ts": 1786970882.0, "msg": "[WATCH] Person (0.86)", "t": 1786970911.4374695}
+{"kind": "sys_log", "ts": 1786970913.0, "msg": "[WATCH] Person (0.82)", "t": 1786970971.4772165}
+{"kind": "sys_log", "ts": 1786970945.0, "msg": "[WATCH] Person (0.83)", "t": 1786970971.4774706}
+{"kind": "sys_log", "ts": 1786970976.0, "msg": "[WATCH] Person (0.88)", "t": 1786971031.5019898}
+{"kind": "sys_log", "ts": 1786971006.0, "msg": "[WATCH] Person (0.85)", "t": 1786971031.5023732}
+{"kind": "sys_log", "ts": 1786971036.0, "msg": "[WATCH] Person (0.86)", "t": 1786971091.5482235}
+{"kind": "sys_log", "ts": 1786971066.0, "msg": "[WATCH] Person (0.85)", "t": 1786971091.548439}
+{"kind": "sys_log", "ts": 1786971096.0, "msg": "[WATCH] Person (0.85)", "t": 1786971151.5815575}
+{"kind": "sys_log", "ts": 1786971126.0, "msg": "[WATCH] Person (0.88)", "t": 1786971151.5819602}
+{"kind": "sys_log", "ts": 1786971156.0, "msg": "[WATCH] Person (0.86)", "t": 1786971211.127163}
+{"kind": "sys_log", "ts": 1786971186.0, "msg": "[WATCH] Person (0.85)", "t": 1786971211.127394}

@@ -28,7 +28,11 @@ xcuserdata/
 Garuda.xcodeproj/xcuserdata/
 
 # Secrets
+# Bare `.env` did not cover .env.bak, .env.local or .env.prod, any of
+# which would carry the same keys into a commit.
 .env
+.env.*
+!.env.example
 
 # Python
 __pycache__/
@@ -76,3 +80,19 @@ clip_*.mp4
 datasets/dataset_v5/train/images/
 datasets/dataset_v5/val/images/
 datasets/dataset_v5/test/images/
+
+# Drishti frontend
+node_modules/
+basic_pipelines/drishti_dist/
+
+# Secrets dropped in the repo root
+nvidia_nim_api.txt
+.env.bak-*
+
+# Runtime state and service logs: household activity, addresses, accounts.
+# These were tracked and pushed until 2026-10; they stay on the Pi only.
+basic_pipelines/system_logs/
+basic_pipelines/danger_sightings.txt
+basic_pipelines/night_mode_findings.txt
+evaluation/out/*.log
+evaluation/out/_boot/

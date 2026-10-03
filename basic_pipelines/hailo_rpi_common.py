@@ -61,8 +61,9 @@ def get_caps_from_pad(pad: Gst.Pad):
             width = structure.get_value('width')
             height = structure.get_value('height')
             return format, width, height
-    else:
-        return None, None, None
+    # Always three values: a pad with caps but no structure used to fall off
+    # the end and return a bare None, which the caller then failed to unpack.
+    return None, None, None
 
 # This function is used to display the user data frame
 def display_user_data_frame(user_data: app_callback_class):

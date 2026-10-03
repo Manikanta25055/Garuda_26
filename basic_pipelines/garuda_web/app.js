@@ -1,6 +1,48 @@
 /* ============================================================
    Garuda — SPA logic
    ============================================================ */
+// Tag the page with what it runs on, before anything paints (style.css,
+// "Every browser, every device"). Apple's own browsers keep the full glass.
+(function () {
+  try {
+    const ua = navigator.userAgent || '';
+    const apple = /iPhone|iPad|iPod/.test(ua)
+      || (/Macintosh/.test(ua) && /Safari\//.test(ua))            // Safari, Chrome and Edge on a Mac
+      || (navigator.platform === 'MacIntel');
+    const root = document.documentElement;
+    if (!apple) root.classList.add('plat-other');
+    // Phones and tablets that are not Apple's get the light rendering from
+    // the start: blur and layered shadows are what made scrolling stutter
+    // there, and waiting to measure it meant a laggy first minute.
+    const touchOnly = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (!apple && touchOnly) root.classList.add('perf-lite');
+    const slowHint = (navigator.deviceMemory && navigator.deviceMemory <= 2)
+      || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)
+      || (window.matchMedia && window.matchMedia('(prefers-reduced-transparency: reduce)').matches);
+    if (slowHint) root.classList.add('perf-lite');
+  } catch (_) {}
+})();
+
+// Measure real frame times once the app is on screen; a device that cannot
+// hold ~25 fps drops the blur and decoration for this visit. Apple devices
+// are left alone (Low Power Mode halves their frame rate on purpose).
+function _garudaProbeFrames() {
+  const root = document.documentElement;
+  if (!root.classList.contains('plat-other') || root.classList.contains('perf-lite')) return;
+  if (document.hidden || !window.requestAnimationFrame) return;
+  const gaps = [];
+  let last = 0;
+  function step(t) {
+    if (document.hidden) return;                    // a hidden tab is throttled, not slow
+    if (last) gaps.push(t - last);
+    last = t;
+    if (gaps.length < 90) { requestAnimationFrame(step); return; }
+    gaps.sort((a, b) => a - b);
+    if (gaps[gaps.length >> 1] > 40) root.classList.add('perf-lite');
+  }
+  requestAnimationFrame(step);
+}
+
 const G = (() => {
 
   // ── State ────────────────────────────────────────────────
@@ -19,14 +61,26 @@ const G = (() => {
   let _uptimeBase = 0;          // seconds from backend
   let _uptimeReceivedAt = 0;    // Date.now() when received
   let _uptimeInterval = null;   // interval ID — cleared on logout to prevent accumulation
-  let _chatInputController = null; // AbortController for chat input listeners
   let _wsRetryDelay = 3000; // WS reconnect backoff (resets on successful open)
+  let _wsRetryTimer = null; // the one pending reconnect, if any
+  // Garuda (home security) and Drishti (home automation) are one app; the
+  // server tags the page with the product for the address it was opened on.
+  const _PRODUCT = document.documentElement.dataset.product === 'security' ? 'security' : 'home';
+  const _BRAND = _PRODUCT === 'security' ? 'GARUDA' : 'DRISHTI';
+  const _HOME_PAGES = ['devices', 'auto', 'insights'];
+  const _forProduct = items => _PRODUCT === 'security' ? items.filter(i => !_HOME_PAGES.includes(i.page)) : items;
   let _currentPage = 'dashboard';
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
   let _alarmInterval  = null; // setInterval ID for repeating alarm beep
   let _audioCtx       = null; // shared AudioContext — unlocked once during login user gesture
   let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
   let _clipRecording = false;  // true while a server-side clip is being recorded
+
+  // localStorage throws in private windows and when site data is blocked;
+  // the app must still start there.
+  function _lsGet(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+  function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+  function _lsDel(k) { try { localStorage.removeItem(k); } catch (_) {} }
 
   function _fmtUptimeLive() {
     if (!_uptimeReceivedAt) return '—';
@@ -42,24 +96,45 @@ const G = (() => {
   function showToast(message, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
+    // The same message again updates the toast already showing ("... x2")
+    // instead of stacking a copy on top of it.
+    const same = [...container.children].find(t =>
+      !t.classList.contains('removing') && t.dataset.msg === message && t.dataset.type === type);
+    if (same) {
+      const n = (+same.dataset.count || 1) + 1;
+      same.dataset.count = n;
+      same.querySelector('.toast-count').textContent = ` \u00d7${n}`;
+      same.classList.remove('bump'); void same.offsetWidth; same.classList.add('bump');
+      clearTimeout(same._timer);
+      same._timer = setTimeout(() => _dismissToast(same), duration);
+      return;
+    }
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+    toast.dataset.msg = message;
+    toast.dataset.type = type;
     const span = document.createElement('span');
+    span.className = 'toast-msg';
     span.textContent = message;
+    const count = document.createElement('span');
+    count.className = 'toast-count';
+    span.appendChild(count);
     const btn = document.createElement('button');
     btn.className = 'toast-dismiss';
     btn.innerHTML = '&times;';
-    btn.onclick = () => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 200); };
-    toast.appendChild(span);
-    toast.appendChild(btn);
+    btn.onclick = () => _dismissToast(toast);
+    toast.append(span, btn);
     container.appendChild(toast);
     if (container.children.length > 3) container.firstChild.remove();
-    setTimeout(() => {
-      if (toast.parentElement) {
-        toast.classList.add('removing');
-        setTimeout(() => toast.remove(), 200);
-      }
-    }, duration);
+    toast._timer = setTimeout(() => _dismissToast(toast), duration);
+  }
+
+  function _dismissToast(toast) {
+    if (!toast.parentElement || toast.classList.contains('removing')) return;
+    clearTimeout(toast._timer);
+    toast.classList.remove('bump');
+    toast.classList.add('removing');
+    setTimeout(() => toast.remove(), 200);
   }
 
   // ── Hardware stats ────────────────────────────────────────
@@ -153,29 +228,51 @@ const G = (() => {
   ];
 
   const MODE_CFG = [
-    { key:'privacy',   label:'Privacy Blur',     icon:'◉', cls:'mode-blue'   },
-    { key:'night',     label:'Night Mode',        icon:'◑', cls:'mode-purple' },
-    { key:'dnd',       label:'Do Not Disturb',    icon:'◯', cls:'mode-warn'   },
-    { key:'idle',      label:'Idle',              icon:'⊟', cls:'mode-muted'  },
-    { key:'email_off', label:'Email Alerts Off',  icon:'◫', cls:'mode-muted'  },
-    { key:'emergency', label:'Emergency',         icon:'△', cls:'mode-danger' },
+    { key:'privacy',   label:'Privacy Blur',     icon:'<span class="gi gi-privacy"></span>', cls:'mode-blue'   },
+    { key:'night',     label:'Night Mode',        icon:'<span class="gi gi-night-mode"></span>', cls:'mode-purple' },
+    { key:'dnd',       label:'Do Not Disturb',    icon:'<span class="gi gi-dnd"></span>', cls:'mode-warn'   },
+    { key:'idle',      label:'Idle',              icon:'<span class="gi gi-idle"></span>', cls:'mode-muted'  },
+    { key:'email_off', label:'Email Alerts Off',  icon:'<span class="gi gi-email-off"></span>', cls:'mode-muted'  },
+    { key:'emergency', label:'Emergency',         icon:'<span class="gi gi-emergency"></span>', cls:'mode-danger' },
   ];
 
   // ── Backend URL config ───────────────────────────────────
+  // True when the page itself is served by the Pi (LAN address or one of the
+  // tunnel hostnames): the backend is this origin and needs no configuring.
+  function _servedByPi() {
+    const h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1'
+        || h.startsWith('192.168.') || h.startsWith('10.')
+        || /^172\.(1[6-9]|2\d|3[01])\./.test(h)
+        || /(^|\.)veeramanikanta\.in$/.test(h);
+  }
+
+  // AbortSignal.timeout() is missing in browsers older than 2022; without
+  // this the status check threw there and always read as "not connected".
+  function _timeoutSignal(ms) {
+    if (typeof AbortSignal !== 'undefined' && AbortSignal.timeout) return AbortSignal.timeout(ms);
+    if (typeof AbortController === 'undefined') return undefined;
+    const c = new AbortController();
+    setTimeout(() => c.abort(), ms);
+    return c.signal;
+  }
+
   function getBackend() {
     const h = location.hostname;
     const isLocal = h === 'localhost' || h === '127.0.0.1'
                  || h.startsWith('192.168.') || h.startsWith('10.')
-                 || h.startsWith('172.');
+                 || /^172\.(1[6-9]|2\d|3[01])\./.test(h);
     if (isLocal) return '';
-    if (h === 'garuda.veeramanikanta.in') return 'https://api.veeramanikanta.in';
+    // garuda., drishti. and api. are all served by the Pi through the one
+    // Cloudflare tunnel, so the page's own origin is the backend.
+    if (/(^|\.)veeramanikanta\.in$/.test(h)) return '';
     // The Vercel copy is only the static front end; it talks to the Pi's API.
-    if (h.endsWith('.vercel.app')) return localStorage.getItem('garuda_backend') || 'https://api.veeramanikanta.in';
-    return localStorage.getItem('garuda_backend') || '';
+    if (h.endsWith('.vercel.app')) return _lsGet('garuda_backend') || 'https://api.veeramanikanta.in';
+    return _lsGet('garuda_backend') || '';
   }
 
   function openBackendConfig() {
-    $('m-bk-url').value = localStorage.getItem('garuda_backend') || '';
+    $('m-bk-url').value = _lsGet('garuda_backend') || '';
     $('m-bk-msg').classList.add('hidden');
     show('m-backend');
   }
@@ -186,9 +283,9 @@ const G = (() => {
     if (!/^https?:\/\//.test(url)) url = 'http://' + url;
     showEl('m-bk-msg', 'Testing connection…', true);
     try {
-      const r = await fetch(url + '/api/users-public', { signal: AbortSignal.timeout(5000) });
+      const r = await fetch(url + '/api/health', { signal: _timeoutSignal(5000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      localStorage.setItem('garuda_backend', url);
+      _lsSet('garuda_backend', url);
       updateBackendStatus(url);
       closeModal('m-backend');
     } catch(e) {
@@ -200,25 +297,42 @@ const G = (() => {
     const dot = $('bk-dot');
     const lbl = $('bk-label');
     if (!dot || !lbl) return;
-    const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    // No URL on a page the Pi serves means "this origin", not "no backend".
     const displayHost = url
       ? (() => { try { return new URL(url).hostname; } catch(_){ return url; } })()
-      : (isLocal ? 'localhost' : 'No backend');
-    lbl.textContent = displayHost;
+      : (_servedByPi() ? location.hostname : 'No backend');
+    const row = dot.closest('.backend-row');
+    const cfgBtn = row && row.querySelector('button');
+    if (cfgBtn) cfgBtn.classList.toggle('hidden', !url && _servedByPi());
+    if (!url && !_servedByPi()) { lbl.textContent = displayHost; dot.className = 'bk-dot'; return; }
+    lbl.textContent = displayHost + ' · checking…';
     dot.className = 'bk-dot';
-    const pingUrl = (url || '') + '/api/users-public';
-    try {
-      const r = await fetch(pingUrl, { method:'GET', credentials:'omit', signal: AbortSignal.timeout(5000) });
-      dot.className = 'bk-dot' + (r.ok ? ' ok' : '');
-    } catch(_) {
-      dot.className = 'bk-dot';
+    // The liveness endpoint: public, cheap, and it lists no accounts.
+    const pingUrl = (url || '') + '/api/health';
+    // One retry: the first request through a cold tunnel can time out.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const r = await fetch(pingUrl, { method:'GET', credentials:'omit', cache:'no-store', signal: _timeoutSignal(8000) });
+        if (r.ok) { dot.className = 'bk-dot ok'; lbl.textContent = displayHost; return; }
+      } catch(_) {}
     }
+    dot.className = 'bk-dot fail';
+    lbl.textContent = displayHost + ' · unreachable';
   }
 
   // ── Boot ─────────────────────────────────────────────────
+  function _applyBrand() {
+    const name = _BRAND.charAt(0) + _BRAND.slice(1).toLowerCase();
+    document.title = name;
+    document.querySelectorAll('.wv-name, .header-brand, #hud-brand').forEach(el => { el.textContent = _BRAND; });
+    const tag = document.querySelector('.wv-tagline');
+    if (tag) tag.textContent = _PRODUCT === 'security' ? 'AI Security Intelligence Platform' : 'Home automation, built on Garuda';
+  }
+
   async function init() {
+    _applyBrand();
     // Theme: apply saved preference before rendering (light is HTML default)
-    const savedTheme = localStorage.getItem('garuda_theme') || 'light';
+    const savedTheme = _lsGet('garuda_theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
     const tBtn = document.getElementById('theme-toggle-btn');
     if (tBtn) tBtn.classList.toggle('is-dark', savedTheme === 'dark');
@@ -231,11 +345,12 @@ const G = (() => {
     buildSwatches('m-swatches');
     const backend = getBackend();
     updateBackendStatus(backend);
-    const isLocal = ['localhost','127.0.0.1'].includes(location.hostname);
-    if (backend) _token = localStorage.getItem('garuda_token') || null;
+    const samePi = _servedByPi();
+    if (backend) _token = _lsGet('garuda_token');
 
-    // Try to restore session from previous visit (cookie / garuda_token)
-    const canRestore = isLocal || !!_token;
+    // Try to restore session from previous visit (cookie / garuda_token).
+    // On a page the Pi serves the session cookie is enough, so always ask.
+    const canRestore = samePi || !!_token;
     if (canRestore) {
       try {
         const session = await api('GET', '/api/session');
@@ -243,17 +358,26 @@ const G = (() => {
         afterLogin();
         return;
       } catch(e) {
-        localStorage.removeItem('garuda_token');
+        _lsDel('garuda_token');
         _token = null;
       }
     }
 
-    if (!backend && !isLocal) openBackendConfig();
+    // Only a copy hosted elsewhere with no address saved needs configuring.
+    if (!backend && !samePi) openBackendConfig();
     showLoginView('lv-main');
     renderHeatmap({});  // render empty heatmap; real data arrives via WS after login
   }
 
   // ── Login view switcher ───────────────────────────────────
+  // A front end on another site (the Vercel copy) cannot use the Pi's
+  // cookies, so it keeps the tokens itself and sends them as headers.
+  function _storeAuth(res) {
+    if (!getBackend()) return;
+    if (res.token) { _token = res.token; _lsSet('garuda_token', _token); }
+    if (res.refresh_token) _lsSet('garuda_refresh', res.refresh_token);
+  }
+
   function showLoginView(viewId) {
     ['lv-main','lv-admin-1','lv-admin-2','lv-forgot','lv-masterkey'].forEach(id => {
       const el = $(id);
@@ -303,10 +427,7 @@ const G = (() => {
       const res = await api('POST', '/api/admin/verify-otp',
                             { username: _pendingAdmin.username, otp });
       _session = res;
-      if (res.token && getBackend()) {
-        _token = res.token;
-        localStorage.setItem('garuda_token', _token);
-      }
+      _storeAuth(res);
       _pendingAdmin = null;
       afterLogin();
     } catch(e) {
@@ -326,10 +447,7 @@ const G = (() => {
     try {
       const res = await api('POST', '/api/master_key/login', { key });
       _session = res;
-      if (res.token && getBackend()) {
-        _token = res.token;
-        localStorage.setItem('garuda_token', _token);
-      }
+      _storeAuth(res);
       afterLogin();
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -346,10 +464,7 @@ const G = (() => {
     try {
       const res = await api('POST', '/api/login', { username: un, password: pw, remember_me: remember });
       _session = res;
-      if (res.token && getBackend()) {
-        _token = res.token;
-        localStorage.setItem('garuda_token', _token);
-      }
+      _storeAuth(res);
       // remember_me → 7-day refresh token issued server-side via httpOnly cookie
       afterLogin();
     } catch(e) {
@@ -362,9 +477,8 @@ const G = (() => {
     $('hdr-user').textContent = _session.display_name || _session.username;
     buildNav(_session.role);
     $('main')?.classList.add('dash-active');
-    _setDILabel('GARUDA');
+    _setDILabel(_BRAND);
     nav('dashboard');
-    _initChatInput();
     // Live uptime ticker — save ID so it can be cleared on logout
     if (_uptimeInterval) clearInterval(_uptimeInterval);
     _uptimeInterval = setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
@@ -374,6 +488,9 @@ const G = (() => {
       cw.classList.add('hidden');
       if (_session.role === 'admin') cw.classList.remove('hidden');
     }
+    // Non-admin profiles get the house at a glance where the console would be.
+    $('dash-home-glance')?.classList.toggle('hidden', _session.role === 'admin' || _PRODUCT === 'security');
+    if (window.H) H.onLogin(_session);
     // Set logs unlock state from session (master key login sets this true)
     _logsUnlocked = !!_session.logs_unlocked;
     $('logs-gate')?.classList.add('hidden');
@@ -383,10 +500,11 @@ const G = (() => {
       const today = new Date().toISOString().split('T')[0];
       datePicker.value = today;
       datePicker.max = today;
-      datePicker.addEventListener('change', _renderTimeline);
+      datePicker.onchange = _renderTimeline;
     }
     _wsAllowed = true;
     connectWS();
+    setTimeout(_garudaProbeFrames, 2500);   // after the first paint and state push have settled
     // Haptic feedback on Dynamic Island tap
     const hudEl = document.getElementById('top-hud');
     if (hudEl && !hudEl._hapticBound) {
@@ -414,25 +532,73 @@ const G = (() => {
     const current = document.documentElement.getAttribute('data-theme') || 'light';
     const next = current === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('garuda_theme', next);
+    _lsSet('garuda_theme', next);
     // Sync both toggle buttons (HUD + login page)
     document.getElementById('theme-toggle-btn')?.classList.toggle('is-dark', next === 'dark');
     document.getElementById('login-theme-toggle')?.classList.toggle('is-dark', next === 'dark');
   }
 
+  // Ask before doing something that cannot be taken back. Resolves true only
+  // on the confirm button; Escape, the backdrop and Cancel all mean no.
+  let _confirmDone = null;
+  function confirmAction(opts) {
+    const o = opts || {};
+    const ov = $('m-confirm');
+    if (!ov) return Promise.resolve(window.confirm(o.title || 'Are you sure?'));
+    if (_confirmDone) _confirmDone(false);
+    setText('m-confirm-title', o.title || 'Are you sure?');
+    const body = $('m-confirm-body');
+    body.textContent = o.body || '';
+    body.classList.toggle('hidden', !o.body);
+    const ok = $('m-confirm-ok');
+    ok.textContent = o.confirmLabel || 'Confirm';
+    ok.className = 'btn ' + (o.danger === false ? 'btn-primary' : 'btn-danger');
+    setText('m-confirm-cancel', o.cancelLabel || 'Cancel');
+    ov.classList.remove('hidden');
+    setTimeout(() => $('m-confirm-cancel')?.focus(), 30);
+    return new Promise(resolve => {
+      _confirmDone = result => {
+        _confirmDone = null;
+        ov.classList.add('hidden');
+        resolve(!!result);
+      };
+    });
+  }
+  function _confirmAnswer(result) { if (_confirmDone) _confirmDone(result); }
+
   async function logout() {
+    const ok = await confirmAction({
+      title: 'Sign out?',
+      body: 'You will need to sign in again to see the camera and control the house.',
+      confirmLabel: 'Sign out',
+    });
+    if (ok) await _doLogout();
+  }
+
+  let _loggingOut = false;
+  async function _doLogout() {
+    if (_loggingOut) return;
+    _loggingOut = true;
+    try { await _doLogoutInner(); } finally { _loggingOut = false; }
+  }
+
+  async function _doLogoutInner() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
-    // Clear uptime interval and chat listeners before resetting state
+    if (window.N) N.stopVoice();
+    // Clear uptime interval before resetting state
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
-    if (_chatInputController) { _chatInputController.abort(); _chatInputController = null; }
     _wsAllowed = false;   // prevent reconnect after logout
     _stopAlarm();
     if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastAlertState = false; _lastDetInfo = '';
-    localStorage.removeItem('garuda_token');
-    localStorage.removeItem('garuda_remember');
-    if (_ws) { _ws.close(); _ws = null; }
+    _timelineSig = '';
+    _lsDel('garuda_token');
+    _lsDel('garuda_refresh');
+    _lsDel('garuda_remember');
+    if (_wsRetryTimer) { clearTimeout(_wsRetryTimer); _wsRetryTimer = null; }
+    _tickPending = null;
+    if (_ws) { const old = _ws; _ws = null; try { old.close(); } catch (_) {} }
     $('app').classList.remove('logged-in');
     _syncFeedbackVisibility();
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
@@ -676,21 +842,37 @@ const G = (() => {
     } catch(e) { showToast('Snapshot failed.', 'error'); }
   }
 
+  const _REC_ICON = {
+    rec:  '<span class="gi gi-record" aria-hidden="true"></span>',
+    stop: '<span class="gi gi-stop" aria-hidden="true"></span>',
+  };
+
   async function toggleClip() {
     const btn = $('cam-record-btn');
     try {
       if (!_clipRecording) {
         await api('POST', '/api/clip/start');
         _clipRecording = true;
-        if (btn) { btn.textContent = '\u23F9'; btn.classList.add('recording'); }
+        if (btn) { btn.innerHTML = _REC_ICON.stop; btn.classList.add('recording'); }
         showToast('Recording started — auto-stops at 60 s.', 'success');
       } else {
         const r = await api('POST', '/api/clip/stop');
         _clipRecording = false;
-        if (btn) { btn.textContent = '\u23FA'; btn.classList.remove('recording'); }
-        showToast('Clip saved: ' + (r.path || ''), 'success');
+        if (btn) { btn.innerHTML = _REC_ICON.rec; btn.classList.remove('recording'); }
+        showToast('Clip saved: ' + ((r.path || '').split('/').pop() || 'done'), 'success');
       }
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
+  }
+
+  // The floor plan is inlined (not an <object>) so the theme can ink it.
+  let _floorplanLoaded = false;
+  function _loadFloorplan() {
+    const box = $('floorplan-svg');
+    if (!box || _floorplanLoaded) return;
+    _floorplanLoaded = true;
+    fetch('/static/floorplan.svg?v=2').then(r => r.ok ? r.text() : Promise.reject())
+      .then(svg => { box.innerHTML = svg; })
+      .catch(() => { _floorplanLoaded = false; });
   }
 
   function switchCamTab(tab) {
@@ -704,6 +886,7 @@ const G = (() => {
       tabLive?.classList.add('active');
       tabFloor?.classList.remove('active');
     } else {
+      _loadFloorplan();
       floor?.classList.remove('hidden');
       live?.classList.add('hidden');
       tabFloor?.classList.add('active');
@@ -712,247 +895,6 @@ const G = (() => {
   }
 
   // ── Chat ──────────────────────────────────────────────────
-  let _chatBusy    = false;
-  let _thinkTimer  = null;
-  let _measureCanvas = null; // reused offscreen canvas for pretext-style text measurement
-  let _chatRo      = null;   // ResizeObserver for input wrap → messages padding sync
-
-  function toggleRateLimitInfo() {
-    const bubble = $('chat-ratelimit-bubble');
-    const btn    = $('chat-info-btn');
-    if (!bubble) return;
-    const open = bubble.classList.toggle('open');
-    if (btn) btn.classList.toggle('active', open);
-  }
-
-  const _THINKING = [
-    // Processing thoughts
-    "Analyzing Hailo-8L inference pipeline state…",
-    "Reviewing YOLOv6n detection confidence scores…",
-    "Cross-referencing security event log…",
-    "Consulting active mode configuration…",
-    "Scanning perimeter alert thresholds…",
-    "Correlating IMX708 frame metadata…",
-    "Evaluating scissors threat probability matrix…",
-    "Syncing with Garuda event database…",
-    "Checking WebRTC stream health…",
-    "Mapping 1280×720 detection grid…",
-    "Processing 5-frame confirmation buffers…",
-    "Reviewing GPIO sensor state…",
-    "Scanning system_logs for recent patterns…",
-    "Verifying detection threshold calibration…",
-    // Quotes & project philosophy
-    "\"Security is not a product, it's a process.\" — Bruce Schneier",
-    "\"The price of liberty is eternal vigilance.\" — Thomas Jefferson",
-    "60fps. Every frame a question. Every detection an answer.",
-    "Standing watch so you don't have to.",
-    "5 consecutive frames to confirm. Certainty over speed.",
-    "Threshold: the line between alert and silence.",
-    "Narada sees. Narada knows. Narada guards.",
-    "Every pixel on the IMX708 tells a story.",
-    "Privacy preserved. Threats surfaced.",
-    "Hailo-8L: 26 TOPS so the Pi 5 CPU doesn't have to.",
-    "One scissors detection is noise. Five is signal.",
-    "The best alarm is the one that never cries wolf.",
-  ];
-
-  // Simple inline markdown renderer
-  function _md(text) {
-    const esc = text
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return esc
-      // Fenced code blocks
-      .replace(/```([^`]*?)```/gs, '<pre class="chat-code-block"><code>$1</code></pre>')
-      // Inline code
-      .replace(/`([^`\n]+)`/g, '<code class="chat-inline-code">$1</code>')
-      // Bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Headers (## / ###) → bold line
-      .replace(/^#{1,3} (.+)$/gm, '<span class="chat-heading">$1</span>')
-      // Bullet lists
-      .replace(/^[-•] (.+)$/gm, '<span class="chat-li">$1</span>')
-      // Newlines
-      .replace(/\n/g, '<br>');
-  }
-
-  function _chatAddUser(text) {
-    const box = $('chat-messages');
-    if (!box) return;
-    const el = document.createElement('div');
-    el.className = 'chat-msg user';
-    el.innerHTML = `<div class="chat-msg-pill">${_md(text)}</div>`;
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-  }
-
-  function _chatAddAssistant() {
-    // Returns the body element to stream into
-    const box = $('chat-messages');
-    if (!box) return null;
-    const el = document.createElement('div');
-    el.className = 'chat-msg assistant';
-    el.innerHTML = `
-      <div class="chat-msg-content">
-        <div class="chat-msg-body"></div>
-      </div>`;
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-    return el.querySelector('.chat-msg-body');
-  }
-
-  function _showThinking() {
-    const box = $('chat-messages');
-    if (!box || $('chat-thinking')) return;
-    const el = document.createElement('div');
-    el.id = 'chat-thinking';
-    el.className = 'chat-thinking';
-    el.innerHTML = `
-      <div class="think-header">
-        <span class="think-pulse"></span><span>Thinking</span>
-      </div>
-      <div class="think-lines" id="think-lines"></div>`;
-    box.appendChild(el);
-    box.scrollTop = box.scrollHeight;
-
-    let idx = Math.floor(Math.random() * _THINKING.length);
-    const shown = [];
-    function addLine() {
-      const lines = $('think-lines');
-      if (!lines) return;
-      const d = document.createElement('div');
-      d.className = 'think-line';
-      d.textContent = _THINKING[idx % _THINKING.length];
-      idx++;
-      lines.appendChild(d);
-      shown.push(d);
-      requestAnimationFrame(() => d.classList.add('think-line-in'));
-      if (shown.length > 3) {
-        const old = shown.shift();
-        old.classList.add('think-line-out');
-        setTimeout(() => old.remove(), 350);
-      }
-      box.scrollTop = box.scrollHeight;
-    }
-    addLine();
-    _thinkTimer = setInterval(addLine, 850);
-  }
-
-  function _hideThinking() {
-    clearInterval(_thinkTimer);
-    _thinkTimer = null;
-    const el = $('chat-thinking');
-    if (el) {
-      el.classList.add('think-fade-out');
-      setTimeout(() => el.remove(), 300);
-    }
-  }
-
-  function _streamInto(bodyEl, text, done) {
-    if (!bodyEl) return;
-    bodyEl.innerHTML = _md(text) + (done ? '' : '<span class="chat-cursor">|</span>');
-    const box = $('chat-messages');
-    if (box) box.scrollTop = box.scrollHeight;
-  }
-
-  async function sendChat() {
-    if (_chatBusy) return;
-    const input = $('chat-input');
-    const btn   = $('chat-send-btn');
-    if (!input) return;
-    const msg = input.value.trim();
-    if (!msg) return;
-    input.value = '';
-    input.style.height = '';
-    _chatAddUser(msg);
-    _chatBusy = true;
-    if (btn) btn.disabled = true;
-    _showThinking();
-    _setDIState('thinking');
-
-    try {
-      const res  = await api('POST', '/api/chat', { message: msg });
-      const text = res.response || '…';
-      _hideThinking();
-      _setDIState('');
-      const bodyEl = _chatAddAssistant();
-      // Typewriter: reveal chars at ~18ms each, then snap remaining on done
-      let i = 0;
-      function tick() {
-        if (!bodyEl) return;
-        i = Math.min(i + 3, text.length);
-        _streamInto(bodyEl, text.slice(0, i), i === text.length);
-        if (i < text.length) requestAnimationFrame(tick);
-      }
-      requestAnimationFrame(tick);
-    } catch(e) {
-      _hideThinking();
-      _setDIState('');
-      const bodyEl = _chatAddAssistant();
-      if (bodyEl) bodyEl.textContent = 'Connection error — please try again.';
-    } finally {
-      _chatBusy = false;
-      if (btn) btn.disabled = false;
-      input.focus();
-    }
-  }
-
-  function clearChat() {
-    const box = $('chat-messages');
-    if (!box) return;
-    box.innerHTML = `
-      <div class="chat-msg assistant">
-        <div class="chat-msg-content">
-          <div class="chat-msg-body">Chat cleared. How can I help?</div>
-        </div>
-      </div>`;
-  }
-
-  function _initChatInput() {
-    const input = $('chat-input');
-    if (!input) return;
-    // Remove previous listeners via AbortController to prevent accumulation across logins
-    if (_chatInputController) _chatInputController.abort();
-    _chatInputController = new AbortController();
-    const sig = { signal: _chatInputController.signal };
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
-    }, sig);
-
-    // Pretext-inspired: measure text height via canvas.measureText(), not scrollHeight.
-    // scrollHeight forces a synchronous layout reflow; canvas measurement is pure arithmetic.
-    if (!_measureCanvas) _measureCanvas = document.createElement('canvas');
-    function _resizeTextarea() {
-      const style  = getComputedStyle(input);
-      const lineH  = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.55;
-      const padV   = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-      const ctx    = _measureCanvas.getContext('2d');
-      ctx.font     = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-      const availW = input.clientWidth || 240;
-      let lines    = 0;
-      for (const line of (input.value || '').split('\n')) {
-        lines += line ? Math.max(1, Math.ceil(ctx.measureText(line).width / availW)) : 1;
-      }
-      input.style.height = Math.min(Math.max(lines, 1) * lineH + padV, 140) + 'px';
-    }
-    input.addEventListener('input', _resizeTextarea, sig);
-
-    // ResizeObserver on the input wrap: dynamically sync messages padding-bottom
-    // instead of hardcoded magic-number estimates in CSS.
-    if (_chatRo) _chatRo.disconnect();
-    const wrap = input.closest('.chat-input-wrap');
-    const msgs = $('chat-messages');
-    if (wrap && msgs) {
-      _chatRo = new ResizeObserver(([entry]) => {
-        const wrapH    = entry.contentRect.height;
-        const bottomPx = parseInt(getComputedStyle(wrap).bottom) || 16;
-        msgs.style.paddingBottom = (bottomPx + wrapH + 12) + 'px';
-      });
-      _chatRo.observe(wrap);
-    }
-  }
-
   // ── Alert activity heatmap (backend-stored, lifetime-persistent) ────────
   let _lastHeatmapKey = '';
 
@@ -1075,27 +1017,38 @@ const G = (() => {
   }
 
   // ── iOS Bottom Navigation ─────────────────────────────────
+  // Hand-drawn icons (icons/*.svg via .gi).
   const _NAV_ICONS = {
-    dashboard: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="6" height="6" rx="1.5"/><rect x="10.5" y="1.5" width="6" height="6" rx="1.5"/><rect x="1.5" y="10.5" width="6" height="6" rx="1.5"/><rect x="10.5" y="10.5" width="6" height="6" rx="1.5"/></svg>`,
-    narada:    `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0v-5a3 3 0 0 1 3-3z"/><path d="M3.75 8.25a5.25 5.25 0 0 0 10.5 0"/><line x1="9" y1="13.5" x2="9" y2="16.5"/><line x1="6" y1="16.5" x2="12" y2="16.5"/></svg>`,
-    users:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="5.5" r="2.5"/><path d="M1.5 15.75a5.5 5.5 0 0 1 11 0"/><path d="M13.5 7.5a2.5 2.5 0 1 1 0-5"/><path d="M16.5 15.75a4 4 0 0 0-3-3.85"/></svg>`,
-    email:     `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="3.75" width="15" height="10.5" rx="1.5"/><path d="M1.5 5.25 9 10.5l7.5-5.25"/></svg>`,
-    settings:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="2.25"/><path d="M14.7 11.1a1 1 0 0 0 .2 1.1l.05.05a1.21 1.21 0 0 1-1.71 1.71l-.05-.05a1 1 0 0 0-1.1-.2 1 1 0 0 0-.61.92v.14a1.21 1.21 0 0 1-2.42 0v-.07a1 1 0 0 0-.65-.92 1 1 0 0 0-1.1.2l-.05.05a1.21 1.21 0 0 1-1.71-1.71l.05-.05a1 1 0 0 0 .2-1.1 1 1 0 0 0-.92-.61H5.4a1.21 1.21 0 0 1 0-2.42h.07a1 1 0 0 0 .92-.65 1 1 0 0 0-.2-1.1l-.05-.05a1.21 1.21 0 0 1 1.71-1.71l.05.05a1 1 0 0 0 1.1.2h.04a1 1 0 0 0 .61-.92V3.4a1.21 1.21 0 0 1 2.42 0v.07a1 1 0 0 0 .61.92 1 1 0 0 0 1.1-.2l.05-.05a1.21 1.21 0 0 1 1.71 1.71l-.05.05a1 1 0 0 0-.2 1.1v.04a1 1 0 0 0 .92.61h.14a1.21 1.21 0 0 1 0 2.42h-.07a1 1 0 0 0-.92.61z"/></svg>`,
-    logs:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5h12M3 9h12M3 13.5h7.5"/></svg>`,
-    commands:  `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4.5 6 1.5 9 4.5 12"/><polyline points="13.5 6 16.5 9 13.5 12"/><line x1="7.5" y1="3" x2="10.5" y2="15"/></svg>`,
-    emergency: `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 1.5 16.5 16.5H1.5Z"/><line x1="9" y1="7" x2="9" y2="11"/><circle cx="9" cy="13.5" r="0.75" fill="currentColor" stroke="none"/></svg>`,
-    chat:      `<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.75 9.75a6.75 6.75 0 0 1-9.45 6.19L2.25 16.5l.56-4.05A6.75 6.75 0 1 1 15.75 9.75z"/></svg>`,
+    dashboard: `<span class="gi gi-home"></span>`,
+    narada:    `<span class="gi gi-narada"></span>`,
+    users:     `<span class="gi gi-users"></span>`,
+    email:     `<span class="gi gi-mail"></span>`,
+    settings:  `<span class="gi gi-settings"></span>`,
+    logs:      `<span class="gi gi-logs"></span>`,
+    commands:  `<span class="gi gi-commands"></span>`,
+    emergency: `<span class="gi gi-stop"></span>`,
+    devices:   `<span class="gi gi-devices"></span>`,
+    auto:      `<span class="gi gi-automate"></span>`,
+    insights:  `<span class="gi gi-insights"></span>`,
+    more:      `<span class="gi gi-more"></span>`,
+    feedback:  `<span class="gi gi-feedback"></span>`,
+    theme:     `<span class="gi gi-light-mode"></span>`,
+    signout:   `<span class="gi gi-power"></span>`,
   };
 
   const _USER_NAV = [
     { page: 'dashboard', label: 'Home',   icon: 'dashboard' },
-    { page: 'chat',      label: 'Chat',   icon: 'chat'      },
+    { page: 'devices',   label: 'Devices', icon: 'devices'  },
+    { page: 'auto',      label: 'Automate', icon: 'auto'    },
+    { page: 'insights',  label: 'Insights', icon: 'insights' },
     { page: 'narada',    label: 'Narada', icon: 'narada'    },
   ];
 
   const _ADMIN_NAV = [
     { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
-    { page: 'chat',       label: 'Chat',     icon: 'chat'      },
+    { page: 'devices',    label: 'Devices',  icon: 'devices'   },
+    { page: 'auto',       label: 'Automate', icon: 'auto'      },
+    { page: 'insights',   label: 'Insights', icon: 'insights'  },
     { page: 'narada',     label: 'Narada',   icon: 'narada'    },
     { page: 'a-email',    label: 'Email',    icon: 'email'     },
     { page: 'a-settings', label: 'System',   icon: 'settings'  },
@@ -1113,8 +1066,13 @@ const G = (() => {
     const ovr = 8;
     // getBoundingClientRect() is viewport-relative; pill is positioned in the
     // nav's scrollable content area, so we must add scrollLeft to compensate.
-    const tx  = ir.left - nr.left + navEl.scrollLeft - ovr;
-    const w   = ir.width + ovr * 2;
+    let tx = ir.left - nr.left + navEl.scrollLeft - ovr;
+    let w  = ir.width + ovr * 2;
+    // Keep the pill inside the bar: the first and last tabs sit near its
+    // rounded ends, where the overhang used to poke out.
+    const inset = 4, maxX = navEl.scrollWidth - inset;
+    if (tx < inset) { w -= inset - tx; tx = inset; }
+    if (tx + w > maxX) w = maxX - tx;
     if (instant) {
       pill.style.transition = 'none';
       pill.style.transform  = `translateX(${tx}px)`;
@@ -1127,35 +1085,145 @@ const G = (() => {
     }
   }
 
+  // Phone mode: five tabs, the rest in an iOS-style "More" sheet. Eleven
+  // items squeezed into a scrolling strip were unreadable at 390 px.
+  const _PHONE_MQ = window.matchMedia('(max-width: 768px)');
+  const _PHONE_PRIMARY = _PRODUCT === 'security'
+    ? ['dashboard', 'narada']
+    : ['dashboard', 'devices', 'auto', 'narada'];
+  let _navRole = null;
+
+  function _isPhone() { return _PHONE_MQ.matches; }
+
+  function _navButton(item) {
+    const btn = document.createElement('button');
+    btn.className = 'ios-item' + (item.danger ? ' ios-danger' : '');
+    btn.innerHTML = `<span class="ios-icon">${_NAV_ICONS[item.icon]}</span><span class="ios-label">${item.label}</span>`;
+    if (item.page) btn.dataset.page = item.page;
+    btn.setAttribute('aria-label', item.label);
+    return btn;
+  }
+
   function buildNav(role) {
-    const items = role === 'admin' ? _ADMIN_NAV : _USER_NAV;
+    _navRole = role;
+    const items = _forProduct(role === 'admin' ? _ADMIN_NAV : _USER_NAV);
     const navEl = $('ios-nav');
     if (!navEl) return;
     navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
-    items.forEach(item => {
-      const btn = document.createElement('button');
-      btn.className = 'ios-item' + (item.danger ? ' ios-danger' : '');
-      btn.innerHTML = `<span class="ios-icon">${_NAV_ICONS[item.icon]}</span><span class="ios-label">${item.label}</span>`;
-      if (item.danger) {
-        btn.onclick = () => emergencyStop();
-      } else {
-        btn.onclick = () => nav(item.page, btn);
-      }
+    const phone = _isPhone();
+    navEl.classList.toggle('ios-nav-phone', phone);
+    const shown = phone
+      ? [...items.filter(i => _PHONE_PRIMARY.includes(i.page)),
+         { page: 'more', label: 'More', icon: 'more' }]
+      : items;
+    shown.forEach(item => {
+      const btn = _navButton(item);
+      if (item.danger) btn.onclick = () => emergencyStop();
+      else if (item.page === 'more') btn.onclick = () => openMoreSheet();
+      else btn.onclick = () => nav(item.page, btn);
       navEl.appendChild(btn);
     });
-    // Instantly place pill on first non-danger item
-    const first = navEl.querySelector('.ios-item:not(.ios-danger)');
-    if (first) {
-      first.classList.add('active');
-      requestAnimationFrame(() => movePill(first, true));
+    _buildMoreSheet(phone ? items.filter(i => !_PHONE_PRIMARY.includes(i.page)) : []);
+    const current = _navItemFor(_currentPage) || navEl.querySelector('.ios-item:not(.ios-danger)');
+    if (current) {
+      current.classList.add('active');
+      requestAnimationFrame(() => movePill(current, true));
     }
   }
 
+  // The tab that represents a page: its own, or "More" on a phone.
+  function _navItemFor(pageId) {
+    if (!pageId) return null;
+    return document.querySelector(`#ios-nav .ios-item[data-page="${pageId}"]`)
+      || (_isPhone() ? document.querySelector('#ios-nav .ios-item[data-page="more"]') : null);
+  }
+
+  function _buildMoreSheet(items) {
+    let sheet = $('more-sheet');
+    if (!sheet) {
+      sheet = document.createElement('div');
+      sheet.id = 'more-sheet';
+      sheet.className = 'more-sheet';
+      sheet.setAttribute('aria-hidden', 'true');
+      sheet.innerHTML = `<div class="more-backdrop"></div>
+        <div class="more-panel" role="dialog" aria-label="More">
+          <div class="more-grabber"></div>
+          <div class="more-grid"></div>
+          <div class="more-list"></div>
+        </div>`;
+      document.body.appendChild(sheet);
+      sheet.querySelector('.more-backdrop').onclick = closeMoreSheet;
+      _bindSheetDrag(sheet.querySelector('.more-panel'));
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMoreSheet(); });
+    }
+    const grid = sheet.querySelector('.more-grid');
+    grid.innerHTML = '';
+    items.filter(i => !i.danger).forEach(item => {
+      const b = document.createElement('button');
+      b.className = 'more-tile';
+      b.dataset.page = item.page;
+      b.innerHTML = `<span class="more-tile-icon">${_NAV_ICONS[item.icon]}</span><span>${item.label}</span>`;
+      b.onclick = () => { closeMoreSheet(); nav(item.page); };
+      grid.appendChild(b);
+    });
+    const list = sheet.querySelector('.more-list');
+    list.innerHTML = '';
+    const rows = [
+      { icon: 'feedback', label: 'Send feedback', run: () => G.toggleFeedback && G.toggleFeedback() },
+      { icon: 'theme', label: 'Switch appearance', run: toggleTheme },
+      ...items.filter(i => i.danger).map(i => ({ icon: i.icon, label: 'Emergency stop', run: emergencyStop, danger: true })),
+      { icon: 'signout', label: 'Sign out', run: logout, danger: true },
+    ];
+    rows.forEach(r => {
+      const b = document.createElement('button');
+      b.className = 'more-row' + (r.danger ? ' danger' : '');
+      b.innerHTML = `<span class="more-row-icon">${_NAV_ICONS[r.icon]}</span><span>${r.label}</span>`;
+      b.onclick = () => { closeMoreSheet(); setTimeout(r.run, 220); };
+      list.appendChild(b);
+    });
+  }
+
+  function openMoreSheet() {
+    const sheet = $('more-sheet'); if (!sheet) return;
+    sheet.querySelectorAll('.more-tile').forEach(t => t.classList.toggle('active', t.dataset.page === _currentPage));
+    sheet.classList.add('open');
+    sheet.setAttribute('aria-hidden', 'false');
+    if (navigator.vibrate) navigator.vibrate(6);
+  }
+
+  function closeMoreSheet() {
+    const sheet = $('more-sheet'); if (!sheet || !sheet.classList.contains('open')) return;
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+    const panel = sheet.querySelector('.more-panel');
+    panel.style.transform = '';
+  }
+
+  // Drag the sheet down to dismiss, like an iOS sheet.
+  function _bindSheetDrag(panel) {
+    let startY = null, dy = 0;
+    panel.addEventListener('touchstart', e => { startY = e.touches[0].clientY; dy = 0; panel.style.transition = 'none'; }, { passive: true });
+    panel.addEventListener('touchmove', e => {
+      if (startY === null) return;
+      dy = Math.max(0, e.touches[0].clientY - startY);
+      panel.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    panel.addEventListener('touchend', () => {
+      panel.style.transition = '';
+      if (dy > 80) closeMoreSheet(); else panel.style.transform = '';
+      startY = null;
+    });
+  }
+
+  _PHONE_MQ.addEventListener('change', () => { if (_navRole) buildNav(_navRole); });
+
   // ── Dynamic Island helpers ────────────────────────────────
   const _DI_LABELS = {
-    'dashboard':   'GARUDA',
+    'dashboard':   _BRAND,
     'narada':      'Narada',
-    'chat':        'Chat',
+    'devices':     'Devices',
+    'auto':        'Automate',
+    'insights':    'Insights',
     'a-email':     'Email',
     'a-settings':  'Settings',
     'a-logs':      'Logs',
@@ -1175,7 +1243,9 @@ const G = (() => {
     const alerting  = hud.classList.contains('di-alert');
     const allclear  = hud.classList.contains('di-allclear');
     const yellow    = hud.classList.contains('di-yellow');
-    const voice = _currentPage === 'narada' && !thinking && !alerting && !allclear && !yellow;
+    // The voice pill while a Narada voice conversation is live.
+    const voice = !!(window.N && N.voiceActive())
+      && !thinking && !alerting && !allclear && !yellow;
     hud.classList.toggle('di-voice', voice);
     hud.classList.toggle('di-idle', !thinking && !alerting && !voice && !allclear && !yellow);
     if (!hudLabel) return;
@@ -1240,23 +1310,29 @@ const G = (() => {
     // Hide when not logged in
     const shouldHide = !appEl.classList.contains('logged-in');
     appEl.classList.toggle('fb-hidden', shouldHide);
-    // On chat page, push button up above the input bar instead of hiding
-    appEl.classList.toggle('page-chat', _currentPage === 'chat');
+    // On Narada, push the button up above the input bar instead of hiding
+    appEl.classList.toggle('page-narada', _currentPage === 'narada');
   }
 
   // ── Navigation ────────────────────────────────────────────
   function nav(pageId, navEl) {
     _currentPage = pageId;
+    if (!navEl || !navEl.isConnected) navEl = _navItemFor(pageId);
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
+    // Every other page is hidden now. The old page used to be hidden from a
+    // timer, which could fire after the new page was shown: tapping the tab
+    // you were already on then hid it and left the screen blank.
+    const target = 'page-' + pageId;
+    let changed = false;
     document.querySelectorAll('.page').forEach(p => {
-      if (p.classList.contains('active')) {
-        p.style.opacity = '0';
-        setTimeout(() => { p.classList.remove('active'); p.style.opacity = ''; }, 0);
-      } else {
-        p.classList.remove('active');
-      }
+      if (p.id === target) return;
+      if (p.classList.contains('active')) changed = true;
+      p.classList.remove('active');
+      p.style.opacity = '';
     });
+    // On a phone the document itself scrolls; a new page starts at its top.
+    if (changed && _isPhone()) window.scrollTo(0, 0);
     document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
     // Dashboard uses overflow:hidden on #main to avoid nav-bar gap
     const mainEl = $('main');
@@ -1277,11 +1353,12 @@ const G = (() => {
       }
     }
     // Dynamic Island: update label per page
-    _setDILabel(_DI_LABELS[pageId] || 'GARUDA');
+    _setDILabel(_DI_LABELS[pageId] || _BRAND);
+    if (window.DI) DI.onNav(pageId);
     _syncDIContext();
     _syncFeedbackVisibility();
     if (pageId === 'a-email')    loadEmailCfg();
-    if (pageId === 'a-settings') loadSysCfg();
+    if (pageId === 'a-settings') { loadSysCfg(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
       if (_logsUnlocked) {
         fetchAndRenderLogs();
@@ -1291,6 +1368,8 @@ const G = (() => {
       }
     }
     if (pageId === 'a-cmds')     loadCmds();
+    if (window.H) H.onNav(pageId);
+    if (window.N) N.onNav(pageId);
   }
 
   // ── Mobile sidebar (no-ops — replaced by iOS nav) ─────────
@@ -1300,26 +1379,77 @@ const G = (() => {
   // ── WebSocket ─────────────────────────────────────────────
   function connectWS() {
     if (!_wsAllowed) return;   // don't reconnect after logout
-    if (_ws) _ws.close();
+    if (_wsRetryTimer) { clearTimeout(_wsRetryTimer); _wsRetryTimer = null; }
+    if (_ws) { const old = _ws; _ws = null; try { old.close(); } catch (_) {} }
     const base = getBackend();
-    const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const tok = _token || (base ? _lsGet('garuda_token') : null);
     let wsUrl;
     if (base) {
-      wsUrl = base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws' + (tok ? `?token=${tok}` : '');
+      wsUrl = base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws' + (tok ? `?token=${encodeURIComponent(tok)}` : '');
     } else {
       const proto = location.protocol === 'https:' ? 'wss' : 'ws';
       wsUrl = `${proto}://${location.host}/ws`;
     }
-    _ws = new WebSocket(wsUrl);
-    _ws.onopen = () => { _wsRetryDelay = 3000; _syncPendingEvents(); };
-    _ws.onmessage = e => { try { tick(JSON.parse(e.data)); } catch(err) { console.warn('[Garuda] WS parse error', err); } };
-    _ws.onerror = () => {};
-    _ws.onclose   = () => {
-      const delay = _wsRetryDelay;
-      _wsRetryDelay = Math.min(_wsRetryDelay * 1.5, 30000);
-      setTimeout(connectWS, delay);
+    let ws;
+    try { ws = new WebSocket(wsUrl); } catch (_) { _scheduleWsRetry(); return; }
+    _ws = ws;
+    let opened = false;
+    ws.onopen = () => { opened = true; _wsRetryDelay = 3000; _syncPendingEvents(); };
+    ws.onmessage = e => {
+      let state;
+      try { state = JSON.parse(e.data); } catch(err) { console.warn('[Garuda] WS parse error', err); return; }
+      _queueTick(state);
+    };
+    ws.onerror = () => {};
+    ws.onclose = ev => {
+      // A socket this function replaced must not start a second retry loop:
+      // each loop closed the other's socket, reconnecting forever.
+      if (_ws !== ws) return;
+      _ws = null;
+      // Refused before it opened (the server answers an unknown session with
+      // a failed handshake, which a browser reports as a plain 1006), or closed
+      // with 4001: the session has probably expired. Ask once; api() then
+      // refreshes the token, or signs out. Either way try again afterwards:
+      // if the server was only restarting, the retry is what reconnects, and
+      // after a sign-out _scheduleWsRetry does nothing.
+      if (!opened || (ev && ev.code === 4001)) {
+        const again = () => _scheduleWsRetry();
+        api('GET', '/api/session').then(again, again);
+        return;
+      }
+      _scheduleWsRetry();
     };
   }
+
+  function _scheduleWsRetry() {
+    if (!_wsAllowed || _wsRetryTimer) return;
+    const delay = _wsRetryDelay;
+    _wsRetryDelay = Math.min(_wsRetryDelay * 1.5, 30000);
+    _wsRetryTimer = setTimeout(() => { _wsRetryTimer = null; connectWS(); }, delay);
+  }
+
+  // State pushes are applied once per frame, and not at all while the tab is
+  // hidden: a burst of detections used to redraw the whole dashboard for each.
+  let _tickPending = null, _tickRaf = 0;
+  function _queueTick(state) {
+    _tickPending = state;
+    if (document.hidden) {
+      // Alerts must still ring and notify from a background tab.
+      if (state && !!state.alert_active !== !!_lastAlertState) _flushTick();
+      return;
+    }
+    if (!_tickRaf) _tickRaf = requestAnimationFrame(_flushTick);
+  }
+  function _flushTick() {
+    _tickRaf = 0;
+    const state = _tickPending;
+    _tickPending = null;
+    if (!state) return;
+    try { tick(state); } catch (err) { console.warn('[Garuda] state render error', err); }
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && _tickPending && !_tickRaf) _tickRaf = requestAnimationFrame(_flushTick);
+  });
 
   // ── Offline event sync on reconnect ─────────────────────
   async function _syncPendingEvents() {
@@ -1347,8 +1477,14 @@ const G = (() => {
   // ── Activity Timeline ─────────────────────────────────────
   let _timelineItems = [];
 
+  let _timelineSig = '';
+  function _logSig(log) { return log.length + '|' + (log.length ? log[log.length - 1] : ''); }
+
   function _updateTimeline(s) {
     const log = s.system_log || [];
+    const sig = _logSig(log);
+    if (sig === _timelineSig) return;         // nothing new: leave the list alone
+    _timelineSig = sig;
     _timelineItems = log.map(entry => {
       const timeMatch = entry.match(/^\[([\d\-: ]+)\]/);
       const time = timeMatch ? timeMatch[1].trim() : '';
@@ -1385,7 +1521,25 @@ const G = (() => {
     ).join('');
   }
 
+  // Android Chrome refuses `new Notification()` on a page (it throws) and
+  // some browsers have no Notification at all; either used to abort the rest
+  // of the state push, so an alert never reached the screen there.
+  function _notifyAlert(body) {
+    try {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      const opts = { body, icon: '/static/icon-192.png', tag: 'garuda-alert' };
+      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+        navigator.serviceWorker.ready
+          .then(reg => reg.showNotification('Garuda Alert', opts))
+          .catch(() => { try { new Notification('Garuda Alert', opts); } catch (_) {} });
+      } else {
+        new Notification('Garuda Alert', opts);
+      }
+    } catch (_) {}
+  }
+
   function tick(s) {
+    if (window.DI) DI.onState(s);
     if (!s || typeof s !== 'object') return;
     const pipeDot = $('pipeline-dot');
     const pipeLabel = $('pipeline-label');
@@ -1418,9 +1572,7 @@ const G = (() => {
 
     // Push notification + alarm on new alert
     if (s.alert_active && !_lastAlertState) {
-      if (Notification.permission === 'granted') {
-        new Notification('Garuda Alert', { body: s.danger_info || 'Danger detected \u2014 check camera feed', icon: '/static/favicon.ico' });
-      }
+      _notifyAlert(s.danger_info || 'Danger detected \u2014 check camera feed');
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
       _startAlarm();
       // On mobile, scroll status card into view so alert is visible
@@ -1437,7 +1589,7 @@ const G = (() => {
     if (typeof s.clip_recording === 'boolean' && _clipRecording && !s.clip_recording) {
       _clipRecording = false;
       const recBtn = $('cam-record-btn');
-      if (recBtn) { recBtn.textContent = '\u23FA'; recBtn.classList.remove('recording'); }
+      if (recBtn) { recBtn.innerHTML = _REC_ICON.rec; recBtn.classList.remove('recording'); }
     }
 
     // Modes
@@ -1498,31 +1650,29 @@ const G = (() => {
 
     // System console — admin dashboard only
     if (_session && _session.role === 'admin') {
-      const logText = (s.system_log || []).join('\n');
       const con = $('sys-console');
-      if (con) {
+      const conSig = _logSig(s.system_log || []);
+      if (con && con.dataset.sig !== conSig) {
+        con.dataset.sig = conSig;
+        const logText = (s.system_log || []).join('\n');
         const atBot = con.scrollTop + con.clientHeight >= con.scrollHeight - 8;
         con.textContent = logText;
         if (atBot) con.scrollTop = con.scrollHeight;
       }
     }
 
+    if (window.H && s.home) H.onState(s.home);
+
     // Activity feed (legacy hidden element) + new timeline
     _updateActivityFeed(s);
     _updateTimeline(s);
 
     // Log badge counts
-    const lcSys = document.getElementById('log-count-system');
-    if (lcSys) lcSys.textContent = (s.system_log || []).length || 0;
-    const lcDet = document.getElementById('log-count-detection');
-    if (lcDet) lcDet.textContent = s.detection_log_count || 0;
-    const lcPres = document.getElementById('log-count-presence');
-    if (lcPres) lcPres.textContent = s.presence_log_count || 0;
-    const lcVoice = document.getElementById('log-count-voice');
-    if (lcVoice) lcVoice.textContent = ((s.voice_log || []).length + (s.voice_responses || []).length) || 0;
+    setText('log-count-system', (s.system_log || []).length || 0);
+    setText('log-count-detection', s.detection_log_count || 0);
+    setText('log-count-presence', s.presence_log_count || 0);
+    setText('log-count-voice', ((s.voice_log || []).length + (s.voice_responses || []).length) || 0);
 
-    // Narada feed (conversation-style)
-    _updateNaradaFeed(s.voice_log || [], s.voice_responses || []);
 
     // Security health panel
     _updateSecHealth(s);
@@ -1624,7 +1774,9 @@ const G = (() => {
     if (!row) return;
     const icon = row.querySelector('.sec-health-icon');
     const descEl = row.querySelector('.sec-health-desc');
-    if (icon) {
+    const mark = String(status);
+    if (icon && icon.dataset.s !== mark) {
+      icon.dataset.s = mark;
       if (status === true) {
         icon.className = 'sec-health-icon ok';
         icon.innerHTML = '&#10003;';
@@ -1636,39 +1788,12 @@ const G = (() => {
         icon.innerHTML = '&#10007;';
       }
     }
-    if (descEl) descEl.textContent = desc;
+    if (descEl && descEl.textContent !== desc) descEl.textContent = desc;
   }
 
   // ── Narada conversation feed ──────────────────────────────
-  let _lastNaradaKey = '';
-  function _updateNaradaFeed(voiceLog, voiceResponses) {
-    const feed = document.getElementById('narada-feed');
-    if (!feed) return;
-    const key = voiceLog.length + ':' + voiceResponses.length;
-    if (key === _lastNaradaKey) return;
-    _lastNaradaKey = key;
-
-    // Interleave voice inputs and responses
-    const items = [];
-    const maxLen = Math.max(voiceLog.length, voiceResponses.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (i < voiceLog.length) items.push({ type: 'user', text: voiceLog[i] });
-      if (i < voiceResponses.length) items.push({ type: 'assistant', text: voiceResponses[i] });
-    }
-
-    if (!items.length) {
-      feed.innerHTML = '<div class="empty-state"><div class="empty-state-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 2a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z"/><path d="M5 11a7 7 0 0 0 14 0"/></svg></div><span>Speak a command to begin</span></div>';
-      return;
-    }
-
-    const atBot = feed.scrollTop + feed.clientHeight >= feed.scrollHeight - 8;
-    feed.innerHTML = items.map(item =>
-      `<div class="narada-msg ${item.type}">${esc(item.text)}</div>`
-    ).join('');
-    if (atBot) feed.scrollTop = feed.scrollHeight;
-  }
-
   function renderModes(modes) {
+    modes = modes || {};
     const grid   = $('modes-pills');
     const hpills = $('header-pills');
     if (!grid) return;
@@ -1690,6 +1815,9 @@ const G = (() => {
         });
         grid.appendChild(row);
       }
+      // A row the user just tapped keeps what they chose until the server
+      // answers; a push sent before then would flick the switch back.
+      if (row.dataset.pending === '1') return;
       // Smooth in-place state update (CSS transitions play)
       row.classList.toggle('on', isOn);
       const toggle = row.querySelector('.mode-toggle');
@@ -1697,7 +1825,9 @@ const G = (() => {
     });
 
     // Header pills — only active modes
-    if (hpills) {
+    const pillKey = MODE_CFG.filter(m => modes[m.key]).map(m => m.key).join(',');
+    if (hpills && hpills.dataset.key !== pillKey) {
+      hpills.dataset.key = pillKey;
       hpills.innerHTML = '';
       MODE_CFG.filter(m => modes[m.key]).forEach(m => {
         const p = mk('span', 'mode-pill active');
@@ -1728,8 +1858,7 @@ const G = (() => {
         const toggle = row.querySelector('.mode-toggle');
         if (toggle) toggle.classList.toggle('on', currentOn);
       }
-      const detail = e?.detail || e?.message || JSON.stringify(e);
-      showToast(`Mode error: ${detail}`, 'error');
+      showToast(extractError(e), 'error');
     } finally {
       if (row) delete row.dataset.pending;
     }
@@ -1780,8 +1909,6 @@ const G = (() => {
       if (wl) wl.value = (cfg.watch_labels || []).join(', ');
       const dl = $('danger-lbl');
       if (dl) dl.value = (cfg.danger_labels || []).join(', ');
-      const gk = $('groq-api-key');
-      if (gk) gk.value = '';
       // Scheduled modes
       const sched = cfg.mode_schedule || {};
       _loadSchedField('night', sched.night);
@@ -1836,7 +1963,6 @@ const G = (() => {
     const wlRaw = val('watch-labels') || '';
     const watchLabels = wlRaw.split(',').map(s => s.trim()).filter(Boolean);
     try {
-      const groqKey = val('groq-api-key');
       const npStartVal = ($('np-start') || {}).value || '';
       const npEndVal   = ($('np-end')   || {}).value || '';
       const payload = {
@@ -1848,7 +1974,6 @@ const G = (() => {
         ...(npStartVal ? { night_presence_start: npStartVal } : {}),
         ...(npEndVal   ? { night_presence_end:   npEndVal   } : {}),
       };
-      if (groqKey) payload.groq_api_key = groqKey;
       const sched = _buildSchedule();
       if (Object.keys(sched).length > 0) payload.mode_schedule = sched;
       await api('POST', '/api/config', payload);
@@ -1901,20 +2026,20 @@ const G = (() => {
 
   async function downloadFullLog() {
     const base = getBackend();
-    const tok  = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const tok  = _token || (base ? _lsGet('garuda_token') : null);
     const url  = (base ? base.replace(/\/$/, '') : '') + '/api/logs/download';
     const headers = {};
     if (tok) headers['X-Garuda-Token'] = tok;
     try {
       const r = await fetch(url, { method: 'GET', headers, credentials: base ? 'omit' : 'include' });
-      if (!r.ok) { alert('Download failed — make sure logs are unlocked.'); return; }
+      if (!r.ok) { showToast('Download failed \u2014 make sure logs are unlocked.', 'error'); return; }
       const blob = await r.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = `garuda-full-log-${new Date().toISOString().slice(0,10)}.txt`;
       a.click();
     } catch(e) {
-      alert('Download error: ' + (e.message || e));
+      showToast('Download error: ' + (e.message || e), 'error');
     }
   }
 
@@ -2011,10 +2136,11 @@ const G = (() => {
   }
 
   async function deleteDevice(mac) {
+    if (!await confirmAction({ title: 'Remove this device?', body: `${mac} will no longer count as the owner being home.`, confirmLabel: 'Remove' })) return;
     try {
       await api('POST', '/api/devices/delete', { mac });
       loadDevices();
-    } catch(e) {}
+    } catch(e) { showToast(extractError(e), 'error'); }
   }
 
   async function scanNetwork() {
@@ -2181,6 +2307,7 @@ const G = (() => {
   }
 
   async function deleteMasterKey(idx) {
+    if (!await confirmAction({ title: 'Delete this master key?', body: 'Anyone using it loses admin access and the logs unlock.', confirmLabel: 'Delete' })) return;
     try {
       await api('POST', '/api/master_key/delete', { index: idx });
       loadMasterKeys();
@@ -2224,23 +2351,29 @@ const G = (() => {
   async function addCmd() {
     const phrase = val('m-phrase').toLowerCase();
     const resp = val('m-resp');
-    if (!phrase || !resp) { alert('Enter both fields.'); return; }
+    if (!phrase || !resp) { showToast('Enter both fields.', 'error'); return; }
     try {
       await api('POST', '/api/config/command/add', { phrase, response: resp });
       closeModal('m-add-cmd'); loadCmds();
-    } catch(e) { alert(e.detail || 'Failed.'); }
+    } catch(e) { showToast(extractError(e), 'error'); }
   }
 
   async function _delCmd(phrase) {
-    if (!confirm(`Delete "${phrase}"?`)) return;
+    if (!await confirmAction({ title: 'Delete this command?', body: `"${phrase}"`, confirmLabel: 'Delete' })) return;
     try { await api('POST', '/api/config/command/delete', { phrase }); loadCmds(); }
-    catch(e) { alert(e.detail || 'Failed.'); }
+    catch(e) { showToast(extractError(e), 'error'); }
   }
 
   // ── Emergency Stop ────────────────────────────────────────
   async function emergencyStop() {
-    if (!confirm('Stop the entire Garuda system now?')) return;
-    await api('POST', '/api/emergency-stop', {});
+    const ok = await confirmAction({
+      title: 'Emergency stop?',
+      body: 'This shuts the whole system down: camera, detection and alerts stop until it is started again on the Pi.',
+      confirmLabel: 'Stop system',
+    });
+    if (!ok) return;
+    try { await api('POST', '/api/emergency-stop', {}); }
+    catch(e) { showToast(extractError(e), 'error'); }
   }
 
   // ── Color swatches ────────────────────────────────────────
@@ -2257,7 +2390,7 @@ const G = (() => {
   // ── Utils ─────────────────────────────────────────────────
   const $ = id => document.getElementById(id);
   const val = id => ($(id)?.value || '').trim();
-  const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+  const setText = (id, v) => { const e = $(id); if (e && e.textContent !== String(v)) e.textContent = v; };
   const setWidth = (id, pct) => { const e = $(id); if (e) e.style.width = Math.min(100, Math.max(0, pct)) + '%'; };
   const show = id => $(id)?.classList.remove('hidden');
   const hide = id => $(id)?.classList.add('hidden');
@@ -2302,8 +2435,10 @@ const G = (() => {
     const base = getBackend();
     const fullUrl = base ? base.replace(/\/$/, '') + url : url;
     const headers = { 'Content-Type': 'application/json' };
-    const tok = _token || (base ? localStorage.getItem('garuda_token') : null);
+    const tok = _token || (base ? _lsGet('garuda_token') : null);
     if (tok) headers['X-Garuda-Token'] = tok;
+    // Sign-out names the refresh token too, so the server can revoke it.
+    if (url === '/api/logout' && base && _lsGet('garuda_refresh')) headers['X-Garuda-Refresh'] = _lsGet('garuda_refresh');
     const opts = { method, headers, credentials: base ? 'omit' : 'include' };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const r = await fetch(fullUrl, opts);
@@ -2311,28 +2446,127 @@ const G = (() => {
     try { d = await r.json(); } catch(_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
     if (!r.ok) {
       // On 401, attempt one silent token refresh before giving up
-      if (r.status === 401 && !_isRetry && url !== '/api/refresh' && url !== '/api/login') {
+      if (r.status === 401 && !_isRetry && !_loggingOut && !['/api/refresh', '/api/login', '/api/logout'].includes(url)) {
         try {
           const refreshUrl = base ? base.replace(/\/$/, '') + '/api/refresh' : '/api/refresh';
-          const rr = await fetch(refreshUrl, { method: 'POST', credentials: 'include' });
+          const stored = base ? _lsGet('garuda_refresh') : null;
+          const rr = await fetch(refreshUrl, {
+            method: 'POST', credentials: 'include',
+            headers: stored ? { 'X-Garuda-Refresh': stored } : {},
+          });
           if (rr.ok) {
             const rd = await rr.json();
-            if (rd.token) { _token = rd.token; localStorage.setItem('garuda_token', _token); }
+            if (rd.token) { _token = rd.token; _lsSet('garuda_token', _token); }
             return api(method, url, body, true);   // retry once with new access token
           }
         } catch (_) {}
-        // Refresh failed — session is gone, force re-login
-        await logout();
+        // Refresh failed — session is gone, force re-login (no question
+        // asked: there is nothing left to stay signed in to).
+        if (_session) await _doLogout();
       }
       throw d;
     }
     return d;
   }
 
+  // ── Scroll fades ──────────────────────────────────────────
+  // Every box that scrolls fades its content out at the sides that have more
+  // to show (style.css: "Scroll fades"). This keeps the marks current.
+  const FADE_Y = '#main, .nx-log, .nx-info-body, .console, .det-timeline, .det-feed, .activity-feed, '
+    + '.docs-body, .modal, .info-pane, .timeline-list, .activity-timeline-wrap, .fb-inbox-list, .fb-panel, '
+    + '.ha-activity, .more-panel, .sidebar-left, .sidebar-right, .admin-page, .page-inner, .dash-layout, .login-center';
+  const FADE_X = '.docs-tabs, .log-tabs, .t-wrap, #ios-nav, #heatmap, .fc-wrap, .docs-section pre';
+  const _fadeSeen = new WeakSet();
+  let _fadeQueued = false, _fadeResize = null;
+
+  function _fadeSync(el) {
+    const y = el.classList.contains('fade-y');
+    const pos = y ? el.scrollTop : el.scrollLeft;
+    const max = y ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth;
+    const before = pos > 1, after = max > 1 && pos < max - 1;
+    el.toggleAttribute(y ? 'data-ft' : 'data-fl', before);
+    el.toggleAttribute(y ? 'data-fb' : 'data-fr', after);
+    if (before || after) el.classList.add('fade-on');
+    else if (el.classList.contains('fade-on')) {
+      // Kept until the fade has run out, so the last edge does not snap sharp.
+      clearTimeout(el._fadeOff);
+      el._fadeOff = setTimeout(() => {
+        if (!el.hasAttribute('data-ft') && !el.hasAttribute('data-fb')
+            && !el.hasAttribute('data-fl') && !el.hasAttribute('data-fr')) el.classList.remove('fade-on');
+      }, 260);
+    }
+  }
+
+  function _fadeAttach(el, axis) {
+    if (_fadeSeen.has(el)) return _fadeSync(el);
+    _fadeSeen.add(el);
+    el.classList.add(axis);
+    el.addEventListener('scroll', () => _fadeSync(el), { passive: true });
+    if (_fadeResize) _fadeResize.observe(el);
+    _fadeSync(el);
+  }
+
+  function _fadeScan() {
+    _fadeQueued = false;
+    document.querySelectorAll(FADE_Y).forEach(el => _fadeAttach(el, 'fade-y'));
+    document.querySelectorAll(FADE_X).forEach(el => _fadeAttach(el, 'fade-x'));
+  }
+
+  function _initFades() {
+    if (!window.CSS || !CSS.supports || !(CSS.supports('mask-image', 'none') || CSS.supports('-webkit-mask-image', 'none'))) return;
+    if (window.ResizeObserver) _fadeResize = new ResizeObserver(entries => entries.forEach(e => _fadeSync(e.target)));
+    _fadeScan();
+    // Content arrives and leaves all the time (logs, lists, a new message):
+    // look again shortly after the page changes, at most a few times a second.
+    new MutationObserver(() => {
+      if (_fadeQueued) return;
+      _fadeQueued = true;
+      setTimeout(_fadeScan, 180);
+    }).observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('resize', () => { if (!_fadeQueued) { _fadeQueued = true; setTimeout(_fadeScan, 180); } });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _initFades);
+  else _initFades();
+
+  // A POST whose answer arrives in pieces (server-sent events): onEvent is
+  // given each one as it comes. Used by Narada to show its steps as it works.
+  async function apiStream(url, body, onEvent) {
+    const base = getBackend();
+    const fullUrl = base ? base.replace(/\/$/, '') + url : url;
+    const headers = { 'Content-Type': 'application/json' };
+    const tok = _token || (base ? _lsGet('garuda_token') : null);
+    if (tok) headers['X-Garuda-Token'] = tok;
+    const r = await fetch(fullUrl, { method: 'POST', headers, credentials: base ? 'omit' : 'include', body: JSON.stringify(body) });
+    if (!r.ok || !r.body) {
+      let d;
+      try { d = await r.json(); } catch (_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
+      d.status = r.status;
+      throw d;
+    }
+    const reader = r.body.getReader(), decoder = new TextDecoder();
+    let buf = '';
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let at;
+      while ((at = buf.indexOf('\n\n')) !== -1) {
+        const chunk = buf.slice(0, at);
+        buf = buf.slice(at + 2);
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue;
+          let event = null;
+          try { event = JSON.parse(line.slice(6)); } catch (_) {}
+          if (event) onEvent(event);
+        }
+      }
+    }
+  }
+
   // ── Public API ────────────────────────────────────────────
   return {
     init,
-    submitLogin, logout,
+    submitLogin, logout, confirmAction, _confirmAnswer,
     goAdminFlow, backToMain, backToAdminStep1, sendAdminOTP, verifyAdminOTP,
     goMasterKey, submitMasterKeyLogin, unlockLogs,
     goForgot, sendForgotOTP, doReset,
@@ -2340,7 +2574,7 @@ const G = (() => {
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,
-    toggleCamera, takeSnapshot, toggleClip, openDocs, sendChat, clearChat, toggleRateLimitInfo,
+    toggleCamera, takeSnapshot, toggleClip, openDocs,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, toggleNightPresence, saveSettings,
     filterLogs, exportLogs, downloadFullLog,
@@ -2351,11 +2585,18 @@ const G = (() => {
     switchLogTab,
     switchDocsTab,
     showToast,
+    setDI: _setDIState,
+    syncDI: _syncDIContext,
+    product: _PRODUCT,
     // Exposed for the feedback widget (separate IIFE, needs access to session + api)
     getSession: () => _session,
     _apiFn: api,
+    _apiStream: apiStream,
+    _base: () => (getBackend() || '').replace(/\/$/, ''),
+    _authQuery: () => (_token ? 'token=' + encodeURIComponent(_token) : ''),
   };
 })();
+window.G = G;
 
 document.addEventListener('DOMContentLoaded', G.init);
 
@@ -2654,8 +2895,17 @@ window.addEventListener('error', e => {
 
 // Close modal on overlay click
 document.addEventListener('click', e => {
-  if (e.target.classList.contains('modal-overlay')) e.target.classList.add('hidden');
+  if (!e.target.classList || !e.target.classList.contains('modal-overlay')) return;
+  if (e.target.id === 'm-confirm') G._confirmAnswer(false);   // also settles the pending question
+  else e.target.classList.add('hidden');
 });
+document.addEventListener('keydown', e => {
+  const ov = document.getElementById('m-confirm');
+  if (!ov || ov.classList.contains('hidden')) return;
+  if (e.key === 'Escape') { e.preventDefault(); G._confirmAnswer(false); }
+  // Enter must not fall through to the login / logs-gate shortcuts below.
+  if (e.key === 'Enter') e.stopImmediatePropagation();
+}, true);
 
 // Enter key shortcuts — logs-gate works while logged in; login views only before login
 document.addEventListener('keydown', e => {

@@ -1,0 +1,176 @@
+"""Compile an utterance into a rule using NVIDIA NIM.
+
+The egress boundary is enforced here. What leaves the device: the user's
+transcribed words, the descriptor SCHEMA, the device list, and the utterances
+of existing rules. What never leaves: frames, crops, keypoints, audio, and any
+current reading of any descriptor field. A compiler does not need to know what
+the room looks like right now, so it is not told.
+
+The schema is passed in rather than imported, because the vocabulary now
+depends on which devices the user has added.
+"""
+import json
+import logging
+import re
+
+import anyio.to_thread
+import requests
+
+from .validator import validate_rule
+
+log = logging.getLogger(__name__)
+
+DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+# A reasoning model spends this budget on its chain of thought *before* it
+# emits a single character of the rule, and the two share one allowance. At 512
+# a long deliberation left the JSON truncated mid-string -- the rule was fully
+# worked out in the reasoning and then cut off on the way out, which surfaced to
+# the user as "could not parse a rule" on roughly one attempt in three. The
+# ceiling only caps a runaway; a completed rule costs about 110 tokens, so
+# raising it does not raise the bill for a request that was going to succeed.
+MAX_COMPLETION_TOKENS = 2048
+
+_SYSTEM_PROMPT = """You compile spoken home-automation instructions into JSON rules.
+
+Return exactly one JSON object and nothing else. No prose, no code fence.
+
+Shape:
+{"source_utterance": str,
+ "when": {"all": [ {"field": str, "op": str, "value": str|number}, ... ]},
+ "then": [ {"device": str, "action": str}, ... ],
+ "cooldown_s": number}
+
+Use "any" instead of "all" when the user means one condition is enough.
+Only use the fields, operators, devices and actions given in the schema.
+Never invent a field or a device. If the instruction cannot be expressed with
+the given schema, return {"error": "<short reason>"} instead.
+Durations are in seconds. "five minutes" is 300.
+"""
+
+_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+
+class NimClient:
+    def __init__(self, api_key, model, base_url=DEFAULT_BASE_URL, timeout=30, chat=None):
+        self._api_key = api_key
+        self.model = model
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.tokens_used = 0
+        # When a shared NimChat is supplied it owns the key and the model
+        # list, so a retired model falls through to the next one here too.
+        self.chat = chat
+
+    @property
+    def api_key(self):
+        return self.chat.api_key if self.chat is not None else self._api_key
+
+    @api_key.setter
+    def api_key(self, value):
+        self._api_key = value
+
+    def build_request(self, utterance, existing_rules, schema):
+        """Assemble the request body. Schema only -- never live values."""
+        known = [r.get("source_utterance", "") for r in existing_rules][:32]
+        user_content = json.dumps({
+            "schema": schema.schema_for_prompt(),
+            "already_known": known,
+            "instruction": utterance,
+        })
+        return {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
+            "temperature": 0.1,
+            "max_tokens": MAX_COMPLETION_TOKENS,
+        }
+
+    @staticmethod
+    def _extract_json(content):
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.strip("`")
+            content = content[content.find("\n") + 1:] if "\n" in content else content
+            if content.lstrip().startswith("json"):
+                content = content.lstrip()[4:]
+        match = _JSON_RE.search(content)
+        if not match:
+            return None
+        try:
+            return json.loads(match.group(0))
+        except ValueError:
+            return None
+
+    def synthesize(self, utterance, existing_rules, schema):
+        """Return (rule, "") on success or (None, reason) on any failure.
+
+        Blocking. Call synthesize_async from async code -- a 20 second timeout
+        on the event loop stalls the MJPEG stream, the websocket broadcaster
+        and every concurrent request for its duration.
+        """
+        if not self.api_key:
+            return None, "no NIM API key configured"
+        if self.chat is not None:
+            return self._synthesize_via_chat(utterance, existing_rules, schema)
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                headers={"Authorization": f"Bearer {self.api_key}",
+                         "Content-Type": "application/json"},
+                json=self.build_request(utterance, existing_rules, schema),
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            payload = response.json()
+        except Exception as exc:
+            log.warning("NIM request failed: %s", exc)
+            return None, f"could not reach the rule service: {type(exc).__name__}"
+
+        self.tokens_used += int(payload.get("usage", {}).get("total_tokens", 0) or 0)
+        try:
+            choice = payload["choices"][0]
+            content = choice["message"]["content"]
+        except (KeyError, IndexError, TypeError):
+            return None, "malformed response from the rule service"
+
+        # Truncation and gibberish both fail to parse, but only one of them is
+        # worth retrying. Saying which is which is the difference between a user
+        # rewording a sentence that was never the problem and one that was.
+        if choice.get("finish_reason") == "length":
+            return None, "the rule service ran out of room before it finished"
+
+        return self._finish(self._extract_json(content), utterance, schema)
+
+    def _finish(self, parsed, utterance, schema):
+        if parsed is None:
+            return None, "could not parse a rule from the response"
+        if "error" in parsed:
+            return None, str(parsed["error"])
+
+        # The model does not get to decide what the user said.
+        parsed["source_utterance"] = utterance
+
+        ok, reason = validate_rule(parsed, schema)
+        if not ok:
+            return None, reason
+        return parsed, ""
+
+    def _synthesize_via_chat(self, utterance, existing_rules, schema):
+        from .llm import NimUnavailable
+        body = self.build_request(utterance, existing_rules, schema)
+        try:
+            message = self.chat.chat(body["messages"], max_tokens=body["max_tokens"],
+                                     temperature=body["temperature"], timeout=self.timeout)
+        except NimUnavailable as exc:
+            return None, str(exc)
+        if message.get("_finish_reason") == "length":
+            return None, "the rule service ran out of room before it finished"
+        return self._finish(self._extract_json(message.get("content") or ""), utterance, schema)
+
+    async def synthesize_async(self, utterance, existing_rules, schema):
+        """Run the blocking call on a worker thread, off the event loop."""
+        return await anyio.to_thread.run_sync(
+            self.synthesize, utterance, existing_rules, schema)

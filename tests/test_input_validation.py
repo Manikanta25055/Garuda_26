@@ -6,7 +6,7 @@ commands, and Unicode/special character handling.
 import pytest
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-import basic_pipelines.Garuda_web as gw
+import Garuda_web as gw
 
 
 # ── Helper: get admin headers ────────────────────────────────────────────────
@@ -268,7 +268,7 @@ class TestLabelValidation:
         app_client.post('/api/config', json={'danger_label': 'knife'}, headers=ah)
         app_client.post('/api/config', json={'danger_label': ''}, headers=ah)
         cfg = app_client.get('/api/config', headers=ah).json()
-        assert cfg['danger_label'] == 'knife'
+        assert cfg['danger_labels'] == ['knife']
 
     def test_watch_labels_strips_whitespace(self, app_client, ah):
         r = app_client.post('/api/config',
@@ -292,6 +292,12 @@ class TestLabelValidation:
 
 class TestChatValidation:
 
+    @pytest.fixture(autouse=True)
+    def _no_nim_key(self, monkeypatch):
+        """Validation is what is under test here, not the LLM. With a key set,
+        /api/chat makes a live NIM call."""
+        monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
+
     def test_empty_message_rejected(self, app_client, user_token):
         headers = {'X-Garuda-Token': user_token}
         r = app_client.post('/api/chat', json={'message': ''}, headers=headers)
@@ -305,7 +311,7 @@ class TestChatValidation:
     def test_valid_message_accepted(self, app_client, user_token):
         headers = {'X-Garuda-Token': user_token}
         r = app_client.post('/api/chat', json={'message': 'what is the status?'}, headers=headers)
-        # 200 or 503 (no Groq key) — both OK; just must not be 400
+        # 200 or 503 (no NIM key) — both OK; just must not be 400
         assert r.status_code != 400
 
 

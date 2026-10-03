@@ -1,0 +1,10 @@
+[01:23:49] evaluation running; deadline in 24.0 h
+[17:06:06] deadman test: suppressing heartbeat for 240 s
+[17:10:06] deadman test: heartbeat resumed
+[17:44:09] watchdog: server back up after 1 failures
+[20:17:24] watchdog: server back up after 1 failures
+[20:19:15] watchdog: server back up after 1 failures
+[20:30:55] watchdog: server back up after 1 failures
+[20:41:46] watchdog: server back up after 1 failures
+[20:42:26] watchdog: server back up after 1 failures
+[20:43:36] watchdog: server back up after 1 failures

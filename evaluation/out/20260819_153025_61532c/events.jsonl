@@ -1,0 +1,20 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8232b250>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.1503391}
+{"kind": "login", "ok": false, "t": 1787133625.150571}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f82334990>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.1592908}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f82330e50>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.1606534}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f82332c90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.1611671}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f82336c10>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.164184}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f82337850>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.1666002}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f82341090>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787133625.1730976}
+{"kind": "sys_log", "ts": 1787133628.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787133688.7245135}
+{"kind": "sys_log", "ts": 1787133628.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787133688.7246947}
+{"kind": "sys_log", "ts": 1787133628.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787133688.7247453}
+{"kind": "sys_log", "ts": 1787133628.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787133688.7247882}
+{"kind": "sys_log", "ts": 1787133628.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787133688.7248323}
+{"kind": "sys_log", "ts": 1787133628.0, "msg": "Pipeline started.", "t": 1787133688.7249765}
+{"kind": "sys_log", "ts": 1787133658.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787133688.7250233}
+{"kind": "sys_log", "ts": 1787133789.0, "msg": "[NETWORK] Internet restored \u2014 4952 queued events ready to sync", "t": 1787133846.8482661}
+{"kind": "sys_log", "ts": 1787133941.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787133966.4629295}
+{"kind": "sys_log", "ts": 1787133969.0, "msg": "[WATCH] Person (0.86)", "t": 1787134026.5241826}
+{"kind": "sys_log", "ts": 1787134001.0, "msg": "[NETWORK] Internet restored \u2014 4953 queued events ready to sync", "t": 1787134026.5245135}
+{"kind": "sys_log", "ts": 1787135905.0, "msg": "[WATCH] Person (0.88)", "t": 1787135946.812274}

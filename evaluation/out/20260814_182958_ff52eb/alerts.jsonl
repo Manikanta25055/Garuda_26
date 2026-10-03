@@ -1,0 +1,4 @@
+{"kind": "danger", "ts": 1786717090.0, "label": "Knife", "conf": 0.86, "t": 1786717115.7364728}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1786717090.0, "label": "Knife", "conf": 0.86, "t": 1786717115.7364728}, "email_ts": 1786717090.0, "latency_s": 0.0, "t": 1786717116.1561136}
+{"kind": "danger", "ts": 1786723415.0, "label": "Knife", "conf": 0.83, "t": 1786723416.0207288}
+{"kind": "email_matched", "danger": {"kind": "danger", "ts": 1786723415.0, "label": "Knife", "conf": 0.83, "t": 1786723416.0207288}, "email_ts": 1786723419.0, "latency_s": 4.0, "t": 1786723475.9539137}

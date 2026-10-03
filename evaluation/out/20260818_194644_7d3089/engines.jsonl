@@ -1,0 +1,4 @@
+{"engine": "presence", "ok": true, "owner_present": false, "t": 1787062607.0536814}
+{"engine": "snapshot", "ok": true, "t": 1787062607.063613}
+{"engine": "email", "ok": true, "t": 1787062611.362684}
+{"engine": "chat", "ok": true, "latency_s": 0.2342214584350586, "body": "{\"response\":\"I heard you, but I'm not sure what to do. Try a command like 'activate dnd'.\"}", "t": 1787062611.5970812}

@@ -1,0 +1,12 @@
+{"engine": "presence", "ok": false, "t": 1787138766.6660738}
+{"engine": "snapshot", "ok": false, "t": 1787138766.6699827}
+{"engine": "email", "ok": false, "t": 1787138766.671876}
+{"engine": "chat", "ok": false, "latency_s": 0.0033521652221679688, "body": "", "t": 1787138766.675314}
+{"engine": "presence", "ok": false, "t": 1787140573.6686797}
+{"engine": "presence", "ok": false, "t": 1787142373.7533853}
+{"engine": "snapshot", "ok": false, "t": 1787142373.7571223}
+{"engine": "chat", "ok": false, "latency_s": 0.004589080810546875, "body": "", "t": 1787142373.7618694}
+{"engine": "presence", "ok": false, "t": 1787144173.835586}
+{"engine": "presence", "ok": false, "t": 1787145973.9438345}
+{"engine": "snapshot", "ok": false, "t": 1787145973.9455636}
+{"engine": "chat", "ok": false, "latency_s": 0.004514217376708984, "body": "", "t": 1787145973.95022}

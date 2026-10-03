@@ -60,9 +60,19 @@ sys.modules.setdefault('aiortc', _aiortc)
 sys.modules.setdefault('aiortc.mediastreams', MagicMock())
 sys.modules.setdefault('av', MagicMock())
 
+# The suite must never call a paid model. load_dotenv() does not override a
+# variable that is already set, so blanking these keeps the real .env keys out.
+for _key in ("NIM_API_KEY", "JEV_API_KEY", "GROQ_API_KEY"):
+    os.environ[_key] = ""
+
 # ── Import the app module ─────────────────────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines'))
 import Garuda_web as gw
+
+# Refresh tokens are mirrored to disk. Point that at a scratch file before the
+# app's lifespan runs, so the suite never reads or writes the live one.
+import tempfile as _tempfile
+gw.REFRESH_TOKENS_FILE = os.path.join(_tempfile.mkdtemp(prefix="garuda-test-"), "refresh_tokens.json")
 
 
 class SyncASGIClient:
@@ -165,8 +175,13 @@ def tmp_data(tmp_path):
 
 
 @pytest.fixture(scope="session")
-def shared_client():
+def shared_client(tmp_path_factory):
     global _SHARED_CLIENT
+    # Redirected before the client is built, because building it runs the real
+    # lifespan -- which configures the Drishti session store. Left alone, every
+    # test login is written into the running service's session file, and
+    # invalidate_user in a test revokes somebody's actual session.
+    gw.DRISHTI_SESSIONS_PATH = str(tmp_path_factory.mktemp("sessions") / "sessions.json")
     gw._presence_poller = lambda: None
     gw._deadman_monitor = lambda: None
     gw._connectivity_monitor = lambda: None
@@ -189,6 +204,11 @@ def app_client(tmp_data, monkeypatch, shared_client):
     """
     import smtplib
 
+    # Never reach ElevenLabs or NVIDIA NIM from a test, whatever the real .env holds.
+    monkeypatch.setattr(gw.NARADA_VOICE, 'api_key', '')
+    monkeypatch.setattr(gw.NARADA_VOICE, 'engine_id', '')
+    monkeypatch.setattr(gw.NIM_CHAT, 'api_key', '')
+
     # ── File path redirects ──
     monkeypatch.setattr(gw, 'USERS_FILE',          str(tmp_data / 'system_logs/users.json'))
     monkeypatch.setattr(gw, 'CONFIG_FILE',         str(tmp_data / 'system_logs/config.json'))
@@ -198,55 +218,75 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw, 'FEEDBACK_FILE',       str(tmp_data / 'system_logs/feedback.json'))
     monkeypatch.setattr(gw, 'FEEDBACK_BACKUP_FILE', str(tmp_data / 'system_logs/feedback.backup.json'))
     monkeypatch.setattr(gw, 'EVENTS_DB',           str(tmp_data / 'system_logs/garuda_events.db'))
+    # Secrets saved from the settings pages go to .env; never the real one.
+    monkeypatch.setattr(gw, 'HOME_ENV_PATH',       str(tmp_data / '.env'))
+    monkeypatch.setattr(gw.STATE.auth, 'refresh_tokens',     {})
+    monkeypatch.setattr(gw.STATE.auth, 'persisted_refresh',  {})
+    monkeypatch.setattr(gw, 'REFRESH_TOKENS_FILE', str(tmp_data / 'system_logs/refresh_tokens.json'))
+    monkeypatch.setattr(gw.STATE.auth, 'login_failures',     {})
+    monkeypatch.setattr(gw.STATE.auth, 'forgot_otp_store',   {})
     monkeypatch.setattr(gw, 'PERM_SYSTEM_LOG',     str(tmp_data / 'system_logs/perm_system_log.txt'))
     monkeypatch.setattr(gw, 'PERM_VOICE_LOG',      str(tmp_data / 'system_logs/perm_voice_log.txt'))
     monkeypatch.setattr(gw, 'PERM_DETECTION_LOG',  str(tmp_data / 'system_logs/perm_detection_log.txt'))
     monkeypatch.setattr(gw, 'SCISSORS_LOG_FILE',   str(tmp_data / 'danger_sightings.txt'))
     monkeypatch.setattr(gw, 'NIGHT_MODE_LOG_FILE', str(tmp_data / 'night_mode_findings.txt'))
 
+    # Narada's saved conversation: never the live file, and empty for each test.
+    monkeypatch.setattr(gw.BRAIN.conversations, 'path', str(tmp_data / 'system_logs/narada_conversations.json'))
+    monkeypatch.setattr(gw.BRAIN.conversations, '_data', {'conversations': {}})
+    monkeypatch.setattr(gw.BRAIN.memory, 'path', str(tmp_data / 'system_logs/narada_memory.json'))
+    monkeypatch.setattr(gw.BRAIN.memory, '_facts', [])
+    monkeypatch.setattr(gw.BRAIN.observer, 'path', str(tmp_data / 'system_logs/narada_offers.json'))
+    monkeypatch.setattr(gw.BRAIN.observer, '_offered', {})
+    monkeypatch.setattr(gw.BRAIN.observer, '_last_offer', 0.0)
+    monkeypatch.setattr(gw.BRAIN, '_habits_at', None)
+    monkeypatch.setattr(gw.BRAIN.noticer, 'path', str(tmp_data / 'system_logs/narada_notices.json'))
+    monkeypatch.setattr(gw.BRAIN.noticer, 'state', {'fired': {}, 'last': 0.0, 'since': {}})
+    monkeypatch.setattr(gw.BRAIN.noticer, '_checked_at', None)
+
     # ── In-memory state reset ──
-    monkeypatch.setattr(gw, '_sessions',    {})
-    monkeypatch.setattr(gw, '_rate_store',  collections.defaultdict(list))
-    monkeypatch.setattr(gw, 'USERS',        {k: dict(v) for k, v in _DEFAULT_USERS.items()})
-    monkeypatch.setattr(gw, 'MASTER_KEYS',  ["test-master-key-12345"])
-    monkeypatch.setattr(gw, 'ADMIN_OTP',    None)
-    monkeypatch.setattr(gw, '_admin_otp_user', None)
-    monkeypatch.setattr(gw, '_admin_otp_ts', 0)
-    monkeypatch.setattr(gw, '_admin_otp_attempts', 0)
-    monkeypatch.setattr(gw, 'USER_FORGOT_OTP', None)
-    monkeypatch.setattr(gw, '_forgot_otp_user', None)
-    monkeypatch.setattr(gw, '_forgot_otp_ts', 0)
-    monkeypatch.setattr(gw, '_forgot_otp_attempts', 0)
-    monkeypatch.setattr(gw, 'MASTER_KEY_OTP', None)
+    monkeypatch.setattr(gw.STATE.auth, 'sessions',    {})
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store',  collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'users',        {k: dict(v) for k, v in _DEFAULT_USERS.items()})
+    monkeypatch.setattr(gw.STATE.auth, 'master_keys',  ["test-master-key-12345"])
+    monkeypatch.setattr(gw.STATE.auth, 'admin_otp',    None)
+    monkeypatch.setattr(gw.STATE.auth, 'admin_otp_user', None)
+    monkeypatch.setattr(gw.STATE.auth, 'admin_otp_ts', 0)
+    monkeypatch.setattr(gw.STATE.auth, 'admin_otp_attempts', 0)
+    monkeypatch.setattr(gw.STATE.auth, 'user_forgot_otp', None)
+    monkeypatch.setattr(gw.STATE.auth, 'forgot_otp_user', None)
+    monkeypatch.setattr(gw.STATE.auth, 'forgot_otp_ts', 0)
+    monkeypatch.setattr(gw.STATE.auth, 'forgot_otp_attempts', 0)
+    monkeypatch.setattr(gw.STATE.auth, 'master_key_otp', None)
     monkeypatch.setattr(gw, 'system_updates_log', [])
     monkeypatch.setattr(gw, 'voice_assistant_log', [])
     monkeypatch.setattr(gw, 'voice_responses', [])
     monkeypatch.setattr(gw, '_detection_log', [])
-    monkeypatch.setattr(gw, 'latest_detection_info', '')
-    monkeypatch.setattr(gw, 'MODE_DND',       False)
-    monkeypatch.setattr(gw, 'MODE_EMAIL_OFF', False)
-    monkeypatch.setattr(gw, 'MODE_IDLE',      False)
-    monkeypatch.setattr(gw, 'MODE_NIGHT',     False)
-    monkeypatch.setattr(gw, 'MODE_EMERGENCY', False)
-    monkeypatch.setattr(gw, 'MODE_PRIVACY',   True)
-    monkeypatch.setattr(gw, '_alert_active',  False)
-    monkeypatch.setattr(gw, '_alert_end_time', 0.0)
-    monkeypatch.setattr(gw, '_danger_trigger_info', '')
-    monkeypatch.setattr(gw, '_alert_history', {})
-    monkeypatch.setattr(gw, '_presence_log',  [])
-    monkeypatch.setattr(gw, '_net_online',    True)
-    monkeypatch.setattr(gw, '_total_frames',  0)
-    monkeypatch.setattr(gw, '_detections_today', 0)
-    monkeypatch.setattr(gw, 'last_email_sent_time', 0)
-    monkeypatch.setattr(gw, 'DETECTION_THRESHOLD', 0.3)
-    monkeypatch.setattr(gw, 'CUSTOM_VOICE_COMMANDS', {})
-    monkeypatch.setattr(gw, 'KNOWN_DEVICES', [])
+    monkeypatch.setattr(gw.STATE.camera, 'latest_detection_info', '')
+    monkeypatch.setattr(gw.STATE.modes, 'dnd',       False)
+    monkeypatch.setattr(gw.STATE.modes, 'email_off', False)
+    monkeypatch.setattr(gw.STATE.modes, 'idle',      False)
+    monkeypatch.setattr(gw.STATE.modes, 'night',     False)
+    monkeypatch.setattr(gw.STATE.modes, 'emergency', False)
+    monkeypatch.setattr(gw.STATE.modes, 'privacy',   True)
+    monkeypatch.setattr(gw.STATE.alerts, 'active',  False)
+    monkeypatch.setattr(gw.STATE.alerts, 'end_time', 0.0)
+    monkeypatch.setattr(gw.STATE.alerts, 'danger_trigger_info', '')
+    monkeypatch.setattr(gw.STATE.alerts, 'history', {})
+    monkeypatch.setattr(gw.STATE.presence, 'log',  [])
+    monkeypatch.setattr(gw.STATE.system, 'net_online',    True)
+    monkeypatch.setattr(gw.STATE.camera, 'total_frames',  0)
+    monkeypatch.setattr(gw.STATE.camera, 'detections_today', 0)
+    monkeypatch.setattr(gw.STATE.alerts, 'last_email_sent_time', 0)
+    monkeypatch.setattr(gw.STATE.config, 'detection_threshold', 0.3)
+    monkeypatch.setattr(gw.STATE.config, 'custom_voice_commands', {})
+    monkeypatch.setattr(gw.STATE.config, 'known_devices', [])
     monkeypatch.setattr(gw, '_app_start_time', time.time())
     monkeypatch.setattr(gw, '_RATE_WINDOW', 3600)
     monkeypatch.setattr(gw, '_RATE_LIMIT', 30)
     # ── New feature state resets ──
-    monkeypatch.setattr(gw, '_login_failures', {})
-    monkeypatch.setattr(gw, '_refresh_tokens', {})
+    monkeypatch.setattr(gw.STATE.auth, 'login_failures', {})
+    monkeypatch.setattr(gw.STATE.auth, 'refresh_tokens', {})
 
     # ── Mock SMTP so no real emails are sent ──
     smtp_mock = MagicMock()
@@ -273,7 +313,7 @@ def admin_token(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     r = app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
     assert r.status_code == 200, r.text
-    otp = gw.ADMIN_OTP
+    otp = gw.STATE.auth.admin_otp
     assert otp is not None
     r2 = app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': otp})
     assert r2.status_code == 200, r2.text

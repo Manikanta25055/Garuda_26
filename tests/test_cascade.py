@@ -1,5 +1,5 @@
 """
-Tests for Garuda Cascade pipeline — garuda_cascade.py + garuda_pipeline.py
+Tests for the Garuda Cascade pipeline — garuda_cascade.py
 
 All Hailo hardware is mocked; tests run on any machine without the NPU.
 
@@ -12,9 +12,10 @@ Covers:
   - TestMetrics counters and FPS rolling window
   - inference_thread weapon-direct vs person-secondary routing
   - postprocess_thread entry composition
-  - garuda_pipeline._on_event routing to common.log_system_update
-  - Alert suppression under MODE_DND / MODE_IDLE
   - Protocol test observability (5 scenarios)
+
+The async secondary-cascade queue lives in Garuda_web.py, not here; it is
+covered by tests/test_async_cascade.py.
 """
 
 import sys
@@ -462,84 +463,7 @@ class TestPostprocessThread:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# 8. garuda_pipeline._on_event routing
-# ══════════════════════════════════════════════════════════════════════════════
-
-class TestGarudaPipeline:
-    """Tests for ProjectGaruda/garuda_pipeline.py adapter."""
-
-    def setup_method(self):
-        # Mock hailo_platform + garuda_cascade before importing garuda_pipeline
-        sys.modules.setdefault("hailo_platform", _hailo_mock)
-        _cascade_mock = MagicMock()
-        _cascade_mock.start  = MagicMock()
-        _cascade_mock.stop   = MagicMock()
-        sys.modules["garuda_cascade"] = _cascade_mock
-        self._cascade_mock = _cascade_mock
-
-        # Mock common module
-        self._common = MagicMock()
-        self._common.MODE_DND   = False
-        self._common.MODE_IDLE  = False
-        self._common.MODE_NIGHT = False
-        self._common.MODE_EMAIL_OFF = True   # suppress real email
-        sys.modules["common"] = self._common
-
-        import importlib
-        gp_path = os.path.join(os.path.dirname(__file__), "..", "ProjectGaruda")
-        sys.path.insert(0, gp_path)
-        import garuda_pipeline
-        importlib.reload(garuda_pipeline)
-        self.gp = garuda_pipeline
-
-    def test_on_event_logs_to_common(self):
-        entry = {"label": "Safe", "conf": 0.80, "variance": 0.05, "ts": "2026-01-01T00:00:00"}
-        self.gp._on_event(entry)
-        self._common.log_system_update.assert_called_once()
-        msg = self._common.log_system_update.call_args[0][0]
-        assert "CASCADE" in msg
-        assert "Safe" in msg
-
-    def test_on_event_weapon_spawns_alert_thread(self):
-        entry = {"label": "Weapon", "conf": 0.50, "variance": 0.0, "ts": "2026-01-01T00:00:00"}
-        with patch.object(threading, "Thread") as mock_thread:
-            mock_thread.return_value = MagicMock()
-            self.gp._on_event(entry)
-            assert mock_thread.called
-
-    def test_on_event_spoof_spawns_alert_thread(self):
-        entry = {"label": "Spoof_Attempt", "conf": 0.60, "variance": 0.001, "ts": "2026-01-01T00:00:00"}
-        with patch.object(threading, "Thread") as mock_thread:
-            mock_thread.return_value = MagicMock()
-            self.gp._on_event(entry)
-            assert mock_thread.called
-
-    def test_handle_alert_suppressed_in_dnd(self):
-        self._common.MODE_DND  = True
-        self._common.MODE_IDLE = False
-        self.gp._handle_alert("Weapon", 0.80)
-        # Should log suppression, not trigger GPIO
-        assert self._common.log_system_update.called
-        msg = self._common.log_system_update.call_args[0][0]
-        assert "suppressed" in msg.lower() or "DND" in msg
-
-    def test_handle_alert_suppressed_in_idle(self):
-        self._common.MODE_DND  = False
-        self._common.MODE_IDLE = True
-        self.gp._handle_alert("Weapon", 0.80)
-        assert self._common.log_system_update.called
-
-    def test_start_pipeline_calls_cascade_start(self):
-        self.gp.start_pipeline(input_src="/dev/video0", conf=0.40)
-        assert self._cascade_mock.start.called
-
-    def test_stop_pipeline_calls_cascade_stop(self):
-        self.gp.stop_pipeline()
-        assert self._cascade_mock.stop.called
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# 9. 5-protocol test observability
+# 8. 5-protocol test observability
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestProtocolObservability:

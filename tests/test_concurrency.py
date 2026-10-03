@@ -64,7 +64,7 @@ def test_concurrent_mode_toggles(app_client, user_headers):
 
     assert not errors
     # Final DND state should be a valid bool (no corruption)
-    assert isinstance(gw.MODE_DND, bool)
+    assert isinstance(gw.STATE.modes.dnd, bool)
 
 
 def test_concurrent_event_queue_inserts(app_client):
@@ -92,7 +92,7 @@ def test_concurrent_event_queue_inserts(app_client):
 def test_rapid_login_logout(app_client, monkeypatch):
     """TC-CON04: Rapid login/logout cycles → session always reflects correct state."""
     import collections
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     monkeypatch.setattr(gw, '_RATE_LIMIT', 200)  # well above 10×3 requests
     for _ in range(10):
         r_login = app_client.post('/api/login',
@@ -135,7 +135,7 @@ def test_rate_limiter_enforces_limit(app_client, monkeypatch):
     """TC-CON06: Rate limiter — 35 requests → some 429 responses."""
     import collections
     # Fresh store + lower limit to make the test deterministic on any hardware
-    monkeypatch.setattr(gw, '_rate_store', collections.defaultdict(list))
+    monkeypatch.setattr(gw.STATE.auth, 'rate_store', collections.defaultdict(list))
     monkeypatch.setattr(gw, '_RATE_LIMIT', 10)
     codes = []
     for _ in range(15):

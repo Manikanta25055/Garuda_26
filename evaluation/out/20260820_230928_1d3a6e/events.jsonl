@@ -1,0 +1,60 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82ab290>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.5793397}
+{"kind": "login", "ok": false, "t": 1787247568.5795348}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82b0fd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.5946455}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82b4ad0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.5964568}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82b2dd0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.5966206}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82b6750>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.6015127}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82b7850>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.6037488}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7fa82c5090>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1787247568.6066885}
+{"kind": "sys_log", "ts": 1787247571.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1787247781.1558495}
+{"kind": "sys_log", "ts": 1787247571.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1787247781.1559856}
+{"kind": "sys_log", "ts": 1787247571.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1787247781.156036}
+{"kind": "sys_log", "ts": 1787247571.0, "msg": "[DRISHTI] rule loop started \u2014 0 rules, 2 devices", "t": 1787247781.1560807}
+{"kind": "sys_log", "ts": 1787247571.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1787247781.1561213}
+{"kind": "sys_log", "ts": 1787247572.0, "msg": "Pipeline started.", "t": 1787247781.1562583}
+{"kind": "sys_log", "ts": 1787247578.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787247781.1563032}
+{"kind": "sys_log", "ts": 1787247581.0, "msg": "[TAMPER] Alert email sent.", "t": 1787247781.1563666}
+{"kind": "sys_log", "ts": 1787248054.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787248080.8938987}
+{"kind": "sys_log", "ts": 1787248114.0, "msg": "[NETWORK] Internet restored \u2014 5060 queued events ready to sync", "t": 1787248140.9374695}
+{"kind": "sys_log", "ts": 1787248297.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1787248321.0532353}
+{"kind": "sys_log", "ts": 1787248327.0, "msg": "[NETWORK] Internet restored \u2014 5060 queued events ready to sync", "t": 1787248381.093378}
+{"kind": "sys_log", "ts": 1787248779.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787248800.8934388}
+{"kind": "sys_log", "ts": 1787248875.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787248920.971011}
+{"kind": "sys_log", "ts": 1787248992.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787249041.0419326}
+{"kind": "sys_log", "ts": 1787249507.0, "msg": "[WATCH] Person (0.86)", "t": 1787249521.3531303}
+{"kind": "sys_log", "ts": 1787249519.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787249521.3534925}
+{"kind": "sys_log", "ts": 1787249607.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787249640.9408038}
+{"kind": "sys_log", "ts": 1787250976.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787251021.3340163}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 14.59, "resp": {"ok": true, "t_request": 1787251317.618443, "t_alert": 1787251317.6248827, "latency_ms": 6.44, "label": "Knife", "confidence": 0.9}, "t": 1787251317.6302035}
+{"kind": "sys_log", "ts": 1787251317.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787251321.0658338}
+{"kind": "sys_log", "ts": 1787251317.0, "msg": "Alert triggered.", "t": 1787251321.066018}
+{"kind": "sys_log", "ts": 1787251420.0, "msg": "[WATCH] Person (0.84)", "t": 1787251441.158877}
+{"kind": "sys_log", "ts": 1787251450.0, "msg": "[WATCH] Person (0.86)", "t": 1787251501.2071443}
+{"kind": "sys_log", "ts": 1787251521.0, "msg": "[WATCH] Person (0.86)", "t": 1787251561.254037}
+{"kind": "sys_log", "ts": 1787251552.0, "msg": "[WATCH] Person (0.92)", "t": 1787251561.2542493}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 10.01, "resp": {"ok": true, "t_request": 1787254917.633034, "t_alert": 1787254917.6364055, "latency_ms": 3.37, "label": "scissors", "confidence": 0.9}, "t": 1787254917.6407075}
+{"kind": "sys_log", "ts": 1787254917.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787254921.0581787}
+{"kind": "sys_log", "ts": 1787254917.0, "msg": "Alert triggered.", "t": 1787254921.0583475}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 9.62, "resp": {"ok": true, "t_request": 1787258517.6436021, "t_alert": 1787258517.6461916, "latency_ms": 2.59, "label": "Hammer", "confidence": 0.9}, "t": 1787258517.6508143}
+{"kind": "sys_log", "ts": 1787258517.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1787258521.0283825}
+{"kind": "sys_log", "ts": 1787258517.0, "msg": "Alert triggered.", "t": 1787258521.0286858}
+{"kind": "sys_log", "ts": 1787259481.0, "msg": "[WATCH] Person (0.88)", "t": 1787259541.2815516}
+{"kind": "sys_log", "ts": 1787259482.0, "msg": "Alert triggered.", "t": 1787259541.2817426}
+{"kind": "sys_log", "ts": 1787259486.0, "msg": "Email alert sent.", "t": 1787259541.281812}
+{"kind": "sys_log", "ts": 1787259975.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1787260021.0934591}
+{"kind": "sys_log", "ts": 1787259979.0, "msg": "[TAMPER] Alert email sent.", "t": 1787260021.0941288}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 16.57, "resp": {"ok": true, "t_request": 1787262117.6570613, "t_alert": 1787262117.663521, "latency_ms": 6.46, "label": "Knife", "confidence": 0.9}, "t": 1787262117.667824}
+{"kind": "sys_log", "ts": 1787262117.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787262121.0491254}
+{"kind": "sys_log", "ts": 1787262117.0, "msg": "Alert triggered.", "t": 1787262121.04928}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 11.83, "resp": {"ok": true, "t_request": 1787265717.672003, "t_alert": 1787265717.676359, "latency_ms": 4.36, "label": "scissors", "confidence": 0.9}, "t": 1787265717.6800635}
+{"kind": "sys_log", "ts": 1787265717.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787265721.0493157}
+{"kind": "sys_log", "ts": 1787265717.0, "msg": "Alert triggered.", "t": 1787265721.0495176}
+{"kind": "eval_inject", "label": "Hammer", "ok": true, "rtt_ms": 12.15, "resp": {"ok": true, "t_request": 1787269317.6840277, "t_alert": 1787269317.6889472, "latency_ms": 4.92, "label": "Hammer", "confidence": 0.9}, "t": 1787269317.692454}
+{"kind": "sys_log", "ts": 1787269317.0, "msg": "[EVAL_INJECT] Hammer conf=0.90", "t": 1787269321.0229278}
+{"kind": "sys_log", "ts": 1787269317.0, "msg": "Alert triggered.", "t": 1787269321.0230572}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 11.02, "resp": {"ok": true, "t_request": 1787272917.6975918, "t_alert": 1787272917.7007115, "latency_ms": 3.12, "label": "Knife", "confidence": 0.9}, "t": 1787272917.7038288}
+{"kind": "sys_log", "ts": 1787272917.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1787272921.4094281}
+{"kind": "sys_log", "ts": 1787272917.0, "msg": "Alert triggered.", "t": 1787272921.4097493}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 9.76, "resp": {"ok": true, "t_request": 1787276517.7061803, "t_alert": 1787276517.7093148, "latency_ms": 3.14, "label": "scissors", "confidence": 0.9}, "t": 1787276517.7138312}
+{"kind": "sys_log", "ts": 1787276517.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1787276521.4701939}
+{"kind": "sys_log", "ts": 1787276517.0, "msg": "Alert triggered.", "t": 1787276521.47055}

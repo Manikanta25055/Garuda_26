@@ -1,2 +1,35 @@
-setproctitle
+# Runtime dependencies of the Garuda service (basic_pipelines/Garuda_web.py).
+#
+# The Hailo runtime, GStreamer bindings (gi), picamera2 and libcamera come from
+# the Raspberry Pi OS / Hailo packages and setup_env.sh, not from pip.
+# Lower bounds are the versions this code is tested against on the Pi; raise
+# them deliberately, with the test suite, not by accident. The exact framework
+# versions in use are in constraints.txt:
+#     pip install -r requirements.txt -c constraints.txt
+
+# Web
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.5
+anyio>=4.0
+python-dotenv>=1.0
+
+# Vision and system
+numpy
 opencv-python
+psutil>=5.9
+setproctitle
+
+# Assistant and integrations
+requests>=2.28
+rapidfuzz
+SpeechRecognition
+elevenlabs
+
+# Optional (graceful fallback if absent)
+# aiortc av              # WebRTC camera transport; MJPEG / WebSocket are used without it
+# cryptography paramiko  # encrypted off-site copy of evidence clips (EXFIL_*)
+# sentence-transformers  # embedding backend for utterance matcher
+# onnxruntime tokenizers  # Narada's routing model (garuda_auto/router.py); the literal matcher answers without them
+# gpiozero               # relay bank; no-op stub used when unavailable
+# paho-mqtt              # MQTT transport; devices unreachable when absent

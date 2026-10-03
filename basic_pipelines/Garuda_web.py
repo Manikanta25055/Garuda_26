@@ -38,10 +38,14 @@ import ipaddress
 import subprocess
 import asyncio
 import threading
+import traceback
 import hashlib
 import hmac
+import math
+import signal
 import tempfile
 import re
+import anyio.to_thread
 from pathlib import Path
 from collections import defaultdict
 
@@ -90,7 +94,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Requ
 from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 import uvicorn
 
@@ -111,24 +115,9 @@ from hailo_rpi_common import (
     app_callback_class,
 )
 
-##############################################################################
-# EMAIL CONFIG (secrets from .env, overridable via config.json for non-secrets)
-##############################################################################
-EMAIL_SENDER = os.environ.get("EMAIL_SENDER", "")
-EMAIL_SENDER_PASS = os.environ.get("EMAIL_SENDER_PASS", "")
-EMAIL_RECIPIENTS = [r.strip() for r in os.environ.get("EMAIL_RECIPIENTS", "amarmanikantan@gmail.com").split(",") if r.strip()]
-
 # Set SECURE_COOKIES=1 in .env when serving behind HTTPS (Cloudflare tunnel).
 # Leave unset for direct http://localhost access — secure=True drops cookies on plain HTTP.
 _COOKIE_SECURE = os.environ.get("SECURE_COOKIES", "0").lower() in ("1", "true", "yes")
-EMAIL_COOLDOWN = 60
-last_email_sent_time = 0
-_email_lock = threading.Lock()
-_danger_active = False   # True while danger label is continuously detected
-
-GROQ_API_KEY  = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL    = "llama-3.3-70b-versatile"
-DANGER_LABELS: list = ["Knife", "scissors", "Hammer"]   # all non-person model outputs
 
 # ── Encrypted evidence exfiltration (AES-256-GCM + SSH) ─────────────────────
 # Set these in .env to enable off-site encrypted clip backup:
@@ -152,7 +141,6 @@ _EXFIL_AES_KEY: bytes | None = bytes.fromhex(_exfil_raw_key) if len(_exfil_raw_k
 ##############################################################################
 # GLOBALS & SETTINGS
 ##############################################################################
-app_gst = None  # GStreamer app instance
 
 _BASE = Path(__file__).parent
 SCISSORS_LOG_FILE    = str(_BASE / "danger_sightings.txt")
@@ -169,241 +157,276 @@ PERM_DETECTION_LOG   = str(_BASE / "system_logs" / "perm_detection_log.txt")
 FEEDBACK_FILE        = str(_BASE / "system_logs" / "feedback.json")
 FEEDBACK_BACKUP_FILE = str(_BASE / "system_logs" / "feedback.backup.json")
 
+# ── Drishti ──────────────────────────────────────────────────────────────────
+# The relay channel map and data directory live in drishti_config so a seeding
+# or migration script can read them without importing this module, which starts
+# GStreamer and claims GPIO pins.
+#
+# This file is loaded as a top-level module: as a script by
+# scripts/run_garuda_web.sh and as `Garuda_web` by the tests. Relative imports
+# only work when it is imported as part of the basic_pipelines package, so fall
+# back to absolute.
+try:
+    from .drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
+    from .drishti_config import DATA_DIR as DRISHTI_DATA_DIR
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from basic_pipelines.drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
+    from basic_pipelines.drishti_config import DATA_DIR as DRISHTI_DATA_DIR
+
+# Both hostnames reach this one app through the one Cloudflare tunnel, so the
+# Host header is what decides which bundle / serves. Without it,
+# drishti.veeramanikanta.in shows the Garuda dashboard.
+# Named so a test harness can point it somewhere else before the lifespan
+# runs. It writes live session tokens; it must never be the real file
+# during a test run.
+DRISHTI_SESSIONS_PATH = os.path.join(DRISHTI_DATA_DIR, "sessions.json")
+DRISHTI_HOST = os.environ.get("DRISHTI_HOST", "drishti.veeramanikanta.in")
+DRISHTI_DIST = _BASE / "drishti_dist"
+# The standalone Drishti app is halted: its features now live in this app's
+# own Home / Automations / Insights pages, behind Garuda's sign-in. Set
+# DRISHTI_APP_ENABLED=1 to serve the Svelte bundle and /api/drishti again.
+DRISHTI_APP_ENABLED = os.environ.get("DRISHTI_APP_ENABLED", "0").lower() in ("1", "true", "yes")
+
+# Two products from one service. Garuda (home security) and Drishti (home
+# automation, built on Garuda) share the camera, the Hailo and this process;
+# the address decides which one a visitor gets. Hosts listed here get the
+# security-only product: no home-automation pages, and /api/home is closed.
+SECURITY_ONLY_HOSTS = frozenset(
+    h.strip().lower() for h in
+    os.environ.get("GARUDA_SECURITY_HOSTS", "garuda.veeramanikanta.in").split(",") if h.strip())
+
+
+# The base every part of the service stands on: typed settings, logging,
+# supervised background loops, state backups. See garuda_core/__init__.py.
+try:
+    from .garuda_routes.master_keys import build_master_keys_router
+    from .garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
+    from .garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
+    from .garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
+    from .garuda_routes.logs import build_logs_router
+    from .garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
+    from .garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
+    from .garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
+    from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
+    from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
+    from .garuda_routes.pages import build_pages_router
+    from .garuda_routes.sockets import build_sockets_router
+    from .garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
+    from .garuda_routes.events import build_events_router
+    from .garuda_routes.shortcuts import build_shortcuts_router
+    from .garuda_routes.artifacts import build_artifacts_router
+    from .garuda_services import presence as _svc_presence
+    from .garuda_services.presence import (  # noqa: F401
+        _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
+    from .garuda_services import monitors as _svc_monitors
+    from .garuda_services.monitors import (  # noqa: F401
+        _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
+    from .garuda_services import alerts as _svc_alerts
+    from .garuda_services.alerts import (  # noqa: F401
+        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
+    from .garuda_services import persistence as _svc_persistence
+    from .garuda_services.persistence import (  # noqa: F401
+        load_users, save_users, load_config, _load_alert_history, _record_alert_activity, _remember_user_activity, _load_presence_log, _append_presence_log, load_master_keys, save_master_keys, _async_save_config, save_config)
+    from .garuda_services import logs as _svc_logs
+    from .garuda_services.logs import (  # noqa: F401
+        _load_logs_from_disk, _rotate_log, _do_flush_logs, _flush_log_thread, _perm_write, _append_detection_perm, log_system_update, append_voice_log, append_voice_response)
+    from .garuda_services import detection as _svc_detection
+    from .garuda_services.detection import (  # noqa: F401
+        _secondary_worker_loop, _check_night_presence, app_callback, _resolve_camera)
+    from .garuda_services import pipeline as _svc_pipeline
+    from .garuda_services.pipeline import (  # noqa: F401
+        _WebCascadeMetrics, user_app_callback_class, GStreamerDetectionApp)
+    from .garuda_services import sessions as _svc_sessions
+    from .garuda_services.sessions import (  # noqa: F401
+        _invalidate_user_sessions, _get_client_ip, _check_rate_limit, _prune_rate_state, _is_login_locked, _record_login_failure, _clear_login_failure, _load_refresh_tokens, _save_refresh_tokens, _revoke_refresh, create_refresh_token, _prune_expired_refresh_tokens, _user_signed_in, _is_cross_site, _cookie_secure, _set_session_cookies, get_refresh_token, create_session, create_master_session, get_session, _prune_expired_sessions, require_session, require_admin, require_logs)
+    from .garuda_services import state as _svc_state
+    from .garuda_services.state import (  # noqa: F401
+        _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
+    from .garuda_services import assistant as _svc_assistant
+    from .garuda_services.assistant import (  # noqa: F401
+        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+    from .garuda_services import home as _svc_home
+    from .garuda_services.home import (  # noqa: F401
+        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _shortcut_facts, _shortcut_role_of, _shortcut_notify)
+    from .garuda_services import middleware as _svc_middleware
+    from .garuda_services.middleware import (  # noqa: F401
+        global_rate_limit, product_scope, security_headers)
+    from .garuda_services import support as _svc_support
+    from .garuda_services.support import (  # noqa: F401
+        mjpeg_frames, _prune_old_clips, _combined_log_text, _load_feedback, _save_feedback, stop_app, send_otp_via_email, _require_eval_token, _safe_json_load, _product_for_host, narada_voice_ws)
+    from .garuda_core import API_VERSION, BUILD
+    from .garuda_core.settings import Settings
+    from .garuda_core.workers import Supervisor
+    from .garuda_core.backup import BackupManager
+    from .garuda_core import http as _core_http
+    from .garuda_core import state as _core_state
+    from .garuda_core import logging_setup as _core_logging
+    from .garuda_core import evidence as _evidence
+    from .garuda_core import events as _events
+    from .garuda_core import mailer as _mailer
+    from .garuda_core.system_api import build_system_router
+    from .garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
+    from .garuda_core.storage import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _atomic_json_write)
+    from .garuda_core.validation import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
+except ImportError:
+    from basic_pipelines.garuda_routes.master_keys import build_master_keys_router
+    from basic_pipelines.garuda_routes.users import build_users_router, AddUserRequest, DeleteUserRequest, UpdateUserRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.config import build_config_router, ConfigUpdateRequest, CustomCommandRequest, DeleteCommandRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.logs import build_logs_router
+    from basic_pipelines.garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.pages import build_pages_router
+    from basic_pipelines.garuda_routes.sockets import build_sockets_router
+    from basic_pipelines.garuda_routes.feedback import build_feedback_router, FeedbackRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.events import build_events_router
+    from basic_pipelines.garuda_routes.shortcuts import build_shortcuts_router
+    from basic_pipelines.garuda_routes.artifacts import build_artifacts_router
+    from basic_pipelines.garuda_services import presence as _svc_presence
+    from basic_pipelines.garuda_services.presence import (  # noqa: F401
+        _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
+    from basic_pipelines.garuda_services import monitors as _svc_monitors
+    from basic_pipelines.garuda_services.monitors import (  # noqa: F401
+        _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
+    from basic_pipelines.garuda_services import alerts as _svc_alerts
+    from basic_pipelines.garuda_services.alerts import (  # noqa: F401
+        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
+    from basic_pipelines.garuda_services import persistence as _svc_persistence
+    from basic_pipelines.garuda_services.persistence import (  # noqa: F401
+        load_users, save_users, load_config, _load_alert_history, _record_alert_activity, _remember_user_activity, _load_presence_log, _append_presence_log, load_master_keys, save_master_keys, _async_save_config, save_config)
+    from basic_pipelines.garuda_services import logs as _svc_logs
+    from basic_pipelines.garuda_services.logs import (  # noqa: F401
+        _load_logs_from_disk, _rotate_log, _do_flush_logs, _flush_log_thread, _perm_write, _append_detection_perm, log_system_update, append_voice_log, append_voice_response)
+    from basic_pipelines.garuda_services import detection as _svc_detection
+    from basic_pipelines.garuda_services.detection import (  # noqa: F401
+        _secondary_worker_loop, _check_night_presence, app_callback, _resolve_camera)
+    from basic_pipelines.garuda_services import pipeline as _svc_pipeline
+    from basic_pipelines.garuda_services.pipeline import (  # noqa: F401
+        _WebCascadeMetrics, user_app_callback_class, GStreamerDetectionApp)
+    from basic_pipelines.garuda_services import sessions as _svc_sessions
+    from basic_pipelines.garuda_services.sessions import (  # noqa: F401
+        _invalidate_user_sessions, _get_client_ip, _check_rate_limit, _prune_rate_state, _is_login_locked, _record_login_failure, _clear_login_failure, _load_refresh_tokens, _save_refresh_tokens, _revoke_refresh, create_refresh_token, _prune_expired_refresh_tokens, _user_signed_in, _is_cross_site, _cookie_secure, _set_session_cookies, get_refresh_token, create_session, create_master_session, get_session, _prune_expired_sessions, require_session, require_admin, require_logs)
+    from basic_pipelines.garuda_services import state as _svc_state
+    from basic_pipelines.garuda_services.state import (  # noqa: F401
+        _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
+    from basic_pipelines.garuda_services import assistant as _svc_assistant
+    from basic_pipelines.garuda_services.assistant import (  # noqa: F401
+        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+    from basic_pipelines.garuda_services import home as _svc_home
+    from basic_pipelines.garuda_services.home import (  # noqa: F401
+        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _shortcut_facts, _shortcut_role_of, _shortcut_notify)
+    from basic_pipelines.garuda_services import middleware as _svc_middleware
+    from basic_pipelines.garuda_services.middleware import (  # noqa: F401
+        global_rate_limit, product_scope, security_headers)
+    from basic_pipelines.garuda_services import support as _svc_support
+    from basic_pipelines.garuda_services.support import (  # noqa: F401
+        mjpeg_frames, _prune_old_clips, _combined_log_text, _load_feedback, _save_feedback, stop_app, send_otp_via_email, _require_eval_token, _safe_json_load, _product_for_host, narada_voice_ws)
+    from basic_pipelines.garuda_core import API_VERSION, BUILD
+    from basic_pipelines.garuda_core.settings import Settings
+    from basic_pipelines.garuda_core.workers import Supervisor
+    from basic_pipelines.garuda_core.backup import BackupManager
+    from basic_pipelines.garuda_core import http as _core_http
+    from basic_pipelines.garuda_core import state as _core_state
+    from basic_pipelines.garuda_core import logging_setup as _core_logging
+    from basic_pipelines.garuda_core import evidence as _evidence
+    from basic_pipelines.garuda_core import events as _events
+    from basic_pipelines.garuda_core import mailer as _mailer
+    from basic_pipelines.garuda_core.system_api import build_system_router
+    from basic_pipelines.garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
+    from basic_pipelines.garuda_core.storage import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _atomic_json_write)
+    from basic_pipelines.garuda_core.validation import (  # noqa: F401  (re-exported: tests and routes use them from here)
+        _time_in_range, _HHMM_RE, _clean_labels, _COLOR_RE)
+
+# garuda_services modules read this module's state through `core`.
+_svc_support.bind(sys.modules[__name__])
+_svc_middleware.bind(sys.modules[__name__])
+_svc_home.bind(sys.modules[__name__])
+_svc_assistant.bind(sys.modules[__name__])
+_svc_state.bind(sys.modules[__name__])
+_svc_sessions.bind(sys.modules[__name__])
+_svc_pipeline.bind(sys.modules[__name__])
+_svc_detection.bind(sys.modules[__name__])
+_svc_logs.bind(sys.modules[__name__])
+_svc_persistence.bind(sys.modules[__name__])
+_svc_alerts.bind(sys.modules[__name__])
+_svc_monitors.bind(sys.modules[__name__])
+_svc_presence.bind(sys.modules[__name__])
+
+import logging
+SETTINGS = Settings.load()
+SUPERVISOR = Supervisor()
+BACKUPS = BackupManager(DRISHTI_DATA_DIR, keep=SETTINGS.backup_keep)
+_syslog = logging.getLogger("garuda.system")
+
 system_updates_log: List[str] = []
 voice_assistant_log: List[str] = []
 voice_responses: List[str] = []
 _detection_log: List[str] = []   # in-memory recent detection events (danger + watch)
-latest_detection_info = ""
 
-ADMIN_OTP = None
-_admin_otp_user: str | None = None   # server-side stored username for OTP step 2
-_admin_otp_ts: float = 0             # epoch when admin OTP was generated
-_admin_otp_attempts: int = 0         # failed verify attempts; cleared on success or expiry
-_forgot_otp_store: dict = {}  # username → {otp, ts, attempts}  (per-user, no race condition)
-USER_FORGOT_OTP: str | None = None   # test-facing alias: last generated forgot OTP string
-# Flat test-facing aliases (conftest monkeypatches these directly)
-_forgot_otp_user: str | None = None
-_forgot_otp_ts: float = 0.0
-_forgot_otp_attempts: int = 0
+# Live state, grouped by concern (garuda_core/state.py): modes, config, alerts,
+# presence, system, camera, auth. The flat globals it replaced (MODE_DND, USERS,
+# ...) are retired: using one on this module raises, naming its new home.
+STATE = _core_state.State()
+_core_state.retire(sys.modules[__name__], _core_state.RETIRED_NAMES)
 
-# Modes
-MODE_DND = False
-MODE_EMAIL_OFF = False
-MODE_IDLE = False
-MODE_NIGHT = False
-MODE_EMERGENCY = False
-MODE_PRIVACY = True
-
-DETECTION_THRESHOLD = 0.3
-CUSTOM_MODES = {}
 NARADA_WAKE_WORD = "narada"
-CUSTOM_VOICE_COMMANDS = {}
 
-_alert_active = False
-_alert_end_time     = 0.0   # epoch when current alert expires (3s visual banner)
-_danger_trigger_info = ""   # detection text snapshot that fired the alert
-_last_danger_conf    = 0.0  # confidence of last danger detection (for logging)
 _app_start_time = time.time()
-_detections_today = 0
-_last_alert_time = None
-_mode_lock = threading.Lock()
-_alert_lock = threading.Lock()   # guards _alert_active/_alert_end_time/_danger_trigger_info
 
 # ── Dead man's switch ────────────────────────────────────
-_last_heartbeat = time.time()      # updated by GET /api/heartbeat
 _DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper alert
-_deadman_alert_sent = False
-_heartbeat_ever = False            # True only after a real heartbeat is received
 # Opt-in: the dead-man switch is only meaningful when an external monitor
 # (e.g. UptimeRobot) is hitting /api/heartbeat. Disabled by default so a
 # deployment WITHOUT such a monitor does not spam "missed heartbeat" alerts.
 _DEADMAN_ENABLED = os.environ.get("DEADMAN_ENABLED", "0") == "1"
 _DEADMAN_REALERT_INTERVAL = 3600   # min seconds between repeat alerts (anti-spam)
-_deadman_last_alert = 0.0
 
-# ── Camera blindness detection ───────────────────────────
-_blind_frame_count = 0
-_blind_alert_sent = False
-_last_tamper_email = 0.0            # last camera-tamper email time (anti-spam)
+# ── Camera tamper ────────────────────────────────────────
 _TAMPER_EMAIL_COOLDOWN = 3600      # min seconds between camera-tamper emails
-_class_counts_today = {}   # class_name → count since startup
-_total_frames = 0          # total inference frames (for avg FPS)
-_watch_last_logged: dict = {}   # label → last log timestamp (30s cooldown)
 _perm_lock = threading.Lock()
-# ── RAM-buffered log write globals (buffer defined here; functions in HELPERS) ─
+# ── RAM-buffered log writes (functions in garuda_services/logs.py) ─────────────
 _log_buffer: "defaultdict[str, list]" = defaultdict(list)
 _log_buffer_lock = threading.Lock()
 
-# ── False positive reduction ──────────────────────────────
-_label_consec_frames: dict = {}   # label → consecutive frames seen above threshold
-
-# ── Scheduled modes ───────────────────────────────────────
-MODE_SCHEDULE: dict = {}   # {"night": {"start": "22:00", "end": "06:00"}, ...}
-
-# ── Night presence window (yellow alarm when human seen in dead hours) ─────────
-NIGHT_PRESENCE_WINDOW: dict = {"start": "01:30", "end": "05:00", "enabled": True}
-_night_presence_alert_active = False
-_night_presence_alert_end_time = 0.0
-_np_lock = threading.Lock()
-
-# ── Clip recording ────────────────────────────────────────
-_clip_writer     = None
-_clip_lock       = threading.Lock()
-_clip_start_time = 0.0
-_clip_path       = ""
-
 # ── Phone presence detection ──────────────────────────────
-KNOWN_DEVICES: list = []      # [{name, mac}] — loaded from config
-_alert_history: dict = {}     # {ISO-date: alert_count} — persisted to disk
-_presence_log: list  = []     # [{ts, event, device, mac}] — permanent presence record
-MASTER_KEYS: list    = []   # loaded from MASTER_KEYS_FILE at startup
-MASTER_KEY_OTP: str | None = None
-_owner_present   = False
-_owner_last_seen = 0.0
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
-_last_arp_cache  = ""         # last raw ARP table read (refreshed by _presence_poller)
-
-# ── Detection categories ──────────────────────────────────
-WATCH_LABELS: list = ['Person', 'person']   # human — log silently, no alert
-
-# ── Password hashing (PBKDF2-SHA256) ────────────────────
-_PBKDF2_ITERS = 600000  # OWASP 2024 recommendation for PBKDF2-SHA256
-
-def _hash_password(pw: str) -> str:
-    salt = os.urandom(16)
-    dk = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, _PBKDF2_ITERS)
-    return f"pbkdf2:sha256:{_PBKDF2_ITERS}:{salt.hex()}:{dk.hex()}"
-
-def _verify_password(pw: str, stored: str) -> bool:
-    if stored.startswith("pbkdf2:"):
-        parts = stored.split(":")
-        if len(parts) != 5:
-            return False
-        _, algo, iters, salt_hex, dk_hex = parts
-        dk = hashlib.pbkdf2_hmac(algo, pw.encode(), bytes.fromhex(salt_hex), int(iters))
-        return hmac.compare_digest(dk.hex(), dk_hex)
-    return hmac.compare_digest(pw, stored)  # plaintext fallback for migration
-
-def _validate_password_strength(pw: str) -> str | None:
-    """Return an error string if password fails requirements, else None."""
-    if not pw or not pw.strip():
-        return "Password cannot be empty."
-    p = pw.strip()
-    if len(p) < 8:
-        return "Password must be at least 8 characters."
-    if len(p) > 256:
-        return "Password must be at most 256 characters."
-    if not any(c.isupper() for c in p):
-        return "Password must contain at least one uppercase letter."
-    if not any(c.islower() for c in p):
-        return "Password must contain at least one lowercase letter."
-    if not any(c.isdigit() for c in p):
-        return "Password must contain at least one digit."
-    return None
-
-def _invalidate_user_sessions(username: str, except_token: str | None = None) -> int:
-    """Remove all active sessions for a user. Returns count removed."""
-    to_delete = [
-        t for t, s in _sessions.items()
-        if s.get("username") == username and t != except_token
-    ]
-    for t in to_delete:
-        del _sessions[t]
-    return len(to_delete)
-
-# ── Atomic JSON write ────────────────────────────────────
-def _atomic_json_write(filepath: str, data):
-    os.makedirs(os.path.dirname(filepath) or ".", exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(filepath) or ".", suffix=".tmp")
-    try:
-        with os.fdopen(fd, "w") as f:
-            json.dump(data, f, indent=2)
-            f.flush()
-            os.fsync(f.fileno())
-        os.replace(tmp, filepath)
-    except Exception:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
-        raise
-
-def _safe_json_load(filepath: str, default):
-    try:
-        if os.path.exists(filepath):
-            with open(filepath, encoding="utf-8") as f:
-                return json.load(f)
-    except Exception as e:
-        log_system_update(f"Failed to read {os.path.basename(filepath)}: {e}")
-    return default
 
 # ── Rate limiter (in-memory, per-IP) ────────────────────
-_rate_store: dict = defaultdict(list)   # IP → [timestamps]
 _RATE_LIMIT = 30     # max requests
 _RATE_WINDOW = 60    # per N seconds
+# A signed-in page is not an attacker: one page load fires several API calls
+# and the home pages refresh on their own. Sharing the anonymous budget made
+# "Too many requests" pop up during ordinary use.
+_RATE_LIMIT_SESSION = 300
 
 # ── Brute-force login lockout ────────────────────────────
-_login_failures: dict = {}   # IP → {"count": int, "lockout_until": float}
 _LOGIN_MAX_ATTEMPTS = 5
 _LOGIN_LOCKOUT_SECONDS = 300  # 5 minutes
 
-def _get_client_ip(request) -> str:
-    """Return the real client IP, trusting X-Forwarded-For only from local proxies."""
-    client = request.client.host if request.client else "unknown"
-    if client in ("127.0.0.1", "::1", "localhost"):
-        # Request arrived from a local proxy (nginx/cloudflared) — trust forwarded header
-        fwd = request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
-        return fwd or client
-    return client
 
-def _check_rate_limit(request) -> bool:
-    """Return True if request is within rate limit, False if exceeded."""
-    ip = _get_client_ip(request)
-    now = time.time()
-    stamps = _rate_store[ip]
-    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
-    if len(stamps) >= _RATE_LIMIT:
-        return False
-    stamps.append(now)
-    return True
+try:
+    from .garuda_auto.frame_publisher import FramePublisher
+except ImportError:
+    from basic_pipelines.garuda_auto.frame_publisher import FramePublisher
 
-def _is_login_locked(ip: str) -> bool:
-    """Return True if the IP is currently locked out from login attempts."""
-    entry = _login_failures.get(ip)
-    if not entry:
-        return False
-    if entry["lockout_until"] == 0.0:
-        # Failures accumulating but threshold not yet reached
-        return False
-    if time.time() < entry["lockout_until"]:
-        return True
-    # Lockout expired — clear it
-    _login_failures.pop(ip, None)
-    return False
+# Pipeline rate in, browser rate out. The clip writer shares this gate, because
+# its VideoWriter is built at a fixed 15fps and writing faster is what made
+# saved clips play back in slow motion.
+_frame_publisher = FramePublisher()
 
-def _record_login_failure(ip: str):
-    """Increment failure count; trigger lockout after _LOGIN_MAX_ATTEMPTS."""
-    entry = _login_failures.setdefault(ip, {"count": 0, "lockout_until": 0.0})
-    entry["count"] += 1
-    if entry["count"] >= _LOGIN_MAX_ATTEMPTS:
-        entry["lockout_until"] = time.time() + _LOGIN_LOCKOUT_SECONDS
-        log_system_update(
-            f"[SECURITY] Login lockout: {ip} after {entry['count']} failed attempts "
-            f"({_LOGIN_LOCKOUT_SECONDS}s cooldown)."
-        )
-
-def _clear_login_failure(ip: str):
-    """Clear failure record after a successful login."""
-    _login_failures.pop(ip, None)
-
-
-USERS: dict = {}  # populated from users.json at startup; no hardcoded defaults
-
-# MJPEG / WebRTC frame buffer
-_frame_buffer = None
-_frame_raw    = None       # raw numpy BGR for WebRTC track
-_frame_lock   = threading.Lock()
-_frame_seq    = 0          # incremented every new frame; lets MJPEG clients skip duplicates
+# Drishti rebuilds its descriptor at this rate, not at frame rate.
+_DRISHTI_OBSERVE_INTERVAL_S = 0.2
 
 # ── Async secondary cascade (MobileNet + MiDaS) ─────────────────────────────
 # Non-blocking queue bridges primary YOLO callback to secondary daemon thread.
@@ -414,79 +437,8 @@ SECONDARY_QUEUE_SIZE = 2
 _secondary_queue: _queue_mod.Queue = _queue_mod.Queue(maxsize=SECONDARY_QUEUE_SIZE)
 _secondary_stop  = threading.Event()
 
-class _WebCascadeMetrics:
-    """Thread-safe counters for the web server's async cascade path."""
-    def __init__(self):
-        self._lock               = threading.Lock()
-        self.primary_frames      = 0
-        self.secondary_enqueued  = 0
-        self.secondary_dropped   = 0
-        self.secondary_completed = 0
-
-    def record_primary(self):
-        with self._lock:
-            self.primary_frames += 1
-
-    def record_secondary_enqueue(self):
-        with self._lock:
-            self.secondary_enqueued += 1
-
-    def record_secondary_drop(self):
-        with self._lock:
-            self.secondary_dropped += 1
-
-    def record_secondary_complete(self):
-        with self._lock:
-            self.secondary_completed += 1
-
-    def snapshot(self) -> dict:
-        with self._lock:
-            return {
-                "primary_frames":      self.primary_frames,
-                "secondary_enqueued":  self.secondary_enqueued,
-                "secondary_dropped":   self.secondary_dropped,
-                "secondary_completed": self.secondary_completed,
-            }
-
 _cascade_metrics = _WebCascadeMetrics()
 
-
-def _secondary_worker_loop():
-    """
-    Daemon thread: consumes person-detection frames from _secondary_queue,
-    runs MobileNet classification + MiDaS depth analysis (when available).
-    Decoupled from the primary GStreamer YOLO pipeline — primary never waits.
-
-    VDevice note: on Garuda_web the primary YOLO runs inside the GStreamer
-    hailonet element (owns the Hailo device). Secondary models would need
-    their own VDevice session or the hailonet would need to release the device.
-    In practice, secondary inference is stubbed here until the cascade HEFs
-    are loaded alongside the GStreamer pipeline. The architecture (queue,
-    daemon thread, drop semantics) is fully production-ready.
-    """
-    import logging
-    _log = logging.getLogger("garuda_web.secondary")
-    _log.info("Secondary worker thread started (daemon).")
-    while not _secondary_stop.is_set():
-        try:
-            frame, det_info = _secondary_queue.get(timeout=0.3)
-        except _queue_mod.Empty:
-            continue
-
-        try:
-            # --- Secondary inference placeholder ---
-            # When cascade HEFs are loaded alongside the GStreamer pipeline,
-            # MobileNet + MiDaS inference runs here on the duplicated frame.
-            # For now: log the event, record completion metric.
-            label = det_info.get("label", "person")
-            conf  = det_info.get("confidence", 0.0)
-            _log.debug(f"Secondary analysis: {label} conf={conf:.2f}")
-        except Exception as e:
-            _log.warning(f"Secondary worker error: {e}")
-        finally:
-            _cascade_metrics.record_secondary_complete()
-
-    _log.info("Secondary worker thread stopped.")
 
 # Start secondary daemon thread at module load
 _secondary_thread = threading.Thread(
@@ -498,23 +450,16 @@ _secondary_thread.start()
 
 # WebRTC peer connections
 _pc_set: set = set()
+_MAX_PEER_CONNECTIONS = 4
 
 # Event-driven WS broadcaster
-_event_loop  = None        # asyncio loop ref (set in lifespan)
-_ws_trigger  = None        # asyncio.Event — set to push WS immediately
-_ws_broadcaster_task = None
 
 # Session store: token → {username, role, expires}
-_sessions = {}
 
-# WebSocket clients (all connected devices)
-_ws_clients: set = set()
+# WebSocket clients (all connected devices): socket -> {username, role}
+_ws_clients: dict = {}
 
 # EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
-_cpu_ema       = 0.0
-_ram_ema       = 0.0
-_temp_ema      = 0.0
-_cpu_cores_ema: list = []   # per-core EMA values (populated on first psutil call)
 _EMA_A         = 0.25
 
 # Voice stop event
@@ -523,453 +468,78 @@ _voice_stop_event = threading.Event()
 ##############################################################################
 # PERSISTENCE
 ##############################################################################
-def load_users():
-    global USERS
-    for path in [USERS_FILE, "system_logs/users_data.json"]:
-        if os.path.exists(path):
-            try:
-                with open(path) as f:
-                    data = json.load(f)
-                if isinstance(data, dict) and data:
-                    default_colors = ["#1565c0","#2e7d32","#6a1b9a","#00838f",
-                                      "#f57f17","#4527a0","#ad1457"]
-                    idx = 0
-                    for uname, udata in data.items():
-                        if "display_name" not in udata:
-                            udata["display_name"] = uname.capitalize()
-                        if "box_color" not in udata:
-                            udata["box_color"] = "#e65100" if udata.get("role") == "admin" \
-                                else default_colors[idx % len(default_colors)]
-                            idx += 1
-                        if "history" not in udata:
-                            udata["history"] = {"logins": [], "narada_activity": []}
-                    USERS = data
-                    return
-            except Exception as e:
-                print(f"Warning: failed to load users from {path}: {e}")
 
-def save_users():
-    try:
-        _atomic_json_write(USERS_FILE, USERS)
-    except Exception as e:
-        log_system_update(f"Failed to save users: {e}")
-
-def load_config():
-    global CUSTOM_VOICE_COMMANDS, CUSTOM_MODES, EMAIL_RECIPIENTS
-    global EMAIL_COOLDOWN, EMAIL_SENDER, DETECTION_THRESHOLD
-    global KNOWN_DEVICES, WATCH_LABELS, DANGER_LABELS
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    global NIGHT_PRESENCE_WINDOW
-    # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are NOT loaded from config.json —
-    # they live exclusively in .env / environment variables for security.
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE) as f:
-                cfg = json.load(f)
-            CUSTOM_VOICE_COMMANDS = cfg.get("custom_voice_commands", CUSTOM_VOICE_COMMANDS)
-            CUSTOM_MODES = cfg.get("custom_modes", CUSTOM_MODES)
-            EMAIL_RECIPIENTS = cfg.get("email_recipients", EMAIL_RECIPIENTS)
-            EMAIL_COOLDOWN = cfg.get("email_cooldown", EMAIL_COOLDOWN)
-            EMAIL_SENDER = cfg.get("email_sender", EMAIL_SENDER)
-            DETECTION_THRESHOLD = cfg.get("detection_threshold", DETECTION_THRESHOLD)
-            KNOWN_DEVICES = cfg.get("known_devices", KNOWN_DEVICES)
-            WATCH_LABELS = cfg.get("watch_labels", WATCH_LABELS)
-            # Support both legacy "danger_label" (str) and new "danger_labels" (list)
-            if "danger_labels" in cfg:
-                DANGER_LABELS = cfg["danger_labels"]
-            elif "danger_label" in cfg:
-                DANGER_LABELS = [cfg["danger_label"]]
-            NIGHT_PRESENCE_WINDOW = cfg.get("night_presence_window", NIGHT_PRESENCE_WINDOW)
-            # Restore persisted mode states
-            modes = cfg.get("modes", {})
-            MODE_DND       = bool(modes.get("dnd",       MODE_DND))
-            MODE_EMAIL_OFF = bool(modes.get("email_off", MODE_EMAIL_OFF))
-            MODE_IDLE      = bool(modes.get("idle",      MODE_IDLE))
-            MODE_NIGHT     = bool(modes.get("night",     MODE_NIGHT))
-            MODE_EMERGENCY = bool(modes.get("emergency", MODE_EMERGENCY))
-            MODE_PRIVACY   = bool(modes.get("privacy",   MODE_PRIVACY))
-            global MODE_SCHEDULE
-            MODE_SCHEDULE  = cfg.get("mode_schedule", MODE_SCHEDULE)
-        except Exception as e:
-            print(f"Warning: failed to load config: {e}")
-
-def _load_alert_history():
-    """Load alert-activity history from disk into _alert_history."""
-    global _alert_history
-    try:
-        if os.path.exists(ALERT_HISTORY_FILE):
-            with open(ALERT_HISTORY_FILE) as f:
-                data = json.load(f)
-            if isinstance(data, dict):
-                _alert_history = data
-            elif isinstance(data, list):
-                # Legacy list format — migrate to {date: count} by counting entries per day
-                migrated: dict = {}
-                for entry in data:
-                    if isinstance(entry, dict) and "timestamp" in entry:
-                        day = entry["timestamp"][:10]
-                        migrated[day] = migrated.get(day, 0) + 1
-                _alert_history = migrated
-                _atomic_json_write(ALERT_HISTORY_FILE, _alert_history)
-            else:
-                _alert_history = {}
-    except Exception:
-        _alert_history = {}
-
-def _record_alert_activity():
-    """Increment today's alert count and persist to disk."""
-    global _alert_history
-    today = datetime.date.today().isoformat()
-    _alert_history[today] = _alert_history.get(today, 0) + 1
-    try:
-        _atomic_json_write(ALERT_HISTORY_FILE, _alert_history)
-    except Exception:
-        pass
-
-def _load_presence_log():
-    global _presence_log
-    try:
-        if os.path.exists(PRESENCE_LOG_FILE):
-            with open(PRESENCE_LOG_FILE) as f:
-                _presence_log = json.load(f)
-    except Exception:
-        _presence_log = []
-
-def _append_presence_log(event: str, device: str, mac: str):
-    """Append one presence event, persist to disk, and queue for sync."""
-    global _presence_log
-    _presence_log.append({
-        "ts":     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "event":  event,
-        "device": device,
-        "mac":    mac,
-    })
-    try:
-        _atomic_json_write(PRESENCE_LOG_FILE, _presence_log)
-    except Exception:
-        pass
-    queue_event("PRESENCE", device, 0.0, f"{event} (mac={mac})")
-
-def load_master_keys():
-    global MASTER_KEYS
-    try:
-        if os.path.exists(MASTER_KEYS_FILE):
-            with open(MASTER_KEYS_FILE) as f:
-                data = json.load(f)
-            if isinstance(data.get("keys"), list) and data["keys"]:
-                MASTER_KEYS[:] = data["keys"]
-                return
-    except Exception:
-        pass
-    # If no key file, seed from MASTER_KEY env var (set in .env)
-    bootstrap = os.environ.get("MASTER_KEY", "").strip()
-    if bootstrap:
-        MASTER_KEYS[:] = [bootstrap]
-        save_master_keys()  # persist to file for future runs
-
-def save_master_keys():
-    try:
-        _atomic_json_write(MASTER_KEYS_FILE, {"keys": MASTER_KEYS})
-    except Exception:
-        pass
-
-async def _async_save_config():
-    """Run save_config in a thread so it never blocks the async event loop (fsync is slow on RPi SD)."""
-    await asyncio.to_thread(save_config)
-
-def save_config():
-    # NOTE: EMAIL_SENDER_PASS and GROQ_API_KEY are intentionally excluded —
-    # credentials must not be stored in plaintext JSON on disk.
-    try:
-        cfg = {
-            "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
-            "custom_modes": CUSTOM_MODES,
-            "email_recipients": EMAIL_RECIPIENTS,
-            "email_cooldown": EMAIL_COOLDOWN,
-            "email_sender": EMAIL_SENDER,
-            "detection_threshold": DETECTION_THRESHOLD,
-            "known_devices": KNOWN_DEVICES,
-            "watch_labels": WATCH_LABELS,
-            "danger_labels": DANGER_LABELS,
-            "night_presence_window": NIGHT_PRESENCE_WINDOW,
-            "modes": {
-                "dnd":       MODE_DND,
-                "email_off": MODE_EMAIL_OFF,
-                "idle":      MODE_IDLE,
-                "night":     MODE_NIGHT,
-                "emergency": MODE_EMERGENCY,
-                "privacy":   MODE_PRIVACY,
-            },
-            "mode_schedule": MODE_SCHEDULE,
-        }
-        _atomic_json_write(CONFIG_FILE, cfg)
-    except Exception as e:
-        log_system_update(f"Failed to save config: {e}")
-
-def _load_logs_from_disk():
-    """Populate in-memory log lists from permanent files on startup (last 500 lines each)."""
-    global system_updates_log, voice_assistant_log, _detection_log
-    def _tail(path, n=500):
-        try:
-            with open(path, "r", encoding="utf-8", errors="replace") as f:
-                lines = f.readlines()
-            return [l.rstrip("\n") for l in lines[-n:]]
-        except FileNotFoundError:
-            return []
-        except Exception:
-            return []
-    system_updates_log[:] = _tail(PERM_SYSTEM_LOG)
-    voice_assistant_log[:] = _tail(PERM_VOICE_LOG)
-    _detection_log[:] = _tail(PERM_DETECTION_LOG)
+_PRESENCE_LOG_MAX = 5000
+_USER_HISTORY_MAX = 200
 
 load_users()
 load_config()
 load_master_keys()
 _load_logs_from_disk()
 
-##############################################################################
-# HELPERS
-##############################################################################
-# ── RAM-buffered log writes ───────────────────────────────────────────────────
+# ── RAM-buffered log writes (the functions are in garuda_services/logs.py) ────
 # All text log writes (detection, system, voice, scissors, night-mode) are
 # accumulated in-memory and flushed to disk every _LOG_FLUSH_INTERVAL seconds.
 # This eliminates per-event fsync calls — the biggest source of SD card wear.
 # Critical state (users, config, alert history) still uses _atomic_json_write.
-# _log_buffer and _log_buffer_lock are declared in the GLOBALS section (above
-# load_users() so startup log calls work correctly).
 _LOG_FLUSH_INTERVAL = 60    # flush every 60 seconds
 _LOG_MAX_SIZE_BYTES = 10 * 1024 * 1024   # rotate at 10 MB
-
-def _rotate_log(filepath: str):
-    """Rename filepath → filepath.1, discarding any previous .1 file."""
-    try:
-        rotated = filepath + ".1"
-        if os.path.exists(rotated):
-            os.unlink(rotated)
-        os.rename(filepath, rotated)
-    except Exception:
-        pass
-
-def _do_flush_logs():
-    """Write all buffered log lines to disk. Called by the flush thread and on shutdown."""
-    with _log_buffer_lock:
-        snapshots = {path: buf[:] for path, buf in _log_buffer.items() if buf}
-        for path in snapshots:
-            _log_buffer[path].clear()
-    for path, lines in snapshots.items():
-        if not lines:
-            continue
-        try:
-            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-            # Rotate if over size cap
-            try:
-                if os.path.getsize(path) > _LOG_MAX_SIZE_BYTES:
-                    _rotate_log(path)
-            except FileNotFoundError:
-                pass
-            with open(path, "a", encoding="utf-8") as f:
-                for line in lines:
-                    f.write(line + "\n")
-        except Exception:
-            pass
-
-def _flush_log_thread():
-    """Background daemon thread: flush log buffer on interval."""
-    while True:
-        time.sleep(_LOG_FLUSH_INTERVAL)
-        _do_flush_logs()
-
-def _perm_write(filepath: str, line: str):
-    """Buffer a log line in RAM; flushed to disk every _LOG_FLUSH_INTERVAL seconds."""
-    with _log_buffer_lock:
-        _log_buffer[filepath].append(line)
-
-def _append_detection_perm(event_type: str, label: str, confidence: float, info: str = ""):
-    """Append one detection event to in-memory list, permanent file, and SQLite queue."""
-    global _detection_log
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line = f"[{stamp}] [{event_type.upper()}] {label} conf={confidence:.2f}"
-    if info:
-        line += f" — {info}"
-    _detection_log.append(line)
-    if len(_detection_log) > 500:
-        _detection_log[:] = _detection_log[-500:]
-    _perm_write(PERM_DETECTION_LOG, line)
-    queue_event(event_type.upper(), label, confidence, info)
-
-def log_system_update(message):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{timestamp}] {message}"
-    system_updates_log.append(entry)
-    if len(system_updates_log) > 500:
-        system_updates_log[:] = system_updates_log[-500:]
-    _perm_write(PERM_SYSTEM_LOG, entry)
-
-def append_voice_log(message, user_name=None):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{timestamp}] {message}"
-    voice_assistant_log.append(entry)
-    if len(voice_assistant_log) > 500:
-        voice_assistant_log[:] = voice_assistant_log[-500:]
-    _perm_write(PERM_VOICE_LOG, entry)
-    if user_name and user_name in USERS:
-        USERS[user_name]["history"]["narada_activity"].append(entry)
-
-def append_voice_response(message, user_name=None):
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    entry = f"[{timestamp}] {message}"
-    voice_responses.append(entry)
-    _perm_write(PERM_VOICE_LOG, "→ " + entry)
-    if user_name and user_name in USERS:
-        USERS[user_name]["history"]["narada_activity"].append(entry)
 
 ##############################################################################
 # OFFLINE EVENT QUEUE (SQLite)
 ##############################################################################
-EVENTS_DB = "system_logs/garuda_events.db"
-_eq_lock = threading.Lock()
-_net_online = True          # tracked by connectivity monitor
+# Anchored to the repository, not to whatever directory the process happened
+# to be started from (same file the service has always used from its unit's
+# WorkingDirectory).
+EVENTS_DB = str(_BASE.parent / "system_logs" / "garuda_events.db")
+_EVENTS_KEEP_DAYS = _events.KEEP_DAYS
+# The same objects the queue uses, still reachable under their old names.
+_pending_cache = _events._pending_cache
+_eq_lock = _events._lock
+
+# The queue itself lives in garuda_core/events.py. These keep the names the
+# rest of this module, the camera callback and the tests call, and pass the
+# database path at call time (EVENTS_DB is repointed by the test suite).
+_EVENT_DB_MIGRATIONS = _events.MIGRATIONS
 
 def _init_event_db():
     """Create events table if not exists."""
-    os.makedirs(os.path.dirname(EVENTS_DB) or ".", exist_ok=True)
-    conn = sqlite3.connect(EVENTS_DB)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            label TEXT,
-            confidence REAL DEFAULT 0,
-            info TEXT DEFAULT '',
-            synced INTEGER DEFAULT 0
-        )
-    """)
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_synced ON events(synced)")
-    conn.execute("CREATE INDEX IF NOT EXISTS idx_events_ts ON events(timestamp)")
-    conn.commit()
-    conn.close()
+    _events.init_db(EVENTS_DB)
 
 def queue_event(event_type: str, label: str = "", confidence: float = 0.0, info: str = ""):
     """Insert an event into the SQLite queue. Thread-safe."""
-    stamp = datetime.datetime.now().isoformat()
-    with _eq_lock:
-        try:
-            conn = sqlite3.connect(EVENTS_DB, timeout=5)
-            conn.execute(
-                "INSERT INTO events (timestamp, event_type, label, confidence, info) VALUES (?, ?, ?, ?, ?)",
-                (stamp, event_type, label, confidence, info))
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            log_system_update(f"[QUEUE] DB write error: {e}")
+    _events.insert(EVENTS_DB, event_type, label, confidence, info, on_error=log_system_update)
 
 def get_events_since(since_ts: str = "", limit: int = 500) -> list:
     """Return events after the given ISO timestamp, oldest-first."""
-    with _eq_lock:
-        try:
-            conn = sqlite3.connect(EVENTS_DB, timeout=5)
-            conn.row_factory = sqlite3.Row
-            if since_ts:
-                rows = conn.execute(
-                    "SELECT * FROM events WHERE timestamp > ? ORDER BY timestamp ASC LIMIT ?",
-                    (since_ts, limit)).fetchall()
-            else:
-                rows = conn.execute(
-                    "SELECT * FROM events ORDER BY timestamp ASC LIMIT ?",
-                    (limit,)).fetchall()
-            conn.close()
-            return [dict(r) for r in rows]
-        except Exception:
-            return []
+    return _events.since(EVENTS_DB, since_ts, limit)
 
-def get_pending_count() -> int:
-    """Return count of unsynced events."""
-    with _eq_lock:
-        try:
-            conn = sqlite3.connect(EVENTS_DB, timeout=5)
-            count = conn.execute("SELECT COUNT(*) FROM events WHERE synced = 0").fetchone()[0]
-            conn.close()
-            return count
-        except Exception:
-            return 0
+def get_unsynced_events(limit: int = 1000) -> list:
+    """Unsynced events, oldest first."""
+    return _events.unsynced(EVENTS_DB, limit)
+
+def prune_synced_events(days: int = _EVENTS_KEEP_DAYS) -> int:
+    """Delete synced events older than `days`; the table had no upper bound."""
+    return _events.prune_synced(EVENTS_DB, days)
+
+def get_pending_count(max_age: float = 0.0) -> int:
+    """Return count of unsynced events (see garuda_core.events.pending_count)."""
+    return _events.pending_count(EVENTS_DB, max_age)
 
 def mark_events_synced(up_to_id: int):
     """Mark all events up to and including the given ID as synced."""
-    with _eq_lock:
-        try:
-            conn = sqlite3.connect(EVENTS_DB, timeout=5)
-            conn.execute("UPDATE events SET synced = 1 WHERE id <= ?", (up_to_id,))
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-
-def _check_connectivity() -> bool:
-    """Quick connectivity check — try to resolve DNS."""
-    import socket
-    try:
-        socket.create_connection(("1.1.1.1", 53), timeout=3)
-        return True
-    except OSError:
-        return False
-
-def _connectivity_monitor():
-    """Background thread: monitor internet connectivity, log transitions."""
-    global _net_online
-    was_online = True
-    while True:
-        time.sleep(30)
-        online = _check_connectivity()
-        if online and not was_online:
-            # Just came back online
-            _net_online = True
-            pending = get_pending_count()
-            log_system_update(f"[NETWORK] Internet restored — {pending} queued events ready to sync")
-            push_urgent_ws()
-        elif not online and was_online:
-            # Just went offline
-            _net_online = False
-            log_system_update("[NETWORK] Internet connection lost — events will be queued locally")
-            push_urgent_ws()
-        was_online = online
-
-def stop_app():
-    log_system_update("Stopping Garuda Web app.")
-    _do_flush_logs()   # write buffered logs before exit
-    if app_gst is not None:
-        try:
-            app_gst.pipeline.set_state(Gst.State.NULL)
-        except Exception:
-            pass
-    sys.exit(0)
+    _events.mark_synced(EVENTS_DB, up_to_id)
 
 ##############################################################################
-# OTP / EMAIL
+# EMAIL
 ##############################################################################
-def generate_otp_code(length=6):
-    return "".join(str(secrets.randbelow(10)) for _ in range(length))
 
-def send_otp_via_email(email, otp_code):
-    body = f"Hello,\n\nYour OTP code is: {otp_code}\n\nUse this to complete your login."
-    msg = MIMEText(body)
-    msg['Subject'] = "Your Garuda OTP Code"
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = email
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-            server.send_message(msg)
-        log_system_update(f"OTP email sent to {email}")
-        return True, None
-    except smtplib.SMTPAuthenticationError:
-        err = "SMTP auth failed. Check EMAIL_SENDER_PASS (must be a Gmail App Password)."
-        log_system_update(err)
-        return False, err
-    except Exception as e:
-        err = str(e)
-        log_system_update(f"Email error: {err}")
-        return False, err
+def _send_mail(subject, body, to=None):
+    """One email from the configured sender; to the alert recipients unless
+    `to` names someone else. Raises on failure (see garuda_core.mailer)."""
+    cfg = STATE.config
+    _mailer.send(subject, body, sender=cfg.email_sender, password=cfg.email_sender_pass,
+                 to=cfg.email_recipients if to is None else to)
 
 ##############################################################################
 # WEBRTC VIDEO TRACK
@@ -981,8 +551,8 @@ if _WEBRTC_AVAILABLE:
 
         async def recv(self):
             pts, time_base = await self.next_timestamp()
-            with _frame_lock:
-                raw = _frame_raw
+            with STATE.camera.frame_lock:
+                raw = STATE.camera.frame_raw
             if raw is not None:
                 vf = av.VideoFrame.from_ndarray(raw, format="bgr24")
             else:
@@ -992,665 +562,35 @@ if _WEBRTC_AVAILABLE:
             return vf
 
 ##############################################################################
-# EVENT-DRIVEN WS HELPER
-##############################################################################
-def push_urgent_ws():
-    """Signal the WS broadcaster to push state immediately (cross-thread safe)."""
-    if _event_loop and _ws_trigger:
-        _event_loop.call_soon_threadsafe(_ws_trigger.set)
-
-##############################################################################
-# PHONE PRESENCE DETECTION
-##############################################################################
-def _get_local_subnet() -> str:
-    """Return the first local subnet (e.g. '192.168.1.0/24') from ip route."""
-    try:
-        out = subprocess.check_output(['ip', 'route'], text=True, timeout=3)
-        for line in out.splitlines():
-            parts = line.split()
-            # Lines like: "192.168.1.0/24 dev wlan0 ..."
-            if parts and '/' in parts[0] and parts[0][0].isdigit():
-                return parts[0]
-    except Exception:
-        pass
-    return ''
-
-def _probe_subnet_for_arp(subnet: str):
-    """Send a UDP datagram to every host in subnet to force ARP table population.
-
-    The packets are sent to port 9 (discard service) so remote hosts ignore them,
-    but the kernel must resolve each MAC via ARP before sending — populating the
-    local ARP cache so /proc/net/arp reflects every reachable device.
-    """
-    try:
-        net = ipaddress.IPv4Network(subnet, strict=False)
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setblocking(False)
-        for host in net.hosts():
-            try:
-                sock.sendto(b'\x00', (str(host), 9))
-            except Exception:
-                pass
-        sock.close()
-    except Exception:
-        pass
-
-def _check_device_presence() -> bool:
-    """Return True if any registered device MAC appears in the kernel ARP table."""
-    global _last_arp_cache
-    try:
-        with open('/proc/net/arp') as f:
-            _last_arp_cache = f.read().lower()
-        return any(d.get('mac', '').lower() in _last_arp_cache for d in KNOWN_DEVICES)
-    except Exception:
-        return False
-
-def _presence_poller():
-    """Background thread: poll ARP table every 30s to detect owner's phone.
-
-    Before reading /proc/net/arp we send UDP probes to every host in the local
-    subnet.  This forces ARP resolution so the table contains all active devices,
-    not just those that have recently communicated with the Pi directly.
-    """
-    global _owner_present, _owner_last_seen
-    _subnet = ''
-    first = True
-    while True:
-        if not first:
-            time.sleep(30)
-        first = False
-        if not KNOWN_DEVICES:
-            continue
-        # Discover subnet once (lazy) and reprobe each cycle
-        if not _subnet:
-            _subnet = _get_local_subnet()
-        if _subnet:
-            _probe_subnet_for_arp(_subnet)
-            time.sleep(2)   # allow ARP responses to arrive
-        found = _check_device_presence()
-        log_system_update(
-            f"[PRESENCE] {'Match' if found else 'No match'} — "
-            f"{len([l for l in _last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
-        )
-        if found:
-            _owner_last_seen = time.time()
-            if not _owner_present:
-                _owner_present = True
-                dev  = next((d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "Unknown")
-                mac  = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
-                _append_presence_log("arrived", dev, mac)
-                log_system_update(f"[OWNER] {dev} arrived — device detected on network.")
-                push_urgent_ws()
-        elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
-            _owner_present = False
-            dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
-            _append_presence_log("left", dev, "")
-            log_system_update(f"[OWNER] {dev} away — device not seen for {OWNER_AWAY_GRACE}s.")
-            push_urgent_ws()
-
-##############################################################################
-# ALERTS
-##############################################################################
-def trigger_software_alert():
-    global _alert_active, _last_alert_time, _alert_end_time
-    with _mode_lock:
-        dnd = MODE_DND
-        idle = MODE_IDLE
-        night = MODE_NIGHT
-    if dnd or idle:
-        return
-    with _alert_lock:
-        was_active = _alert_active
-        # Extend the 3s window every frame scissors is visible — alert stays on
-        # while scissors is in frame and expires 3s after it disappears.
-        _alert_active = True
-        _alert_end_time = time.time() + 3
-    if not was_active:
-        # New alert starting: log, record, sound, email
-        if night:
-            _perm_write(NIGHT_MODE_LOG_FILE,
-                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        _last_alert_time = datetime.datetime.now()
-        _record_alert_activity()
-        log_system_update("Alert triggered.")
-        push_urgent_ws()
-        try:
-            subprocess.Popen(["aplay", "/usr/share/sounds/alsa/Front_Center.wav"],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
-
-def send_email_alert():
-    global last_email_sent_time
-    with _mode_lock:
-        email_off = MODE_EMAIL_OFF
-        idle = MODE_IDLE
-        emergency = MODE_EMERGENCY
-        night = MODE_NIGHT
-    if email_off or idle:
-        return
-    with _email_lock:
-        current_time = time.time()
-        if (current_time - last_email_sent_time) < EMAIL_COOLDOWN:
-            return
-        last_email_sent_time = current_time
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    label_str = ", ".join(DANGER_LABELS)
-    subject = f"Danger Object Detected — {label_str}"
-    if emergency:
-        subject = "EMERGENCY: " + subject
-    elif night:
-        subject = "HIGH PRIORITY: " + subject
-    body = f"Danger object detected at {now_str}.\nObject(s): {label_str}\nCheck your environment for safety.\n"
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-            server.send_message(msg)
-        log_system_update("Email alert sent.")
-    except Exception as e:
-        log_system_update(f"Failed sending email alert: {e}")
-
-def log_scissors_detection(label: str = "danger"):
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    _perm_write(SCISSORS_LOG_FILE, f"[{stamp}] DANGER DETECTED: {label.upper()}")
-
-def _send_tamper_email():
-    """Maximum-priority tamper alert — bypasses DND/idle/email-off modes.
-
-    Rate-limited to one email per _TAMPER_EMAIL_COOLDOWN so a flickering /
-    intermittently-dark camera cannot spam the recipient.
-    """
-    global _last_tamper_email
-    if not EMAIL_SENDER or not EMAIL_RECIPIENTS:
-        return
-    now = time.time()
-    if (now - _last_tamper_email) < _TAMPER_EMAIL_COOLDOWN:
-        return
-    _last_tamper_email = now
-    now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    msg = MIMEText(
-        f"CRITICAL: Camera tamper detected at {now_str}.\n"
-        "The camera lens appears to be covered or the feed has gone blank.\n"
-        "Immediate physical inspection required."
-    )
-    msg['Subject'] = "CRITICAL TAMPER ALERT — Garuda Camera Covered"
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-            server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-            server.send_message(msg)
-        log_system_update("[TAMPER] Alert email sent.")
-    except Exception as e:
-        log_system_update(f"[TAMPER] Email failed: {e}")
-
-##############################################################################
 # ENCRYPTED EVIDENCE EXFILTRATION
 ##############################################################################
 def _encrypt_clip_aes256(src_path: str) -> str | None:
     """AES-256-GCM encrypt src_path → src_path.enc. Returns encrypted path or None on failure."""
-    if _EXFIL_AES_KEY is None:
-        log_system_update("[EXFIL] AES key not set — skipping encryption.")
-        return None
-    if len(_EXFIL_AES_KEY) != 32:
-        log_system_update("[EXFIL] EXFIL_AES_KEY must be exactly 32 bytes (64 hex chars).")
-        return None
-    enc_path = src_path + ".enc"
-    try:
-        from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-        nonce = os.urandom(12)   # 96-bit nonce (recommended for GCM)
-        with open(src_path, "rb") as f:
-            plaintext = f.read()
-        ciphertext = AESGCM(_EXFIL_AES_KEY).encrypt(nonce, plaintext, None)
-        # Layout: [12-byte nonce][ciphertext+16-byte GCM tag]
-        with open(enc_path, "wb") as f:
-            f.write(nonce + ciphertext)
-        return enc_path
-    except ImportError:
-        log_system_update("[EXFIL] cryptography package not installed — run: pip install cryptography")
-        return None
-    except Exception as e:
-        log_system_update(f"[EXFIL] Encryption failed: {e}")
-        return None
+    # The work is in garuda_core.evidence; the key and the logger are read
+    # here, at call time, so a changed (or test-patched) value is honoured.
+    return _evidence.encrypt_file(src_path, _EXFIL_AES_KEY, log_system_update)
 
 def _ssh_upload(local_path: str, remote_filename: str) -> bool:
     """SFTP-upload local_path to the configured SSH server. Returns True on success."""
-    if not _EXFIL_HOST or not _EXFIL_USER:
-        return False
-    try:
-        import paramiko
-    except ImportError:
-        log_system_update("[EXFIL] paramiko not installed — run: pip install paramiko")
-        return False
-    try:
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        kwargs: dict = {"hostname": _EXFIL_HOST, "port": _EXFIL_PORT,
-                        "username": _EXFIL_USER, "timeout": 30}
-        if _EXFIL_KEY_PATH and os.path.exists(_EXFIL_KEY_PATH):
-            kwargs["key_filename"] = _EXFIL_KEY_PATH
-        elif _EXFIL_PASSWORD:
-            kwargs["password"] = _EXFIL_PASSWORD
-        ssh.connect(**kwargs)
-        sftp = ssh.open_sftp()
-        remote_dir = _EXFIL_REMOTE.rstrip("/")
-        try:
-            sftp.mkdir(remote_dir)
-        except IOError:
-            pass   # already exists
-        sftp.put(local_path, remote_dir + "/" + remote_filename)
-        sftp.close()
-        ssh.close()
-        return True
-    except Exception as e:
-        log_system_update(f"[EXFIL] SSH upload failed: {e}")
-        return False
-
-def exfiltrate_clip(clip_path: str):
-    """Encrypt a clip and upload the ciphertext off-device via SSH. Runs in a daemon thread."""
-    if not _EXFIL_HOST or _EXFIL_AES_KEY is None:
-        return   # exfiltration not configured
-    enc_path = _encrypt_clip_aes256(clip_path)
-    if not enc_path:
-        return
-    log_system_update(f"[EXFIL] Encrypted → {os.path.basename(enc_path)}")
-    if _ssh_upload(enc_path, os.path.basename(enc_path)):
-        log_system_update(f"[EXFIL] Uploaded to {_EXFIL_HOST}:{_EXFIL_REMOTE}")
-        # Remove plaintext clip — only ciphertext kept locally (briefly)
-        try:
-            os.unlink(clip_path)
-        except Exception:
-            pass
-    else:
-        log_system_update(f"[EXFIL] Upload failed — encrypted clip retained locally: {enc_path}")
+    return _evidence.sftp_upload(
+        local_path, remote_filename, host=_EXFIL_HOST, port=_EXFIL_PORT, user=_EXFIL_USER,
+        key_path=_EXFIL_KEY_PATH, password=_EXFIL_PASSWORD, remote_dir=_EXFIL_REMOTE,
+        log=log_system_update)
 
 ##############################################################################
-# GSTREAMER CALLBACK
+# CAMERA PIPELINE SETTINGS (the pipeline is in garuda_services/pipeline.py)
 ##############################################################################
-class user_app_callback_class(app_callback_class):
-    def __init__(self):
-        super().__init__()
-        self.person_detected = False
-        self.danger_labels = list(DANGER_LABELS)
-        # Override with a threading-safe lock-based store
-        # (base class uses multiprocessing.Queue which breaks across threads)
-        self._frame = None
-        self._flock = threading.Lock()
-
-    def set_frame(self, frame):
-        with self._flock:
-            self._frame = frame
-
-    def get_frame(self):
-        with self._flock:
-            return self._frame
+try:
+    import zoneinfo as _zoneinfo
+    _IST = _zoneinfo.ZoneInfo("Asia/Kolkata")
+except Exception:
+    _IST = None   # no timezone data: fall back to the system clock
 
 
-def _check_night_presence():
-    """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
-    global _night_presence_alert_active, _night_presence_alert_end_time
-    with _np_lock:
-        win = dict(NIGHT_PRESENCE_WINDOW)   # snapshot — avoids race with config update
-    if not win.get("enabled", True):
-        return
-    try:
-        import zoneinfo
-        now_ist = datetime.datetime.now(zoneinfo.ZoneInfo("Asia/Kolkata"))
-    except Exception:
-        now_ist = datetime.datetime.now()  # fallback: no timezone lib
-    now_hm = now_ist.strftime("%H:%M")
-    start, end = win.get("start", "01:30"), win.get("end", "05:00")
-    # Handle window that wraps midnight (e.g. 23:00 → 05:00)
-    if start <= end:
-        in_window = start <= now_hm < end
-    else:
-        in_window = now_hm >= start or now_hm < end
-    if in_window:
-        with _np_lock:
-            _night_presence_alert_active = True
-            _night_presence_alert_end_time = time.time() + 10
 
+PI_CAMERA_SIZE = (1280, 720)
+PI_CAMERA_FPS = 60
 
-def app_callback(pad, info, user_data):
-    global latest_detection_info, DETECTION_THRESHOLD, MODE_PRIVACY
-    global _detections_today, _frame_buffer, _total_frames, _class_counts_today
-    global _last_danger_conf, _label_consec_frames
-    global _clip_writer, _clip_start_time   # assigned (set to None) on auto-stop
-    buffer = info.get_buffer()
-    if buffer is None:
-        return Gst.PadProbeReturn.OK
-
-    user_data.increment()
-    _total_frames += 1
-    _cascade_metrics.record_primary()
-    frame_num = user_data.get_count()
-    text_info = f"Frame: {frame_num}\n"
-    format_, width, height = get_caps_from_pad(pad)
-
-    if user_data.use_frame and format_ and width and height:
-        frame = get_numpy_from_buffer(buffer, format_, width, height)
-    else:
-        frame = None
-
-    # Camera blindness detection — flag if camera is covered/blocked
-    global _blind_frame_count, _blind_alert_sent
-    if frame is not None:
-        gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        variance = float(np.var(gray))
-        if variance < 50:   # nearly uniform → blocked/covered
-            _blind_frame_count += 1
-            if _blind_frame_count >= 300 and not _blind_alert_sent:   # ~10s at 30fps
-                _blind_alert_sent = True
-                log_system_update("[TAMPER] Camera blindness detected — lens may be covered!")
-                _append_detection_perm("TAMPER", "camera_blind", 0.0, "camera appears blocked")
-                push_urgent_ws()
-                # Max-priority: bypass DND/idle and send alert email immediately
-                threading.Thread(target=_send_tamper_email, daemon=True).start()
-        else:
-            _blind_frame_count = 0
-            _blind_alert_sent = False
-
-    roi = hailo.get_roi_from_buffer(buffer)
-    detections = roi.get_objects_typed(hailo.HAILO_DETECTION)
-
-    with _mode_lock:
-        threshold = DETECTION_THRESHOLD
-        privacy = MODE_PRIVACY
-
-    # Build case-insensitive lookup sets so UI casing mismatches never break detection
-    _danger_set = {lbl.lower() for lbl in user_data.danger_labels}
-    _watch_set  = {lbl.lower() for lbl in WATCH_LABELS}
-
-    danger_detected = False
-    det_count = 0
-    for d in detections:
-        label = d.get_label()
-        confidence = d.get_confidence()
-        if confidence >= threshold:
-            det_count += 1
-            text_info += f"{label} ({confidence:.2f})\n"
-            _class_counts_today[label] = _class_counts_today.get(label, 0) + 1
-            # Privacy blur: blur any detected person (case-insensitive)
-            if privacy and label.lower() == "person" and frame is not None:
-                bbox = d.get_bbox()
-                x1 = int(bbox.xmin() * width)
-                y1 = int(bbox.ymin() * height)
-                x2 = int(bbox.xmax() * width)
-                y2 = int(bbox.ymax() * height)
-                x1, y1 = max(0, x1), max(0, y1)
-                x2, y2 = min(width, x2), min(height, y2)
-                if x2 > x1 and y2 > y1:
-                    roi_face = frame[y1:y2, x1:x2]
-                    roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
-                    frame[y1:y2, x1:x2] = roi_face
-            if label.lower() in _danger_set:
-                _label_consec_frames[label] = _label_consec_frames.get(label, 0) + 1
-                if _label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
-                    danger_detected = True
-                _last_danger_conf = confidence
-            elif label.lower() == "person" or (label.lower() in _watch_set and label.lower() not in _danger_set):
-                # WATCH: log silently with 30s cooldown to avoid per-frame spam
-                now_t = time.time()
-                if now_t - _watch_last_logged.get(label, 0) >= 30:
-                    _watch_last_logged[label] = now_t
-                    log_system_update(f"[WATCH] {label} ({confidence:.2f})")
-                    _append_detection_perm("WATCH", label, confidence)
-
-    # Reset consecutive counts for labels not seen (or below threshold) this frame
-    seen_above_thr = {d.get_label() for d in detections if d.get_confidence() >= threshold}
-    for k in list(_label_consec_frames):
-        if k not in seen_above_thr:
-            _label_consec_frames[k] = 0
-
-    if det_count > 0:
-        _detections_today += det_count
-
-    global _danger_active
-    # Find which danger labels were actually detected this frame (for logging)
-    _triggered_labels = [d.get_label() for d in detections
-                         if d.get_label().lower() in _danger_set
-                         and d.get_confidence() >= threshold]
-    if danger_detected:
-        global _danger_trigger_info
-        _danger_trigger_info = text_info   # snapshot the frame that triggered
-        _captured_conf = _last_danger_conf
-        _captured_label = _triggered_labels[0] if _triggered_labels else "danger"
-        _is_rising_edge = not _danger_active
-        if _is_rising_edge:
-            _danger_active = True
-        # Batch all danger work into ONE daemon thread per frame (not 4-5 separate ones)
-        def _danger_work(lbl=_captured_label, conf=_captured_conf, rising=_is_rising_edge):
-            trigger_software_alert()
-            if rising:
-                send_email_alert()
-                _danger_key = "__danger__"
-                _now = time.time()
-                if _now - _watch_last_logged.get(_danger_key, 0) >= 60:
-                    _watch_last_logged[_danger_key] = _now
-                    log_scissors_detection(lbl)
-                    _append_detection_perm("DANGER", lbl, conf, "alert triggered")
-        threading.Thread(target=_danger_work, daemon=True).start()
-    elif not _triggered_labels:
-        # Only reset when NO danger labels are seen at all this frame.
-        # Avoids false reset during the 2-frame ramp-up period.
-        _danger_active = False
-
-    user_data.person_detected = any(d.get_label().lower() == "person" for d in detections)
-    if user_data.person_detected:
-        threading.Thread(target=_check_night_presence, daemon=True).start()
-        # Async cascade: push frame to secondary queue for MobileNet + MiDaS.
-        # Non-blocking — if queue full, drop and record metric. Primary never waits.
-        if frame is not None:
-            best_person = max(
-                (d for d in detections if d.get_label().lower() == "person"),
-                key=lambda d: d.get_confidence(),
-                default=None,
-            )
-            if best_person is not None:
-                det_info = {
-                    "label": best_person.get_label(),
-                    "confidence": best_person.get_confidence(),
-                }
-                try:
-                    _secondary_queue.put_nowait((frame.copy(), det_info))
-                    _cascade_metrics.record_secondary_enqueue()
-                except _queue_mod.Full:
-                    _cascade_metrics.record_secondary_drop()
-
-    if frame is not None:
-        cv2.putText(frame, f"Thr: {threshold:.2f}", (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 255), 2)
-        if privacy:
-            cv2.putText(frame, "PRIVACY ON", (10, 60),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 80, 80), 2)
-        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        _, jpeg = cv2.imencode('.jpg', frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 75])
-        with _frame_lock:
-            global _frame_seq, _frame_raw
-            _frame_buffer = jpeg.tobytes()
-            _frame_raw    = frame_bgr
-            _frame_seq += 1
-        user_data.set_frame(frame_bgr)
-
-        # Clip recording — write current frame if active
-        _clip_autostopped = False
-        _clip_autostopped_path = ""
-        with _clip_lock:
-            if _clip_writer is not None:
-                try:
-                    _clip_writer.write(frame_bgr)
-                except Exception:
-                    pass
-                if time.time() - _clip_start_time > 60:
-                    _clip_writer.release()
-                    _clip_writer = None
-                    _clip_autostopped = True
-                    _clip_autostopped_path = _clip_path
-        if _clip_autostopped:
-            log_system_update("Clip auto-stopped after 60 s.")
-            push_urgent_ws()   # notify JS so it can reset the record button
-            if _clip_autostopped_path:
-                threading.Thread(target=exfiltrate_clip, args=(_clip_autostopped_path,),
-                                 daemon=True).start()
-
-    latest_detection_info = text_info
-    return Gst.PadProbeReturn.OK
-
-
-class GStreamerDetectionApp(GStreamerApp):
-    def __init__(self, args, user_data):
-        # Force frame capture for MJPEG stream; suppress display
-        args.use_frame = True
-        args.show_fps = False
-        super().__init__(args, user_data)
-        self.batch_size = 1
-        self.network_width = 640
-        self.network_height = 640
-        self.network_format = "RGB"
-        nms_score_threshold = 0.25
-        nms_iou_threshold = 0.45
-
-        new_postprocess_path = os.path.join(self.current_path, '../resources/libyolo_hailortpp_post.so')
-        if os.path.exists(new_postprocess_path):
-            self.default_postprocess_so = new_postprocess_path
-        else:
-            self.default_postprocess_so = os.path.join(self.postprocess_dir, 'libyolo_hailortpp_post.so')
-
-        if args.hef_path is not None:
-            self.hef_path = args.hef_path
-        elif args.network == "yolov8s":
-            self.hef_path = os.path.join(self.current_path, '../resources/yolov8s_h8l.hef')
-        elif args.network == "yolov6n":
-            self.hef_path = os.path.join(self.current_path, '../resources/yolov6n.hef')
-        elif args.network == "yolox_s_leaky":
-            self.hef_path = os.path.join(self.current_path, '../resources/yolox_s_leaky_h8l_mz.hef')
-        else:
-            raise ValueError("Invalid network type")
-
-        if args.labels_json:
-            self.labels_config = f' config-path={args.labels_json} '
-            if not os.path.exists(new_postprocess_path):
-                print("New postprocess .so file is missing. Required for custom labels.")
-                sys.exit(1)
-        else:
-            self.labels_config = ''
-
-        self.app_callback = app_callback
-        # When using libyolo_hailortpp_post.so with a custom labels config, the HEF
-        # runs NMS internally (HailortPP mode). Adding output-format-type=FLOAT32
-        # conflicts with that and silently drops all detections (Knife, Hammer, etc.).
-        # Only set FLOAT32 for standard models that rely on hailofilter for NMS.
-        if args.labels_json:
-            self.thresholds_str = (
-                f"nms-score-threshold={nms_score_threshold} "
-                f"nms-iou-threshold={nms_iou_threshold}"
-            )
-        else:
-            self.thresholds_str = (
-                f"nms-score-threshold={nms_score_threshold} "
-                f"nms-iou-threshold={nms_iou_threshold} "
-                f"output-format-type=HAILO_FORMAT_TYPE_FLOAT32"
-            )
-        setproctitle.setproctitle("Garuda Web App")
-        # Use fakesink — no display needed, frames captured via MJPEG callback
-        self.video_sink = "fakesink"
-        self.create_pipeline()
-
-    def run(self):
-        """Override base run() to skip cv2 display subprocess (web mode uses MJPEG)."""
-        from hailo_rpi_common import disable_qos
-        bus = self.pipeline.get_bus()
-        bus.add_signal_watch()
-        bus.connect("message", self.bus_call, self.loop)
-
-        identity = self.pipeline.get_by_name("identity_callback")
-        if identity:
-            identity_pad = identity.get_static_pad("src")
-            identity_pad.add_probe(Gst.PadProbeType.BUFFER, self.app_callback, self.user_data)
-
-        disable_qos(self.pipeline)
-        self.pipeline.set_state(Gst.State.PLAYING)
-
-        if self.options_menu.dump_dot:
-            GLib.timeout_add_seconds(3, self.dump_dot_file)
-
-        try:
-            self.loop.run()
-        except Exception:
-            pass
-
-        self.user_data.running = False
-        self.pipeline.set_state(Gst.State.NULL)
-
-    def get_pipeline_string(self):
-        if self.source_type == "rpi":
-            # 1280x720 @ 60fps — IMX708 supports up to 120fps at 720p vs 30fps at 1536x864
-            # libcamerasrc already outputs RGB at the requested size; skip the common
-            # videoscale+videoconvert to avoid redundant processing on the Pi 5.
-            source_element = (
-                "libcamerasrc name=src_0 ! "
-                f"video/x-raw, format={self.network_format}, width=1280, height=720, framerate=60/1 ! "
-                + QUEUE("queue_src_scale")
-                + "videoscale n-threads=2 ! "
-                f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, "
-                "pixel-aspect-ratio=1/1 ! "
-            )
-        elif self.source_type == "usb":
-            source_element = (
-                f"v4l2src device={self.video_source} name=src_0 ! "
-                "video/x-raw, width=640, height=480, framerate=30/1 ! "
-            )
-        else:
-            source_element = (
-                f"filesrc location={self.video_source} name=src_0 ! "
-                + QUEUE("queue_dec264")
-                + "qtdemux ! h264parse ! avdec_h264 max-threads=2 ! "
-                "video/x-raw, format=I420 ! "
-            )
-
-        if self.source_type != "rpi":
-            # USB and file sources need scale + format conversion to network dims
-            source_element += QUEUE("queue_scale")
-            source_element += "videoscale n-threads=2 ! "
-            source_element += QUEUE("queue_src_convert")
-            source_element += "videoconvert n-threads=3 name=src_convert qos=false ! "
-            source_element += (
-                f"video/x-raw, format={self.network_format}, "
-                f"width={self.network_width}, height={self.network_height}, "
-                "pixel-aspect-ratio=1/1 ! "
-            )
-
-        pipeline_string = (
-            "hailomuxer name=hmux "
-            + source_element
-            + "tee name=t ! "
-            + QUEUE("bypass_queue", max_size_buffers=20)
-            + "hmux.sink_0 "
-            + "t. ! "
-            + QUEUE("queue_hailonet")
-            + "videoconvert n-threads=3 ! "
-            f"hailonet hef-path={self.hef_path} batch-size={self.batch_size} "
-            f"{self.thresholds_str} force-writable=true ! "
-            + QUEUE("queue_hailofilter")
-            + f"hailofilter so-path={self.default_postprocess_so} {self.labels_config} qos=false ! "
-            + QUEUE("queue_hmuc")
-            + "hmux.sink_1 "
-            + "hmux. ! "
-            + QUEUE("queue_hailo_python")
-            + QUEUE("queue_user_callback")
-            + "identity name=identity_callback ! "
-            + QUEUE("queue_hailooverlay")
-            + "hailooverlay ! "
-            + QUEUE("queue_videoconvert")
-            + "videoconvert n-threads=3 qos=false ! "
-            + QUEUE("queue_hailo_display")
-            + "fakesink name=hailo_display sync=false "
-        )
-        return pipeline_string
 
 ##############################################################################
 # NARADA VOICE ASSISTANT
@@ -1672,246 +612,9 @@ BUILT_IN_COMMANDS = {
 }
 
 
-def apply_rule_based_command(user_input_lower):
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    for phrase, resp in CUSTOM_VOICE_COMMANDS.items():
-        if phrase in user_input_lower:
-            return resp
+# None until the voice thread has tried the microphone; then True or False.
+# The web app shows one clear notice instead of a pile of repeated errors.
 
-    response = None
-    with _mode_lock:
-        if "activate dnd" in user_input_lower:
-            MODE_DND = True; response = "Do Not Disturb activated."
-        elif "deactivate dnd" in user_input_lower:
-            MODE_DND = False; response = "Do Not Disturb deactivated."
-        elif "activate email off" in user_input_lower:
-            MODE_EMAIL_OFF = True; response = "Email alerts disabled."
-        elif "deactivate email off" in user_input_lower:
-            MODE_EMAIL_OFF = False; response = "Email alerts enabled."
-        elif "activate idle" in user_input_lower:
-            MODE_IDLE = True; response = "Idle mode activated."
-        elif "deactivate idle" in user_input_lower:
-            MODE_IDLE = False; response = "Idle mode deactivated."
-        elif "activate night mode" in user_input_lower or "night mode on" in user_input_lower:
-            MODE_NIGHT = True; response = "Night mode activated."
-        elif "deactivate night mode" in user_input_lower or "night mode off" in user_input_lower:
-            MODE_NIGHT = False; response = "Night mode deactivated."
-        elif "activate emergency" in user_input_lower or "emergency on" in user_input_lower:
-            MODE_EMERGENCY = True; MODE_DND = False; response = "EMERGENCY MODE activated."
-        elif "deactivate emergency" in user_input_lower or "emergency off" in user_input_lower:
-            MODE_EMERGENCY = False; response = "Emergency mode deactivated."
-        elif "privacy on" in user_input_lower or "enable privacy" in user_input_lower:
-            MODE_PRIVACY = True; response = "Privacy masking enabled."
-        elif "privacy off" in user_input_lower or "disable privacy" in user_input_lower:
-            MODE_PRIVACY = False; response = "Privacy masking disabled."
-
-    if response:
-        save_config()
-        return response
-    if "time" in user_input_lower or "clock" in user_input_lower:
-        return f"The time is {datetime.datetime.now().strftime('%I:%M %p')}."
-    if any(w in user_input_lower for w in ["hi", "hello", "hey narada"]):
-        return "Hello! I'm Narada, your AI security assistant."
-    if "how are you" in user_input_lower:
-        return "All systems operational. Standing by to assist."
-    if "your name" in user_input_lower:
-        return "I am Narada, voice assistant of the Garuda Security System."
-    if "status" in user_input_lower:
-        with _mode_lock:
-            parts = [m for m, v in [("DND", MODE_DND), ("Night", MODE_NIGHT),
-                                     ("EMERGENCY", MODE_EMERGENCY), ("Idle", MODE_IDLE)] if v]
-        active = ", ".join(parts) if parts else "none"
-        return f"Active modes: {active}. Threshold: {DETECTION_THRESHOLD:.2f}."
-    return "I heard you, but I'm not sure what to do. Try a command like 'activate dnd'."
-
-
-def query_local_llm(user_input, model=None):
-    """Query Groq cloud API — rich project context, live state, natural language commands."""
-    if not GROQ_API_KEY:
-        return None  # No key configured, fall back to rule-based
-    if model is None:
-        model = GROQ_MODEL
-
-    # Build live state snapshot (read under lock)
-    with _mode_lock:
-        active_modes = [name for name, val in [
-            ("DND", MODE_DND), ("Email-Off", MODE_EMAIL_OFF),
-            ("Idle", MODE_IDLE), ("Night", MODE_NIGHT),
-            ("Emergency", MODE_EMERGENCY), ("Privacy", MODE_PRIVACY),
-        ] if val]
-    uptime_s = int(time.time() - _app_start_time)
-    uptime_str = f"{uptime_s // 3600}h {(uptime_s % 3600) // 60}m" if uptime_s >= 60 else f"{uptime_s}s"
-    state_str = (
-        f"Active modes: {', '.join(active_modes) if active_modes else 'none'}. "
-        f"Detection threshold: {DETECTION_THRESHOLD:.2f}. "
-        f"Detections today: {_detections_today}. "
-        f"Alert active: {_alert_active}. Uptime: {uptime_str}."
-    )
-
-    system_prompt = f"""You are Narada, the AI assistant embedded in Garuda — a smart AI home security system built by Manikanta, running on Raspberry Pi 5 with a Hailo-8L AI accelerator and Sony IMX708 camera.
-
-PROJECT OVERVIEW:
-Garuda performs real-time AI object detection to monitor the environment. It can detect threats, send email alerts, control operation modes, and respond to natural language commands through you (Narada).
-
-HARDWARE:
-- Raspberry Pi 5 (8GB RAM)
-- Hailo-8L NPU (13 TOPS) — runs YOLOv6n detection at up to 60fps
-- Sony IMX708 camera (1280×720 @ 60fps)
-- GPIO: LED indicator (lights up on alerts), HC-SR04 ultrasonic distance sensor
-
-DETECTION SYSTEM:
-- Model: YOLOv6n trained on 80 COCO classes
-- Danger label: scissors (requires 15 consecutive frames at confidence ≥ 0.55 to trigger — avoids false alarms)
-- Detection threshold: adjustable 0.05–0.95 (lower = more sensitive, higher = stricter)
-- On threat: plays alarm sound, sends email alert with detection details and timestamp
-
-OPERATION MODES (you can enable/disable these):
-- **DND** (Do Not Disturb): Silences all audio alarms. Email alerts still work.
-- **Email-Off**: Stops all email alert sending. Local alarms still sound.
-- **Idle**: Disables ALL alerts (audio + email). Use when you know someone trusted is present.
-- **Night**: High-sensitivity mode — logs all detections, stricter alert criteria.
-- **Emergency**: Maximum alert mode — overrides DND, triggers immediate emails.
-- **Privacy**: Masks detected objects on the camera feed (blur/box) for privacy.
-
-CURRENT LIVE STATE:
-{state_str}
-Current time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.
-
-NATURAL LANGUAGE COMMANDS (understand intent, not just exact phrasing):
-- "quiet mode" / "turn on dnd" / "don't disturb me" / "mute alerts" → activate DND
-- "unmute" / "alerts on" / "disable dnd" → deactivate DND
-- "no emails" / "stop email alerts" / "turn off notifications" → activate Email-Off
-- "send emails again" / "enable email alerts" → deactivate Email-Off
-- "idle" / "I'm home" / "pause monitoring" / "stand down" → activate Idle
-- "resume" / "start monitoring" / "watch again" / "back on duty" → deactivate Idle
-- "night mode" / "night watch" / "high alert" → activate Night
-- "day mode" / "normal mode" / "lower alert" → deactivate Night
-- "emergency" / "intruder!" / "maximum alert" → activate Emergency
-- "all clear" / "cancel emergency" / "stand down emergency" → deactivate Emergency
-- "privacy on" / "hide objects" / "blur camera" / "mask detections" → activate Privacy
-- "privacy off" / "show everything" → deactivate Privacy
-- "set threshold to 0.5" / "make it less sensitive" / "confidence 0.6" → change DETECTION_THRESHOLD
-- "status" / "what's running?" / "system check" → describe current state
-- "what can you do?" / "help" / "commands" → list capabilities
-- "how does Garuda work?" / "explain the system" → explain the project
-- "what was detected?" / "any alerts today?" → report detection stats
-
-RESPONSE FORMAT — you MUST respond ONLY with this exact JSON (no markdown wrapper, no backticks, no prose outside the JSON):
-{{"modes":{{"MODE_DND":null,"MODE_EMAIL_OFF":null,"MODE_IDLE":null,"MODE_NIGHT":null,"MODE_EMERGENCY":null,"MODE_PRIVACY":null}},"settings":{{"DETECTION_THRESHOLD":null}},"response":"your reply here"}}
-
-RULES:
-- Set mode values to true (activate), false (deactivate), or null (no change).
-- Set DETECTION_THRESHOLD to a float 0.05–0.95 if requested, else null.
-- "response" must be conversational and helpful. Use **bold**, `code`, and bullet lists where they add clarity.
-- When changing a mode, confirm it and explain what it does in 1-2 sentences.
-- When answering project questions, use the context above — be accurate.
-- Never invent capabilities not described above."""
-
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_input},
-        ],
-        "temperature": 0.3,
-        "max_tokens": 600,
-        "response_format": {"type": "json_object"},
-    }
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    try:
-        res = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            json=payload, headers=headers, timeout=8
-        )
-        res.raise_for_status()
-        content = res.json()["choices"][0]["message"]["content"]
-        return json.loads(content)
-    except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
-        return None  # Network unavailable — fall back to rule-based
-    except Exception:
-        return None
-
-
-def _apply_llm_result(llm_result):
-    """Apply mode/settings changes from an LLM JSON response and return the reply text."""
-    global DETECTION_THRESHOLD
-    def _to_bool(v):
-        if isinstance(v, bool): return v
-        if isinstance(v, int):  return v != 0
-        if isinstance(v, str):
-            return v.lower() in ("true", "active", "on", "yes", "1", "enabled")
-        return None
-    modes_to_change    = llm_result.get("modes", {}) or {}
-    settings_to_change = llm_result.get("settings", {}) or {}
-    with _mode_lock:
-        for key in ["MODE_DND","MODE_EMAIL_OFF","MODE_IDLE","MODE_NIGHT","MODE_EMERGENCY","MODE_PRIVACY"]:
-            raw = modes_to_change.get(key)
-            if raw is not None:
-                val = _to_bool(raw)
-                if val is not None:
-                    globals()[key] = val
-        raw_thr = settings_to_change.get("DETECTION_THRESHOLD")
-        if raw_thr is not None:
-            try:
-                DETECTION_THRESHOLD = max(0.05, min(0.95, float(raw_thr)))
-            except (ValueError, TypeError):
-                pass
-        if MODE_EMERGENCY:
-            globals()["MODE_DND"] = False
-        if MODE_NIGHT:
-            globals()["MODE_DND"] = False
-    save_config()
-    push_urgent_ws()
-    return llm_result.get("response") or "Done."
-
-
-def voice_assistant_loop(stop_event, current_user=None):
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    global DETECTION_THRESHOLD
-
-    recognizer = sr.Recognizer()
-    try:
-        mic = sr.Microphone()
-        append_voice_log("Microphone connected.", user_name=current_user)
-    except Exception as e:
-        append_voice_log(f"Error accessing microphone: {e}", user_name=current_user)
-        return
-
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source)
-        append_voice_log("Calibrated for ambient noise.", user_name=current_user)
-
-    while not stop_event.is_set():
-        with mic as source:
-            append_voice_log("Listening...", user_name=current_user)
-            try:
-                audio = recognizer.listen(source, timeout=10, phrase_time_limit=10)
-            except sr.WaitTimeoutError:
-                continue
-
-        try:
-            user_input = recognizer.recognize_google(audio)
-            append_voice_log(f"You said: {user_input}", user_name=current_user)
-        except sr.UnknownValueError:
-            append_voice_log("Could not understand audio.", user_name=current_user)
-            continue
-        except sr.RequestError as e:
-            append_voice_log(f"Speech recognition error: {e}", user_name=current_user)
-            continue
-
-        user_input_lower = user_input.lower()
-        llm_result = query_local_llm(user_input)
-
-        if llm_result is not None:
-            response = _apply_llm_result(llm_result)
-        else:
-            response = apply_rule_based_command(user_input_lower)
-
-        append_voice_response(response, user_name=current_user)
-        time.sleep(0.5)
 
 ##############################################################################
 # SESSION MANAGEMENT
@@ -1920,345 +623,12 @@ _ACCESS_DURATION  = 900           # 15 minutes — short-lived access token
 _REFRESH_DURATION = 7 * 24 * 3600  # 7 days — refresh token
 
 # Refresh token store: token → {username, role, expires, created_at}
-_refresh_tokens: dict = {}
 
-def create_refresh_token(username: str) -> str:
-    token = secrets.token_hex(64)
-    now = time.time()
-    _refresh_tokens[token] = {
-        "username": username,
-        "role": USERS[username]["role"],
-        "expires": now + _REFRESH_DURATION,
-        "created_at": now,
-    }
-    return token
-
-def get_refresh_token(token: str) -> dict | None:
-    s = _refresh_tokens.get(token)
-    if not s:
-        return None
-    if s["expires"] <= time.time():
-        del _refresh_tokens[token]
-        return None
-    return s
-
-def create_session(username, duration=None):
-    if duration is None:
-        duration = _ACCESS_DURATION
-    token = secrets.token_hex(64)
-    now = time.time()
-    _sessions[token] = {
-        "username": username,
-        "role": USERS[username]["role"],
-        "expires": now + duration,
-        "created_at": now,
-        "max_lifetime": now + 86400,  # absolute 24-hour hard limit
-        "logs_unlocked": False,
-    }
-    return token
-
-def create_master_session(duration=3600):
-    """Create an admin session via master key — logs unlocked immediately."""
-    token = secrets.token_hex(64)
-    now = time.time()
-    _sessions[token] = {
-        "username": "admin",
-        "role": "admin",
-        "expires": now + duration,
-        "created_at": now,
-        "max_lifetime": now + 28800,  # absolute 8-hour hard limit for master sessions
-        "logs_unlocked": True,
-    }
-    return token
-
-def get_session(token):
-    if not token:
-        return None
-    s = _sessions.get(token)
-    if not s:
-        return None
-    now = time.time()
-    if s["expires"] <= now or now >= s.get("max_lifetime", now + 1):
-        del _sessions[token]
-        return None
-    return s
-
-def _prune_expired_sessions():
-    """Remove sessions that have expired or exceeded their absolute lifetime."""
-    now = time.time()
-    dead = [t for t, s in _sessions.items()
-            if s["expires"] <= now or now >= s.get("max_lifetime", now + 1)]
-    for t in dead:
-        del _sessions[t]
-
-def require_session(request: Request):
-    # X-Garuda-Token header takes priority (cross-origin API); cookie is browser fallback
-    token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-    session = get_session(token)
-    if not session:
-        raise HTTPException(401, "Not authenticated")
-    # No sliding window — access tokens are short-lived (15 min); use /api/refresh to renew.
-    # Inject token so endpoints can exclude the current session during invalidation.
-    session["token"] = token
-    return session
-
-def require_admin(request: Request):
-    session = require_session(request)
-    if session["role"] != "admin":
-        raise HTTPException(403, "Admin access required")
-    return session
-
-def require_logs(request: Request):
-    """Admin session AND master key must have been entered this session."""
-    session = require_admin(request)
-    if not session.get("logs_unlocked", False):
-        raise HTTPException(403, "Master key required to view logs.")
-    return session
-
-##############################################################################
-# STATE HELPER
-##############################################################################
-def get_state_dict():
-    global _alert_active, _danger_trigger_info, _alert_end_time
-    # Expire alert once the wall-clock timer runs out
-    _just_cleared = False
-    with _alert_lock:
-        if _alert_active and _alert_end_time > 0 and time.time() >= _alert_end_time:
-            _alert_active = False
-            _alert_end_time = 0.0
-            _danger_trigger_info = ""
-            _just_cleared = True
-    if _just_cleared:
-        push_urgent_ws()   # push cleared state outside lock to avoid deadlock
-
-    uptime = int(time.time() - _app_start_time)
-    hours, rem = divmod(uptime, 3600)
-    mins, secs = divmod(rem, 60)
-    uptime_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
-
-    # System health (psutil) — EMA-smoothed to avoid jitter
-    global _cpu_ema, _ram_ema, _temp_ema, _cpu_cores_ema
-    cpu_pct = None
-    ram_pct = None
-    cpu_temp = None
-    cpu_cores = []
-    ram_used_gb = None
-    ram_total_gb = None
-    if psutil:
-        raw_cpu = psutil.cpu_percent(interval=None)
-        vm = psutil.virtual_memory()
-        raw_ram = vm.percent
-        _cpu_ema = _EMA_A * raw_cpu + (1 - _EMA_A) * _cpu_ema
-        _ram_ema = _EMA_A * raw_ram + (1 - _EMA_A) * _ram_ema
-        cpu_pct = round(_cpu_ema, 1)
-        ram_pct = round(_ram_ema, 1)
-        ram_used_gb  = round(vm.used  / (1024 ** 3), 1)
-        ram_total_gb = round(vm.total / (1024 ** 3), 1)
-        # Per-core EMA
-        raw_cores = psutil.cpu_percent(percpu=True, interval=None)
-        if not _cpu_cores_ema:
-            _cpu_cores_ema.extend(raw_cores)
-        else:
-            for i, v in enumerate(raw_cores):
-                if i < len(_cpu_cores_ema):
-                    _cpu_cores_ema[i] = _EMA_A * v + (1 - _EMA_A) * _cpu_cores_ema[i]
-        cpu_cores = [round(v, 1) for v in _cpu_cores_ema]
-        try:
-            temps = psutil.sensors_temperatures()
-            if temps:
-                for sensor_name in ('cpu_thermal', 'coretemp', 'k10temp', 'acpitz'):
-                    if sensor_name in temps and temps[sensor_name]:
-                        raw_temp = temps[sensor_name][0].current
-                        _temp_ema = _EMA_A * raw_temp + (1 - _EMA_A) * _temp_ema
-                        cpu_temp = round(_temp_ema, 1)
-                        break
-        except Exception:
-            pass
-
-    inference_fps = round(_total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
-
-    # ── Disk usage ──
-    disk_pct = None
-    disk_used_gb = None
-    disk_total_gb = None
-    if psutil:
-        try:
-            du = psutil.disk_usage('/')
-            disk_pct = round(du.percent, 1)
-            disk_used_gb = round(du.used / (1024 ** 3), 1)
-            disk_total_gb = round(du.total / (1024 ** 3), 1)
-        except Exception:
-            pass
-
-    # ── Network status ──
-    net_connected = False
-    net_iface = None
-    if psutil:
-        try:
-            stats = psutil.net_if_stats()
-            for iface in ('wlan0', 'eth0', 'end0'):
-                if iface in stats and stats[iface].isup:
-                    net_connected = True
-                    net_iface = iface
-                    break
-        except Exception:
-            pass
-
-    # ── Thermal throttling (RPi5: >80°C = throttled) ──
-    throttled = False
-    if cpu_temp and cpu_temp >= 80:
-        throttled = True
-
-    # ── Security health ──
-    # If no HEARTBEAT_KEY is configured, watchdog is N/A (always OK)
-    _hb_key = os.environ.get("HEARTBEAT_KEY", "")
-    watchdog_ok = True if not _hb_key else (time.time() - _last_heartbeat) < _DEADMAN_TIMEOUT
-    camera_blind = _blind_alert_sent
-
-    # Expire night presence alert if window ended
-    global _night_presence_alert_active
-    with _np_lock:
-        if _night_presence_alert_active and time.time() > _night_presence_alert_end_time:
-            _night_presence_alert_active = False
-    np_alert = _night_presence_alert_active
-
-    return {
-        "modes": {
-            "dnd": MODE_DND,
-            "email_off": MODE_EMAIL_OFF,
-            "idle": MODE_IDLE,
-            "night": MODE_NIGHT,
-            "emergency": MODE_EMERGENCY,
-            "privacy": MODE_PRIVACY,
-        },
-        "alert_active": _alert_active,
-        "night_presence_alert": np_alert,
-        "danger_info": _danger_trigger_info,   # only non-empty during a danger alert
-        "last_alert": _last_alert_time.isoformat() if _last_alert_time else None,
-        "uptime": uptime_str,
-        "uptime_seconds": uptime,
-        "system_log": system_updates_log[-50:],
-        "voice_log": voice_assistant_log[-30:],
-        "voice_responses": voice_responses[-30:],
-        "detection_threshold": DETECTION_THRESHOLD,
-        "cpu_percent": cpu_pct,
-        "cpu_cores": cpu_cores,
-        "ram_percent": ram_pct,
-        "ram_used_gb": ram_used_gb,
-        "ram_total_gb": ram_total_gb,
-        "cpu_temp": cpu_temp,
-        "inference_fps": inference_fps,
-        "owner_present": _owner_present,
-        "owner_name": next(
-            (d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), None
-        ),
-        "known_devices": [
-            {"name": d["name"], "mac": d["mac"],
-             "online": d["mac"].lower() in _last_arp_cache}
-            for d in KNOWN_DEVICES
-        ],
-        "alert_history": _alert_history,
-        # Security health
-        "watchdog_ok": watchdog_ok,
-        "camera_blind": camera_blind,
-        "throttled": throttled,
-        # Extended hardware
-        "disk_percent": disk_pct,
-        "disk_used_gb": disk_used_gb,
-        "disk_total_gb": disk_total_gb,
-        "net_connected": net_connected,
-        "net_iface": net_iface,
-        # Log counts for badge display (avoid sending full arrays over WS)
-        "detection_log_count": len(_detection_log),
-        "presence_log_count": len(_presence_log),
-        # Offline queue
-        "net_online": _net_online,
-        "pending_sync": get_pending_count(),
-        # Clip recording state (lets JS reset button when server auto-stops)
-        "clip_recording": _clip_writer is not None,
-    }
-
-##############################################################################
-# DEAD MAN'S SWITCH MONITOR
-##############################################################################
-def _deadman_monitor():
-    """Background thread: if no /api/heartbeat in _DEADMAN_TIMEOUT seconds, send tamper alert.
-
-    Opt-in via DEADMAN_ENABLED=1. Only meaningful with an external monitor
-    hitting /api/heartbeat. Anti-spam guards: never alarms unless at least one
-    real heartbeat has been received (otherwise there is simply no heartbeat
-    source), and repeat alerts are rate-limited to _DEADMAN_REALERT_INTERVAL.
-    """
-    global _deadman_alert_sent, _deadman_last_alert
-    if not _DEADMAN_ENABLED:
-        log_system_update("[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).")
-        return
-    while True:
-        time.sleep(60)
-        # No heartbeat has ever arrived → no monitor configured, not tampering.
-        if not _heartbeat_ever:
-            continue
-        elapsed = time.time() - _last_heartbeat
-        now = time.time()
-        if elapsed > _DEADMAN_TIMEOUT and not _deadman_alert_sent \
-                and (now - _deadman_last_alert) > _DEADMAN_REALERT_INTERVAL:
-            _deadman_alert_sent = True
-            _deadman_last_alert = now
-            log_system_update(f"[TAMPER] No heartbeat in {int(elapsed)}s — possible system tampering!")
-            # Send tamper alert email
-            try:
-                body = (f"Garuda dead man's switch triggered.\n"
-                        f"No heartbeat received in {int(elapsed)} seconds.\n"
-                        f"Possible system tampering or network failure.")
-                msg = MIMEText(body)
-                msg['Subject'] = "TAMPER ALERT: Garuda heartbeat missed"
-                msg['From'] = EMAIL_SENDER
-                msg['To'] = ", ".join(EMAIL_RECIPIENTS)
-                with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as server:
-                    server.login(EMAIL_SENDER, EMAIL_SENDER_PASS)
-                    server.send_message(msg)
-            except Exception as e:
-                log_system_update(f"[TAMPER] Failed to send alert email: {e}")
-
-##############################################################################
-# SCHEDULED MODES
-##############################################################################
-def _time_in_range(start: str, end: str, current: str) -> bool:
-    """Return True if current (HH:MM) is in [start, end] — handles midnight wrap."""
-    if start <= end:
-        return start <= current <= end
-    return current >= start or current <= end
-
-def _schedule_monitor():
-    """Background thread: enforce scheduled mode transitions.
-
-    Checks every 30 s and immediately on first run so startup catches the
-    correct state without a 60-s blind window.  Takes a dict snapshot before
-    iterating so a concurrent update_config() call can't cause a RuntimeError.
-    """
-    mode_map = {
-        "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
-        "idle": "MODE_IDLE", "night": "MODE_NIGHT",
-    }
-    while True:
-        sched_snap = dict(MODE_SCHEDULE)   # snapshot outside lock — avoids racing with update_config
-        if sched_snap:
-            now_str = datetime.datetime.now().strftime("%H:%M")
-            changed = False
-            with _mode_lock:
-                for mode_name, sched in sched_snap.items():
-                    start = sched.get("start", "")
-                    end   = sched.get("end", "")
-                    if not start or not end or mode_name not in mode_map:
-                        continue
-                    in_range = _time_in_range(start, end, now_str)
-                    gkey = mode_map[mode_name]
-                    if globals().get(gkey) != in_range:
-                        globals()[gkey] = in_range
-                        changed = True
-            if changed:
-                push_urgent_ws()
-        time.sleep(30)   # sleep AFTER check so first run is immediate; 30 s ≤ worst-case lag
+# Every restart used to sign the whole house out: the store above lived only
+# in memory. It is now mirrored to disk, as SHA-256 digests (the file is no
+# use to someone who reads it), and a token that arrives after a restart is
+# recognised by its digest and adopted back into the store above.
+REFRESH_TOKENS_FILE = str(_BASE / "system_logs" / "refresh_tokens.json")
 
 ##############################################################################
 # FASTAPI APP
@@ -2267,32 +637,55 @@ from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def _lifespan(app):
-    global _event_loop, _ws_trigger, _ws_broadcaster_task
-    _event_loop = asyncio.get_event_loop()
-    _ws_trigger = asyncio.Event()
+    STATE.system.event_loop = asyncio.get_running_loop()
+    STATE.system.ws_trigger = asyncio.Event()
     _init_event_db()
     _load_alert_history()
     _load_presence_log()
     load_master_keys()
-    _ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
-    threading.Thread(target=_presence_poller, daemon=True).start()
-    threading.Thread(target=_deadman_monitor, daemon=True).start()
-    threading.Thread(target=_connectivity_monitor, daemon=True).start()
-    threading.Thread(target=_schedule_monitor, daemon=True).start()
-    threading.Thread(target=_flush_log_thread, daemon=True).start()
+    # Proposals and sessions from the previous run are stale by definition.
+    DRISHTI_CTX.pending.purge()
+    # Backed by a file, so deploying a change does not sign the house out.
+    _drishti_auth.configure(DRISHTI_SESSIONS_PATH)
+    _drishti_auth.prune_expired()
+    DRISHTI_RUNTIME.start()
+    HOME.start()
+    SHORTCUTS.start()
+    log_system_update(
+        f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
+        f"{len(DRISHTI_CTX.registry.devices)} devices")
+    STATE.system.ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
+    _load_refresh_tokens()
+    # Supervised: a loop that raises is logged, restarted with a pause, and
+    # shows on /api/system/info instead of vanishing until the next restart.
+    SUPERVISOR.spawn("presence", _presence_poller)
+    SUPERVISOR.spawn("deadman", _deadman_monitor)
+    SUPERVISOR.spawn("connectivity", _connectivity_monitor)
+    SUPERVISOR.spawn("mode-schedule", _schedule_monitor)
+    SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
+    SHORTCUTS.stop()
+    HOME.stop()
+    DRISHTI_RUNTIME.stop()
     # Flush any remaining buffered log lines before exit
     _do_flush_logs()
-    if _ws_broadcaster_task is not None:
-        _ws_broadcaster_task.cancel()
-        await asyncio.gather(_ws_broadcaster_task, return_exceptions=True)
-        _ws_broadcaster_task = None
+    _save_refresh_tokens()
+    if STATE.system.ws_broadcaster_task is not None:
+        STATE.system.ws_broadcaster_task.cancel()
+        await asyncio.gather(STATE.system.ws_broadcaster_task, return_exceptions=True)
+        STATE.system.ws_broadcaster_task = None
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
         await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)
         _pc_set.clear()
 
-fastapi_app = FastAPI(title="Garuda Security System", lifespan=_lifespan)
+# /docs, /redoc and /openapi.json were served to anyone who asked, over the
+# tunnel: a map of every route for whoever is probing. The reference is still
+# there for an admin, at /api/openapi.json.
+fastapi_app = FastAPI(title="Garuda Security System", version=API_VERSION, lifespan=_lifespan,
+                      docs_url=None, redoc_url=None, openapi_url=None)
+
+_VERCEL_PROJECT_RE = re.escape(os.environ.get("GARUDA_VERCEL_PROJECT", "garuda-26").strip().lower() or "garuda-26")
 
 # CORS — restrict to known origins
 fastapi_app.add_middleware(
@@ -2302,1419 +695,307 @@ fastapi_app.add_middleware(
         "http://localhost:8080",
         "http://127.0.0.1:8080",
     ],
-    allow_origin_regex=r"^https://([a-z0-9-]+\.)*veeramanikanta\.in$|^https://[a-z0-9-]+\.vercel\.app$|^http://(localhost|127\.0\.0\.1)(:\d+)?$",
+    # Credentials are allowed, so the Vercel rule names this project's own
+    # deployments (garuda-26, garuda-26-git-<branch>-..., garuda-26-<hash>-...)
+    # rather than every site anyone hosts on vercel.app.
+    allow_origin_regex=(r"^https://([a-z0-9-]+\.)*veeramanikanta\.in$"
+                        r"|^https://" + _VERCEL_PROJECT_RE + r"(-[a-z0-9-]+)?\.vercel\.app$"
+                        r"|^http://(localhost|127\.0\.0\.1)(:\d+)?$"),
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Garuda-Token"],
+    # PATCH and DELETE are used by /api/home (devices, scenes, schedules,
+    # rules). The Vercel front end is cross-origin, so without them the
+    # browser's preflight fails and those buttons silently do nothing.
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Content-Type", "X-Garuda-Token", "X-Garuda-Refresh"],
 )
 
-# Global rate-limit middleware — applied to all API endpoints
-# Endpoints that do their own per-action rate limiting (login, OTP) keep their
-# individual checks; this catches everything else.
-_RATE_EXEMPT_PREFIXES = ("/static/", "/ws", "/stream", "/api/eval/")
+# Middleware (the functions are in garuda_services/middleware.py; the order
+# of registration here is the order they were declared in).
+# The global rate limit applies to all API endpoints. Endpoints that do their
+# own per-action rate limiting (login, OTP) keep their individual checks; this
+# catches everything else.
+# Health and readiness are polled by monitors; they must not eat the budget.
+_RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
+                         "/api/health", "/api/ready")
 
-@fastapi_app.middleware("http")
-async def global_rate_limit(request: Request, call_next):
-    path = request.url.path
-    _eval_tok = os.environ.get("GARUDA_EVAL_TOKEN", "")
-    _tok_hdr = request.headers.get("X-Eval-Token", "")
-    _eval_bypass = bool(_eval_tok) and _tok_hdr == _eval_tok
-    if not _eval_bypass and not any(path.startswith(p) for p in _RATE_EXEMPT_PREFIXES):
-        if not _check_rate_limit(request):
-            from fastapi.responses import JSONResponse
-            return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
-    return await call_next(request)
+fastapi_app.middleware("http")(global_rate_limit)
+fastapi_app.middleware("http")(product_scope)
+fastapi_app.middleware("http")(security_headers)
 
-# Security headers middleware
-@fastapi_app.middleware("http")
-async def security_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' blob: data:; "
-        "connect-src 'self' wss: ws:; "
-        "frame-ancestors 'none'"
-    )
-    return response
+# Request ids, the /api/v1 alias, one error shape and the access log. Added
+# after the middleware above so it wraps them: a 429 from the rate limiter
+# carries a request id too.
+_core_http.install(fastapi_app, api_version=API_VERSION, client_ip=_get_client_ip)
 
 # Serve static files from garuda_web/
 _static_dir = Path(__file__).parent / "garuda_web"
 if _static_dir.exists():
     fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
-# ── Pydantic models ──────────────────────────────────────────────────────────
-class LoginRequest(BaseModel):
-    username: str
-    password: str
-    remember_me: bool = False
-
-class ModeRequest(BaseModel):
-    mode: str   # "dnd","email_off","idle","night","emergency","privacy"
-    value: bool
-
-class AddUserRequest(BaseModel):
-    username: str
-    password: str
-    role: str = "user"
-    display_name: str = ""
-    box_color: str = "#1565c0"
-
-class DeleteUserRequest(BaseModel):
-    username: str
-
-class UpdateUserRequest(BaseModel):
-    username: str
-    new_password: Optional[str] = None
-    display_name: Optional[str] = None
-    box_color: Optional[str] = None
-
-class ConfigUpdateRequest(BaseModel):
-    detection_threshold: Optional[float] = None
-    email_sender: Optional[str] = None
-    email_sender_pass: Optional[str] = None
-    email_recipients: Optional[List[str]] = None
-    email_cooldown: Optional[int] = None
-    danger_label: Optional[str] = None    # legacy single-label (maps to danger_labels)
-    danger_labels: Optional[List[str]] = None
-    groq_api_key: Optional[str] = None
-    privacy: Optional[bool] = None
-    watch_labels: Optional[List[str]] = None
-    mode_schedule: Optional[dict] = None
-    night_presence_start: Optional[str] = None
-    night_presence_end: Optional[str] = None
-    night_presence_enabled: Optional[bool] = None
-
-class DeviceAddRequest(BaseModel):
-    name: str
-    mac: str
-
-class DeviceDeleteRequest(BaseModel):
-    mac: str
-
-class CustomCommandRequest(BaseModel):
-    phrase: str
-    response: str
-
-class DeleteCommandRequest(BaseModel):
-    phrase: str
-
-class FeedbackRequest(BaseModel):
-    message: str
-    category: str = "general"   # bug | feature | general | other
-    rating: int   = 0           # 1-5 stars, 0 = not rated
-    name: str     = ""          # optional, anonymous if blank
-
-class OTPRequest(BaseModel):
-    username: str
-    password: str
-
-class VerifyOTPRequest(BaseModel):
-    username: str
-    otp: str
-
-class ForgotPasswordRequest(BaseModel):
-    username: Optional[str] = None   # omittable — endpoint resolves from OTP store
-    otp: str
-    new_password: str
-
-class SendForgotOTPRequest(BaseModel):
-    username: str
-
-class WebRTCOfferRequest(BaseModel):
-    sdp: str
-    type: str
-
-class ChatRequest(BaseModel):
-    message: str
-
-# ── Routes ───────────────────────────────────────────────────────────────────
-
-@fastapi_app.get("/", response_class=HTMLResponse)
-async def index():
-    html_path = _static_dir / "index.html"
-    if html_path.exists():
-        return HTMLResponse(html_path.read_text())
-    return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
-
-@fastapi_app.get("/manifest.json")
-async def pwa_manifest():
-    p = _static_dir / "manifest.json"
-    return FileResponse(str(p), media_type="application/manifest+json") if p.exists() else JSONResponse({})
-
-@fastapi_app.get("/sw.js")
-async def service_worker():
-    p = _static_dir / "sw.js"
-    return FileResponse(str(p), media_type="application/javascript",
-                        headers={"Service-Worker-Allowed": "/"}) if p.exists() else Response("", media_type="application/javascript")
-
-@fastapi_app.get("/api/users-public")
-async def users_public():
-    """Return non-sensitive user info for login screen profile cards."""
-    result = []
-    for uname, udata in USERS.items():
-        if udata.get("role") == "user":
-            result.append({
-                "username": uname,
-                "display_name": udata.get("display_name", uname),
-                "box_color": udata.get("box_color", "#1565c0"),
-            })
-    return result
-
-@fastapi_app.post("/api/login")
-async def login(data: LoginRequest, request: Request, response: Response):
-    ip = _get_client_ip(request)
-    if _is_login_locked(ip):
-        raise HTTPException(429, "Too many failed attempts. Try again later.")
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    u = data.username.strip()
-    p = data.password.strip()
-    if u in USERS and USERS[u].get("role") == "admin":
-        # Test-only bypass for the P1-4 evaluation harness. Set GARUDA_EVAL_OTP_BYPASS=1
-        # in the environment before starting the server to allow a named service admin
-        # (GARUDA_EVAL_SERVICE_ADMIN) to sign in via /api/login without the email OTP.
-        _bypass = os.environ.get("GARUDA_EVAL_OTP_BYPASS", "") == "1"
-        _allowed = os.environ.get("GARUDA_EVAL_SERVICE_ADMIN", "")
-        if not (_bypass and _allowed and u == _allowed):
-            raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
-    if u in USERS and _verify_password(p, USERS[u]["password"]):
-        # Auto-migrate plaintext passwords to hashed
-        if not USERS[u]["password"].startswith("pbkdf2:"):
-            USERS[u]["password"] = _hash_password(p)
-            save_users()
-        _clear_login_failure(ip)
-        access_token = create_session(u)
-        refresh_token = create_refresh_token(u)
-        response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
-                            secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
-        response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
-                            secure=_COOKIE_SECURE, max_age=_REFRESH_DURATION, path="/api/refresh")
-        log_system_update(f"Login: {u}")
-        USERS[u]["history"]["logins"].append(
-            datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-        save_users()
-        return {
-            "role": USERS[u]["role"],
-            "username": u,
-            "display_name": USERS[u].get("display_name", u),
-            "box_color": USERS[u].get("box_color", "#1565c0"),
-            "token": access_token,   # for cross-origin clients that can't use cookies
-        }
-    _record_login_failure(ip)
-    raise HTTPException(401, "Invalid username or password.")
-
-@fastapi_app.get("/api/session")
-async def session_info(session=Depends(require_session)):
-    """Return current session user info — used to restore session on page refresh."""
-    u = session["username"]
-    return {
-        "role": session["role"],
-        "username": u,
-        "display_name": USERS.get(u, {}).get("display_name", u),
-        "box_color": USERS.get(u, {}).get("box_color", "#1565c0"),
-        "logs_unlocked": session.get("logs_unlocked", False),
-    }
-
-@fastapi_app.post("/api/logout")
-async def logout(request: Request, response: Response):
-    token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-    if token and token in _sessions:
-        del _sessions[token]
-    # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
-    refresh = request.cookies.get("garuda_refresh")
-    if refresh and refresh in _refresh_tokens:
-        del _refresh_tokens[refresh]
-    response.delete_cookie("garuda_session")
-    response.delete_cookie("garuda_refresh", path="/api/refresh")
-    return {"ok": True}
-
-@fastapi_app.post("/api/refresh")
-async def refresh_session(request: Request, response: Response):
-    """Exchange a valid refresh token for a new 15-minute access token."""
-    refresh = request.cookies.get("garuda_refresh")
-    if not refresh:
-        raise HTTPException(401, "No refresh token.")
-    rs = get_refresh_token(refresh)
-    if not rs:
-        raise HTTPException(401, "Refresh token expired or invalid. Please log in again.")
-    u = rs["username"]
-    if u not in USERS:
-        del _refresh_tokens[refresh]
-        raise HTTPException(401, "User no longer exists.")
-    access_token = create_session(u)
-    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
-                        secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
-    return {
-        "token": access_token,
-        "role": USERS[u]["role"],
-        "username": u,
-    }
-
-@fastapi_app.post("/api/admin/send-otp")
-async def admin_send_otp(data: OTPRequest, request: Request, response: Response):
-    """Admin login step 1: verify credentials, send OTP."""
-    ip = _get_client_ip(request)
-    if _is_login_locked(ip):
-        raise HTTPException(429, "Too many failed attempts. Try again later.")
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts
-    u = data.username.strip()
-    p = data.password.strip()
-    if u not in USERS or not _verify_password(p, USERS[u]["password"]) or USERS[u]["role"] != "admin":
-        _record_login_failure(ip)
-        raise HTTPException(401, "Invalid admin credentials.")
-    # Auto-migrate plaintext passwords to hashed
-    if not USERS[u]["password"].startswith("pbkdf2:"):
-        USERS[u]["password"] = _hash_password(p)
-        save_users()
-    ADMIN_OTP = generate_otp_code(6)
-    _admin_otp_user = u          # store server-side so step 2 cannot be hijacked
-    _admin_otp_ts = time.time()  # for expiry check
-    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, ADMIN_OTP)
-    if not ok:
-        return {"ok": False, "error": err}
-    return {"ok": True}
-
-@fastapi_app.post("/api/admin/verify-otp")
-async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: Response):
-    """Admin login step 2: verify OTP, issue session."""
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    global ADMIN_OTP, _admin_otp_user, _admin_otp_ts, _admin_otp_attempts
-    if not ADMIN_OTP or not _admin_otp_user:
-        raise HTTPException(401, "No OTP pending. Please restart login.")
-    if time.time() - _admin_otp_ts > 300:
-        ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
-        raise HTTPException(401, "OTP expired. Please request a new one.")
-    if _admin_otp_attempts >= 3:
-        ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_attempts = 0
-        raise HTTPException(401, "Too many incorrect attempts. Please restart login.")
-    if not hmac.compare_digest(data.otp.strip(), ADMIN_OTP):
-        _admin_otp_attempts += 1
-        raise HTTPException(401, "Invalid OTP.")
-    u = _admin_otp_user   # use server-stored username, not client-supplied
-    ADMIN_OTP = None; _admin_otp_user = None; _admin_otp_ts = 0; _admin_otp_attempts = 0
-    if u not in USERS or USERS[u]["role"] != "admin":
-        raise HTTPException(401, "Account not authorised.")
-    ip = _get_client_ip(request)
-    _clear_login_failure(ip)
-    access_token = create_session(u)
-    refresh_token = create_refresh_token(u)
-    response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
-                        secure=_COOKIE_SECURE, max_age=_ACCESS_DURATION)
-    response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
-                        secure=_COOKIE_SECURE, max_age=_REFRESH_DURATION, path="/api/refresh")
-    log_system_update(f"Admin login: {u}")
-    return {
-        "role": "admin",
-        "username": u,
-        "display_name": USERS[u].get("display_name", u),
-        "token": access_token,   # for cross-origin clients
-    }
-
-@fastapi_app.post("/api/forgot/send-otp")
-async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    u = data.username.strip()
-    # Always return the same response regardless of whether user exists (anti-enumeration)
-    if u not in USERS:
-        return {"ok": True}
-    otp = generate_otp_code(6)
-    _forgot_otp_store[u] = {"otp": otp, "ts": time.time(), "attempts": 0}
-    global USER_FORGOT_OTP; USER_FORGOT_OTP = otp   # test-facing alias
-    # Send to the user's own email if stored, else fall back to admin recipient
-    dest = USERS[u].get("email") or (EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER)
-    ok, err = send_otp_via_email(dest, otp)
-    if not ok:
-        _forgot_otp_store.pop(u, None)
-        return {"ok": False, "error": err}
-    return {"ok": True}
-
-@fastapi_app.post("/api/forgot/reset")
-async def forgot_reset(data: ForgotPasswordRequest, request: Request):
-    global USER_FORGOT_OTP
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    # username optional: if omitted, find user by matching OTP across store
-    if data.username:
-        u = data.username.strip()
-    else:
-        u = next((k for k, v in _forgot_otp_store.items()
-                  if v.get("otp") == data.otp.strip()), None)
-        if not u:
-            raise HTTPException(401, "No OTP pending.")
-    state = _forgot_otp_store.get(u)
-    if not state:
-        USER_FORGOT_OTP = None
-        raise HTTPException(401, "No OTP pending.")
-    if time.time() - state["ts"] > 300:
-        _forgot_otp_store.pop(u, None)
-        USER_FORGOT_OTP = None
-        raise HTTPException(401, "OTP expired. Please request a new one.")
-    if state["attempts"] >= 3:
-        _forgot_otp_store.pop(u, None)
-        USER_FORGOT_OTP = None
-        raise HTTPException(401, "Too many incorrect attempts. Please request a new OTP.")
-    if not hmac.compare_digest(data.otp.strip(), state["otp"]):
-        state["attempts"] += 1
-        if state["attempts"] >= 3:
-            _forgot_otp_store.pop(u, None)
-            USER_FORGOT_OTP = None
-        raise HTTPException(401, "Invalid OTP.")
-    err = _validate_password_strength(data.new_password)
-    if err:
-        raise HTTPException(400, err)
-    if u not in USERS:
-        raise HTTPException(404, "User not found.")
-    USERS[u]["password"] = _hash_password(data.new_password.strip())
-    _invalidate_user_sessions(u)
-    save_users()
-    log_system_update(f"Password reset for {u}.")
-    _forgot_otp_store.pop(u, None)
-    USER_FORGOT_OTP = None
-    return {"ok": True}
-
-@fastapi_app.get("/api/state")
-async def get_state(session=Depends(require_session)):
-    return get_state_dict()
-
-@fastapi_app.get("/api/cascade_metrics")
-async def get_cascade_metrics(session=Depends(require_session)):
-    return _cascade_metrics.snapshot()
-
-def _require_eval_token(request: Request):
-    """Token-gated access for the P1-4 evaluation harness."""
-    expected = os.environ.get("GARUDA_EVAL_TOKEN", "")
-    if not expected:
-        raise HTTPException(404, "Not found")
-    got = request.headers.get("X-Eval-Token", "")
-    if got != expected:
-        raise HTTPException(403, "Bad eval token")
-
-class EvalInjectRequest(BaseModel):
-    label: str = "Knife"
-    confidence: float = 0.92
-    email: bool = False
-
-@fastapi_app.post("/api/eval/inject_danger")
-async def eval_inject_danger(data: EvalInjectRequest, request: Request):
-    _require_eval_token(request)
-    t_req = time.time()
-    log_scissors_detection(data.label)
-    log_system_update(f"[EVAL_INJECT] {data.label} conf={data.confidence:.2f}")
-    trigger_software_alert()
-    if data.email:
-        try:
-            send_email_alert()
-        except Exception as e:
-            log_system_update(f"[EVAL_INJECT] email failed: {e}")
-    return {"ok": True, "t_request": t_req, "t_alert": time.time(),
-            "latency_ms": round((time.time() - t_req) * 1000, 2),
-            "label": data.label, "confidence": data.confidence}
-
-class EvalTagRequest(BaseModel):
-    tag: str
-    note: str = ""
-
-@fastapi_app.post("/api/eval/tag")
-async def eval_tag(data: EvalTagRequest, request: Request):
-    _require_eval_token(request)
-    msg = f"[EVAL_TAG] {data.tag}"
-    if data.note:
-        msg += f" — {data.note}"
-    log_system_update(msg)
-    return {"ok": True, "t": time.time(), "tag": data.tag, "note": data.note}
-
-@fastapi_app.get("/api/eval/fps_probe")
-async def eval_fps_probe(request: Request):
-    _require_eval_token(request)
-    with _mode_lock:
-        modes = {
-            "dnd": MODE_DND, "email_off": MODE_EMAIL_OFF,
-            "idle": MODE_IDLE, "night": MODE_NIGHT,
-            "emergency": MODE_EMERGENCY, "privacy": MODE_PRIVACY,
-        }
-    cm = _cascade_metrics.snapshot() if _cascade_metrics else {}
-    return {
-        "t": time.time(),
-        "uptime": time.time() - _app_start_time,
-        "total_frames": _total_frames,
-        "modes": modes,
-        "cascade": cm,
-        "alert_active": _alert_active,
-    }
-
-@fastapi_app.post("/api/chat")
-async def chat(data: ChatRequest, session=Depends(require_session)):
-    msg = data.message.strip()
-    if not msg:
-        raise HTTPException(400, "Empty message")
-    if not GROQ_API_KEY:
-        reply = ("Narada is not configured yet. "
-                 "Please go to Admin → Settings → Narada and enter your Groq API key, then click Save Settings.")
-        return {"response": reply}
-    loop = asyncio.get_event_loop()
-    llm_result = await loop.run_in_executor(None, query_local_llm, msg, GROQ_MODEL)
-    if llm_result is not None:
-        reply = _apply_llm_result(llm_result)
-    else:
-        reply = apply_rule_based_command(msg.lower())
-    return {"response": reply}
-
-def _groq_stream_text(user_input):
-    """Sync generator: yields text tokens from Groq streaming API."""
-    if not GROQ_API_KEY:
-        yield apply_rule_based_command(user_input.lower())
-        return
-    system_prompt = (
-        "You are Narada, the AI assistant embedded in Garuda — an AI home security system "
-        "running on Raspberry Pi 5 with Hailo-8L AI accelerator and IMX708 camera (1280×720 @ 60fps).\n"
-        "System details: YOLOv6n object detection, danger label = scissors (single-frame trigger, "
-        "60s cooldown between alerts), modes: DND / Night / Emergency / Idle / Privacy, detection threshold "
-        "(0.05–0.95 default 0.35), email alerts via Gmail SMTP, WebRTC + WS binary JPEG + MJPEG "
-        "camera streaming, Groq LLM (llama-3.3-70b-versatile) for this chat.\n"
-        "When the user requests a mode or setting change, confirm what you're doing. "
-        "Be concise and direct. Use markdown (bold, code blocks, lists) where it adds clarity."
-    )
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_input},
-        ],
-        "temperature": 0.7,
-        "max_tokens": 600,
-        "stream": True,
-    }
-    headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    try:
-        with requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            json=payload, headers=headers, stream=True, timeout=30
-        ) as resp:
-            resp.raise_for_status()
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                if line.startswith(b"data: "):
-                    chunk_raw = line[6:]
-                    if chunk_raw == b"[DONE]":
-                        return
-                    try:
-                        chunk = json.loads(chunk_raw)
-                        token = chunk["choices"][0]["delta"].get("content", "")
-                        if token:
-                            yield token
-                    except Exception:
-                        pass
-    except Exception:
-        yield apply_rule_based_command(user_input.lower())
-
-@fastapi_app.post("/api/chat/stream")
-async def chat_stream(data: ChatRequest, session=Depends(require_session)):
-    """SSE streaming chat — tokens arrive in real-time; commands applied after full response."""
-    msg = data.message.strip()
-    if not msg:
-        raise HTTPException(400, "Empty message")
-
-    loop  = asyncio.get_event_loop()
-    queue: asyncio.Queue = asyncio.Queue()
-
-    def _worker():
-        full_tokens = []
-        for token in _groq_stream_text(msg):
-            full_tokens.append(token)
-            loop.call_soon_threadsafe(queue.put_nowait, ("token", token))
-        # Apply rule-based commands from the streamed text (no second LLM call).
-        # The streaming endpoint is conversational — mode changes should go
-        # through the non-streaming /api/chat endpoint which uses structured JSON.
-        full_text = "".join(full_tokens)
-        apply_rule_based_command(full_text.lower())
-        loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
-
-    threading.Thread(target=_worker, daemon=True).start()
-
-    async def generate():
-        yield f"data: {json.dumps({'type': 'start'})}\n\n"
-        while True:
-            try:
-                kind, payload_val = await asyncio.wait_for(queue.get(), timeout=35)
-            except asyncio.TimeoutError:
-                break
-            if kind == "done":
-                yield f"data: {json.dumps({'type': 'done'})}\n\n"
-                break
-            yield f"data: {json.dumps({'type': 'token', 'text': payload_val})}\n\n"
-
-    return StreamingResponse(
-        generate(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
-
-@fastapi_app.post("/api/modes")
-async def set_mode(data: ModeRequest, session=Depends(require_session)):
-    global MODE_DND, MODE_EMAIL_OFF, MODE_IDLE, MODE_NIGHT, MODE_EMERGENCY, MODE_PRIVACY
-    mode_map = {
-        "dnd": "MODE_DND", "email_off": "MODE_EMAIL_OFF",
-        "idle": "MODE_IDLE", "night": "MODE_NIGHT",
-        "emergency": "MODE_EMERGENCY", "privacy": "MODE_PRIVACY",
-    }
-    if data.mode not in mode_map:
-        raise HTTPException(400, f"Unknown mode: {data.mode}")
-    with _mode_lock:
-        globals()[mode_map[data.mode]] = data.value
-        if data.mode == "emergency" and data.value:
-            MODE_DND = False
-    await _async_save_config()
-    log_system_update(f"Mode {data.mode} set to {data.value} by {session['username']}")
-    push_urgent_ws()
-    return {"ok": True, "modes": get_state_dict()["modes"]}
-
-@fastapi_app.get("/api/users")
-async def list_users(session=Depends(require_admin)):
-    result = {}
-    for uname, udata in USERS.items():
-        result[uname] = {
-            "role": udata.get("role"),
-            "display_name": udata.get("display_name", uname),
-            "box_color": udata.get("box_color", "#1565c0"),
-        }
-    return result
-
-@fastapi_app.post("/api/users/add")
-async def add_user(data: AddUserRequest, session=Depends(require_admin)):
-    un = (data.username or "").strip()
-    if not un:
-        raise HTTPException(400, "Username required.")
-    if un in USERS:
-        raise HTTPException(400, "Username already exists.")
-    if not re.match(r'^[a-zA-Z0-9_-]{3,32}$', un):
-        raise HTTPException(400, "Username must be 3-32 chars, alphanumeric, underscore or hyphen only.")
-    if data.role not in ("user",):
-        raise HTTPException(400, "Role must be 'user'. Admins cannot be created via this endpoint.")
-    err = _validate_password_strength(data.password)
-    if err:
-        raise HTTPException(400, err)
-    USERS[un] = {
-        "password": _hash_password(data.password.strip()),
-        "role": "user",
-        "display_name": data.display_name or un.capitalize(),
-        "box_color": data.box_color,
-        "history": {"logins": [], "narada_activity": []},
-    }
-    save_users()
-    log_system_update(f"User added: {un}")
-    return {"ok": True}
-
-@fastapi_app.post("/api/users/delete")
-async def delete_user(data: DeleteUserRequest, session=Depends(require_admin)):
-    if data.username == "admin":
-        raise HTTPException(400, "Cannot delete the admin account.")
-    if data.username not in USERS:
-        raise HTTPException(404, "User not found.")
-    del USERS[data.username]
-    save_users()
-    log_system_update(f"User deleted: {data.username}")
-    return {"ok": True}
-
-@fastapi_app.post("/api/users/update")
-async def update_user(data: UpdateUserRequest, session=Depends(require_admin)):
-    if data.username not in USERS:
-        raise HTTPException(404, "User not found.")
-    if data.new_password:
-        err = _validate_password_strength(data.new_password)
-        if err:
-            raise HTTPException(400, err)
-        USERS[data.username]["password"] = _hash_password(data.new_password.strip())
-        current_token = session.get("token")
-        _invalidate_user_sessions(data.username, except_token=current_token)
-    if data.display_name is not None:
-        USERS[data.username]["display_name"] = data.display_name
-    if data.box_color is not None:
-        USERS[data.username]["box_color"] = data.box_color
-    save_users()
-    log_system_update(f"User updated: {data.username}")
-    return {"ok": True}
-
-@fastapi_app.get("/api/config")
-async def get_config(session=Depends(require_admin)):
-    return {
-        "detection_threshold": DETECTION_THRESHOLD,
-        "danger_labels": DANGER_LABELS,
-        "email_sender": EMAIL_SENDER,
-        "email_recipients": EMAIL_RECIPIENTS,
-        "email_cooldown": EMAIL_COOLDOWN,
-        "privacy": MODE_PRIVACY,
-        "custom_voice_commands": CUSTOM_VOICE_COMMANDS,
-        "custom_modes": CUSTOM_MODES,
-        "watch_labels": WATCH_LABELS,
-        "groq_configured": bool(GROQ_API_KEY),
-        "mode_schedule": MODE_SCHEDULE,
-        "night_presence_window": NIGHT_PRESENCE_WINDOW,
-    }
-
-@fastapi_app.post("/api/config")
-async def update_config(data: ConfigUpdateRequest, session=Depends(require_admin)):
-    global DETECTION_THRESHOLD, EMAIL_SENDER, EMAIL_SENDER_PASS
-    global EMAIL_RECIPIENTS, EMAIL_COOLDOWN, MODE_PRIVACY, GROQ_API_KEY, DANGER_LABELS
-    global NIGHT_PRESENCE_WINDOW
-    if data.detection_threshold is not None:
-        DETECTION_THRESHOLD = max(0.05, min(0.95, data.detection_threshold))
-    if data.email_sender is not None:
-        EMAIL_SENDER = data.email_sender
-    if data.email_sender_pass is not None:
-        EMAIL_SENDER_PASS = data.email_sender_pass
-    if data.email_recipients is not None:
-        if len(data.email_recipients) > 10:
-            raise HTTPException(400, "Maximum 10 email recipients allowed.")
-        for addr in data.email_recipients:
-            if not re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', addr):
-                raise HTTPException(400, f"Invalid email address: {addr}")
-        EMAIL_RECIPIENTS = data.email_recipients
-    if data.email_cooldown is not None:
-        if not (5 <= data.email_cooldown <= 3600):
-            raise HTTPException(400, "Email cooldown must be between 5 and 3600 seconds.")
-        EMAIL_COOLDOWN = data.email_cooldown
-    if data.groq_api_key is not None:
-        GROQ_API_KEY = data.groq_api_key
-    if data.privacy is not None:
-        with _mode_lock:
-            MODE_PRIVACY = data.privacy
-    # Accept danger_labels (list) or legacy danger_label (single)
-    if data.danger_labels is not None:
-        DANGER_LABELS = [l.strip() for l in data.danger_labels if l.strip()]
-        if app_gst and hasattr(app_gst, 'user_data'):
-            app_gst.user_data.danger_labels = list(DANGER_LABELS)
-    elif data.danger_label is not None:
-        new_lbl = data.danger_label.strip()
-        if new_lbl:
-            DANGER_LABELS = [new_lbl]
-            if app_gst and hasattr(app_gst, 'user_data'):
-                app_gst.user_data.danger_labels = list(DANGER_LABELS)
-    if data.watch_labels is not None:
-        global WATCH_LABELS
-        WATCH_LABELS = [l.strip() for l in data.watch_labels if l.strip()]
-    if data.mode_schedule is not None:
-        global MODE_SCHEDULE
-        # Validate structure: {mode: {start: HH:MM, end: HH:MM}}
-        valid_modes = {"dnd", "email_off", "idle", "night"}
-        clean = {}
-        for k, v in data.mode_schedule.items():
-            if k in valid_modes and isinstance(v, dict):
-                s = v.get("start", "")
-                e = v.get("end", "")
-                if re.match(r'^\d{2}:\d{2}$', s) and re.match(r'^\d{2}:\d{2}$', e):
-                    clean[k] = {"start": s, "end": e}
-        MODE_SCHEDULE = clean
-    # Night presence window
-    if data.night_presence_start is not None or data.night_presence_end is not None or data.night_presence_enabled is not None:
-        with _np_lock:
-            if data.night_presence_start is not None:
-                if re.match(r'^\d{2}:\d{2}$', data.night_presence_start):
-                    NIGHT_PRESENCE_WINDOW["start"] = data.night_presence_start
-            if data.night_presence_end is not None:
-                if re.match(r'^\d{2}:\d{2}$', data.night_presence_end):
-                    NIGHT_PRESENCE_WINDOW["end"] = data.night_presence_end
-            if data.night_presence_enabled is not None:
-                NIGHT_PRESENCE_WINDOW["enabled"] = data.night_presence_enabled
-    await _async_save_config()
-    log_system_update("Config updated.")
-    return {"ok": True}
-
-@fastapi_app.post("/api/config/command/add")
-async def add_command(data: CustomCommandRequest, session=Depends(require_admin)):
-    phrase = (data.phrase or "").strip()
-    if not phrase:
-        raise HTTPException(400, "Command phrase cannot be empty.")
-    if len(phrase) > 200:
-        raise HTTPException(400, "Command phrase must be 200 characters or fewer.")
-    if len(data.response or "") > 500:
-        raise HTTPException(400, "Command response must be 500 characters or fewer.")
-    if len(CUSTOM_VOICE_COMMANDS) >= 100 and phrase.lower() not in CUSTOM_VOICE_COMMANDS:
-        raise HTTPException(400, "Maximum 100 custom commands reached.")
-    CUSTOM_VOICE_COMMANDS[phrase.lower()] = data.response
-    await _async_save_config()
-    return {"ok": True}
-
-@fastapi_app.post("/api/config/command/delete")
-async def delete_command(data: DeleteCommandRequest, session=Depends(require_admin)):
-    CUSTOM_VOICE_COMMANDS.pop(data.phrase.lower(), None)
-    await _async_save_config()
-    return {"ok": True}
-
-@fastapi_app.get("/api/devices")
-async def get_devices(session=Depends(require_admin)):
-    return {"devices": KNOWN_DEVICES, "owner_present": _owner_present}
-
-@fastapi_app.get("/api/arp")
-async def get_arp_table(session=Depends(require_admin)):
-    """Return all active ARP entries so admin can identify device MACs."""
-    entries = []
-    try:
-        with open('/proc/net/arp') as f:
-            for line in f.readlines()[1:]:   # skip header
-                parts = line.split()
-                if len(parts) >= 4 and parts[2] == '0x2':  # 0x2 = complete entry
-                    entries.append({"ip": parts[0], "mac": parts[3]})
-    except Exception as e:
-        raise HTTPException(500, str(e))
-    registered_macs = {d["mac"].lower() for d in KNOWN_DEVICES}
-    for e in entries:
-        e["registered"] = e["mac"].lower() in registered_macs
-    return {"entries": entries}
-
-def _do_presence_check():
-    """Blocking presence check — run in thread executor from async endpoints."""
-    global _owner_present, _owner_last_seen
-    subnet = _get_local_subnet()
-    if subnet:
-        _probe_subnet_for_arp(subnet)
-        time.sleep(2)
-    found = _check_device_presence()
-    if found:
-        _owner_last_seen = time.time()
-        if not _owner_present:
-            _owner_present = True
-            dev = next((d["name"] for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "Unknown")
-            mac = next((d["mac"]  for d in KNOWN_DEVICES if d["mac"].lower() in _last_arp_cache), "")
-            _append_presence_log("arrived", dev, mac)
-            log_system_update(f"[OWNER] {dev} arrived (manual refresh).")
-    elif _owner_present and (time.time() - _owner_last_seen > OWNER_AWAY_GRACE):
-        _owner_present = False
-        dev = next((d["name"] for d in KNOWN_DEVICES), "Unknown")
-        _append_presence_log("left", dev, "")
-        log_system_update(f"[OWNER] {dev} away (manual refresh — device not found).")
-
-@fastapi_app.post("/api/presence_refresh")
-async def presence_refresh(session=Depends(require_admin)):
-    """Trigger an immediate ARP presence check without waiting for the 30s poller."""
-    loop = asyncio.get_event_loop()
-    await loop.run_in_executor(None, _do_presence_check)
-    push_urgent_ws()
-    return {"owner_present": _owner_present}
-
-@fastapi_app.post("/api/devices/add")
-async def add_device(data: DeviceAddRequest, session=Depends(require_admin)):
-    mac = data.mac.strip().lower()
-    if not re.match(r'^([0-9a-f]{2}:){5}[0-9a-f]{2}$', mac):
-        raise HTTPException(400, "Invalid MAC address format (use aa:bb:cc:dd:ee:ff)")
-    if any(d['mac'].lower() == mac for d in KNOWN_DEVICES):
-        raise HTTPException(400, "Device with this MAC already registered")
-    KNOWN_DEVICES.append({"name": data.name.strip(), "mac": mac})
-    await _async_save_config()
-    log_system_update(f"Known device added: {data.name.strip()} ({mac})")
-    return {"ok": True, "devices": KNOWN_DEVICES}
-
-@fastapi_app.post("/api/devices/delete")
-async def delete_device(data: DeviceDeleteRequest, session=Depends(require_admin)):
-    mac = data.mac.strip().lower()
-    before = len(KNOWN_DEVICES)
-    KNOWN_DEVICES[:] = [d for d in KNOWN_DEVICES if d['mac'].lower() != mac]
-    if len(KNOWN_DEVICES) == before:
-        raise HTTPException(404, "Device not found")
-    await _async_save_config()
-    log_system_update(f"Known device removed: {mac}")
-    return {"ok": True, "devices": KNOWN_DEVICES}
-
-@fastapi_app.post("/api/email/test")
-async def test_email(session=Depends(require_admin)):
-    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, "TEST-123")
-    if not ok:
-        return {"ok": False, "error": err}
-    return {"ok": True}
-
-@fastapi_app.get("/api/logs")
-async def get_logs(session=Depends(require_logs)):
-    return {
-        "system_log": system_updates_log,
-        "voice_log": voice_assistant_log,
-        "voice_responses": voice_responses,
-        "presence_log": _presence_log[-200:],
-        "detection_log": _detection_log[-200:],
-    }
-
-@fastapi_app.get("/api/logs/download")
-async def download_logs(session=Depends(require_logs)):
-    """Return all permanent logs as a single combined text file for download."""
-    parts = []
-    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    parts.append(f"# Garuda Security System — Full Log Export")
-    parts.append(f"# Generated: {stamp}")
-    parts.append("")
-
-    for title, filepath in [
-        ("SYSTEM LOG", PERM_SYSTEM_LOG),
-        ("VOICE LOG",  PERM_VOICE_LOG),
-        ("DETECTION LOG", PERM_DETECTION_LOG),
-        ("PRESENCE LOG", PRESENCE_LOG_FILE),
-    ]:
-        parts.append(f"{'='*60}")
-        parts.append(f"  {title}")
-        parts.append(f"{'='*60}")
-        try:
-            if filepath.endswith(".json"):
-                # presence_log is JSON array
-                if os.path.exists(filepath):
-                    with open(filepath, encoding="utf-8") as f:
-                        data = json.load(f)
-                    for e in data:
-                        parts.append(f"[{e.get('ts','')}] {e.get('event','').upper():8s} {e.get('device','')} ({e.get('mac','')})")
-                else:
-                    parts.append("(no entries)")
-            else:
-                if os.path.exists(filepath):
-                    with open(filepath, encoding="utf-8") as f:
-                        content = f.read().strip()
-                    parts.append(content if content else "(no entries)")
-                else:
-                    parts.append("(no entries)")
-        except Exception as ex:
-            parts.append(f"(error reading log: {ex})")
-        parts.append("")
-
-    content = "\n".join(parts)
-    fname = f"garuda-full-log-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}.txt"
-    return Response(
-        content=content,
-        media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
-    )
-
-##############################################################################
-# MASTER KEY ENDPOINTS
-##############################################################################
-@fastapi_app.post("/api/master_key/login")
-async def master_key_login(data: dict, request: Request, response: Response):
-    """Log in with only a master key — issues an admin session with logs unlocked."""
-    if not _check_rate_limit(request):
-        raise HTTPException(429, "Too many requests. Try again later.")
-    key = (data.get("key") or "").strip()
-    # Also accept the bootstrap env var key in case keys file hasn't been written yet
-    _env_key = os.environ.get("MASTER_KEY", "").strip()
-    valid_keys = list(MASTER_KEYS) + ([_env_key] if _env_key else [])
-    if not key or not any(hmac.compare_digest(key, k) for k in valid_keys):
-        raise HTTPException(401, "Invalid master key.")
-    # Persist env key to file so future restarts find it
-    if key not in MASTER_KEYS:
-        MASTER_KEYS.append(key)
-        save_master_keys()
-    token = create_master_session()
-    response.set_cookie("garuda_session", token, httponly=True, samesite="lax", secure=_COOKIE_SECURE, max_age=3600)
-    log_system_update("Master key login.")
-    return {
-        "role": "admin",
-        "username": "admin",
-        "display_name": USERS.get("admin", {}).get("display_name", "Admin"),
-        "token": token,
-        "logs_unlocked": True,
-    }
-
-@fastapi_app.post("/api/master_key/verify")
-async def master_key_verify(data: dict, request: Request, session=Depends(require_admin)):
-    """Unlock logs on an existing admin session by verifying a master key."""
-    key = (data.get("key") or "").strip()
-    if not key or not any(hmac.compare_digest(key, k) for k in MASTER_KEYS):
-        raise HTTPException(401, "Invalid master key.")
-    token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token")
-    if token and token in _sessions:
-        _sessions[token]["logs_unlocked"] = True
-    return {"ok": True, "logs_unlocked": True}
-
-@fastapi_app.get("/api/master_keys")
-async def list_master_keys(session=Depends(require_admin)):
-    """Return master keys with all but last 4 chars masked."""
-    masked = []
-    for k in MASTER_KEYS:
-        if len(k) > 4:
-            masked.append("\u2022" * (len(k) - 4) + k[-4:])
-        else:
-            masked.append("\u2022\u2022\u2022\u2022")
-    return {"keys": masked, "count": len(MASTER_KEYS)}
-
-@fastapi_app.post("/api/master_key/request_otp")
-async def master_key_request_otp(data: dict, session=Depends(require_admin)):
-    """Step 1 of adding a master key: verify an existing key, then email OTP."""
-    global MASTER_KEY_OTP
-    current = (data.get("current_key") or "").strip()
-    if not current or not any(hmac.compare_digest(current, k) for k in MASTER_KEYS):
-        raise HTTPException(401, "Current master key is incorrect.")
-    MASTER_KEY_OTP = generate_otp_code(6)
-    dest = EMAIL_RECIPIENTS[0] if EMAIL_RECIPIENTS else EMAIL_SENDER
-    ok, err = send_otp_via_email(dest, MASTER_KEY_OTP)
-    if not ok:
-        return {"ok": False, "error": err}
-    return {"ok": True}
-
-@fastapi_app.post("/api/master_key/add")
-async def master_key_add(data: dict, session=Depends(require_admin)):
-    """Step 2: verify OTP and persist new master key."""
-    global MASTER_KEY_OTP
-    otp = (data.get("otp") or "").strip()
-    new_key = (data.get("new_key") or "").strip()
-    if not otp or not MASTER_KEY_OTP or not hmac.compare_digest(otp, MASTER_KEY_OTP):
-        raise HTTPException(401, "Invalid OTP.")
-    if not new_key or len(new_key) < 12:
-        raise HTTPException(400, "Key must be at least 12 characters.")
-    if not re.search(r'[A-Z]', new_key):
-        raise HTTPException(400, "Key must contain at least one uppercase letter.")
-    if not re.search(r'[a-z]', new_key):
-        raise HTTPException(400, "Key must contain at least one lowercase letter.")
-    if not re.search(r'[0-9]', new_key):
-        raise HTTPException(400, "Key must contain at least one number.")
-    if not re.search(r'[^A-Za-z0-9]', new_key):
-        raise HTTPException(400, "Key must contain at least one symbol (!@#$ etc.).")
-    _MK_COMMON = ['password','master','admin','garuda','security','qwerty','asdfgh',
-                   'zxcvbn','123456','letmein','welcome','login','access']
-    if any(w in new_key.lower() for w in _MK_COMMON):
-        raise HTTPException(400, "Key contains a common word or sequence — choose something more random.")
-    if new_key in MASTER_KEYS:
-        raise HTTPException(400, "Key already exists.")
-    # Reject keys too similar to existing ones (shared 6-char substring)
-    for existing in MASTER_KEYS:
-        for i in range(len(existing) - 5):
-            if existing[i:i+6] in new_key:
-                raise HTTPException(400, "Key is too similar to an existing master key.")
-    MASTER_KEYS.append(new_key)
-    save_master_keys()
-    MASTER_KEY_OTP = None
-    log_system_update("New master key added.")
-    return {"ok": True}
-
-@fastapi_app.post("/api/master_key/delete")
-async def master_key_delete(data: dict, session=Depends(require_admin)):
-    """Delete a master key by index — cannot delete the last key."""
-    idx = data.get("index")
-    if idx is None or not isinstance(idx, int):
-        raise HTTPException(400, "index required.")
-    if len(MASTER_KEYS) <= 1:
-        raise HTTPException(400, "Cannot delete the last master key.")
-    if idx < 0 or idx >= len(MASTER_KEYS):
-        raise HTTPException(400, "Index out of range.")
-    MASTER_KEYS.pop(idx)
-    save_master_keys()
-    log_system_update("Master key deleted.")
-    return {"ok": True}
-
-@fastapi_app.get("/api/heartbeat")
-async def heartbeat(request: Request, key: Optional[str] = None):
-    """Health check for external monitors (UptimeRobot etc.).
-    Accepts an optional ?key= query param or X-Heartbeat-Key header to guard
-    the dead-man reset. Without a key the endpoint still returns health data
-    but does NOT reset the deadman timer (prevents unauthenticated suppression).
-    """
-    global _last_heartbeat, _deadman_alert_sent, _heartbeat_ever
-    _HEARTBEAT_KEY = os.environ.get("HEARTBEAT_KEY", "")
-    provided = key or request.headers.get("X-Heartbeat-Key", "")
-    # Only reset dead-man's switch if key matches (or no key configured)
-    if not _HEARTBEAT_KEY or provided == _HEARTBEAT_KEY:
-        _last_heartbeat = time.time()
-        _deadman_alert_sent = False
-        _heartbeat_ever = True
-    return {"ok": True, "uptime": int(time.time() - _app_start_time)}
-
-@fastapi_app.post("/api/emergency-stop")
-async def emergency_stop(session=Depends(require_admin)):
-    log_system_update(f"Emergency stop by {session['username']}.")
-    threading.Thread(target=stop_app, daemon=True).start()
-    return {"ok": True}
+# Vite builds with base=/drishti/, so the SPA's own asset URLs are absolute and
+# index.html can be served from / without rewriting anything.
+if DRISHTI_APP_ENABLED and DRISHTI_DIST.is_dir():
+    fastapi_app.mount("/drishti", StaticFiles(directory=str(DRISHTI_DIST)), name="drishti")
+
+# ── Drishti router ───────────────────────────────────────────────────────────
+# Same two import paths as the constants above; sys.path is already fixed by
+# the time this runs in script mode.
+try:
+    from .drishti_api import build_context as _build_drishti_context
+    from .drishti_api import build_router as _build_drishti_router
+    from . import drishti_auth as _drishti_auth
+    from .garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
+except ImportError:
+    from basic_pipelines.drishti_api import build_context as _build_drishti_context
+    from basic_pipelines.drishti_api import build_router as _build_drishti_router
+    from basic_pipelines import drishti_auth as _drishti_auth
+    from basic_pipelines.garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
+
+DRISHTI_CTX = _build_drishti_context(
+    data_dir=DRISHTI_DATA_DIR,
+    relay_channels=RELAY_CHANNELS,
+    channel_to_pin=CHANNEL_TO_PIN,
+    mqtt_host=os.environ.get("DRISHTI_MQTT_HOST", "localhost"),
+    nim_key=os.environ.get("NIM_API_KEY", ""),
+    nim_model=os.environ.get("NIM_MODEL", ""),
+    matcher_backend=os.environ.get("DRISHTI_MATCHER", "fuzzy"),
+)
+
+
+DRISHTI_CTX.authenticate = _drishti_authenticate
+DRISHTI_CTX.system_state = _drishti_system_state
+DRISHTI_CTX.set_privacy = _drishti_set_privacy
+
+# The loop that makes rules actually run. Narada-RS built SceneBuilder and
+# RuleEngine, tested them, and connected them to nothing: until now the
+# descriptor was always empty and no rule had ever fired.
+DRISHTI_RUNTIME = _DrishtiRuntime(DRISHTI_CTX)
+DRISHTI_CTX.on_registry_change = DRISHTI_RUNTIME.rebind
+
+if DRISHTI_APP_ENABLED:
+    fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
+
+# ── Home automation (Drishti, merged into Garuda) ────────────────────────────
+# One NIM client for everything that needs a model: the rule compiler, the
+# Narada agent and the daily digest. Models are tried in order, so a model NIM
+# retires (as nemotron-3-nano was on 2026-09-01) falls through to the next.
+try:
+    from .garuda_auto.llm import NimChat, NimUnavailable, parse_models
+    from .garuda_auto.home import HomeServices
+    from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from .garuda_auto.router import RouterBackend
+    from .garuda_auto.agent import HomeAgent
+    from .garuda_auto.site_calls import SiteCaller
+    from .garuda_auto import shortcuts as _shortcuts_mod
+    from .garuda_auto.artifacts import ArtifactStore
+    from .narada_brain import Brain
+    from .garuda_auto.digest import Digest
+    from .garuda_auto.narada_voice import NaradaVoice
+    from .garuda_auto.envfile import set_vars as _set_env_vars
+    from .home_api import build_home_router
+except ImportError:
+    from basic_pipelines.garuda_auto.llm import NimChat, NimUnavailable, parse_models
+    from basic_pipelines.garuda_auto.home import HomeServices
+    from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from basic_pipelines.garuda_auto.router import RouterBackend
+    from basic_pipelines.garuda_auto.agent import HomeAgent
+    from basic_pipelines.garuda_auto.site_calls import SiteCaller
+    from basic_pipelines.garuda_auto import shortcuts as _shortcuts_mod
+    from basic_pipelines.garuda_auto.artifacts import ArtifactStore
+    from basic_pipelines.narada_brain import Brain
+    from basic_pipelines.garuda_auto.digest import Digest
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+    from basic_pipelines.garuda_auto.envfile import set_vars as _set_env_vars
+    from basic_pipelines.home_api import build_home_router
+
+# Where admin-entered AI keys are persisted. A module global so the tests can
+# point it at a temp file: the suite must never rewrite the real .env.
+HOME_ENV_PATH = str(Path(__file__).resolve().parent.parent / ".env")
+
+# The planner's models when .env names none (measured: evaluation/narada_planner/).
+# Kimi K3 and GLM 5.3 were the owner's first candidates; on NIM they took two to
+# four minutes to begin answering a five-word prompt (2026-10-03), which a job
+# of several model calls cannot use. These two answer in seconds.
+PLANNER_DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+PLANNER_DEFAULT_FALLBACKS = "nvidia/nemotron-3-super-120b-a12b"
+
+NIM_CHAT = NimChat(
+    os.environ.get("NIM_API_KEY", ""),
+    parse_models(os.environ.get("NIM_MODEL", ""), os.environ.get("NIM_FALLBACK_MODELS", "")),
+)
+DRISHTI_CTX.nim.chat = NIM_CHAT
+
+HOME = HomeServices(DRISHTI_CTX, DRISHTI_RUNTIME, DRISHTI_DATA_DIR)
+DRISHTI_RUNTIME.context_provider = HOME.context
+
+
+HOME.presence_fn = _home_presence
+HOME.security_fn = _home_security
+HOME.notify_fn = _home_email
+HOME.on_change = lambda: push_urgent_ws()
+
+DECISION = DecisionEngine(
+    LocalBackend(lambda: [d for d in DRISHTI_CTX.registry.devices if d.get("enabled", True)],
+                 lambda: HOME.scenes.scenes),
+    JevBackend(os.environ.get("JEV_API_KEY", ""),
+               os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai")),
+    threshold=float(os.environ.get("DECISION_THRESHOLD", "0.85")),
+    # The routing model trained for this house's kind of sentence (router.py).
+    # Without its file or onnxruntime it is simply absent and the matcher answers.
+    router=RouterBackend(os.environ.get("NARADA_ROUTER_DIR") or None),
+)
+# Who Narada is and what it carries between turns: the persona, and the
+# conversation saved beside the rest of the house's data.
+BRAIN = Brain(DRISHTI_DATA_DIR, NIM_CHAT)
+# The planner: a slower, more capable model for requests that need something
+# built (a shortcut, an artifact, several dependent steps). Chosen by
+# scripts/planner_eval.py; the routing model on the Pi decides which requests
+# go to it, and the quick model can hand one over.
+NIM_PLANNER = NimChat(
+    os.environ.get("NIM_API_KEY", ""),
+    parse_models(os.environ.get("NIM_PLANNER_MODEL", "") or PLANNER_DEFAULT_MODEL,
+                 os.environ.get("NIM_PLANNER_FALLBACKS", "") or PLANNER_DEFAULT_FALLBACKS),
+    timeout=120,
+)
+# Pages Narada writes to answer with something you can see (garuda_auto/artifacts.py).
+ARTIFACTS = ArtifactStore(os.path.join(DRISHTI_DATA_DIR, "artifacts"))
+AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
+                  set_mode_fn=_home_set_mode, security_fn=_home_security_summary, brain=BRAIN,
+                  planner=NIM_PLANNER, artifacts=ARTIFACTS)
+# What a button can do, Narada can do the same way: by the site's own endpoint,
+# as the person who asked (garuda_auto/capabilities.py lists which).
+AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
+AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
+
+# Shortcuts: programs made of those capabilities, written by Narada on request
+# (garuda_auto/shortcuts.py). One runs as its maker, with the role they have now.
+SHORTCUTS = _shortcuts_mod.ShortcutEngine(
+    _shortcuts_mod.ShortcutStore(os.path.join(DRISHTI_DATA_DIR, "shortcuts.json")),
+    do_fn=AGENT._run_tool, facts_fn=_shortcut_facts, role_of=_shortcut_role_of,
+    notify_fn=_shortcut_notify, on_change=lambda: push_urgent_ws())
+AGENT.facts_fn = SHORTCUTS.facts
+AGENT.shortcuts_fn = lambda: [
+    {"id": s["id"], "name": s["name"], "when": _shortcuts_mod.describe(s)["when"]}
+    for s in SHORTCUTS.store.all() if s.get("enabled", True)]
+# What a page in the chat may not ask for, whatever its tier.
+ARTIFACT_BLOCKED = _shortcuts_mod.NOT_STEPS
+
+
+# ElevenLabs does the listening and speaking; _assistant_reply (NIM) decides.
+NARADA_VOICE = NaradaVoice(
+    os.environ.get("ELEVENLABS_API_KEY", ""),
+    os.environ.get("ELEVENLABS_SPEECH_ENGINE_ID", ""),
+    reply_fn=lambda text, user, role, scope: _assistant_reply(text, user, role, scope, voice=True),
+    on_turn=_voice_turn_logged,
+    voice_id=os.environ.get("ELEVENLABS_VOICE_ID", ""),
+)
+NARADA_VOICE.live_fn = AGENT.live_for
+DIGEST = Digest(HOME, NIM_CHAT,
+                alerts_fn=lambda: STATE.alerts.history.get(datetime.date.today().isoformat(), 0))
+HOME.digest_fn = DIGEST.text
+
+
+fastapi_app.include_router(build_home_router(
+    DRISHTI_CTX, HOME, AGENT, DIGEST, session_dep=require_session, admin_dep=require_admin,
+    ai_configure=_ai_configure, ai_test=_ai_test,
+    # Narada remembers the household's answer to an offered routine.
+    suggestion_decided=lambda s, accepted, by: BRAIN.routine_decided(
+        s, (DRISHTI_CTX.registry.get(s["device"]) or {}).get("name", s["device"]), accepted, by=by)))
+
+# ── Routes (one module per area in garuda_routes/) ───────────────────────────
+
+fastapi_app.include_router(build_pages_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_shortcuts_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_artifacts_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_control_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_narada_router(sys.modules[__name__]))
+
+ADMIN_ONLY_MODES = frozenset({"idle", "email_off"})
+
+fastapi_app.include_router(build_users_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_config_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_presence_router(sys.modules[__name__]))
+
+fastapi_app.include_router(build_logs_router(sys.modules[__name__]))
+
+# ── Master key OTP state ─────────────────────────────────────────────────────
+_MASTER_OTP_TTL = 300
+
+fastapi_app.include_router(build_master_keys_router(sys.modules[__name__]))
 
 # ── Offline event queue endpoints ─────────────────────────────────────────────
-@fastapi_app.get("/api/events/since")
-async def events_since(since: str = "", limit: int = 500, session=Depends(require_session)):
-    """Return events after the given ISO timestamp, oldest-first."""
-    limit = min(limit, 500)
-    events = get_events_since(since, limit)
-    return {"events": events, "count": len(events)}
-
-@fastapi_app.get("/api/events/pending")
-async def events_pending(session=Depends(require_session)):
-    """Return all unsynced events and mark them as synced."""
-    events = get_events_since("", 1000)
-    unsynced = [e for e in events if not e.get("synced")]
-    if unsynced:
-        max_id = max(e["id"] for e in unsynced)
-        mark_events_synced(max_id)
-    return {"events": unsynced, "count": len(unsynced)}
-
-@fastapi_app.get("/api/events/stats")
-async def events_stats(session=Depends(require_session)):
-    """Return queue statistics."""
-    pending = get_pending_count()
-    total = 0
-    with _eq_lock:
-        try:
-            conn = sqlite3.connect(EVENTS_DB, timeout=5)
-            total = conn.execute("SELECT COUNT(*) FROM events").fetchone()[0]
-            conn.close()
-        except Exception:
-            pass
-    return {"pending": pending, "total": total, "online": _net_online}
+fastapi_app.include_router(build_events_router(sys.modules[__name__]))
 
 # ── Feedback ─────────────────────────────────────────────────────────────────
 _feedback_lock = threading.Lock()
+_FEEDBACK_MAX = 2000
 
-def _load_feedback() -> list:
-    entries = _safe_json_load(FEEDBACK_FILE, None)
-    if isinstance(entries, list):
-        return entries
-    backup_entries = _safe_json_load(FEEDBACK_BACKUP_FILE, [])
-    if isinstance(backup_entries, list):
-        if backup_entries:
-            try:
-                _atomic_json_write(FEEDBACK_FILE, backup_entries)
-            except Exception as e:
-                log_system_update(f"Failed to restore feedback from backup: {e}")
-        return backup_entries
-    return []
+fastapi_app.include_router(build_feedback_router(sys.modules[__name__]))
 
-def _save_feedback(entries: list):
-    try:
-        _atomic_json_write(FEEDBACK_FILE, entries)
-        _atomic_json_write(FEEDBACK_BACKUP_FILE, entries)
-    except Exception as e:
-        log_system_update(f"Failed to save feedback: {e}")
+# ── MJPEG stream (mjpeg_frames is in garuda_services/support.py) ─────────────
+_STREAM_RECHECK_S = 5.0
 
-@fastapi_app.post("/api/feedback")
-async def submit_feedback(data: FeedbackRequest, request: Request):
-    """Public endpoint — no auth required. Rate-limited to 5 per hour per IP."""
-    ip = _get_client_ip(request)
-    now = time.time()
-    # Reuse _rate_store but with a separate key to avoid conflating with API limits
-    fb_key = f"fb:{ip}"
-    stamps = _rate_store[fb_key]
-    stamps[:] = [t for t in stamps if now - t < 3600]
-    if len(stamps) >= 5:
-        raise HTTPException(429, "Too many feedback submissions. Try again later.")
-    stamps.append(now)
 
-    msg = data.message.strip()
-    if not msg:
-        raise HTTPException(400, "Message cannot be empty.")
-    if len(msg) > 1000:
-        raise HTTPException(400, "Message too long (max 1000 chars).")
-    rating = max(0, min(5, int(data.rating)))
-    category = data.category.strip().lower()
-    if category not in ("bug", "feature", "general", "other"):
-        category = "general"
-    name = data.name.strip()[:64] if data.name else ""
+DRISHTI_CTX.frame_source = mjpeg_frames
 
-    entry = {
-        "id": int(time.time() * 1000),
-        "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "category": category,
-        "rating": rating,
-        "name": name or "Anonymous",
-        "message": msg,
-        "ip": ip,
-    }
-
-    def _write_entry():
-        with _feedback_lock:
-            entries = _load_feedback()
-            entries.append(entry)
-            _save_feedback(entries)
-
-    await asyncio.to_thread(_write_entry)
-    log_system_update(f"Feedback received [{category}] from {name or 'Anonymous'}")
-    return {"ok": True}
-
-@fastapi_app.get("/api/feedback")
-async def get_feedback(session=Depends(require_admin)):
-    """Admin-only — returns all stored feedback entries."""
-    with _feedback_lock:
-        entries = _load_feedback()
-    return {"feedback": entries, "count": len(entries)}
-
-# ── MJPEG stream ─────────────────────────────────────────────────────────────
-# Uses _frame_seq to detect new frames only — avoids re-sending duplicate
-# frames and keeps per-client CPU near zero when the pipeline is idle.
-@fastapi_app.get("/stream")
-async def mjpeg_stream(request: Request, token: Optional[str] = None):
-    # Authenticate via cookie or ?token= query param
-    session_token = request.cookies.get("garuda_session") or token
-    if not get_session(session_token):
-        raise HTTPException(401, "Not authenticated")
-    async def generate():
-        last_seq = -1
-        last_sent = 0.0
-        while True:
-            if await request.is_disconnected():
-                break
-            now = time.time()
-            with _frame_lock:
-                seq = _frame_seq
-                raw = _frame_raw if seq != last_seq else None
-            if raw is not None and (now - last_sent) >= 0.033:
-                # Adaptive quality: reduce JPEG quality under CPU pressure
-                _q = 75
-                if psutil:
-                    _cpu = psutil.cpu_percent(interval=None)
-                    if _cpu > 80:
-                        _q = 45
-                    elif _cpu > 65:
-                        _q = 60
-                _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, _q])
-                last_seq = seq
-                last_sent = now
-                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
-            else:
-                await asyncio.sleep(0.005)
-    return StreamingResponse(
-        generate(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
-
-# ── Snapshot ──────────────────────────────────────────────────────────────────
-@fastapi_app.get("/api/snapshot")
-async def snapshot(request: Request, token: Optional[str] = None):
-    session_token = request.cookies.get("garuda_session") or token
-    if not get_session(session_token):
-        raise HTTPException(401, "Not authenticated")
-    with _frame_lock:
-        raw = _frame_raw
-    if raw is None:
-        raise HTTPException(503, "No frame available yet")
-    _, jpeg = cv2.imencode('.jpg', raw, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    return Response(
-        content=jpeg.tobytes(), media_type="image/jpeg",
-        headers={"Content-Disposition": f'attachment; filename="garuda_{ts}.jpg"'}
-    )
 
 # ── Clip recording ────────────────────────────────────────────────────────────
-@fastapi_app.post("/api/clip/start")
-async def clip_start(session=Depends(require_session)):
-    global _clip_writer, _clip_start_time, _clip_path
-    # Fast check — avoid I/O if already recording
-    with _clip_lock:
-        if _clip_writer is not None:
-            return {"ok": True, "already_recording": True, "path": _clip_path}
-    # Read frame dims and create VideoWriter OUTSIDE the lock (file I/O must not block event loop)
-    with _frame_lock:
-        raw = _frame_raw
-    if raw is None:
-        raise HTTPException(503, "No frame available yet")
-    h, w = raw.shape[:2]
-    ts = int(time.time())
-    new_path = str(_BASE / "system_logs" / f"clip_{ts}.mp4")
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    writer = cv2.VideoWriter(new_path, fourcc, 15.0, (w, h))
-    # Assign atomically — re-check in case a concurrent request beat us
-    with _clip_lock:
-        if _clip_writer is not None:
-            writer.release()
-            return {"ok": True, "already_recording": True, "path": _clip_path}
-        _clip_writer = writer
-        _clip_path = new_path
-        _clip_start_time = time.time()
-    log_system_update(f"Clip recording started by {session['username']}.")
-    return {"ok": True, "path": _clip_path}
+_CLIPS_KEEP = 50
 
-@fastapi_app.post("/api/clip/stop")
-async def clip_stop(session=Depends(require_session)):
-    global _clip_writer, _clip_path
-    with _clip_lock:
-        if _clip_writer is None:
-            return {"ok": True, "was_recording": False}
-        _clip_writer.release()
-        _clip_writer = None
-        path = _clip_path
-    log_system_update(f"Clip saved: {path}")
-    threading.Thread(target=exfiltrate_clip, args=(path,), daemon=True).start()
-    return {"ok": True, "path": path}
+fastapi_app.include_router(build_camera_router(sys.modules[__name__]))
 
-# ── WebRTC offer/answer ───────────────────────────────────────────────────────
-@fastapi_app.post("/webrtc/offer")
-async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(require_session)):
-    if not _WEBRTC_AVAILABLE:
-        raise HTTPException(501, "aiortc not installed")
-    pc = RTCPeerConnection()
-    _pc_set.add(pc)
-
-    @pc.on("connectionstatechange")
-    async def _on_state():
-        if pc.connectionState in ("failed", "closed", "disconnected"):
-            await pc.close()
-            _pc_set.discard(pc)
-
-    pc.addTrack(GarudaVideoTrack())
-    offer = RTCSessionDescription(sdp=data.sdp, type=data.type)
-    await pc.setRemoteDescription(offer)
-    answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
-
-    # Wait for ICE gathering to complete
-    while pc.iceGatheringState != "complete":
-        await asyncio.sleep(0.1)
-
-    return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
-
-# ── WebSocket binary JPEG stream (CF Tunnel fallback) ────────────────────────
-@fastapi_app.websocket("/ws/stream")
-async def ws_stream(websocket: WebSocket, token: Optional[str] = None):
-    """Streams JPEG frames as binary WebSocket messages (~same as MJPEG but WS).
-    Works through Cloudflare Tunnel (unlike raw UDP WebRTC)."""
-    # Rate-limit WebSocket connections per IP (re-use the global _rate_store)
-    ws_ip = websocket.client.host if websocket.client else "unknown"
-    now = time.time()
-    stamps = _rate_store[ws_ip]
-    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
-    if len(stamps) >= _RATE_LIMIT:
-        await websocket.close(code=4029)
-        return
-    stamps.append(now)
-    token = websocket.cookies.get("garuda_session") or token
-    if not get_session(token):
-        await websocket.close(code=4001)
-        return
-    await websocket.accept()
-    last_seq = -1
-    try:
-        while True:
-            with _frame_lock:
-                seq   = _frame_seq
-                frame = _frame_buffer if seq != last_seq else None
-            if frame is not None:
-                last_seq = seq
-                await websocket.send_bytes(frame)
-            else:
-                await asyncio.sleep(0.005)
-    except WebSocketDisconnect:
-        pass
-    except Exception as e:
-        log_system_update(f"[STREAM] WS stream error: {type(e).__name__}")
-
-# ── WebSocket broadcaster (event-driven) ─────────────────────────────────────
-# Waits on _ws_trigger asyncio.Event with a 2s timeout (heartbeat).
-# push_urgent_ws() sets the event from any thread → immediate broadcast.
-# Compute state ONCE per tick and fan-out via asyncio.gather — O(1) in CPU.
-
-async def _ws_broadcaster():
-    """Background task: push state immediately on events, or every 2s as heartbeat."""
-    _prune_counter = 0
-    while True:
-        try:
-            await asyncio.wait_for(_ws_trigger.wait(), timeout=2.0)
-        except asyncio.TimeoutError:
-            pass
-        _ws_trigger.clear()
-        # Prune expired sessions every ~5 minutes (150 ticks × 2s)
-        _prune_counter += 1
-        if _prune_counter >= 150:
-            _prune_expired_sessions()
-            _prune_counter = 0
-        payload = get_state_dict()   # always run — handles alert expiry even without clients
-        if not _ws_clients:
-            continue
-        dead: set = set()
-        results = await asyncio.gather(
-            *[ws.send_json(payload) for ws in list(_ws_clients)],
-            return_exceptions=True
-        )
-        for ws, result in zip(list(_ws_clients), results):
-            if isinstance(result, Exception):
-                dead.add(ws)
-        _ws_clients.difference_update(dead)
+# ── Narada voice (ElevenLabs Speech Engine) ──────────────────────────────────
+fastapi_app.websocket("/ws/narada-voice")(narada_voice_ws)
 
 
-@fastapi_app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
-    # Rate-limit WebSocket connections per IP
-    ws_ip = websocket.client.host if websocket.client else "unknown"
-    now = time.time()
-    stamps = _rate_store[ws_ip]
-    stamps[:] = [t for t in stamps if now - t < _RATE_WINDOW]
-    if len(stamps) >= _RATE_LIMIT:
-        await websocket.close(code=4029)
-        return
-    stamps.append(now)
-    # Accept token from cookie (same-origin) or query param (cross-origin)
-    token = websocket.cookies.get("garuda_session") or token
-    if not get_session(token):
-        await websocket.close(code=4001)
-        return
-    await websocket.accept()
-    _ws_clients.add(websocket)
-    try:
-        # Keep the connection alive; broadcaster pushes state.
-        # Drain any client messages; the frontend does not send data, so we
-        # just wait indefinitely — WebSocketDisconnect fires on close/error.
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        pass
-    except Exception:
-        pass
-    finally:
-        _ws_clients.discard(websocket)
+_WS_CONNECT_LIMIT = 60   # socket opens per client address per rate window
+
+# ── Browser sockets (the broadcaster is in garuda_services/state.py) ─────────
+# What a non-admin does not need pushed to their browser every two seconds.
+_ADMIN_ONLY_STATE = ("known_devices", "cpu_cores", "voice_log", "voice_responses")
+_ADMIN_ONLY_LOG_TAGS = ("[SECURITY]", "Login", "login", "Master key", "master key",
+                        "Password", "User added", "User deleted", "User updated")
+
+fastapi_app.include_router(build_sockets_router(sys.modules[__name__]))
 
 ##############################################################################
-# CAMERA AUTO-DETECT
+# SYSTEM: HEALTH, READINESS, DIAGNOSTICS
 ##############################################################################
-def _resolve_camera(input_src: str) -> str:
-    """
-    Resolve the camera source for GStreamer.
-    - If input is not a /dev/videoN device, return as-is (file or 'rpi').
-    - If it IS a /dev/videoN, check via v4l2-ctl whether it is a Pi-internal
-      device (rp1-cfe / pispbe). If so, find a real USB camera or fall back
-      to 'rpi' (libcamera via GStreamer, which works here unlike OpenCV).
-    """
-    if not input_src.startswith("/dev/video"):
-        return input_src
 
-    try:
-        result = subprocess.run(
-            ["v4l2-ctl", "--list-devices"],
-            capture_output=True, text=True, timeout=3
-        )
-        # Build map: device_path → category_name
-        dev_category: dict = {}
-        current = ""
-        for line in result.stdout.splitlines():
-            stripped = line.strip()
-            if stripped and not line.startswith("\t"):
-                current = stripped
-            elif stripped.startswith("/dev/video"):
-                dev_category[stripped] = current
+fastapi_app.include_router(build_system_router(
+    settings=SETTINGS, supervisor=SUPERVISOR, backups=BACKUPS, admin_dep=require_admin,
+    probes={"camera": (_probe_camera, True), "events_db": (_probe_events_db, True),
+            "disk": (_probe_disk, True), "workers": (_probe_workers, True),
+            "rule_loop": (_probe_rules, False)},
+    meta_fn=_client_meta, openapi_fn=fastapi_app.openapi,
+    started_at=lambda: _app_start_time, extra_info=_system_extra))
 
-        def _is_pi_internal(dev: str) -> bool:
-            return "platform:" in dev_category.get(dev, "")
-
-        if _is_pi_internal(input_src):
-            # Look for a real USB camera (no "platform:" in name)
-            for dev, cat in dev_category.items():
-                if "platform:" not in cat:
-                    log_system_update(f"[CAMERA] {input_src} is Pi-internal → using USB: {dev}")
-                    return dev
-            # No USB camera found; libcamera (GStreamer) works for Pi camera
-            log_system_update("[CAMERA] No USB camera found → using Pi camera (rpi/libcamera)")
-            return "rpi"
-    except Exception as e:
-        log_system_update(f"[CAMERA] v4l2-ctl probe failed: {e}")
-
-    return input_src  # unable to determine — use as-is
-
+_core_http.tag_routes(fastapi_app, [
+    ("/api/login", "Auth"), ("/api/logout", "Auth"), ("/api/refresh", "Auth"),
+    ("/api/session", "Auth"), ("/api/admin/", "Auth"), ("/api/forgot/", "Auth"),
+    ("/api/master_key", "Master keys"), ("/api/users", "Users"),
+    ("/api/config", "Configuration"), ("/api/modes", "Modes"), ("/api/devices", "Presence"),
+    ("/api/arp", "Presence"), ("/api/presence_refresh", "Presence"),
+    ("/api/logs", "Logs"), ("/api/events", "Events"), ("/api/feedback", "Feedback"),
+    ("/api/chat", "Narada"), ("/api/narada", "Narada"), ("/api/home", "Home automation"),
+    ("/api/clip", "Camera"), ("/api/snapshot", "Camera"), ("/stream", "Camera"),
+    ("/webrtc", "Camera"), ("/api/eval", "Evaluation harness"), ("/api/", "Core"),
+])
 
 ##############################################################################
 # MAIN
 ##############################################################################
 def run_web_app(args):
-    global app_gst
-
     # ── Resolve camera input ───────────────────────────────────────────────
     args.input = _resolve_camera(args.input)
     log_system_update(f"[CAMERA] Input resolved to: {args.input}")
@@ -3737,28 +1018,35 @@ def run_web_app(args):
     # The server must outlive any pipeline restarts, so we spin the GStreamer
     # pipeline in a background thread and keep the main thread for the server.
     def _run_pipeline():
-        global app_gst
         retry_delay = 5
         while True:
             try:
                 user_data = user_app_callback_class()
-                app_gst = GStreamerDetectionApp(args, user_data)
+                STATE.camera.app_gst = GStreamerDetectionApp(args, user_data)
                 log_system_update("Pipeline started.")
-                app_gst.run()
+                STATE.camera.app_gst.run()
                 log_system_update("Pipeline stopped. Restarting in 5s...")
             except Exception as e:
                 log_system_update(f"Pipeline error: {e}. Restarting in {retry_delay}s...")
             time.sleep(retry_delay)
 
-    # Start voice assistant thread
-    threading.Thread(
-        target=voice_assistant_loop,
-        args=(_voice_stop_event,),
-        daemon=True
-    ).start()
+    # One log file for the whole service, and what the configuration lacks,
+    # said once at start-up instead of discovered feature by feature.
+    log_path = _core_logging.configure(str(_BASE / "system_logs"), level=SETTINGS.log_level)
+    log_system_update(f"Garuda starting: commit {BUILD['commit']} ({BUILD['branch']}), "
+                      f"API v{API_VERSION}, log {log_path or 'stderr only'}")
+    for severity, message in SETTINGS.problems():
+        if severity != "info":
+            log_system_update(f"[CONFIG] {severity}: {message}")
+
+    # Start voice assistant thread (returns at once when there is no microphone)
+    SUPERVISOR.spawn("voice-assistant", voice_assistant_loop, args=(_voice_stop_event,), restart=False)
 
     # Start pipeline thread (restarts automatically on failure)
-    threading.Thread(target=_run_pipeline, daemon=True).start()
+    SUPERVISOR.spawn("camera-pipeline", _run_pipeline, critical=True)
+
+    # A daily archive of accounts, settings, keys, devices and rules.
+    SUPERVISOR.spawn("state-backup", BACKUPS.run_forever)
 
     print("\n" + "="*60)
     print("  Garuda Web UI is running at http://localhost:8080")
@@ -3768,7 +1056,10 @@ def run_web_app(args):
     # Bind to 127.0.0.1 only — external access goes via Cloudflare tunnel,
     # which already terminates TLS. Binding to 0.0.0.0 would expose the HTTP
     # port on all network interfaces including LAN.
-    uvicorn.run(fastapi_app, host="127.0.0.1", port=8080, log_level="warning")
+    uvicorn.run(fastapi_app, host=SETTINGS.host, port=SETTINGS.port, log_level="warning",
+                # Open camera streams never finish by themselves; without a
+                # limit a restart waited on them until systemd killed the process.
+                timeout_graceful_shutdown=8)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,81 @@
+"""Every actuation, with the rule and the conditions that caused it.
+
+This is what lets the system answer "why did the fan turn on" locally, with
+no model involved: the answer is already written down.
+
+Newline-delimited JSON so an append is one write and a partial line cannot
+corrupt what came before it.
+"""
+import json
+import os
+import time
+
+MAX_LINES = 20_000
+# The file itself had no limit: only the read was capped, and every read
+# loaded all of it. Past this size the oldest lines are dropped.
+MAX_BYTES = 4 * 1024 * 1024
+
+
+def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.time,
+           source="", actor=""):
+    entry = {
+        "ts": clock(),
+        "device": device,
+        "action": action,
+        "rule_id": rule_id,
+        "matched": matched,
+        "ok": ok,
+        "reason": reason,
+    }
+    # Who asked: "rule", "manual", "scene:<id>", "schedule:<id>", "away",
+    # "assistant". Usage stats and habit suggestions need to tell a person's
+    # own switching apart from the house acting on its own.
+    if source:
+        entry["source"] = source
+    if actor:
+        entry["actor"] = actor
+    directory = os.path.dirname(path) or "."
+    os.makedirs(directory, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(json.dumps(entry) + "\n")
+    _trim(path)
+
+
+def _trim(path):
+    try:
+        if os.path.getsize(path) <= MAX_BYTES:
+            return
+        with open(path, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()[-MAX_LINES // 2:]
+        tmp = f"{path}.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.writelines(lines)
+        os.replace(tmp, path)
+    except OSError:
+        pass
+
+
+def _read(path):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            lines = fh.readlines()[-MAX_LINES:]
+    except OSError:
+        return []
+    entries = []
+    for line in lines:
+        try:
+            entries.append(json.loads(line))
+        except ValueError:
+            continue
+    return entries
+
+
+def recent(path, limit=200):
+    return list(reversed(_read(path)))[:limit]
+
+
+def last_for(path, device):
+    for entry in reversed(_read(path)):
+        if entry.get("device") == device:
+            return entry
+    return None
