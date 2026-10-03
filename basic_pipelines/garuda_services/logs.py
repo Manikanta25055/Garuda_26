@@ -40,12 +40,21 @@ def _load_logs_from_disk():
 
 
 def _rotate_log(filepath: str):
-    """Rename filepath → filepath.1, discarding any previous .1 file."""
+    """Shift filepath → .1 → .2 … keeping _LOG_KEEP_ROTATED old files; the oldest goes.
+
+    Only one old file used to be kept, so a busy week pushed the one before it
+    off the disk; the dashboard and Narada read all of these back
+    (garuda_core/log_history.py).
+    """
+    keep = max(1, int(getattr(core, "_LOG_KEEP_ROTATED", 1)))
     try:
-        rotated = filepath + ".1"
-        if os.path.exists(rotated):
-            os.unlink(rotated)
-        os.rename(filepath, rotated)
+        oldest = f"{filepath}.{keep}"
+        if os.path.exists(oldest):
+            os.unlink(oldest)
+        for i in range(keep - 1, 0, -1):
+            if os.path.exists(f"{filepath}.{i}"):
+                os.rename(f"{filepath}.{i}", f"{filepath}.{i + 1}")
+        os.rename(filepath, filepath + ".1")
     except Exception:
         pass
 

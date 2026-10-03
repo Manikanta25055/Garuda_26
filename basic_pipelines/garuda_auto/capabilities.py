@@ -165,6 +165,29 @@ CAPABILITIES += (
           "GET /api/home/insights", {"days": _N, "limit": _N}),
     _site("get_home_settings", "Home settings: tariff, away and vacation behaviour, digest time.",
           "GET /api/home/settings"),
+    # Everything recorded, on any day: the quick model's as well, because "what
+    # happened at 14:33" is a question, not a job, and it was answered from the
+    # state of now or not at all.
+    _site("search_history",
+          "Search everything the house has recorded, on any day, from the files on disk: the "
+          "system log (alerts, modes, sign-ins, camera, network, shortcuts, Narada's actions, "
+          "the owner arriving and leaving), camera detections, and device actions with what "
+          "caused them. Use it for any question about the past. Give at for a moment (pass "
+          "the time exactly as the person wrote or copied it, e.g. 2026-10-02 14:33:05, "
+          "14:33, yesterday 9pm), date for a whole day, start and end for a range, q for "
+          "words. Entries come back in time order with exact times; total, omitted_before and "
+          "omitted_after say how many more there are, and nearest_before and nearest_after "
+          "what is either side of an empty window.",
+          "GET /api/history",
+          {"at": {"type": "string", "description": "a moment, as written or copied"},
+           "window_minutes": {"type": "integer",
+                              "description": "minutes either side of at; 5 if not given"},
+           "date": {"type": "string", "description": "a whole day, e.g. 2026-10-02 or yesterday"},
+           "start": _S, "end": _S,
+           "q": {"type": "string", "description": "words that must all appear, e.g. knife"},
+           "sources": {"type": "string",
+                       "description": "comma list of system, detection, devices; empty for all"}},
+          lane="fast", security=True),
     _site("event_stats", "How many security events are stored and how many wait to be synced.",
           "GET /api/events/stats", security=True),
     _site("recent_events", "Security events (detections, alerts) after a time.",
@@ -173,8 +196,6 @@ CAPABILITIES += (
            "limit": _N}, security=True),
     _site("camera_health", "The camera pipeline's speed and health figures.",
           "GET /api/cascade_metrics", security=True),
-    _site("read_logs", "The system, voice, presence and detection logs (newest lines).",
-          "GET /api/logs", role="admin", security=True),
     _site("read_feedback", "Feedback people have sent from the site.", "GET /api/feedback",
           role="admin", security=True),
     _site("system_info", "Build, uptime, health checks, background workers and backups.",
@@ -413,7 +434,10 @@ NEVER = {
     "GET /api/eval/fps_probe": "test harness",
     "POST /api/eval/inject_danger": "test harness",
     "POST /api/eval/tag": "test harness",
-    "GET /api/logs/download": "a file for a person; read_logs covers the content",
+    "GET /api/logs": "the Logs page's raw lines, behind the master key; search_history "
+                     "reads the same files, by time",
+    "GET /api/logs/download": "a file for a person; search_history covers the content",
+    "GET /api/history/days": "the date picker's list of days; search_history reads them",
     "GET /api/openapi.json": "developer page",
     "POST /api/feedback": "a person's own words to the owner",
 }
