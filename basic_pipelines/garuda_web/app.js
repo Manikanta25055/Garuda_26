@@ -576,7 +576,7 @@ const G = (() => {
 
   async function _doLogoutInner() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
-    if (window.N) N.stopVoice();
+    if (window.N) { N.stopVoice(); N.closeArtifact && N.closeArtifact(); }
     // Clear uptime interval before resetting state
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
     _wsAllowed = false;   // prevent reconnect after logout
@@ -1486,6 +1486,9 @@ const G = (() => {
     return `${d.getFullYear()}-${_pad2(d.getMonth() + 1)}-${_pad2(d.getDate())}`;
   }
   function _tlKey(i) { return i.time + '|' + i.text; }
+  // A presence check that found nothing new (ROUTINE in garuda_routes/logs.py):
+  // the server leaves these out of the card, and so does the live merge.
+  const _ROUTINE = /^\[PRESENCE\] (?:Match|No match) [\u2014\u2013-] \d+ active ARP entries$/;
 
   function _tlItem(time, text) {
     let type = '';
@@ -1573,7 +1576,8 @@ const G = (() => {
     _timelineSig = sig;
     const day = picker?.value || _localDay();
     const have = new Set(_timelineItems.map(_tlKey));
-    const fresh = log.map(_tlFromLine).filter(i => i.dateKey === day && !have.has(_tlKey(i)));
+    const fresh = log.map(_tlFromLine)
+      .filter(i => i.dateKey === day && !_ROUTINE.test(i.text) && !have.has(_tlKey(i)));
     if (!fresh.length) return;
     _timelineItems = fresh.reverse().concat(_timelineItems)
       .sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
@@ -2106,7 +2110,8 @@ const G = (() => {
 
   async function _fetchLogKind(kind, olderThan) {
     const { day, q } = _logFilters();
-    const p = new URLSearchParams({ sources: kind, limit: '500' });
+    // The Logs page is the raw log: the routine presence checks too.
+    const p = new URLSearchParams({ sources: kind, limit: '500', routine: 'true' });
     if (day) p.set('date', day);
     if (q) p.set('q', q);
     if (olderThan) p.set('before', olderThan);

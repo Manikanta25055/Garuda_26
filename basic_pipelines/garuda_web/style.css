@@ -3268,9 +3268,10 @@ input:-webkit-autofill:focus {
 /* ── Security status card light mode ────────────────────── */
 .status-card { border: 1px solid var(--border) !important; }
 
-/* One log line per line: the panes are filled with text joined by newlines,
-   which without this ran together into one paragraph. */
-#page-a-logs .console { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* One log line per line: every console (the dashboard's, the Logs page's) is
+   filled with text joined by newlines, which without this ran together into
+   one paragraph. */
+.console { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ── Logs bottom action bar ──────────────────────────────── */
 .logs-bottom-bar {
@@ -4995,12 +4996,35 @@ body { overscroll-behavior: auto; }
   transition: height 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 [data-theme="dark"] .nx-art-f { background: #111; }
-.nx-artifact.full {
-  position: fixed; inset: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) 12px;
-  z-index: 2000; max-width: none; display: flex; flex-direction: column; background: #000;
-  box-shadow: 0 0 0 100vmax rgba(0,0,0,0.55);
+/* The expanded artifact: a layer over the whole page (narada.js moves the card
+   into it), above the top bar and the dock, clear of the notch. */
+.nx-art-overlay {
+  position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,0.6);
+  display: flex; padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: nx-art-in 0.2s ease-out;
 }
+@keyframes nx-art-in { from { opacity: 0; } to { opacity: 1; } }
+.nx-art-overlay .nx-artifact.full {
+  flex: 1; min-width: 0; max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column;
+  background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.nx-artifact.full .nx-art-h { padding: 6px 8px 6px 16px; }
+.nx-artifact.full .nx-art-h b { font-size: 15px; }
 .nx-artifact.full .nx-art-f { flex: 1; height: auto !important; }
+/* The way out: a 44 px target, only while expanded. */
+.nx-art-x { display: none; }
+.nx-art-acts button.nx-art-x {
+  width: 44px; height: 44px; margin: -6px -4px -6px 0; border-radius: 50%;
+  font: 400 28px/1 var(--font); text-decoration: none; color: #fff;
+  align-items: center; justify-content: center;
+}
+.nx-artifact.full .nx-art-x { display: inline-flex; }
+.nx-art-acts button.nx-art-x:hover, .nx-art-acts button.nx-art-x:focus-visible { background: rgba(255,255,255,0.14); }
+/* Easier to hit on a phone than bare 12 px words. */
+.nx-art-acts { align-items: center; }
+.nx-art-acts button:not(.nx-art-x) { padding: 8px 2px; }
 
 /* Shortcuts on the Automations page. */
 .ha-steps { margin: 4px 0 2px; font-size: 13px; color: var(--t2); }
@@ -5072,6 +5096,21 @@ body { overscroll-behavior: auto; }
   background: rgba(255,255,255,0.12);
 }
 .nx-msg.md a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+/* A table scrolls sideways inside the bubble rather than widening the page. */
+.nx-msg.md .md-table { overflow-x: auto; margin: 0 0 0.55em; -webkit-overflow-scrolling: touch; }
+.nx-msg.md table { border-collapse: collapse; font-size: 0.92em; line-height: 1.35; min-width: 100%; }
+.nx-msg.md th, .nx-msg.md td {
+  text-align: left; vertical-align: top; padding: 5px 10px 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.nx-msg.md th { font-weight: 650; color: rgba(255,255,255,0.7); white-space: nowrap; }
+/* Short columns stay on one line; the last (the event, the description)
+   wraps between words, never inside one ("syste / m"). */
+.nx-msg.md td { overflow-wrap: normal; word-break: normal; }
+.nx-msg.md td:not(:last-child) { white-space: nowrap; }
+.nx-msg.md td:last-child { overflow-wrap: break-word; min-width: 9em; }
+.nx-msg.md td:first-child { font-variant-numeric: tabular-nums; }
+.nx-msg.md tr:last-child td { border-bottom: 0; }
 
 .nx-card-warn {
   padding: 7px 10px; border-radius: 9px; font-size: 12.5px; line-height: 1.4;

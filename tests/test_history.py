@@ -225,3 +225,27 @@ def test_days_index(app_client, user_headers, logs_on_disk):
 
 def test_history_needs_a_sign_in(app_client):
     assert app_client.get("/api/history").status_code == 401
+
+
+def test_routine_presence_checks_are_left_out_unless_asked(app_client, user_headers):
+    _write(gw.PERM_SYSTEM_LOG, [
+        "[2026-10-02 20:09:15] [PRESENCE] Match — 9 active ARP entries",
+        "[2026-10-02 20:09:36] Master key login.",
+        "[2026-10-02 20:09:47] [PRESENCE] Match – 9 active ARP entries",
+        "[2026-10-02 20:10:32] Pipeline started.",
+        "[2026-10-02 20:10:34] [OWNER] Phone arrived — device detected on network.",
+    ])
+    d = _get(app_client, user_headers, at="2026-10-02 20:10:34", sources="system").json()
+    assert [e["text"] for e in d["entries"]] == [
+        "Pipeline started.", "[OWNER] Phone arrived — device detected on network."]
+    assert "routine_left_out" in d
+    # The Logs page asks for them; a search for them finds them.
+    d = _get(app_client, user_headers, at="2026-10-02 20:10:34", sources="system",
+             routine="true").json()
+    assert len(d["entries"]) == 4
+    assert _get(app_client, user_headers, q="active ARP").json()["total"] == 2
+
+
+def test_static_files_are_asked_after_on_every_load(app_client):
+    r = app_client.get("/static/app.js")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"

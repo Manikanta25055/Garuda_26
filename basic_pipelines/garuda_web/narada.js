@@ -385,11 +385,34 @@ const N = (() => {
       .replace(/(^|[\s(])\*([^*\s][^*\n]*?)\*(?=[\s).,;:!?]|$)/g, '$1<i>$2</i>')
       .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   }
+  // A table: a row of cells between pipes, then a row of dashes, then rows.
+  // Without this a table came out as lines of pipes and dashes.
+  const mdRow = line => /^\s*\|.*\|\s*$/.test(line);
+  const mdRule = line => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line) && line.includes('-');
+  // (An escaped \| stays in its cell; no lookbehind, which older Safari cannot parse.)
+  const mdCells = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').replace(/\\\|/g, '\u0000')
+    .split('|').map(c => c.replace(/\u0000/g, '|').trim());
+  function mdTable(rows) {
+    const [head, ...body] = rows.map(mdCells);
+    return '<div class="md-table"><table><thead><tr>' + head.map(c => `<th>${mdInline(c)}</th>`).join('')
+      + '</tr></thead><tbody>' + body.map(r => '<tr>' + head.map((_, i) => `<td>${mdInline(r[i] || '')}</td>`).join('') + '</tr>').join('')
+      + '</tbody></table></div>';
+  }
   function mdHtml(text) {
     const out = [];
     let list = null;
     const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
-    for (const raw of String(text || '').split('\n')) {
+    const lines = String(text || '').split('\n');
+    for (let n = 0; n < lines.length; n++) {
+      const raw = lines[n];
+      if (mdRow(raw) && n + 1 < lines.length && mdRule(lines[n + 1])) {
+        const rows = [raw];
+        n += 2;
+        while (n < lines.length && mdRow(lines[n])) rows.push(lines[n++]);
+        n--;
+        close(); out.push(mdTable(rows));
+        continue;
+      }
       const line = raw.replace(/\s+$/, '');
       const bullet = line.match(/^\s*[-*•]\s+(.*)$/), number = line.match(/^\s*\d+[.)]\s+(.*)$/);
       const head = line.match(/^\s*#{1,4}\s+(.*)$/);
@@ -411,7 +434,9 @@ const N = (() => {
     return out.join('');
   }
   // The same reply as plain words: for the line above the bar and while it types.
-  const mdPlain = text => String(text || '').replace(/\*\*|__|`/g, '').replace(/^\s*#{1,4}\s+/gm, '')
+  const mdPlain = text => String(text || '').split('\n').filter(l => !(mdRule(l) && l.includes('|')))
+    .map(l => mdRow(l) ? mdCells(l).join('  ·  ') : l).join('\n')
+    .replace(/\*\*|__|`/g, '').replace(/^\s*#{1,4}\s+/gm, '')
     .replace(/^\s*[-*]\s+/gm, '• ').replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '$1');
   function setReply(el, text) {
     el.classList.add('md');
@@ -509,6 +534,7 @@ const N = (() => {
   }
 
   function clearSession() {
+    closeFullArtifact();
     session = []; save();
     setPending(false);
     const log = $('nx-log');
@@ -860,7 +886,7 @@ const N = (() => {
       el.dataset.art = a.id;
       const src = `${G._base ? G._base() : ''}/api/narada/artifacts/${encodeURIComponent(a.id)}/view?k=${encodeURIComponent(a.key)}`;
       el.innerHTML = `<div class="nx-art-h"><b>${escHtml(a.title)}</b>
-          <span class="nx-art-acts"><button type="button" data-art-act="full">Expand</button><button type="button" data-art-act="keep">${a.pinned ? 'Kept' : 'Keep'}</button><button type="button" data-art-act="remove">Remove</button></span></div>
+          <span class="nx-art-acts"><button type="button" data-art-act="full">Expand</button><button type="button" data-art-act="keep">${a.pinned ? 'Kept' : 'Keep'}</button><button type="button" data-art-act="remove">Remove</button><button type="button" class="nx-art-x" data-art-act="close" aria-label="Close">\u00d7</button></span></div>
         <iframe class="nx-art-f" sandbox="allow-scripts" referrerpolicy="no-referrer" title="${escHtml(a.title)}" src="${escHtml(src)}"></iframe>`;
       if (!restoring) {
         session.push({ who: 'artifact', text: a.title, art: { id: a.id, key: a.key, title: a.title } });
@@ -870,11 +896,61 @@ const N = (() => {
     if ((list || []).length && !restoring) { syncDock(); scrollLog(); setTimeout(scrollLog, 700); }
   }
 
+  // Expanded, an artifact goes into a layer of its own on top of the whole
+  // page. It used to stay inside Narada's panel, which (a transformed
+  // ancestor) held its "fixed" box to the panel's size, over the conversation,
+  // with a 12 px "Close" link as the only way out; where it did reach the top
+  // of the screen, the status bar sat over that link. Now: a large ×, Escape,
+  // a tap outside it, or the phone's back gesture.
+  let artOverlay = null;
+  function openFullArtifact(card) {
+    if (artOverlay) closeFullArtifact();
+    const slot = document.createElement('div');
+    slot.className = 'nx-art-slot';
+    card.before(slot);
+    const layer = document.createElement('div');
+    layer.className = 'nx-art-overlay';
+    layer.setAttribute('role', 'dialog');
+    layer.setAttribute('aria-modal', 'true');
+    layer.appendChild(card);
+    document.body.appendChild(layer);
+    card.classList.add('full');
+    const btn = card.querySelector('[data-art-act="full"]');
+    if (btn) btn.textContent = 'Shrink';
+    const onKey = e => { if (e.key === 'Escape') { e.preventDefault(); closeFullArtifact(); } };
+    const onPop = () => closeFullArtifact(true);
+    layer.addEventListener('click', e => {
+      if (e.target === layer) return closeFullArtifact();            // the dimmed space around it
+      const act = e.target.closest('[data-art-act]');
+      if (act) artifactAction(card, act.dataset.artAct, act);
+    });
+    document.addEventListener('keydown', onKey);
+    try { history.pushState({ nxArtifact: card.dataset.art }, ''); window.addEventListener('popstate', onPop); } catch (_) {}
+    artOverlay = { card, slot, layer, onKey, onPop };
+    card.querySelector('.nx-art-x')?.focus();
+  }
+  function closeFullArtifact(fromHistory) {
+    const o = artOverlay;
+    if (!o) return;
+    artOverlay = null;
+    document.removeEventListener('keydown', o.onKey);
+    window.removeEventListener('popstate', o.onPop);
+    if (!fromHistory && history.state && history.state.nxArtifact) { try { history.back(); } catch (_) {} }
+    o.card.classList.remove('full');
+    const btn = o.card.querySelector('[data-art-act="full"]');
+    if (btn) btn.textContent = 'Expand';
+    if (o.slot.isConnected) o.slot.replaceWith(o.card); else o.card.remove();
+    o.layer.remove();
+  }
+
   async function artifactAction(card, what, btn) {
     const id = card.dataset.art;
     if (what === 'full') {
-      const full = card.classList.toggle('full');
-      btn.textContent = full ? 'Close' : 'Expand';
+      if (card.classList.contains('full')) closeFullArtifact(); else openFullArtifact(card);
+      return;
+    }
+    if (what === 'close') {
+      if (card.classList.contains('full')) closeFullArtifact();
       return;
     }
     try {
@@ -887,6 +963,7 @@ const N = (() => {
         await G._apiFn('DELETE', `/api/narada/artifacts/${id}`).catch(() => {});
         session = session.filter(m => !(m.who === 'artifact' && m.art.id === id));
         save();
+        if (card.classList.contains('full')) closeFullArtifact();
         card.remove();
         syncDock();
       }
@@ -1221,6 +1298,7 @@ const N = (() => {
   }
 
   function onNav(pageId) {
+    if (pageId !== 'narada') closeFullArtifact();
     // Facts kept after a conversation went quiet show their chip the next time the page is open.
     if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); pollMemory(); }
     else stop();                               // a live conversation keeps going in the island
@@ -1229,6 +1307,7 @@ const N = (() => {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  return { toggleVoice, stopVoice, submit, onNav, voiceActive, haptic, toggleInfo, toggleSheet, clearSession };
+  return { toggleVoice, stopVoice, submit, onNav, voiceActive, haptic, toggleInfo, toggleSheet, clearSession,
+           closeArtifact: () => closeFullArtifact() };
 })();
 window.N = N;

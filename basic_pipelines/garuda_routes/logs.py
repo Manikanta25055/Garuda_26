@@ -28,6 +28,10 @@ MAX_LIMIT = 500
 DEFAULT_WINDOW_MIN = 5
 # Where to look for the nearest thing either side when a window is empty.
 NEAREST_DAYS = 7
+# Lines that say nothing happened: the presence check wrote one every 30 s
+# until 2026-10 and the logs on disk are full of them. Left out of the Activity
+# card and of what Narada reads, unless asked for (routine=1) or searched for.
+ROUTINE = re.compile(r"^\[PRESENCE\] (?:Match|No match) [—–-] \d+ active ARP entries$")
 
 
 def build_logs_router(core):
@@ -101,7 +105,7 @@ def build_logs_router(core):
                                   f"({e.get('mac') or 'no mac'})")
                 for e in list(core.STATE.presence.log) if start <= e.get("ts", "") < end]
 
-    def _collect(session, sources, start, end, q, newest=None):
+    def _collect(session, sources, start, end, q, newest=None, routine=True):
         """Chronological entries of the given sources with start <= ts < end.
 
         newest=N: only the newest N are wanted (and one more, to tell that
@@ -111,6 +115,8 @@ def build_logs_router(core):
         for source in sources:
             def accept(ts, text, source=source):
                 if source == "system" and _hidden_line(session, text):
+                    return False
+                if not routine and source == "system" and ROUTINE.match(text):
                     return False
                 return not q or log_history.matches(f"{source} {text}", q)
             if source in _files():
@@ -129,7 +135,8 @@ def build_logs_router(core):
     def _bad(message):
         raise HTTPException(400, message)
 
-    def _history(session, at, window_minutes, start, end, date, q, sources, limit, before):
+    def _history(session, at, window_minutes, start, end, date, q, sources, limit, before,
+                 routine=False):
         core._do_flush_logs()               # lines still waiting in the write buffer
         allowed, refused = _allowed(session)
         asked = [s for s in re.split(r"[^a-z]+", (sources or "").lower()) if s]
@@ -191,12 +198,16 @@ def build_logs_router(core):
         # on the moment. Otherwise the newest `limit` are wanted, and the old
         # files are read only as far back as that takes; the counts are then
         # "at least" (omitted_before > 0 still means there is more).
-        entries = _collect(session, chosen, lo, hi, q, None if centre else limit)
+        routine = routine or bool(q)
+        entries = _collect(session, chosen, lo, hi, q, None if centre else limit, routine)
         kept, omitted_before, omitted_after = log_history.pick(entries, limit, centre)
         out = {"from": lo or None, "to": hi, "at": centre or None, "read_as": read_as or None,
                "query": q or None, "searched": chosen, "total": len(entries),
                "omitted_before": omitted_before, "omitted_after": omitted_after,
                "entries": kept}
+        if not routine:
+            out["routine_left_out"] = ("presence checks that found nothing new; "
+                                       "ask with routine=true to include them")
         if not_searched:
             out["not_searched"] = not_searched
         if not entries and lo:
@@ -205,8 +216,8 @@ def build_logs_router(core):
                                         - datetime.timedelta(days=NEAREST_DAYS))
             near_hi = log_history.stamp(datetime.datetime.strptime(hi, log_history.STAMP_FMT)
                                         + datetime.timedelta(days=NEAREST_DAYS))
-            earlier = _collect(session, chosen, near_lo, lo, q, newest=1)
-            later = _collect(session, chosen, hi, near_hi, q)
+            earlier = _collect(session, chosen, near_lo, lo, q, 1, routine)
+            later = _collect(session, chosen, hi, near_hi, q, None, routine)
             out["nearest_before"] = earlier[-1] if earlier else None
             out["nearest_after"] = later[0] if later else None
         return out
@@ -214,7 +225,8 @@ def build_logs_router(core):
     @router.get("/api/history")
     async def history(at: str = "", window_minutes: int = 0, start: str = "", end: str = "",
                       date: str = "", q: str = "", sources: str = "", limit: int = 40,
-                      before: str = "", session=Depends(core.require_session)):
+                      before: str = "", routine: bool = False,
+                      session=Depends(core.require_session)):
         """What the logs hold for a moment, a day or a range, from every file on disk.
 
         at       a time as written or copied ("2026-10-02 14:33:05", "14:33", "yesterday 9pm");
@@ -223,10 +235,11 @@ def build_logs_router(core):
                  that second)
         q        words that must all appear; sources a comma list of system, detection,
                  devices, presence, voice (the last two need the master key)
+        routine  also the presence checks that found nothing new (always, when q is given)
         """
         return await asyncio.to_thread(_history, session, at[:80], window_minutes, start[:80],
                                        end[:80], date[:40], q[:200], sources[:80], limit,
-                                       before[:40])
+                                       before[:40], routine)
 
     @router.get("/api/history/days")
     async def history_days(source: str = "system", session=Depends(core.require_session)):

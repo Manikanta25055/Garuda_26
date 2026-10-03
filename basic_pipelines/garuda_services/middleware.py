@@ -76,4 +76,9 @@ async def security_headers(request: Request, call_next):
     # the Pi and the browser should keep a copy.
     if request.url.path.startswith("/api/") and "cache-control" not in response.headers:
         response.headers["Cache-Control"] = "no-store"
+    # The page's own script and style: kept, but asked after on every load (a
+    # 304 when unchanged). With no header the browser guessed how long they
+    # stay fresh and ran yesterday's script against today's server.
+    elif request.url.path.startswith("/static/") and "cache-control" not in response.headers:
+        response.headers["Cache-Control"] = "no-cache"
     return response

@@ -1,5 +1,5 @@
 // Garuda Service Worker — enables PWA installability + offline shell caching
-const CACHE = 'garuda-v25';
+const CACHE = 'garuda-v26';
 const SHELL = ['/static/style.css', '/static/app.js', '/static/home.js', '/static/narada.js', '/static/island.js'];
 
 self.addEventListener('install', e => {
@@ -48,14 +48,14 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Static files: answer from the cache at once and refresh it behind the
-  // scenes, so nothing is ever more than one load out of date.
+  // Static files: the network first as well, the cache only when the Pi
+  // cannot be reached. Cache-first ran the old script and style for one load
+  // after every deploy, against the new server: a fix looked as if it had not
+  // happened (log lines still run together) until a second reload.
   if (url.pathname.startsWith('/static/')) {
     e.respondWith(
-      caches.match(req).then(cached => {
-        const fresh = fetch(req).then(res => putInCache(req, res)).catch(() => cached);
-        return cached || fresh;
-      })
+      fetch(req).then(res => putInCache(req, res))
+        .catch(() => caches.match(req).then(c => c || Response.error()))
     );
   }
 });

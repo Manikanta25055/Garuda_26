@@ -102,6 +102,7 @@ def _presence_poller():
     """
     _subnet = ''
     first = True
+    last_found = None
     while True:
         if not first:
             time.sleep(30)
@@ -118,10 +119,15 @@ def _presence_poller():
                 core._probe_subnet_for_arp(_subnet)
                 time.sleep(2)   # allow ARP responses to arrive
             found = core._check_device_presence()
-            core.log_system_update(
-                f"[PRESENCE] {'Match' if found else 'No match'} — "
-                f"{len([l for l in core.STATE.presence.last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
-            )
+            # Only when the answer changes: every 30 s it was 2,700 lines a day
+            # that buried everything else on the dashboard, in the Logs page and
+            # in what Narada read back. Arrivals and departures are logged below.
+            if found != last_found:
+                core.log_system_update(
+                    f"[PRESENCE] {'Match' if found else 'No match'} — "
+                    f"{len([l for l in core.STATE.presence.last_arp_cache.splitlines() if '0x2' in l])} active ARP entries"
+                )
+            last_found = found
             if found:
                 core.STATE.presence.owner_last_seen = time.time()
                 if not core.STATE.presence.owner_present:
