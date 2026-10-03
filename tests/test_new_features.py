@@ -427,8 +427,12 @@ class TestLogBuffer:
         assert not errors
         assert len(gw._log_buffer[log_path]) == 500   # 5 threads × 100 lines
 
-    def test_flush_interval_is_60_seconds(self):
-        assert gw._LOG_FLUSH_INTERVAL == 60
+    def test_flush_interval_is_10_seconds(self):
+        # At 60 s a power cut lost the last minute of the logs: the one that matters.
+        assert gw._LOG_FLUSH_INTERVAL == 10
+
+    def test_old_log_files_are_kept(self):
+        assert gw._LOG_KEEP_ROTATED >= 10
 
 
 # ══════════════════════════════════════════════════════════════════════════════

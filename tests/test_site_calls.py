@@ -43,8 +43,30 @@ def test_an_admin_capability_is_refused_to_a_user(app_client):
     assert "error" not in run("list_users", role="admin")
 
 
+def _log_lines(path, lines):
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("".join(line + "\n" for line in lines))
+
+
+def test_search_history_reads_a_moment_from_disk(app_client):
+    _log_lines(gw.PERM_SYSTEM_LOG + ".1", ["[2026-09-01 14:33:05] Alert triggered.",
+                                           "[2026-09-01 14:40:00] Login: admin"])
+    _log_lines(gw.PERM_DETECTION_LOG, ["[2026-09-01 14:33:04] [DANGER] knife conf=0.91"])
+    out = run("search_history", {"at": "[2026-09-01 14:33:05]"})
+    assert [(e["source"], e["text"]) for e in out["entries"]] == [
+        ("detection", "[DANGER] knife conf=0.91"), ("system", "Alert triggered.")]
+    # A user's Narada sees what the user's dashboard does: no sign-ins.
+    assert run("search_history", {"q": "login"})["total"] == 0
+    assert run("search_history", {"q": "login"}, role="admin")["total"] == 1
+    # A bad time comes back as the reason, for the model to fix.
+    assert "could not read a time" in run("search_history", {"at": "teatime"})["error"]
+
+
 def test_logs_stay_behind_the_master_key(app_client):
-    assert "master key" in run("read_logs", role="admin")["error"]
+    # Narada never holds the master key, so the Logs page's private logs are not hers.
+    _log_lines(gw.PERM_VOICE_LOG, ["[2026-09-01 14:33:05] You said: hello"])
+    out = run("search_history", {"date": "2026-09-01", "sources": "voice"}, role="admin")
+    assert out["entries"] == [] and "voice" in out["not_searched"]
 
 
 def test_a_change_goes_through_the_endpoints_own_checks(app_client):

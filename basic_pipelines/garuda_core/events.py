@@ -78,6 +78,9 @@ def insert(path, event_type: str, label: str = "", confidence: float = 0.0, info
 
 def since(path, since_ts: str = "", limit: int = 500) -> list:
     """Return events after the given ISO timestamp, oldest-first."""
+    # Stored as 2026-10-02T14:33:05.123; a time copied from a log has a space,
+    # and " " sorts before "T", so every event of that day was "after" it.
+    since_ts = (since_ts or "").strip().strip("[]").replace(" ", "T", 1)
     with _lock:
         try:
             conn = sqlite3.connect(path, timeout=5)
