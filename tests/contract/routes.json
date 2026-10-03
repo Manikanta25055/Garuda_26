@@ -182,18 +182,6 @@
  {
   "kind": "http",
   "method": "GET",
-  "path": "/api/history",
-  "guard": "require_session"
- },
- {
-  "kind": "http",
-  "method": "GET",
-  "path": "/api/history/days",
-  "guard": "require_session"
- },
- {
-  "kind": "http",
-  "method": "GET",
   "path": "/api/home/activity",
   "guard": "require_session"
  },

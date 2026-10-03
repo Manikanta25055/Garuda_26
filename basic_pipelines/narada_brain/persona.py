@@ -77,31 +77,11 @@ SECURITY_RULES = (
     "The house: this is Garuda, an AI home security system on a Raspberry Pi 5 with a "
     "Hailo accelerator and a camera that detects people and dangerous objects (knife, "
     "scissors, hammer) and emails alerts.\n"
-    "Use get_security_state for anything about the current situation, search_history "
-    "for anything that already happened, and "
+    "Use get_security_state for anything about the current situation and "
     f"set_security_mode to change a mode ({MODE_LIST}). You do not control lights or "
     "appliances here; if asked to, say that home automation lives in the Drishti app. A "
     "mode only changes through a set_security_mode call in this turn; never claim a "
     "change you did not just make.")
-
-# Questions about the past were answered from the state of now, or from
-# nothing: asked what happened at a time copied from the logs, the model
-# guessed. The logs on disk go back weeks; it is told to read them first.
-HISTORY_RULES = (
-    "The past: everything the house records is kept on disk, on every day, and "
-    "search_history reads it. For any question about what happened, when something "
-    "happened, whether it happened, or a time or log line the person gives you:\n"
-    "- Call search_history before you answer, every time, even if you think you know. "
-    "Pass a time exactly as they wrote or pasted it in at; a day in date; a span in start "
-    "and end; a thing to look for (knife, alert, night mode, a name) in q.\n"
-    "- Read every entry that comes back. Answer from them with their exact times, in "
-    "order, and say what the entries closest to the moment were. Each entry's source "
-    "says where it is from (system, detection, devices).\n"
-    "- If omitted_before or omitted_after is not 0, there is more: search again with a "
-    "narrower window, later or earlier, or with words, until you have what was asked.\n"
-    "- If nothing is found, say exactly what range you searched (read_as), and give "
-    "nearest_before and nearest_after if there are any. Never guess or invent an event, "
-    "a time or a cause.")
 
 # Spoken replies: every character is synthesised (and billed), lists and
 # markdown read aloud badly, and a reply that sounds written feels robotic.
@@ -119,14 +99,13 @@ VOICE_STYLE = (
 
 def system_prompt(user, role, *, scope="home", now=None):
     """The persona for one turn. State, memory and summary are appended by the caller."""
-    stamp = time.strftime("%A %d %B %Y, %H:%M:%S (%Y-%m-%d)", time.localtime(now))
+    stamp = time.strftime("%A %d %B %Y, %H:%M", time.localtime(now))
     rules = SECURITY_RULES if scope == "security" else HOME_RULES
     return (f"{IDENTITY}\n{MEMORY_RULES}\n\n{STYLE}\n\n"
             f"It is {stamp} local time. You are talking to {user or 'a resident'} (role: {role}).\n\n"
-            f"{rules}\n\n{HISTORY_RULES}")
+            f"{rules}")
 
 
 def protected_text():
     """The instruction text that must not be recited (see guards.protect)."""
-    return "\n".join((IDENTITY, MEMORY_RULES, STYLE, HOME_RULES, SECURITY_RULES, HISTORY_RULES,
-                      VOICE_STYLE))
+    return "\n".join((IDENTITY, MEMORY_RULES, STYLE, HOME_RULES, SECURITY_RULES, VOICE_STYLE))

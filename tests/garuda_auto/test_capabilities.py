@@ -59,13 +59,12 @@ def test_the_quick_model_is_offered_what_it_always_was():
                        "run_scene", "create_scene", "schedule_action", "list_schedules",
                        "create_automation", "list_automations", "set_security_mode",
                        "recent_activity", "energy_usage", "remember_fact", "forget_fact",
-                       "search_history", "take_snapshot", "run_shortcut"]
+                       "take_snapshot", "run_shortcut"]
     # With a planner to hand over to, the quick model gets one more tool: the way to it.
     assert "hand_to_planner" in [t["function"]["name"] for t in caps.tools()]
     assert "hand_to_planner" not in [t["function"]["name"] for t in caps.tools("planner")]
     assert [n for n in offered if n in SECURITY_TOOLS] == [
-        "get_security_state", "set_security_mode", "remember_fact", "forget_fact", "search_history",
-        "take_snapshot"]
+        "get_security_state", "set_security_mode", "remember_fact", "forget_fact", "take_snapshot"]
     assert {"set_device", "all_off", "run_scene", "create_scene", "schedule_action",
             "create_automation", "set_security_mode", "forget_fact"} <= set(CHANGING_TOOLS)
     assert "remember_fact" not in CHANGING_TOOLS

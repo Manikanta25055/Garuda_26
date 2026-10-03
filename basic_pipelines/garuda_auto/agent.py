@@ -57,10 +57,6 @@ PLANNER_ROUNDS = 14
 PLANNER_TIMEOUT_S = 120
 PLANNER_MAX_TOKENS = 8000
 PLANNER_RESULT_CHARS = 12000
-# What the quick model is given of one tool's answer. A search of the logs is
-# forty lines of about a hundred characters; at 4000 the end of it was cut off
-# mid-line and the model read broken JSON.
-QUICK_RESULT_CHARS = 7000
 PLANNER_BUDGET_S = 300          # one job, all its model calls together
 PLANNER_EXTRA = None            # request fields for the planner model (see llm.NO_THINKING)
 # The routing model's word for "this needs the planner", and how sure it must be.
@@ -70,9 +66,8 @@ PLANNER_INTENTS = ("build", "automation_rule")
 # could have done (renaming a device), or made up a tool of its own.
 HANDOVER_RULE = ("\n\nIf a request needs something you have no tool for (making or changing a shortcut "
                  "or routine, steps that depend on each other, a chart, table or panel to look at, "
-                 "adding, renaming or removing devices or people, settings, backups, recordings), "
-                 "do not refuse and do not explain: call hand_to_planner. Questions about what "
-                 "happened are yours: search_history answers them.")
+                 "adding, renaming or removing devices or people, settings, backups, logs, recordings), "
+                 "do not refuse and do not explain: call hand_to_planner.")
 PLANNER_RULES = """
 
 For this request you are working as the planner: it needs something built or several steps. You have every capability of the site as a tool.
@@ -116,48 +111,6 @@ SECURITY_TOOLS = capabilities.names(security=True)
 CHANGING_TOOLS = capabilities.names(changing=True)
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
-
-
-
-def fit_result(out, limit):
-    """A tool's answer as JSON of at most `limit` characters, still valid JSON.
-
-    It used to be cut at the limit wherever that fell, so a long answer reached
-    the model as broken text with its end (often the part that mattered)
-    missing. Now the longest list is shortened instead, from the end that
-    matters least, and the answer says how much is not shown: entries around a
-    moment ("at") lose their far ends, a log its oldest lines, anything else
-    its tail.
-    """
-    text = json.dumps(out, default=str)
-    if len(text) <= limit or not isinstance(out, dict):
-        return text[:limit]
-    out = dict(out)
-    lists = [k for k, v in out.items() if isinstance(v, list) and v]
-    while lists and len(text) > limit:
-        key = max(lists, key=lambda k: len(json.dumps(out[k], default=str)))
-        items = list(out[key])
-        drop = max(1, len(items) // 8)
-        if out.get("at") and "omitted_before" in out:
-            front = drop // 2 + drop % 2
-            back = drop - front
-            items = items[front:len(items) - back]
-            out["omitted_before"] = out.get("omitted_before", 0) + front
-            out["omitted_after"] = out.get("omitted_after", 0) + back
-        elif key.endswith("log") or "omitted_before" in out:
-            items = items[drop:]
-            if "omitted_before" in out:
-                out["omitted_before"] += drop
-        else:
-            items = items[:-drop]
-        out[key] = items
-        out["not_shown"] = out.get("not_shown", 0) + drop
-        out["note"] = ("some items were left out to fit; ask again for a narrower time or "
-                       "with words to see them")
-        if not items:
-            lists.remove(key)
-        text = json.dumps(out, default=str)
-    return text[:limit]
 
 
 class HomeAgent:
@@ -414,7 +367,7 @@ class HomeAgent:
             log.exception("state brief")
             return ""
         return ("\nCurrent state, read just now (act on it directly; only call a state tool "
-                "for something not listed here):\n" + fit_result(state, 3000))
+                "for something not listed here):\n" + json.dumps(state, default=str)[:3000])
 
     def _agent(self, text, user, role, scope="home", voice=False, planner=False):
         # Separate conversations, so a Drishti one never leaks into Garuda's.
@@ -529,7 +482,7 @@ class HomeAgent:
                         "waiting": "waiting" in out}
                 self._turn.steps.append(step)
                 self._emit(type="step", status="done", **step)
-                content = fit_result(out, PLANNER_RESULT_CHARS if planner else QUICK_RESULT_CHARS)
+                content = json.dumps(out, default=str)[:PLANNER_RESULT_CHARS if planner else 4000]
                 found = self.brain.scan(content)
                 if found:
                     self._turn.injected = True
@@ -807,9 +760,7 @@ class HomeAgent:
         for e in actuation_log.recent(self.ctx.log_path, limit=limit):
             cause = (f"rule: {rules.get(e['rule_id'], e['rule_id'])}" if e.get("rule_id")
                      else e.get("source") or "manual")
-            # The date and the second, as the logs write them: "Thu 14:33" could
-            # not be matched to a time someone copied from a log, or to a day.
-            out.append({"when": time.strftime("%Y-%m-%d %H:%M:%S (%a)", time.localtime(e["ts"])),
+            out.append({"when": time.strftime("%a %H:%M", time.localtime(e["ts"])),
                         "device": names.get(e["device"], e["device"]), "action": e["action"],
                         "ok": e["ok"], "cause": cause, "by": e.get("actor", "")})
         return {"activity": out}

@@ -3178,15 +3178,6 @@ input[type=range]::-webkit-slider-thumb {
   opacity: 1;
 }
 .activity-date-picker:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
-.activity-day-nav { display: flex; align-items: center; gap: 4px; }
-.activity-day-step {
-  background: var(--surface-2); border: none; border-radius: 8px;
-  width: 24px; height: 24px; padding: 0;
-  color: var(--t2); font: 600 15px/1 var(--font); cursor: pointer;
-}
-.activity-day-step:disabled { opacity: 0.35; cursor: default; }
-.activity-day-step:not(:disabled):hover { color: var(--t1); }
-.tl-older { display: block; margin: 6px auto 10px; }
 
 .timeline-list {
   overflow-y: auto;
@@ -3267,10 +3258,6 @@ input:-webkit-autofill:focus {
 
 /* ── Security status card light mode ────────────────────── */
 .status-card { border: 1px solid var(--border) !important; }
-
-/* One log line per line: the panes are filled with text joined by newlines,
-   which without this ran together into one paragraph. */
-#page-a-logs .console { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* ── Logs bottom action bar ──────────────────────────────── */
 .logs-bottom-bar {

@@ -54,6 +54,8 @@ const G = (() => {
   let _lastDetInfo = '';
   let _recentDets  = [];
   let _privacyOn = true;
+  let _allLogs      = [];
+  let _presenceLogs = [];
   let _logsUnlocked = false;
   let _lastAlertState = false;
   let _uptimeBase = 0;          // seconds from backend
@@ -492,8 +494,14 @@ const G = (() => {
     // Set logs unlock state from session (master key login sets this true)
     _logsUnlocked = !!_session.logs_unlocked;
     $('logs-gate')?.classList.add('hidden');
-    // Activity: today, local time; any earlier day is read from the logs on disk.
-    _initTimeline();
+    // Activity date picker — default to all dates and wire change
+    const datePicker = document.getElementById('activity-date');
+    if (datePicker) {
+      const today = new Date().toISOString().split('T')[0];
+      datePicker.value = today;
+      datePicker.max = today;
+      datePicker.onchange = _renderTimeline;
+    }
     _wsAllowed = true;
     connectWS();
     setTimeout(_garudaProbeFrames, 2500);   // after the first paint and state push have settled
@@ -584,8 +592,7 @@ const G = (() => {
     if (G._fbOnLogout) G._fbOnLogout();   // clean up feedback inbox tab
     _session = null; _token = null; _logsUnlocked = false;
     _recentDets = []; _prevAlertActive = false; _lastAlertState = false; _lastDetInfo = '';
-    _timelineSig = ''; _timelineItems = []; _timelineReq++;
-    _logLines = { system: [], detection: [], voice: [], presence: [] }; _logsLoaded = false;
+    _timelineSig = '';
     _lsDel('garuda_token');
     _lsDel('garuda_refresh');
     _lsDel('garuda_remember');
@@ -1468,135 +1475,42 @@ const G = (() => {
   }
 
   // ── Activity Timeline ─────────────────────────────────────
-  // One day at a time, read from /api/history: every day the logs on disk
-  // hold, not only the last 50 lines of the state push (which is all this card
-  // had, so yesterday was always "No activity"). The push still adds new lines
-  // as they happen while today is shown.
-  let _timelineItems = [];      // the chosen day, newest first
-  let _timelineMore = false;    // older lines of that day are on disk
-  let _timelineAuto = true;     // following today (not a day someone picked)
-  let _timelineDays = [];       // days with lines, newest first
-  let _timelineReq = 0;
+  let _timelineItems = [];
+
   let _timelineSig = '';
-
-  const _pad2 = n => String(n).padStart(2, '0');
-  // The device stamps lines in local time; toISOString() is UTC, which in
-  // India put the picker on yesterday until 05:30.
-  function _localDay(d = new Date()) {
-    return `${d.getFullYear()}-${_pad2(d.getMonth() + 1)}-${_pad2(d.getDate())}`;
-  }
-  function _tlKey(i) { return i.time + '|' + i.text; }
-
-  function _tlItem(time, text) {
-    let type = '';
-    if (text.includes('[TAMPER]') || text.includes('Alert triggered')) type = 'danger';
-    else if (text.includes('[WATCH]')) type = 'watch';
-    else if (text.includes('[PRESENCE]') || text.includes('[OWNER]')) type = 'presence';
-    else if (/\[MODE\]|mode (on|off)/i.test(text)) type = 'warn';
-    return { time, text, type, dateKey: time.split(' ')[0] || '' };
-  }
-  function _tlFromLine(entry) {
-    const m = entry.match(/^\[([\d\-: ]+)\]\s*/);
-    return _tlItem(m ? m[1].trim() : '', m ? entry.slice(m[0].length) : entry);
-  }
-
-  function _initTimeline() {
-    const picker = $('activity-date');
-    _timelineAuto = true;
-    if (picker) {
-      picker.value = picker.max = _localDay();
-      picker.onchange = () => { _timelineAuto = picker.value === _localDay(); _loadTimeline(); };
-    }
-    _loadTimeline();
-    _loadTimelineDays();
-  }
-
-  async function _loadTimelineDays() {
-    try {
-      const d = await api('GET', '/api/history/days?source=system');
-      _timelineDays = (d.days || []).map(x => x.date);
-      const picker = $('activity-date');
-      if (picker && _timelineDays.length) picker.min = _timelineDays[_timelineDays.length - 1];
-      _renderTimeline();
-    } catch (_) {}
-  }
-
-  // Step to the previous (-1) or next (+1) day that has anything in it.
-  function stepActivityDay(dir) {
-    const picker = $('activity-date');
-    if (!picker) return;
-    const cur = picker.value || _localDay();
-    const today = _localDay();
-    const days = _timelineDays.filter(d => d <= today);
-    const next = dir < 0 ? days.find(d => d < cur) : [...days].reverse().find(d => d > cur);
-    if (!next) return;
-    picker.value = next;
-    _timelineAuto = next === today;
-    _loadTimeline();
-  }
-
-  async function _loadTimeline(older) {
-    const day = $('activity-date')?.value || _localDay();
-    const req = ++_timelineReq;
-    const q = new URLSearchParams({ sources: 'system', date: day, limit: '150' });
-    if (older && _timelineItems.length) q.set('before', _timelineItems[_timelineItems.length - 1].time);
-    if (!older) { _timelineItems = []; _timelineMore = false; _renderTimeline(true); }
-    try {
-      const d = await api('GET', '/api/history?' + q.toString());
-      if (req !== _timelineReq) return;           // another day was picked meanwhile
-      const have = new Set(_timelineItems.map(_tlKey));
-      const items = (d.entries || []).map(e => _tlItem(e.ts, e.text)).reverse()
-        .filter(i => !have.has(_tlKey(i)));
-      _timelineItems = older ? _timelineItems.concat(items) : items;
-      _timelineMore = (d.omitted_before || 0) > 0;
-    } catch (_) {
-      if (req !== _timelineReq) return;
-    }
-    _timelineSig = '';                          // let the next push add what is newer
-    _renderTimeline();
-  }
-
-  function loadOlderActivity() { _loadTimeline(true); }
+  function _logSig(log) { return log.length + '|' + (log.length ? log[log.length - 1] : ''); }
 
   function _updateTimeline(s) {
     const log = s.system_log || [];
-    const picker = $('activity-date');
-    // Past midnight, a card that was following today follows the new day.
-    if (_timelineAuto && picker && picker.value !== _localDay()) {
-      picker.value = picker.max = _localDay();
-      _loadTimeline();
-      _loadTimelineDays();
-      return;
-    }
     const sig = _logSig(log);
     if (sig === _timelineSig) return;         // nothing new: leave the list alone
     _timelineSig = sig;
-    const day = picker?.value || _localDay();
-    const have = new Set(_timelineItems.map(_tlKey));
-    const fresh = log.map(_tlFromLine).filter(i => i.dateKey === day && !have.has(_tlKey(i)));
-    if (!fresh.length) return;
-    _timelineItems = fresh.reverse().concat(_timelineItems)
-      .sort((a, b) => (a.time < b.time ? 1 : a.time > b.time ? -1 : 0));
-    if (!_timelineDays.includes(day)) _timelineDays.unshift(day);
+    _timelineItems = log.map(entry => {
+      const timeMatch = entry.match(/^\[([\d\-: ]+)\]/);
+      const time = timeMatch ? timeMatch[1].trim() : '';
+      const text = entry.replace(/^\[[\d\-: ]+\]\s*/, '');
+      let type = '';
+      if (text.includes('[TAMPER]') || text.includes('Alert triggered')) type = 'danger';
+      else if (text.includes('[WATCH]')) type = 'watch';
+      else if (text.includes('[PRESENCE]') || text.includes('[OWNER]')) type = 'presence';
+      else if (/\[MODE\]|mode (on|off)/i.test(text)) type = 'warn';
+      return { time, text, type, dateKey: time.split(' ')[0] || '' };
+    }).reverse(); // newest first
     _renderTimeline();
   }
-  function _logSig(log) { return log.length + '|' + (log.length ? log[log.length - 1] : ''); }
 
-  function _renderTimeline(loading) {
+  function _renderTimeline() {
     const el = $('activity-timeline');
     if (!el) return;
-    const picker = $('activity-date');
-    const day = picker?.value || _localDay();
-    const today = _localDay();
-    const prev = $('activity-prev'), next = $('activity-next');
-    if (prev) prev.disabled = !_timelineDays.some(d => d < day);
-    if (next) next.disabled = day >= today;
-    if (!_timelineItems.length) {
-      el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">\u25CB</div><span>${
-        loading ? 'Loading\u2026' : (day === today ? 'No activity yet today' : 'No activity recorded on ' + esc(day))}</span></div>`;
+    const filter = ($('activity-date')?.value) || null;
+    const items = filter
+      ? _timelineItems.filter(i => i.dateKey === filter)
+      : _timelineItems.slice(0, 50);
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">\u25CB</div><span>No activity for this date</span></div>';
       return;
     }
-    el.innerHTML = _timelineItems.map(item =>
+    el.innerHTML = items.map(item =>
       `<div class="timeline-item">
         <div class="tl-dot ${esc(item.type)}"></div>
         <div class="tl-body">
@@ -1604,9 +1518,7 @@ const G = (() => {
           <div class="tl-time">${esc(item.time)}</div>
         </div>
       </div>`
-    ).join('') + (_timelineMore
-      ? '<button class="btn btn-ghost btn-sm tl-older" onclick="G.loadOlderActivity()">Show earlier</button>'
-      : '');
+    ).join('');
   }
 
   // Android Chrome refuses `new Notification()` on a page (it throws) and
@@ -1755,20 +1667,19 @@ const G = (() => {
     _updateActivityFeed(s);
     _updateTimeline(s);
 
-    // Log badge counts (the Logs page counts what it shows once it has loaded)
-    if (!_logsLoaded) {
-      setText('log-count-system', (s.system_log || []).length || 0);
-      setText('log-count-detection', s.detection_log_count || 0);
-      setText('log-count-presence', s.presence_log_count || 0);
-      setText('log-count-voice', ((s.voice_log || []).length + (s.voice_responses || []).length) || 0);
-    }
+    // Log badge counts
+    setText('log-count-system', (s.system_log || []).length || 0);
+    setText('log-count-detection', s.detection_log_count || 0);
+    setText('log-count-presence', s.presence_log_count || 0);
+    setText('log-count-voice', ((s.voice_log || []).length + (s.voice_responses || []).length) || 0);
 
 
     // Security health panel
     _updateSecHealth(s);
 
-    // New lines into the Logs page, if it is open on the newest ones.
-    if (_logsLoaded) _mergeLiveLogs(s.system_log || []);
+    // Sync system_log from WS state for any live-updating consumers
+    // (actual admin logs page fetches via /api/logs which requires master key)
+    _allLogs = s.system_log || [];
   }
 
   function fmtUptime(secs) {
@@ -2086,101 +1997,31 @@ const G = (() => {
     }
   }
 
-  // ── Logs page ───────────────────────────────────────────────
-  // Every tab reads /api/history: the newest 500 lines across every file kept
-  // on disk, or one chosen day, or whatever matches the filter on any day; and
-  // "Show earlier" pages further back. It used to show the 500 lines held in
-  // memory, and two seconds later the 50 of the state push, so the filter
-  // searched only those 50.
-  const _LOG_KINDS = ['system', 'detection', 'presence', 'voice'];
-  const _LOG_PANES = { system: 'a-syslog', detection: 'a-detlog', presence: 'a-preslog', voice: 'a-vlog' };
-  let _logLines = { system: [], detection: [], voice: [], presence: [] };   // {ts, text}, oldest first
-  let _logMore = {};
-  let _logTab = 'system';
-  let _logsLoaded = false;
-  let _logReq = 0;
-  let _logQTimer = null;
-
-  function _logFilters() { return { day: val('log-date') || '', q: (val('log-q') || '').trim() }; }
-  const _logKey = e => e.ts + '|' + e.text;
-
-  async function _fetchLogKind(kind, olderThan) {
-    const { day, q } = _logFilters();
-    const p = new URLSearchParams({ sources: kind, limit: '500' });
-    if (day) p.set('date', day);
-    if (q) p.set('q', q);
-    if (olderThan) p.set('before', olderThan);
-    const d = await api('GET', '/api/history?' + p.toString());
-    if (d.not_searched && d.not_searched[kind]) throw { detail: 'Master key required to view logs.' };
-    return { lines: d.entries || [], more: (d.omitted_before || 0) > 0 };
-  }
-
   async function fetchAndRenderLogs() {
-    const req = ++_logReq;
     try {
-      const got = await Promise.all(_LOG_KINDS.map(k => _fetchLogKind(k)));
-      if (req !== _logReq) return;              // the filter changed meanwhile
-      _LOG_KINDS.forEach((k, i) => { _logLines[k] = got[i].lines; _logMore[k] = got[i].more; });
-      _logsLoaded = true;
+      const data = await api('GET', '/api/logs');
+      _allLogs = data.system_log || [];
+      _presenceLogs = data.presence_log || [];
       renderLogs();
+      const av = $('a-vlog');
+      if (av) {
+        av.innerHTML = [...(data.voice_log||[]), ...(data.voice_responses||[])]
+          .map(l => `<div class="log-line">${esc(l)}</div>`).join('');
+        av.scrollTop = av.scrollHeight;
+      }
+      const dl = $('a-detlog');
+      if (dl) {
+        const dets = data.detection_log || [];
+        dl.textContent = dets.length ? dets.join('\n') : 'No detection events this session.';
+        dl.scrollTop = dl.scrollHeight;
+      }
     } catch(e) {
-      if (req !== _logReq) return;
       // 403 means logs not unlocked — re-show gate
       if (e && (e.detail || '').toString().includes('Master key')) {
         _logsUnlocked = false;
         $('logs-gate')?.classList.remove('hidden');
-        return;
-      }
-      _fetchLogsFromMemory();                   // a server without /api/history
-    }
-  }
-
-  async function _fetchLogsFromMemory() {
-    try {
-      const data = await api('GET', '/api/logs');
-      const parse = l => { const i = _tlFromLine(l); return { ts: i.time, text: i.text }; };
-      _logLines = {
-        system: (data.system_log || []).map(parse),
-        detection: (data.detection_log || []).map(parse),
-        voice: [...(data.voice_log || []), ...(data.voice_responses || [])].map(parse),
-        presence: (data.presence_log || []).map(e => ({ ts: e.ts, text: `${e.device || 'Unknown'} ${e.event} (${e.mac || 'no mac'})` })),
-      };
-      _logMore = {};
-      _logsLoaded = true;
-      renderLogs();
-    } catch(e) {
-      if (e && (e.detail || '').toString().includes('Master key')) {
-        _logsUnlocked = false;
-        $('logs-gate')?.classList.remove('hidden');
       }
     }
-  }
-
-  async function loadOlderLogs() {
-    const kind = _logTab, cur = _logLines[kind];
-    if (!cur.length) return;
-    const req = _logReq;
-    try {
-      const got = await _fetchLogKind(kind, cur[0].ts);
-      if (req !== _logReq) return;
-      const have = new Set(cur.map(_logKey));
-      _logLines[kind] = got.lines.filter(e => !have.has(_logKey(e))).concat(cur);
-      _logMore[kind] = got.more;
-      _renderLogPane(kind, 'older');
-    } catch(_) { showToast('Could not read earlier lines.', 'error'); }
-  }
-
-  // New lines from the state push, while the page shows the newest (no past day, no filter).
-  function _mergeLiveLogs(lines) {
-    const { day, q } = _logFilters();
-    if (q || (day && day !== _localDay())) return;
-    const cur = _logLines.system;
-    const have = new Set(cur.map(_logKey));
-    const fresh = lines.map(_tlFromLine).map(i => ({ ts: i.time, text: i.text }))
-      .filter(e => !have.has(_logKey(e)) && (!day || e.ts.startsWith(day)));
-    if (!fresh.length) return;
-    _logLines.system = cur.concat(fresh);
-    _renderLogPane('system', 'live');
   }
 
   async function downloadFullLog() {
@@ -2202,43 +2043,29 @@ const G = (() => {
     }
   }
 
-  // how: 'older' keeps the reader's place as earlier lines go on top; 'live'
-  // follows new lines only for a reader already at the bottom.
-  function _renderLogPane(kind, how) {
-    const el = $(_LOG_PANES[kind]);
-    if (!el) return;
-    const { day, q } = _logFilters();
-    const lines = _logLines[kind] || [];
-    const fromBottom = el.scrollHeight - el.scrollTop;
-    const atBottom = fromBottom - el.clientHeight < 8;
-    const fmt = e => kind === 'presence' ? `${e.ts}  ${e.text}` : `[${e.ts}] ${e.text}`;
-    if (!lines.length) {
-      el.textContent = q ? `Nothing matches "${q}"${day ? ' on ' + day : ''}.`
-        : day ? `Nothing recorded on ${day}.` : 'Nothing recorded yet.';
-    } else if (kind === 'voice') {
-      el.innerHTML = lines.map(e => `<div class="log-line">${esc(fmt(e))}</div>`).join('');
-    } else {
-      el.textContent = lines.map(fmt).join('\n');
+  function renderLogs() {
+    const q = (val('log-q') || '').toLowerCase();
+    const el = $('a-syslog');
+    if (el) {
+      const lines = _allLogs.filter(l => !q || l.toLowerCase().includes(q));
+      el.textContent = lines.join('\n');
+      el.scrollTop = el.scrollHeight;
     }
-    if (how === 'older') el.scrollTop = el.scrollHeight - fromBottom;
-    else if (how !== 'live' || atBottom) el.scrollTop = el.scrollHeight;
-    setText(`log-count-${kind}`, lines.length + (_logMore[kind] ? '+' : ''));
-    if (kind === _logTab) _syncLogOlder();
+    const pl = $('a-preslog');
+    if (pl) {
+      if (_presenceLogs.length) {
+        pl.textContent = _presenceLogs.map(e => {
+          const icon = e.event === 'arrived' ? '→' : '←';
+          return `${e.ts}  ${icon}  ${e.device || 'Unknown'}  (${e.mac || 'no mac'})`;
+        }).join('\n');
+      } else {
+        pl.textContent = 'No presence events yet.';
+      }
+      pl.scrollTop = pl.scrollHeight;
+    }
   }
 
-  function _syncLogOlder() {
-    const b = $('log-older');
-    if (b) b.disabled = !_logMore[_logTab];
-  }
-
-  function renderLogs() { _LOG_KINDS.forEach(k => _renderLogPane(k)); }
-
-  // Typing searches every day on disk, once the typing pauses.
-  function filterLogs() {
-    if (!_logsUnlocked) return;
-    clearTimeout(_logQTimer);
-    _logQTimer = setTimeout(fetchAndRenderLogs, 350);
-  }
+  function filterLogs() { if (_logsUnlocked) renderLogs(); }
 
   // ── Log tab switching ──────────────────────────────────────
   function switchLogTab(tab) {
@@ -2248,8 +2075,6 @@ const G = (() => {
     const paneEl = document.getElementById(`log-pane-${tab}`);
     if (tabEl) tabEl.classList.add('active');
     if (paneEl) paneEl.classList.add('active');
-    _logTab = tab;
-    _syncLogOlder();
   }
 
   // ── Docs tab switching ─────────────────────────────────────
@@ -2265,13 +2090,11 @@ const G = (() => {
     if (body) body.scrollTo({ top: 0, behavior });
   }
 
-  // What the open tab shows, as shown (a day, a search, or the newest lines).
   function exportLogs() {
-    const fmt = e => `[${e.ts}] ${e.text}`;
-    const blob = new Blob([(_logLines[_logTab] || []).map(fmt).join('\n')], { type: 'text/plain' });
+    const blob = new Blob([_allLogs.join('\n')], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `garuda-${_logTab}-log-${val('log-date') || _localDay()}.txt`;
+    a.download = `garuda-logs-${new Date().toISOString().slice(0, 10)}.txt`;
     a.click();
   }
 
@@ -2754,8 +2577,7 @@ const G = (() => {
     toggleCamera, takeSnapshot, toggleClip, openDocs,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, toggleNightPresence, saveSettings,
-    filterLogs, exportLogs, downloadFullLog, loadOlderLogs, onLogDate: fetchAndRenderLogs,
-    loadOlderActivity, stepActivityDay,
+    filterLogs, exportLogs, downloadFullLog,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence,
     loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey, onMkKeyInput,
     loadCmds, openAddCmd, addCmd, _delCmd,

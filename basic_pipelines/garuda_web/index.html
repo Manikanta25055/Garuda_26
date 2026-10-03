@@ -425,11 +425,7 @@
             <div class="card activity-card-scroll">
               <div class="dash-card-hdr">
                 <div class="dash-card-title">Activity</div>
-                <div class="activity-day-nav">
-                  <button id="activity-prev" class="activity-day-step" onclick="G.stepActivityDay(-1)" title="Earlier day with activity" aria-label="Earlier day">&#8249;</button>
-                  <input type="date" id="activity-date" class="activity-date-picker" aria-label="Day"/>
-                  <button id="activity-next" class="activity-day-step" onclick="G.stepActivityDay(1)" title="Later day with activity" aria-label="Later day">&#8250;</button>
-                </div>
+                <input type="date" id="activity-date" class="activity-date-picker"/>
               </div>
               <div id="activity-timeline" class="timeline-list">
                 <div class="empty-state">
@@ -985,10 +981,8 @@
             </div>
             <!-- Action bar at bottom — clear of Dynamic Island -->
             <div class="logs-bottom-bar" style="padding:0 20px 16px">
-              <input id="log-date" class="input" type="date" aria-label="Day" title="Show one day (empty: the newest lines)" style="width:150px" onchange="G.onLogDate()"/>
-              <input id="log-q" class="input" type="text" placeholder="Search all days..." style="width:160px" oninput="G.filterLogs()"/>
-              <button id="log-older" class="btn btn-ghost btn-sm" onclick="G.loadOlderLogs()" disabled>Show earlier</button>
-              <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export shown</button>
+              <input id="log-q" class="input" type="text" placeholder="Filter..." style="width:160px" oninput="G.filterLogs()"/>
+              <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export Session</button>
               <button class="btn btn-primary btn-sm" onclick="G.downloadFullLog()">Download Full</button>
             </div>
           </div>

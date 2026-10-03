@@ -482,11 +482,8 @@ _load_logs_from_disk()
 # accumulated in-memory and flushed to disk every _LOG_FLUSH_INTERVAL seconds.
 # This eliminates per-event fsync calls — the biggest source of SD card wear.
 # Critical state (users, config, alert history) still uses _atomic_json_write.
-# Ten seconds, not sixty: a power cut or a pulled plug lost the last minute,
-# which on a security system is the minute that matters.
-_LOG_FLUSH_INTERVAL = 10    # flush every 10 seconds
+_LOG_FLUSH_INTERVAL = 60    # flush every 60 seconds
 _LOG_MAX_SIZE_BYTES = 10 * 1024 * 1024   # rotate at 10 MB
-_LOG_KEEP_ROTATED = 10      # old files kept per log (.1 … .10): about 110 MB each at most
 
 ##############################################################################
 # OFFLINE EVENT QUEUE (SQLite)
