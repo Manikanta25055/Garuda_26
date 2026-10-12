@@ -85,6 +85,25 @@ class RelayBank:
         self._state[device] = action
         return True
 
+    def settle(self):
+        """Drive every mapped relay off. Called once when the service starts.
+
+        After a restart the app believes every relay is off, but nothing had
+        told the board: a pin left as an input floats, and one the last run
+        left driven still holds its relay. Claiming the pins here is the
+        service starting, not an import, so it takes nothing from anyone.
+        Returns the devices whose pin could not be driven.
+        """
+        failed = []
+        with self._lock:
+            for device in self.pin_map:
+                try:
+                    self._set(device, "off")
+                except Exception as exc:
+                    log.warning("could not settle relay %s: %s", device, exc)
+                    failed.append(device)
+        return failed
+
     def all_off(self):
         # Only drive pins this bank has already opened. A pin it never touched
         # is not energised by us, and opening it here just to write the value

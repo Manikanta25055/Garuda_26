@@ -651,6 +651,11 @@ async def _lifespan(app):
     # Backed by a file, so deploying a change does not sign the house out.
     _drishti_auth.configure(DRISHTI_SESSIONS_PATH)
     _drishti_auth.prune_expired()
+    # Before the rule loop: every relay is driven off, so what the app shows
+    # and what the board is doing agree from the first tick.
+    unsettled = DRISHTI_CTX.relay_bank.settle()
+    if unsettled:
+        log_system_update(f"[DRISHTI] relays not reachable at start: {', '.join(unsettled)}")
     DRISHTI_RUNTIME.start()
     HOME.start()
     SHORTCUTS.start()

@@ -122,3 +122,26 @@ def test_polarity_can_be_flipped_without_editing_code(monkeypatch):
     assert actuators.ACTIVE_HIGH is True
     monkeypatch.delenv("RELAY_ACTIVE_HIGH")
     importlib.reload(actuators)
+
+
+def test_settle_drives_every_mapped_relay_off(monkeypatch):
+    # After a restart the app says "off" for every relay; the board has to be
+    # told, or a pin the last run left driven keeps its relay on.
+    bank = _bank(monkeypatch)
+    assert bank.settle() == []
+    assert sorted(o.pin for o in FakeOutput.instances) == [17, 27]
+    assert all(o.value is False for o in FakeOutput.instances)
+    assert bank.state("lamp") == "off"
+
+
+def test_settle_reports_a_pin_it_could_not_drive(monkeypatch):
+    bank = _bank(monkeypatch)
+
+    def busy(pin, **kwargs):
+        if pin == 27:
+            raise RuntimeError("GPIO busy")
+        return FakeOutput(pin, **kwargs)
+
+    monkeypatch.setattr(actuators, "OutputDevice", busy)
+    assert bank.settle() == ["fan"]
+    assert bank.state("lamp") == "off"
