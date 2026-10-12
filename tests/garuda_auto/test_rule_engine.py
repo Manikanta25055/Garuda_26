@@ -87,3 +87,29 @@ def test_type_mismatch_is_treated_as_no_match():
     engine = RuleEngine(FakeStore([rule]), clock=lambda: 1000.0)
     broken = {**BASE, "temperature_c": "warm"}
     assert engine.evaluate(broken) == []
+
+
+def test_once_acts_when_the_condition_becomes_true_not_while_it_holds():
+    from basic_pipelines.garuda_auto.rule_engine import RuleEngine
+
+    class Store:
+        rules = [{"id": "r", "when": {"all": [{"field": "occupancy", "op": "==", "value": "empty"}]},
+                  "then": [{"device": "lamp", "action": "off"}], "cooldown_s": 0}]
+
+    engine = RuleEngine(Store(), once=True)
+    assert len(engine.evaluate({"occupancy": "empty"})) == 1
+    assert engine.evaluate({"occupancy": "empty"}) == []
+    assert engine.evaluate({"occupancy": "occupied"}) == []
+    assert len(engine.evaluate({"occupancy": "empty"})) == 1
+
+
+def test_prime_takes_what_already_holds_as_done():
+    from basic_pipelines.garuda_auto.rule_engine import RuleEngine
+
+    class Store:
+        rules = [{"id": "r", "when": {"all": [{"field": "occupancy", "op": "==", "value": "empty"}]},
+                  "then": [{"device": "lamp", "action": "off"}], "cooldown_s": 0}]
+
+    engine = RuleEngine(Store(), once=True)
+    engine.prime({"occupancy": "empty"})
+    assert engine.evaluate({"occupancy": "empty"}) == []

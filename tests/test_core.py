@@ -178,6 +178,15 @@ def test_system_info_is_admin_only_and_holds_no_secret(app_client, user_headers,
             assert secret not in r.text
 
 
+def test_system_info_shows_the_relay_board_to_an_admin(app_client, admin_headers):
+    hardware = app_client.get('/api/system/info', headers=admin_headers).json()['hardware']
+    assert hardware['polarity'] in ('active-low', 'active-high')
+    by_channel = {c['channel']: c for c in hardware['channels']}
+    assert by_channel[1]['pin'] == 17 and by_channel[1]['device'] == 'lamp'
+    assert by_channel[3]['device'] is None and by_channel[3]['driven'] is False
+    assert set(hardware['mqtt']) == {'broker', 'connected', 'devices'}
+
+
 # ── compatibility ────────────────────────────────────────────────────────────
 
 def test_native_app_mode_route_is_served(app_client, user_headers):

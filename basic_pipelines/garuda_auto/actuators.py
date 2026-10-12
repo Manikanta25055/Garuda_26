@@ -68,6 +68,10 @@ class RelayBank:
     def state(self, device):
         return self._state.get(device, "off")
 
+    def claimed(self, device):
+        """True once this bank is driving the device's pin."""
+        return device in self._outputs
+
     def set(self, device, action):
         with self._lock:
             return self._set(device, action)

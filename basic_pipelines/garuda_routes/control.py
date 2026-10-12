@@ -66,7 +66,7 @@ def build_control_router(core):
             core.STATE.system.last_heartbeat = time.time()
             core.STATE.system.deadman_alert_sent = False
             core.STATE.system.heartbeat_ever = True
-        return {"ok": True, "uptime": int(time.time() - core._app_start_time)}
+        return {"ok": True, "uptime": int(core._uptime_s())}
 
     @router.post("/api/emergency-stop")
     async def emergency_stop(session=Depends(core.require_admin)):

@@ -52,7 +52,7 @@ def get_state_dict():
     if _just_cleared:
         core.push_urgent_ws()   # push cleared state outside lock to avoid deadlock
 
-    uptime = int(time.time() - core._app_start_time)
+    uptime = int(core._uptime_s())
     hours, rem = divmod(uptime, 3600)
     mins, secs = divmod(rem, 60)
     uptime_str = f"{hours:02d}:{mins:02d}:{secs:02d}"
@@ -324,8 +324,41 @@ def _client_meta(request: Request) -> dict:
     }
 
 
+def _hardware_info() -> dict:
+    """What the relay board and the MQTT devices look like to the service."""
+    ctx = core.DRISHTI_CTX
+    bank, mqtt = ctx.relay_bank, ctx.mqtt_bank
+    on_relay = {d["transport"]["channel"]: d for d in ctx.registry.devices
+                if d["transport"]["kind"] == "relay"}
+    channels = []
+    for channel, pin in sorted(ctx.channel_to_pin.items()):
+        device = on_relay.get(channel)
+        channels.append({
+            "channel": channel, "pin": pin,
+            "device": device["id"] if device else None,
+            "name": device["name"] if device else None,
+            "state": bank.state(device["id"]) if device else None,
+            "driven": bool(device) and bank.claimed(device["id"]),
+        })
+    return {
+        # The bank's own module: this file is loaded under two package names.
+        "gpio": bool(__import__("sys").modules[type(bank).__module__].GPIO_AVAILABLE),
+        "polarity": "active-high" if bank.active_high else "active-low",
+        "channels": channels,
+        "mqtt": {
+            "broker": f"{mqtt.broker_host}:{mqtt.broker_port}",
+            "connected": mqtt.connected(),
+            "devices": [{"id": d["id"], "name": d["name"],
+                         "topic": d["transport"]["topic_base"],
+                         "seen": mqtt.available(d["id"])}
+                        for d in ctx.registry.devices if d["transport"]["kind"] == "mqtt"],
+        },
+    }
+
+
 def _system_extra() -> dict:
-    return {"sessions": {"active": len(core.STATE.auth.sessions),
+    return {"hardware": _hardware_info(),
+            "sessions": {"active": len(core.STATE.auth.sessions),
                          "refresh_tokens": len(core.STATE.auth.refresh_tokens) + len(core.STATE.auth.persisted_refresh),
                          "websockets": len(core._ws_clients), "video_peers": len(core._pc_set)},
             "log_file": getattr(core._core_logging.configure, "path", None)}

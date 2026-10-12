@@ -23,7 +23,8 @@ except Exception:
 
 
 class MqttBank:
-    def __init__(self, broker_host, broker_port=1883, client_factory=None):
+    def __init__(self, broker_host, broker_port=1883, client_factory=None,
+                 username=None, password=None):
         self.broker_host = broker_host
         self.broker_port = broker_port
         self._topics = {}
@@ -41,6 +42,9 @@ class MqttBank:
                 version = getattr(paho, "CallbackAPIVersion", None)
                 self._client = paho.Client(version.VERSION1) if version else paho.Client()
                 self._wire(self._client)
+                if username:
+                    # The broker does not take anonymous clients.
+                    self._client.username_pw_set(username, password or None)
                 # Non-blocking, with paho's own retry loop: a broker that is
                 # down at start-up is picked up when it comes back instead of
                 # leaving MQTT devices dead until the service is restarted.
@@ -107,6 +111,14 @@ class MqttBank:
 
     def available(self, device_id):
         return device_id in self._seen
+
+    def connected(self):
+        """True while the broker connection is up."""
+        check = getattr(self._client, "is_connected", None)
+        try:
+            return bool(check()) if callable(check) else False
+        except Exception:
+            return False
 
     def state(self, device_id):
         return self._state.get(device_id)

@@ -41,7 +41,7 @@ class DrishtiRuntime:
         self._clock = clock
         self._lock = threading.Lock()
         self.scene = SceneBuilder(zones or DEFAULT_ZONES, ctx.registry, clock=clock)
-        self.engine = RuleEngine(ctx.store, clock=clock)
+        self.engine = RuleEngine(ctx.store, clock=clock, once=True)
         self._stop = threading.Event()
         self._thread = None
         # Observability. A loop nobody can see is a loop nobody can tell has
@@ -140,10 +140,7 @@ class DrishtiRuntime:
         performed, touched = [], set()
         for action in actions:
             if self.ctx.device_router.state(action["device"]) == action["action"]:
-                # Already so. A rule holds while its condition does, and one with
-                # no cooldown asked for the same thing every tick: the relay was
-                # set, the action logged and the rule file rewritten twice a
-                # second for as long as someone was home.
+                # Already so: nothing to switch, nothing to log.
                 continue
             ok, reason = self.ctx.device_router.set(action["device"], action["action"])
             if ok:
@@ -187,6 +184,15 @@ class DrishtiRuntime:
         if self._thread is not None:
             return
         self._stop.clear()
+        # Rules act when their condition becomes true. What is already true as
+        # the service starts is not news.
+        self._refresh_context()
+        try:
+            with self._lock:
+                descriptor = dict(self.ctx.descriptor)
+            self.engine.prime(descriptor)
+        except Exception as exc:
+            self.last_error = f"{type(exc).__name__}: {exc}"
 
         def loop():
             while not self._stop.wait(interval):

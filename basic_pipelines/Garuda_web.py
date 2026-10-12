@@ -263,6 +263,7 @@ try:
     from .garuda_core import http as _core_http
     from .garuda_core import state as _core_state
     from .garuda_core import logging_setup as _core_logging
+    from .garuda_core import watchdog as _watchdog
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
     from .garuda_core import mailer as _mailer
@@ -337,6 +338,7 @@ except ImportError:
     from basic_pipelines.garuda_core import http as _core_http
     from basic_pipelines.garuda_core import state as _core_state
     from basic_pipelines.garuda_core import logging_setup as _core_logging
+    from basic_pipelines.garuda_core import watchdog as _watchdog
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
     from basic_pipelines.garuda_core import mailer as _mailer
@@ -383,6 +385,14 @@ _core_state.retire(sys.modules[__name__], _core_state.RETIRED_NAMES)
 NARADA_WAKE_WORD = "narada"
 
 _app_start_time = time.time()
+_app_start_mono = time.monotonic()
+
+
+def _uptime_s():
+    """Seconds this process has run. Not wall-clock arithmetic: the Pi boots
+    at its last saved time and jumps when NTP answers, which made a service
+    49 minutes old report four days."""
+    return time.monotonic() - _app_start_mono
 
 # ── Dead man's switch ────────────────────────────────────
 _DEADMAN_TIMEOUT = 180             # seconds without heartbeat before tamper alert
@@ -663,6 +673,8 @@ async def _lifespan(app):
         f"[DRISHTI] rule loop started — {len(DRISHTI_CTX.store.rules)} rules, "
         f"{len(DRISHTI_CTX.registry.devices)} devices")
     STATE.system.ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
+    # While this task runs, systemd knows the event loop is turning.
+    heartbeat_task = asyncio.create_task(_watchdog.heartbeat())
     _load_refresh_tokens()
     # Supervised: a loop that raises is logged, restarted with a pause, and
     # shows on /api/system/info instead of vanishing until the next restart.
@@ -672,9 +684,12 @@ async def _lifespan(app):
     SUPERVISOR.spawn("mode-schedule", _schedule_monitor)
     SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
+    heartbeat_task.cancel()
     SHORTCUTS.stop()
     HOME.stop()
     DRISHTI_RUNTIME.stop()
+    # A stopped service leaves no load switched on behind it.
+    DRISHTI_CTX.relay_bank.close()
     # Flush any remaining buffered log lines before exit
     _do_flush_logs()
     _save_refresh_tokens()
@@ -764,6 +779,8 @@ DRISHTI_CTX = _build_drishti_context(
     relay_channels=RELAY_CHANNELS,
     channel_to_pin=CHANNEL_TO_PIN,
     mqtt_host=os.environ.get("DRISHTI_MQTT_HOST", "localhost"),
+    mqtt_user=os.environ.get("DRISHTI_MQTT_USER", ""),
+    mqtt_password=os.environ.get("DRISHTI_MQTT_PASS", ""),
     nim_key=os.environ.get("NIM_API_KEY", ""),
     nim_model=os.environ.get("NIM_MODEL", ""),
     matcher_backend=os.environ.get("DRISHTI_MATCHER", "fuzzy"),
@@ -986,7 +1003,7 @@ fastapi_app.include_router(build_system_router(
             "disk": (_probe_disk, True), "workers": (_probe_workers, True),
             "rule_loop": (_probe_rules, False)},
     meta_fn=_client_meta, openapi_fn=fastapi_app.openapi,
-    started_at=lambda: _app_start_time, extra_info=_system_extra))
+    started_at=lambda: time.time() - _uptime_s(), extra_info=_system_extra))
 
 _core_http.tag_routes(fastapi_app, [
     ("/api/login", "Auth"), ("/api/logout", "Auth"), ("/api/refresh", "Auth"),

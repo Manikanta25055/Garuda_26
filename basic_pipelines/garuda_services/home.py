@@ -44,7 +44,7 @@ def _drishti_system_state():
             "emergency": core.STATE.modes.emergency, "privacy": core.STATE.modes.privacy,
             "email_off": core.STATE.modes.email_off,
         },
-        "uptime_s": int(time.time() - core._app_start_time),
+        "uptime_s": int(core._uptime_s()),
         # There is no pipeline liveness flag, and app_gst is set before the
         # pipeline produces anything. Frame freshness is the honest signal:
         # what the screen wants to know is whether the camera is delivering.

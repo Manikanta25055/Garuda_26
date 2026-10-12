@@ -105,6 +105,9 @@ class SyncASGIClient:
         try:
             self._lifespan = gw._lifespan(self.app)
             await self._lifespan.__aenter__()
+            # Start-up settles every relay, which claims its (mock) pin for the
+            # whole process. Give them back: tests build relay banks of their own.
+            gw.DRISHTI_CTX.relay_bank.close()
             self._transport = httpx.ASGITransport(
                 app=self.app,
                 raise_app_exceptions=self.raise_server_exceptions,

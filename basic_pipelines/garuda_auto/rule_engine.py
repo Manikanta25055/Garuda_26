@@ -30,10 +30,26 @@ def _holds(cond, descriptor):
 
 
 class RuleEngine:
-    def __init__(self, store, clock=time.time):
+    def __init__(self, store, clock=time.time, once=False):
         self.store = store
         self._clock = clock
         self._last_fired = {}
+        # once: a rule acts when its condition becomes true, then stays quiet
+        # until the condition has been false again. Without it a rule asks for
+        # the same thing on every tick it holds, so "when I am home, lamp on"
+        # switched the lamp back on a fifth of a second after a person had
+        # switched it off. The house loop runs with once=True.
+        self._once = once
+        self._holding = set()
+
+    def prime(self, descriptor):
+        """Take the conditions that hold now as already acted on.
+
+        Called when the house loop starts: a restart is not somebody coming
+        home, so it must not switch on everything a rule would have.
+        """
+        self._holding = {rule.get("id", "") for rule in self.store.rules
+                         if rule.get("enabled", True) and self._matches(rule, descriptor)}
 
     def _matches(self, rule, descriptor):
         combinator, conditions = next(iter(rule["when"].items()))
@@ -50,11 +66,12 @@ class RuleEngine:
         now = self._clock()
         actions, claimed = [], set()
         for rule in self.store.rules:
-            if not rule.get("enabled", True):
-                continue
-            if not self._matches(rule, descriptor):
-                continue
             rule_id = rule.get("id", "")
+            if not rule.get("enabled", True) or not self._matches(rule, descriptor):
+                self._holding.discard(rule_id)
+                continue
+            if self._once and rule_id in self._holding:
+                continue
             cooldown = rule.get("cooldown_s", 60)
             last = self._last_fired.get(rule_id)
             if last is not None and (now - last) < cooldown:
@@ -68,4 +85,5 @@ class RuleEngine:
                 fired = True
             if fired:
                 self._last_fired[rule_id] = now
+                self._holding.add(rule_id)
         return actions

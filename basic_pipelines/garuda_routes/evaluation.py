@@ -60,7 +60,7 @@ def build_evaluation_router(core):
         cm = core._cascade_metrics.snapshot() if core._cascade_metrics else {}
         return {
             "t": time.time(),
-            "uptime": time.time() - core._app_start_time,
+            "uptime": core._uptime_s(),
             "total_frames": core.STATE.camera.total_frames,
             "modes": modes,
             "cascade": cm,

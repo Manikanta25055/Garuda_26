@@ -35,6 +35,16 @@ class Clock:
         return self.t
 
 
+def _room_empties(runtime, ctx):
+    """Someone is in the room with the lamp on, then leaves. Returns what the
+    rules did about the empty room."""
+    runtime.observe([PERSON], luma=0)
+    runtime.tick()
+    ctx.device_router.set("lamp", "on")
+    runtime.observe([], luma=0)
+    return runtime.tick()
+
+
 @pytest.fixture
 def rt(tmp_path):
     ctx = drishti_api.build_context(
@@ -193,19 +203,18 @@ def test_a_failed_actuation_is_logged_with_its_reason(rt):
 def test_the_rule_counts_its_own_fires(rt):
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
-    runtime.observe([], luma=0)
     for _ in range(2):
-        ctx.device_router.set("lamp", "on")       # someone switches it back on
-        runtime.tick()
+        _room_empties(runtime, ctx)
 
     rule = ctx.store.rules[0]
     assert rule["fired_count"] == 2
     assert rule["last_fired"] > 0
 
 
-def test_a_rule_whose_device_is_already_so_does_nothing(rt):
-    """A rule holds while its condition does. With no cooldown it used to set
-    the relay, log the action and rewrite the rule file on every tick."""
+def test_a_rule_acts_once_and_leaves_a_person_the_last_word(rt):
+    """A rule acts when its condition becomes true. It used to ask again on
+    every tick the condition held, so a lamp somebody switched back on was
+    switched off again a fifth of a second later."""
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
     ctx.device_router.set("lamp", "on")
@@ -215,8 +224,23 @@ def test_a_rule_whose_device_is_already_so_does_nothing(rt):
         assert runtime.tick() == []
     assert ctx.store.rules[0]["fired_count"] == 1
     assert len(actuation_log.recent(ctx.log_path)) == 1
+    ctx.device_router.set("lamp", "on")           # somebody wants it on
+    assert runtime.tick() == []
+    assert ctx.device_router.state("lamp") == "on"
+    assert len(_room_empties(runtime, ctx)) == 1  # the room empties again: it acts again
+
+
+def test_a_restart_is_not_a_condition_becoming_true(rt):
+    runtime, ctx, _ = rt
+    ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
     ctx.device_router.set("lamp", "on")
-    assert len(runtime.tick()) == 1               # and it still holds the lamp off
+    runtime.observe([], luma=0)
+    runtime.start(interval=3600)
+    try:
+        assert runtime.tick() == []
+        assert ctx.device_router.state("lamp") == "on"
+    finally:
+        runtime.stop()
 
 
 def test_the_fire_count_survives_a_restart(rt, tmp_path):
@@ -237,8 +261,7 @@ def test_a_cooldown_holds_the_rule_back(rt):
 
     ctx.device_router.set("lamp", "on")
     assert len(runtime.tick()) == 1
-    ctx.device_router.set("lamp", "on")
-    assert runtime.tick() == []
+    assert _room_empties(runtime, ctx) == []
     clock.t += 61
     assert len(runtime.tick()) == 1
 
@@ -308,13 +331,11 @@ def test_health_reports_a_stopped_loop_before_start(rt):
 def test_health_counts_ticks_and_fires(rt):
     runtime, ctx, _ = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
-    runtime.observe([], luma=0)
     for _ in range(2):
-        ctx.device_router.set("lamp", "on")
-        runtime.tick()
+        _room_empties(runtime, ctx)
 
     health = runtime.health()
-    assert health["ticks"] == 2
+    assert health["ticks"] == 4
     assert health["fires"] == 2
     assert health["rules"] == 1
     assert health["devices"] == 2

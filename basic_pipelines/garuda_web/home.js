@@ -379,7 +379,31 @@ const H = (() => {
     return _types;
   }
 
+  // What the service sees of the relay board and the Wi-Fi devices, so wiring
+  // can be checked from the page instead of a terminal.
+  async function renderHardware() {
+    let hw;
+    try { hw = (await api('GET', '/api/system/info')).hardware; } catch (_) { return; }
+    if (!hw) return;
+    const mqtt = hw.mqtt || { devices: [] };
+    $('ha-hardware-summary').textContent =
+      (hw.gpio ? 'Relay board: ' + hw.polarity : 'No GPIO on this machine: relays are simulated') +
+      ' · MQTT broker ' + mqtt.broker + (mqtt.connected ? ' connected' : ' not connected');
+    const relays = (hw.channels || []).map(c => `
+      <div class="ha-manage-row">
+        <div class="ha-manage-main"><b>Channel ${c.channel}</b>
+          <span class="ha-sub">GPIO ${c.pin} · ${c.device ? esc(c.name) + ' · ' + esc(c.state) : 'free'}${c.device && !c.driven ? ' · pin not driven yet' : ''}</span></div>
+      </div>`);
+    const wifi = mqtt.devices.map(d => `
+      <div class="ha-manage-row">
+        <div class="ha-manage-main"><b>${esc(d.name)}</b>
+          <span class="ha-sub">${esc(d.topic)} · ${d.seen ? 'reporting' : 'nothing heard yet'}</span></div>
+      </div>`);
+    $('ha-hardware').innerHTML = relays.concat(wifi).join('');
+  }
+
   async function renderManage() {
+    if (isAdmin()) renderHardware();
     try { await ensureTypes(); } catch (_) { return; }
     const used = new Set((_overview.devices || []).filter(d => d.transport.kind === 'relay').map(d => d.transport.channel));
     const free = _types.channels.filter(c => !used.has(c));
