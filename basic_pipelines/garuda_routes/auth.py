@@ -101,8 +101,8 @@ def build_auth_router(core):
             "box_color": user.get("box_color", "#1565c0"),
             "token": access_token,   # for cross-origin clients that can't use cookies
         }
-        if core._is_cross_site(request):
-            body["refresh_token"] = refresh_token
+        # The refresh token stays in its httpOnly cookie, never in the body:
+        # a page that stored it was handing a week-long sign-in to its scripts.
         return body
 
     @router.get("/api/session")
@@ -153,6 +153,21 @@ def build_auth_router(core):
             "role": core.STATE.auth.users[u]["role"],
             "username": u,
         }
+
+    @router.post("/api/refresh/revoke")
+    async def revoke_refresh(request: Request, response: Response):
+        """Sign-out's second half: end the refresh token this browser holds.
+
+        The refresh cookie is sent only under /api/refresh, so /api/logout
+        never saw it and a signed-out browser's token stayed valid for its
+        whole week. This route is under that path, so the cookie arrives.
+        """
+        refresh = request.cookies.get("garuda_refresh") or request.headers.get("X-Garuda-Refresh")
+        revoked = core._revoke_refresh(refresh) if refresh else False
+        response.delete_cookie("garuda_refresh", path="/api/refresh",
+                               secure=core._cookie_secure(request), httponly=True,
+                               samesite="none" if core._cookie_secure(request) and core._is_cross_site(request) else "lax")
+        return {"ok": True, "revoked": bool(revoked)}
 
     @router.post("/api/admin/send-otp")
     async def admin_send_otp(data: OTPRequest, request: Request, response: Response):
@@ -217,8 +232,8 @@ def build_auth_router(core):
             "display_name": core.STATE.auth.users[u].get("display_name", u),
             "token": access_token,   # for cross-origin clients
         }
-        if core._is_cross_site(request):
-            body["refresh_token"] = refresh_token
+        # The refresh token stays in its httpOnly cookie, never in the body:
+        # a page that stored it was handing a week-long sign-in to its scripts.
         return body
 
     @router.post("/api/forgot/send-otp")

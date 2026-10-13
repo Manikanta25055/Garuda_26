@@ -196,10 +196,16 @@ def test_native_app_mode_route_is_served(app_client, user_headers):
 
 # ── refresh tokens across a restart ──────────────────────────────────────────
 
+def _refresh_from(response):
+    # The refresh token travels only in its httpOnly cookie, never in the body.
+    cookie = next(c for c in response.headers.get_list('set-cookie') if c.startswith('garuda_refresh='))
+    return cookie.split(';', 1)[0].split('=', 1)[1]
+
+
 def test_refresh_token_survives_a_restart_and_is_stored_as_a_digest(app_client):
     r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'},
                         headers={'Origin': 'https://garuda-26.vercel.app'})
-    token = r.json()['refresh_token']
+    token = _refresh_from(r)
     gw._save_refresh_tokens()
     on_disk = open(gw.REFRESH_TOKENS_FILE).read()
     assert token not in on_disk and gw._rt_digest(token) in on_disk
@@ -216,7 +222,7 @@ def test_refresh_token_survives_a_restart_and_is_stored_as_a_digest(app_client):
 def test_logout_revokes_a_token_known_only_from_disk(app_client):
     r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'},
                         headers={'Origin': 'https://garuda-26.vercel.app'})
-    token = r.json()['refresh_token']
+    token = _refresh_from(r)
     gw._save_refresh_tokens()
     gw.STATE.auth.refresh_tokens.clear()
     gw._load_refresh_tokens()

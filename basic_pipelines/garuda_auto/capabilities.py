@@ -418,6 +418,7 @@ NEVER = {
     "POST /api/login": "signing in is a person's act",
     "POST /api/logout": "signing in is a person's act",
     "POST /api/refresh": "signing in is a person's act",
+    "POST /api/refresh/revoke": "signing in is a person's act",
     "GET /api/session": "signing in is a person's act",
     "GET /api/users-public": "signing in is a person's act",
     "POST /api/admin/send-otp": "one-time codes prove a person is present",

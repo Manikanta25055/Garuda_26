@@ -47,7 +47,10 @@ const G = (() => {
 
   // ── State ────────────────────────────────────────────────
   let _session = null;   // { role, username, display_name }
-  let _token   = null;   // session token for cross-origin auth
+  // The access token, for a front end on another site that cannot use the
+  // Pi's cookies. Memory only: it was kept in localStorage with the refresh
+  // token, where any script on the page could read a week-long sign-in.
+  let _token   = null;
   let _ws      = null;
   let _pendingAdmin = null;  // { username } during OTP flow
   let _prevAlertActive = false;
@@ -344,11 +347,14 @@ const G = (() => {
     const backend = getBackend();
     updateBackendStatus(backend);
     const samePi = _servedByPi();
-    if (backend) _token = _lsGet('garuda_token');
+    // Tokens an older version stored where scripts can read them.
+    _lsDel('garuda_token');
+    _lsDel('garuda_refresh');
 
-    // Try to restore session from previous visit (cookie / garuda_token).
-    // On a page the Pi serves the session cookie is enough, so always ask.
-    const canRestore = samePi || !!_token;
+    // Try to restore the session from a previous visit. On a page the Pi
+    // serves the session cookie is enough; a front end on another site first
+    // trades its httpOnly refresh cookie for an access token held in memory.
+    const canRestore = samePi || (!!backend && await _refreshAccess().catch(() => false));
     if (canRestore) {
       try {
         const session = await api('GET', '/api/session');
@@ -356,7 +362,6 @@ const G = (() => {
         afterLogin();
         return;
       } catch(e) {
-        _lsDel('garuda_token');
         _token = null;
       }
     }
@@ -369,11 +374,23 @@ const G = (() => {
 
   // ── Login view switcher ───────────────────────────────────
   // A front end on another site (the Vercel copy) cannot use the Pi's
-  // cookies, so it keeps the tokens itself and sends them as headers.
+  // session cookie, so it holds the access token in memory and sends it as a
+  // header. The refresh token stays in its httpOnly cookie.
   function _storeAuth(res) {
     if (!getBackend()) return;
-    if (res.token) { _token = res.token; _lsSet('garuda_token', _token); }
-    if (res.refresh_token) _lsSet('garuda_refresh', res.refresh_token);
+    if (res.token) _token = res.token;
+  }
+
+  // A fresh access token from the refresh cookie, which no script can read.
+  // True when the cookie was still good.
+  async function _refreshAccess() {
+    const base = getBackend();
+    const url = (base ? base.replace(/\/$/, '') : '') + '/api/refresh';
+    const r = await fetch(url, { method: 'POST', credentials: 'include' });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (base && d.token) _token = d.token;
+    return true;
   }
 
   function showLoginView(viewId) {
@@ -576,6 +593,13 @@ const G = (() => {
 
   async function _doLogoutInner() {
     try { await api('POST', '/api/logout', {}); } catch(_) {}
+    // The refresh cookie is sent only under /api/refresh, so /api/logout never
+    // sees it; this ends it on the server as well as in the browser.
+    try {
+      const base = getBackend();
+      await fetch((base ? base.replace(/\/$/, '') : '') + '/api/refresh/revoke',
+                  { method: 'POST', credentials: 'include' });
+    } catch (_) {}
     if (window.N) { N.stopVoice(); N.closeArtifact && N.closeArtifact(); }
     // Clear uptime interval before resetting state
     if (_uptimeInterval) { clearInterval(_uptimeInterval); _uptimeInterval = null; }
@@ -1375,7 +1399,7 @@ const G = (() => {
     if (_wsRetryTimer) { clearTimeout(_wsRetryTimer); _wsRetryTimer = null; }
     if (_ws) { const old = _ws; _ws = null; try { old.close(); } catch (_) {} }
     const base = getBackend();
-    const tok = _token || (base ? _lsGet('garuda_token') : null);
+    const tok = _token;
     let wsUrl;
     if (base) {
       wsUrl = base.replace(/^http/, 'ws').replace(/\/$/, '') + '/ws' + (tok ? `?token=${encodeURIComponent(tok)}` : '');
@@ -2190,7 +2214,7 @@ const G = (() => {
 
   async function downloadFullLog() {
     const base = getBackend();
-    const tok  = _token || (base ? _lsGet('garuda_token') : null);
+    const tok  = _token;
     const url  = (base ? base.replace(/\/$/, '') : '') + '/api/logs/download';
     const headers = {};
     if (tok) headers['X-Garuda-Token'] = tok;
@@ -2617,10 +2641,7 @@ const G = (() => {
     const base = getBackend();
     const fullUrl = base ? base.replace(/\/$/, '') + url : url;
     const headers = { 'Content-Type': 'application/json' };
-    const tok = _token || (base ? _lsGet('garuda_token') : null);
-    if (tok) headers['X-Garuda-Token'] = tok;
-    // Sign-out names the refresh token too, so the server can revoke it.
-    if (url === '/api/logout' && base && _lsGet('garuda_refresh')) headers['X-Garuda-Refresh'] = _lsGet('garuda_refresh');
+    if (_token) headers['X-Garuda-Token'] = _token;
     const opts = { method, headers, credentials: base ? 'omit' : 'include' };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const r = await fetch(fullUrl, opts);
@@ -2630,17 +2651,7 @@ const G = (() => {
       // On 401, attempt one silent token refresh before giving up
       if (r.status === 401 && !_isRetry && !_loggingOut && !['/api/refresh', '/api/login', '/api/logout'].includes(url)) {
         try {
-          const refreshUrl = base ? base.replace(/\/$/, '') + '/api/refresh' : '/api/refresh';
-          const stored = base ? _lsGet('garuda_refresh') : null;
-          const rr = await fetch(refreshUrl, {
-            method: 'POST', credentials: 'include',
-            headers: stored ? { 'X-Garuda-Refresh': stored } : {},
-          });
-          if (rr.ok) {
-            const rd = await rr.json();
-            if (rd.token) { _token = rd.token; _lsSet('garuda_token', _token); }
-            return api(method, url, body, true);   // retry once with new access token
-          }
+          if (await _refreshAccess()) return api(method, url, body, true);   // retry once with the new token
         } catch (_) {}
         // Refresh failed — session is gone, force re-login (no question
         // asked: there is nothing left to stay signed in to).
@@ -2716,8 +2727,7 @@ const G = (() => {
     const base = getBackend();
     const fullUrl = base ? base.replace(/\/$/, '') + url : url;
     const headers = { 'Content-Type': 'application/json' };
-    const tok = _token || (base ? _lsGet('garuda_token') : null);
-    if (tok) headers['X-Garuda-Token'] = tok;
+    if (_token) headers['X-Garuda-Token'] = _token;
     const r = await fetch(fullUrl, { method: 'POST', headers, credentials: base ? 'omit' : 'include', body: JSON.stringify(body) });
     if (!r.ok || !r.body) {
       let d;

@@ -246,12 +246,21 @@ def _set_session_cookies(request, response, access_token, refresh_token=None, pe
 
     `persistent=False` is "Remember me" left unticked: the refresh cookie is
     then a browser-session cookie and goes when the browser closes.
+
+    A page on another site (the Vercel copy) used to be handed the refresh
+    token in the response body and kept it in localStorage, where any script
+    on the page could read a week-long sign-in. Its refresh cookie is now
+    SameSite=None instead (Secure, httpOnly, sent only to /api/refresh), so no
+    script ever holds it. A browser that blocks third-party cookies simply
+    asks that page to sign in again after a reload.
     """
     secure = core._cookie_secure(request)
     response.set_cookie("garuda_session", access_token, httponly=True, samesite="lax",
                         secure=secure, max_age=core._ACCESS_DURATION)
     if refresh_token:
-        response.set_cookie("garuda_refresh", refresh_token, httponly=True, samesite="lax",
+        cross = secure and core._is_cross_site(request)
+        response.set_cookie("garuda_refresh", refresh_token, httponly=True,
+                            samesite="none" if cross else "lax",
                             secure=secure, path="/api/refresh",
                             max_age=core._REFRESH_DURATION if persistent else None)
 

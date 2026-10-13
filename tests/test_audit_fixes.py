@@ -73,13 +73,29 @@ def test_deleting_a_user_ends_their_sessions(app_client, admin_headers, user_hea
     assert not gw._user_signed_in('user')
 
 
-def test_cross_site_login_gets_a_refresh_token_it_can_send_back(app_client):
+def _refresh_cookie(response):
+    return next(c for c in response.headers.get_list('set-cookie') if c.startswith('garuda_refresh='))
+
+
+def test_cross_site_login_keeps_the_refresh_token_in_a_cookie_scripts_cannot_read(app_client):
+    # It used to come back in the body, and the Vercel page kept it in localStorage.
+    r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'},
+                        headers={'Origin': 'https://garuda-26.vercel.app',
+                                 'X-Forwarded-Proto': 'https'})
+    assert 'refresh_token' not in r.json()
+    cookie = _refresh_cookie(r).lower()
+    assert 'httponly' in cookie and 'secure' in cookie and 'samesite=none' in cookie
+    assert 'path=/api/refresh' in cookie
+    token = _refresh_cookie(r).split(';', 1)[0].split('=', 1)[1]
+    r2 = app_client.post('/api/refresh', headers={'X-Garuda-Refresh': token})
+    assert r2.status_code == 200 and r2.json()['token']
+
+
+def test_a_cross_site_cookie_is_never_samesite_none_over_plain_http(app_client):
+    # Browsers drop SameSite=None without Secure; Lax keeps local development working.
     r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'},
                         headers={'Origin': 'https://garuda-26.vercel.app'})
-    body = r.json()
-    assert body.get('refresh_token')
-    r2 = app_client.post('/api/refresh', headers={'X-Garuda-Refresh': body['refresh_token']})
-    assert r2.status_code == 200 and r2.json()['token']
+    assert 'samesite=lax' in _refresh_cookie(r).lower()
 
 
 def test_same_site_login_keeps_the_refresh_token_out_of_the_body(app_client):
@@ -276,3 +292,15 @@ def test_only_an_admin_can_switch_on_a_mode_that_silences_alerts(app_client, use
         assert r.status_code == 200
     r = app_client.post('/api/modes', json={'mode': 'dnd', 'value': True}, headers=user_headers)
     assert r.status_code == 200
+
+
+def test_signing_out_ends_the_refresh_token_held_in_the_cookie(app_client):
+    # /api/logout never receives the refresh cookie (it is scoped to
+    # /api/refresh), so a signed-out browser's token used to stay valid a week.
+    r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
+    token = _refresh_cookie(r).split(';', 1)[0].split('=', 1)[1]
+    cookie = {'Cookie': f'garuda_refresh={token}'}
+    r = app_client.post('/api/refresh/revoke', headers=cookie)
+    assert r.status_code == 200 and r.json()['revoked'] is True
+    assert 'garuda_refresh=""' in _refresh_cookie(r) or 'max-age=0' in _refresh_cookie(r).lower()
+    assert app_client.post('/api/refresh', headers=cookie).status_code == 401
