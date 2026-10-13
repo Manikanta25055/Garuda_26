@@ -1,0 +1,3 @@
+# The browser tests (tests/browser): pip install -c constraints.txt -r requirements-browser.txt
+# then: python -m playwright install --with-deps chromium
+playwright==1.63.0
