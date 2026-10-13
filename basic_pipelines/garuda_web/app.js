@@ -1641,7 +1641,7 @@ const G = (() => {
         </div>
       </div>`
     ).join('') + (_timelineMore
-      ? '<button class="btn btn-ghost btn-sm tl-older" onclick="G.loadOlderActivity()">Show earlier</button>'
+      ? '<button class="btn btn-ghost btn-sm tl-older" data-click="G.loadOlderActivity">Show earlier</button>'
       : '');
   }
 
@@ -2471,7 +2471,7 @@ const G = (() => {
       el.innerHTML = keys.map((k, i) => `
         <div class="mk-item">
           <span>${esc(k)}</span>
-          ${keys.length > 1 ? `<button class="mk-item-del" onclick="G.deleteMasterKey(${i})" title="Delete">×</button>` : ''}
+          ${keys.length > 1 ? `<button class="mk-item-del" data-click="G.deleteMasterKey" data-args="[${i}]" title="Delete">×</button>` : ''}
         </div>`).join('');
     } catch(e) {
       el.innerHTML = '<div style="font-size:12px;color:var(--t3)">Could not load keys.</div>';
@@ -2830,14 +2830,14 @@ document.addEventListener('DOMContentLoaded', G.init);
     d.innerHTML =
       '<div class="fb-inbox-toolbar">' +
         '<div class="fb-inbox-summary" id="fb-inbox-summary">Loading…</div>' +
-        '<button class="fb-inbox-refresh" onclick="G.fbLoadInbox()" title="Refresh">↻</button>' +
+        '<button class="fb-inbox-refresh" data-click="G.fbLoadInbox" title="Refresh">↻</button>' +
       '</div>' +
       '<div class="fb-cats" id="fb-inbox-filters" style="margin-bottom:8px">' +
-        '<span class="fb-cat sel" data-filter="all" onclick="G.fbFilterInbox(this)">All</span>' +
-        '<span class="fb-cat" data-filter="bug" onclick="G.fbFilterInbox(this)">Bug</span>' +
-        '<span class="fb-cat" data-filter="feature" onclick="G.fbFilterInbox(this)">Feature</span>' +
-        '<span class="fb-cat" data-filter="general" onclick="G.fbFilterInbox(this)">General</span>' +
-        '<span class="fb-cat" data-filter="other" onclick="G.fbFilterInbox(this)">Other</span>' +
+        '<span class="fb-cat sel" data-filter="all" data-click="G.fbFilterInbox" data-args="[{&quot;$&quot;: &quot;this&quot;}]">All</span>' +
+        '<span class="fb-cat" data-filter="bug" data-click="G.fbFilterInbox" data-args="[{&quot;$&quot;: &quot;this&quot;}]">Bug</span>' +
+        '<span class="fb-cat" data-filter="feature" data-click="G.fbFilterInbox" data-args="[{&quot;$&quot;: &quot;this&quot;}]">Feature</span>' +
+        '<span class="fb-cat" data-filter="general" data-click="G.fbFilterInbox" data-args="[{&quot;$&quot;: &quot;this&quot;}]">General</span>' +
+        '<span class="fb-cat" data-filter="other" data-click="G.fbFilterInbox" data-args="[{&quot;$&quot;: &quot;this&quot;}]">Other</span>' +
       '</div>' +
       '<div class="fb-inbox-list" id="fb-inbox-list">' +
         '<div class="fb-inbox-empty">No feedback yet.</div>' +

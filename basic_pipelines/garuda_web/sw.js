@@ -1,6 +1,6 @@
 // Garuda Service Worker — enables PWA installability + offline shell caching
-const CACHE = 'garuda-v27';
-const SHELL = ['/static/style.css', '/static/app.js', '/static/home.js', '/static/narada.js', '/static/island.js'];
+const CACHE = 'garuda-v28';
+const SHELL = ['/static/style.css', '/static/actions.js', '/static/app.js', '/static/home.js', '/static/narada.js', '/static/island.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

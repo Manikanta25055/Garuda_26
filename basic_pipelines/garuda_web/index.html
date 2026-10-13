@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=78"/>
+  <link rel="stylesheet" href="/static/style.css?v=79"/>
 </head>
 <body>
 <div id="app">
@@ -41,7 +41,7 @@
         <div class="backend-row">
           <div class="bk-dot" id="bk-dot"></div>
           <span id="bk-label" class="bk-host">Checking connection…</span>
-          <button class="btn-text-mono" onclick="G.openBackendConfig()">Configure</button>
+          <button class="btn-text-mono" data-click="G.openBackendConfig">Configure</button>
         </div>
 
         <div class="lc-fields">
@@ -58,21 +58,21 @@
           <span class="remember-lbl">Remember me for 5 days</span>
         </label>
 
-        <button id="lc-signin-btn" class="lc-signin" onclick="G.submitLogin()">
+        <button id="lc-signin-btn" class="lc-signin" data-click="G.submitLogin">
           <span class="gi gi-sign-in lc-gi" aria-hidden="true"></span>
           <span>Sign In</span>
         </button>
 
         <div class="lc-links">
-          <button class="lc-link" onclick="G.goAdminFlow()">Admin Access</button>
-          <button class="lc-link" id="forgot-link" onclick="G.goForgot()">Forgot Password?</button>
-          <button class="lc-link" onclick="G.goMasterKey()">Use Master Key</button>
+          <button class="lc-link" data-click="G.goAdminFlow">Admin Access</button>
+          <button class="lc-link" id="forgot-link" data-click="G.goForgot">Forgot Password?</button>
+          <button class="lc-link" data-click="G.goMasterKey">Use Master Key</button>
         </div>
       </div>
 
       <!-- VIEW: Admin OTP — step 1 (credentials) -->
       <div id="lv-admin-1" class="hidden">
-        <button class="lc-back" onclick="G.backToMain()">← Back</button>
+        <button class="lc-back" data-click="G.backToMain">← Back</button>
         <div class="lc-title" style="font-size:22px">Admin Access</div>
         <div class="lc-sub">Verify credentials — a one-time code will be sent</div>
         <div class="lc-fields">
@@ -80,17 +80,17 @@
           <input id="adm-pass" class="modern-input" type="password" placeholder="Password" autocomplete="current-password"/>
         </div>
         <div id="adm-err-1" class="lc-err hidden"></div>
-        <button class="lc-signin lc-signin-danger" onclick="G.sendAdminOTP()">
+        <button class="lc-signin lc-signin-danger" data-click="G.sendAdminOTP">
           Send One-Time Code
         </button>
         <div class="lc-links" style="margin-top:12px">
-          <button class="lc-link" onclick="G.goMasterKey()">Use Master Key instead</button>
+          <button class="lc-link" data-click="G.goMasterKey">Use Master Key instead</button>
         </div>
       </div>
 
       <!-- VIEW: Master Key login -->
       <div id="lv-masterkey" class="hidden">
-        <button class="lc-back" onclick="G.backToMain()">← Back</button>
+        <button class="lc-back" data-click="G.backToMain">← Back</button>
         <div class="lc-title" style="font-size:22px;color:var(--mk-orange)">Master Key</div>
         <div class="lc-sub">Enter master key for instant admin access — no password needed</div>
         <div class="lc-fields">
@@ -98,14 +98,14 @@
                  placeholder="Master key" autocomplete="off"/>
         </div>
         <div id="mk-login-err" class="lc-err hidden"></div>
-        <button class="lc-signin lc-signin-mk" onclick="G.submitMasterKeyLogin()">
+        <button class="lc-signin lc-signin-mk" data-click="G.submitMasterKeyLogin">
           Unlock
         </button>
       </div>
 
       <!-- VIEW: Admin OTP — step 2 (verify) -->
       <div id="lv-admin-2" class="hidden">
-        <button class="lc-back" onclick="G.backToAdminStep1()">← Back</button>
+        <button class="lc-back" data-click="G.backToAdminStep1">← Back</button>
         <div class="lc-title" style="font-size:22px">Two-Factor</div>
         <div class="lc-sub">6-digit code sent to your alert email</div>
         <div class="lc-fields">
@@ -113,14 +113,14 @@
                  maxlength="6" placeholder="000000" inputmode="numeric"/>
         </div>
         <div id="adm-err-2" class="lc-err hidden"></div>
-        <button class="lc-signin lc-signin-danger" onclick="G.verifyAdminOTP()">
+        <button class="lc-signin lc-signin-danger" data-click="G.verifyAdminOTP">
           Verify OTP
         </button>
       </div>
 
       <!-- VIEW: Forgot password -->
       <div id="lv-forgot" class="hidden">
-        <button class="lc-back" onclick="G.backToMain()">← Back</button>
+        <button class="lc-back" data-click="G.backToMain">← Back</button>
         <div class="lc-title" style="font-size:22px">Reset Password</div>
         <div class="lc-sub">Enter your username to receive OTP</div>
         <div class="lc-fields">
@@ -131,7 +131,7 @@
           </div>
         </div>
         <div id="fp-msg" class="lc-err hidden"></div>
-        <button id="fp-btn" class="lc-signin" onclick="G.sendForgotOTP()">Send OTP</button>
+        <button id="fp-btn" class="lc-signin" data-click="G.sendForgotOTP">Send OTP</button>
       </div>
 
     </div><!-- /login-card -->
@@ -144,13 +144,13 @@
   </div>
 
   <!-- Theme toggle — top right of login screen -->
-  <button class="login-theme-toggle" id="login-theme-toggle" aria-label="Toggle theme" onclick="G.toggleTheme()">
+  <button class="login-theme-toggle" id="login-theme-toggle" aria-label="Toggle theme" data-click="G.toggleTheme">
     <span class="gi gi-light-mode t-sun" aria-hidden="true"></span>
     <span class="gi gi-night-mode t-moon" aria-hidden="true"></span>
   </button>
 
   <!-- Documentation bubble — bottom left -->
-  <button class="wv-docs-btn" onclick="G.openDocs()" title="Documentation">
+  <button class="wv-docs-btn" data-click="G.openDocs" title="Documentation">
     <span class="gi gi-documentation" aria-hidden="true"></span>
   </button>
 
@@ -159,12 +159,12 @@
 <!-- Logs gate overlay — fixed over entire viewport until master key entered -->
 <div id="logs-gate" class="logs-gate-overlay hidden">
   <div class="logs-gate-card">
-    <button class="logs-gate-back" onclick="G.nav('dashboard')" title="Back to dashboard">← Back</button>
+    <button class="logs-gate-back" data-click="G.nav" data-args='["dashboard"]' title="Back to dashboard">← Back</button>
     <div class="logs-gate-title" style="color:var(--mk-orange)">Master Key Required</div>
     <div class="logs-gate-sub">Enter your master key to unlock the logs for this session</div>
     <input id="lg-key" class="modern-input" type="password" placeholder="Master key" autocomplete="off"/>
     <div id="lg-err" class="lc-err hidden"></div>
-    <button class="btn btn-primary" style="width:100%;background:var(--mk-orange);border-color:var(--mk-orange)" onclick="G.unlockLogs()">Unlock Logs</button>
+    <button class="btn btn-primary" style="width:100%;background:var(--mk-orange);border-color:var(--mk-orange)" data-click="G.unlockLogs">Unlock Logs</button>
   </div>
 </div>
 
@@ -181,7 +181,7 @@
         <span id="pipeline-label">Initializing</span>
       </div>
       <span class="hdr-user"></span>
-      <button class="btn btn-ghost btn-sm" onclick="G.logout()">Sign Out</button>
+      <button class="btn btn-ghost btn-sm" data-click="G.logout">Sign Out</button>
     </div>
   </header>
 
@@ -222,11 +222,11 @@
   <!-- Top-right controls -->
   <div id="top-actions">
     <span id="hdr-user" class="hud-user-lbl"></span>
-    <button class="theme-toggle-btn top-act" id="theme-toggle-btn" aria-label="Toggle theme" onclick="G.toggleTheme()">
+    <button class="theme-toggle-btn top-act" id="theme-toggle-btn" aria-label="Toggle theme" data-click="G.toggleTheme">
       <span class="gi gi-light-mode t-sun" aria-hidden="true"></span>
       <span class="gi gi-night-mode t-moon" aria-hidden="true"></span>
     </button>
-    <button class="top-act hud-signout" aria-label="Power Off" title="Power Off" onclick="G.logout()">
+    <button class="top-act hud-signout" aria-label="Power Off" title="Power Off" data-click="G.logout">
       <span class="gi gi-power" aria-hidden="true"></span>
     </button>
   </div>
@@ -252,7 +252,7 @@
                 <div class="status-desc" id="status-desc">No activity detected</div>
                 <span id="owner-badge" class="owner-badge hidden">
                   <span id="owner-badge-name">Owner</span> is home
-                  <button class="owner-refresh-btn" title="Refresh presence" onclick="G.refreshPresence()">↻</button>
+                  <button class="owner-refresh-btn" title="Refresh presence" data-click="G.refreshPresence">↻</button>
                 </span>
               </div>
               <div class="stat-rows" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
@@ -339,17 +339,17 @@
             <!-- Camera main card -->
             <div class="cam-main-card card">
               <div class="cam-tab-bar">
-                <button class="cam-tab-btn active" id="cam-tab-live" onclick="G.switchCamTab('live')">Live</button>
-                <button class="cam-tab-btn" id="cam-tab-floor" onclick="G.switchCamTab('floor')">Floor Plan</button>
+                <button class="cam-tab-btn active" id="cam-tab-live" data-click="G.switchCamTab" data-args='["live"]'>Live</button>
+                <button class="cam-tab-btn" id="cam-tab-floor" data-click="G.switchCamTab" data-args='["floor"]'>Floor Plan</button>
                 <div class="cam-tab-right">
                   <span id="cam-status-txt" class="cam-status-txt">Offline</span>
-                  <button class="cam-action-btn" id="cam-snapshot-btn" onclick="G.takeSnapshot()" title="Save snapshot" style="display:none" aria-label="Download snapshot">
+                  <button class="cam-action-btn" id="cam-snapshot-btn" data-click="G.takeSnapshot" title="Save snapshot" style="display:none" aria-label="Download snapshot">
                     <span class="gi gi-snapshot" aria-hidden="true"></span>
                   </button>
-                  <button class="cam-action-btn" id="cam-record-btn" onclick="G.toggleClip()" title="Record clip" style="display:none" aria-label="Record 60-second clip">
+                  <button class="cam-action-btn" id="cam-record-btn" data-click="G.toggleClip" title="Record clip" style="display:none" aria-label="Record 60-second clip">
                     <span class="gi gi-record" aria-hidden="true"></span>
                   </button>
-                  <button class="cam-toggle-btn" id="cam-toggle-btn" onclick="G.toggleCamera()" aria-label="Connect camera feed">
+                  <button class="cam-toggle-btn" id="cam-toggle-btn" data-click="G.toggleCamera" aria-label="Connect camera feed">
                     <span class="cam-live-dot" id="cam-live-dot"></span><span id="cam-btn-label">Connect</span>
                   </button>
                 </div>
@@ -410,7 +410,7 @@
             <div id="dash-home-glance" class="card ha-glance hidden">
               <div class="dash-card-hdr">
                 <div class="dash-card-title">Home</div>
-                <button class="btn btn-ghost btn-sm" onclick="G.nav('devices', document.querySelector('.ios-item[data-page=devices]'))">Open</button>
+                <button class="btn btn-ghost btn-sm" data-click="G.nav" data-args='["devices", {"$q": ".ios-item[data-page=devices]"}]'>Open</button>
               </div>
               <div id="ha-glance-body" class="ha-glance-body"></div>
             </div>
@@ -426,9 +426,9 @@
               <div class="dash-card-hdr">
                 <div class="dash-card-title">Activity</div>
                 <div class="activity-day-nav">
-                  <button id="activity-prev" class="activity-day-step" onclick="G.stepActivityDay(-1)" title="Earlier day with activity" aria-label="Earlier day">&#8249;</button>
+                  <button id="activity-prev" class="activity-day-step" data-click="G.stepActivityDay" data-args='[-1]' title="Earlier day with activity" aria-label="Earlier day">&#8249;</button>
                   <input type="date" id="activity-date" class="activity-date-picker" aria-label="Day"/>
-                  <button id="activity-next" class="activity-day-step" onclick="G.stepActivityDay(1)" title="Later day with activity" aria-label="Later day">&#8250;</button>
+                  <button id="activity-next" class="activity-day-step" data-click="G.stepActivityDay" data-args='[1]' title="Later day with activity" aria-label="Later day">&#8250;</button>
                 </div>
               </div>
               <div id="activity-timeline" class="timeline-list">
@@ -465,7 +465,7 @@
               <span class="cam-live-dot"></span>
               LIVE CAMERA
             </div>
-            <button class="btn btn-ghost btn-sm" onclick="G.toggleCamera()">Close</button>
+            <button class="btn btn-ghost btn-sm" data-click="G.toggleCamera">Close</button>
           </div>
         </div>
 
@@ -475,7 +475,7 @@
       <div id="page-narada" class="page">
         <canvas class="nx-glyph" id="nx-glyph" aria-hidden="true"></canvas>
 
-        <button type="button" class="nx-info-btn" id="nx-info-btn" aria-label="Memory, models and usage" aria-expanded="false" onclick="N.toggleInfo()">i</button>
+        <button type="button" class="nx-info-btn" id="nx-info-btn" aria-label="Memory, models and usage" aria-expanded="false" data-click="N.toggleInfo">i</button>
         <div class="nx-info" id="nx-info" role="dialog" aria-label="Memory, models and usage">
           <div class="nx-info-body" id="nx-info-body"></div>
         </div>
@@ -490,20 +490,20 @@
             <div class="nx-sheet-in">
               <div class="nx-head">
                 <span class="nx-head-t">Conversation</span>
-                <button type="button" class="nx-hbtn nx-hbtn-text" onclick="N.clearSession()">Clear</button>
-                <button type="button" class="nx-hbtn" aria-label="Minimise conversation" onclick="N.toggleSheet(false)"><i class="gi gi-minimise" aria-hidden="true"></i></button>
+                <button type="button" class="nx-hbtn nx-hbtn-text" data-click="N.clearSession">Clear</button>
+                <button type="button" class="nx-hbtn" aria-label="Minimise conversation" data-click="N.toggleSheet" data-args='[false]'><i class="gi gi-minimise" aria-hidden="true"></i></button>
               </div>
               <div class="nx-log" id="nx-log" role="log" aria-live="polite" aria-label="Conversation with Narada"></div>
             </div>
           </div>
-          <button type="button" class="nx-peek" id="nx-peek" aria-label="Open conversation" onclick="N.toggleSheet(true)"></button>
-          <form class="nx-bar" id="nx-bar" autocomplete="off" onsubmit="N.submit(event)">
-            <button type="button" class="nx-mic" id="nx-mic" aria-label="Talk to Narada" aria-pressed="false" onclick="N.toggleVoice()">
+          <button type="button" class="nx-peek" id="nx-peek" aria-label="Open conversation" data-click="N.toggleSheet" data-args='[true]'></button>
+          <form class="nx-bar" id="nx-bar" autocomplete="off" data-submit="N.submit" data-args='[{"$": "event"}]'>
+            <button type="button" class="nx-mic" id="nx-mic" aria-label="Talk to Narada" aria-pressed="false" data-click="N.toggleVoice">
               <i class="gi gi-mic" aria-hidden="true"></i>
               <span class="nx-mic-stop" aria-hidden="true"></span>
             </button>
             <input class="nx-input" id="nx-input" type="text" maxlength="2000" placeholder="Ask Narada anything…" aria-label="Message Narada"/>
-            <button type="button" class="nx-expand" id="nx-expand" aria-label="Open conversation" aria-expanded="false" onclick="N.toggleSheet()"><i class="gi gi-expand" aria-hidden="true"></i></button>
+            <button type="button" class="nx-expand" id="nx-expand" aria-label="Open conversation" aria-expanded="false" data-click="N.toggleSheet"><i class="gi gi-expand" aria-hidden="true"></i></button>
             <button type="submit" class="nx-send" id="nx-send" aria-label="Send"><i class="gi gi-send" aria-hidden="true"></i></button>
           </form>
         </div>
@@ -520,7 +520,7 @@
 
           <div id="ha-notices" class="ha-notices"></div>
 
-          <form class="ha-composer" onsubmit="event.preventDefault(); H.instruct();">
+          <form class="ha-composer" data-submit="H.instruct">
             <input id="ha-cmd" class="input" maxlength="500" autocomplete="off"
                    placeholder="Tell Garuda — “fan off in 30 minutes”, “when I leave, turn everything off”"/>
             <button class="btn btn-primary" id="ha-cmd-btn" type="submit">Send</button>
@@ -529,14 +529,14 @@
 
           <div class="ha-section-hdr">
             <div class="ha-section-title">Scenes</div>
-            <button class="btn btn-ghost btn-sm ha-admin-only" onclick="H.openSceneEditor()">New scene</button>
+            <button class="btn btn-ghost btn-sm ha-admin-only" data-click="H.openSceneEditor">New scene</button>
           </div>
           <div id="ha-scenes" class="ha-scenes"></div>
           <div id="ha-scene-editor" class="settings-card ha-scene-editor hidden"></div>
 
           <div class="ha-section-hdr">
             <div class="ha-section-title">Devices</div>
-            <button class="btn btn-ghost btn-sm ha-danger-btn" onclick="H.allOff()">All off</button>
+            <button class="btn btn-ghost btn-sm ha-danger-btn" data-click="H.allOff">All off</button>
           </div>
           <div id="ha-rooms" class="ha-rooms"></div>
 
@@ -547,14 +547,14 @@
               <input id="ha-add-name" class="input" placeholder="Name (e.g. Desk lamp)" maxlength="64"/>
               <input id="ha-add-room" class="input" placeholder="Room (e.g. Study)" maxlength="64"/>
               <select id="ha-add-type" class="input" aria-label="Device type"></select>
-              <select id="ha-add-kind" class="input" aria-label="Connection" onchange="H.onKindChange()">
+              <select id="ha-add-kind" class="input" aria-label="Connection" data-change="H.onKindChange">
                 <option value="relay">Relay channel</option>
                 <option value="mqtt">Wi-Fi (MQTT)</option>
               </select>
               <select id="ha-add-channel" class="input" aria-label="Relay channel"></select>
               <input id="ha-add-topic" class="input hidden" placeholder="MQTT topic (e.g. home/heater)" maxlength="128"/>
               <input id="ha-add-watts" class="input" type="number" min="0" max="5000" placeholder="Watts (optional)"/>
-              <button class="btn btn-primary" onclick="H.addDevice()">Add device</button>
+              <button class="btn btn-primary" data-click="H.addDevice">Add device</button>
             </div>
             <div id="ha-manage-msg" class="msg hidden"></div>
           </div>
@@ -596,17 +596,17 @@
           <div id="ha-schedules" class="ha-list"></div>
           <div class="settings-card ha-sched-form">
             <div class="ha-sched-grid">
-              <select id="ha-s-target" class="input" aria-label="What" onchange="H.onSchedMode()"></select>
+              <select id="ha-s-target" class="input" aria-label="What" data-change="H.onSchedMode"></select>
               <select id="ha-s-action" class="input" aria-label="Action">
                 <option value="on">on</option><option value="off">off</option>
               </select>
-              <select id="ha-s-mode" class="input" aria-label="When" onchange="H.onSchedMode()">
+              <select id="ha-s-mode" class="input" aria-label="When" data-change="H.onSchedMode">
                 <option value="timer">In … minutes</option>
                 <option value="daily" class="ha-admin-opt">Every day at</option>
               </select>
               <input id="ha-s-minutes" class="input" type="number" min="1" max="10080" value="30" aria-label="Minutes"/>
               <input id="ha-s-time" class="input hidden" type="time" value="19:00" aria-label="Time"/>
-              <button class="btn btn-primary" onclick="H.addSchedule()">Add</button>
+              <button class="btn btn-primary" data-click="H.addSchedule">Add</button>
             </div>
             <div id="ha-s-days" class="ha-days hidden"></div>
             <div id="ha-s-msg" class="msg hidden"></div>
@@ -617,16 +617,16 @@
             <div class="toggle-row">
               <div class="toggle-info"><div><span>Turn everything off when I leave</span></div>
                 <div><span class="ha-sub">Uses the phones registered under System → Known Devices. Off: you get a notice with a one-tap button instead.</span></div></div>
-              <div class="toggle" data-setting="away_auto_off" onclick="H.toggleSetting(this)"></div>
+              <div class="toggle" data-setting="away_auto_off" data-click="H.toggleSetting" data-args='[{"$": "this"}]'></div>
             </div>
             <div class="toggle-row">
               <div class="toggle-info"><div><span>Email me about the house while I'm away</span></div></div>
-              <div class="toggle" data-setting="away_notify" onclick="H.toggleSetting(this)"></div>
+              <div class="toggle" data-setting="away_notify" data-click="H.toggleSetting" data-args='[{"$": "this"}]'></div>
             </div>
             <div class="toggle-row">
               <div class="toggle-info"><div><span>Vacation lighting</span></div>
                 <div><span class="ha-sub">While nobody is home, lights switch at irregular times in the evening window.</span></div></div>
-              <div class="toggle" data-setting="vacation_mode" onclick="H.toggleSetting(this)"></div>
+              <div class="toggle" data-setting="vacation_mode" data-click="H.toggleSetting" data-args='[{"$": "this"}]'></div>
             </div>
             <div class="sched-grid">
               <div class="sched-row">
@@ -641,7 +641,7 @@
                 <span class="sched-sep">min, nobody home → notify (0 = off)</span>
               </div>
             </div>
-            <button class="btn btn-primary btn-sm ha-admin-only" style="margin-top:12px" onclick="H.saveAway()">Save</button>
+            <button class="btn btn-primary btn-sm ha-admin-only" style="margin-top:12px" data-click="H.saveAway">Save</button>
             <div id="ha-away-msg" class="msg hidden"></div>
           </div>
         </div>
@@ -655,7 +655,7 @@
           <div class="settings-card ha-digest">
             <div class="dash-card-hdr">
               <div class="dash-card-title">Today</div>
-              <button class="btn btn-ghost btn-sm" onclick="H.loadDigest(true)">Refresh</button>
+              <button class="btn btn-ghost btn-sm" data-click="H.loadDigest" data-args='[true]'>Refresh</button>
             </div>
             <div id="ha-digest-text" class="ha-digest-text">—</div>
             <div id="ha-digest-meta" class="ha-sub"></div>
@@ -670,7 +670,7 @@
             <div class="ha-tariff ha-admin-only">
               <span class="ha-sub">Tariff per kWh</span>
               <input id="ha-tariff" class="input input-sm" type="number" min="0" max="1000" step="0.1"/>
-              <button class="btn btn-ghost btn-sm" onclick="H.saveTariff()">Save</button>
+              <button class="btn btn-ghost btn-sm" data-click="H.saveTariff">Save</button>
             </div>
           </div>
 
@@ -709,8 +709,8 @@
               <input id="e-cool" class="input" type="number" min="10" max="3600"/>
             </div>
             <div class="form-row">
-              <button class="btn btn-ghost" onclick="G.testEmail()">Send Test Email</button>
-              <button class="btn btn-primary" onclick="G.saveEmail()">Save</button>
+              <button class="btn btn-ghost" data-click="G.testEmail">Send Test Email</button>
+              <button class="btn btn-primary" data-click="G.saveEmail">Save</button>
             </div>
             <div id="e-msg" class="msg hidden"></div>
           </div>
@@ -780,7 +780,7 @@
             <div>
               <span class="input-label">Detection Threshold — <strong id="thr-val" style="color:var(--accent)">0.30</strong></span>
               <input id="thr-slider" type="range" min="5" max="95" step="1" value="30"
-                     oninput="document.getElementById('thr-val').textContent=(this.value/100).toFixed(2)"/>
+                     data-input="UI.showScaled" data-args='[{"$": "this"}, "thr-val", 100, 2]'/>
               <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--t4);margin-top:4px">
                 <span>Sensitive</span><span>Strict</span>
               </div>
@@ -799,7 +799,7 @@
                 <div><span>Face Privacy Blur</span></div>
                 <div><span style="font-size:12px;color:var(--t3)">Blur detected persons in the feed</span></div>
               </div>
-              <div id="priv-toggle" class="toggle on" onclick="G.togglePrivacy()"></div>
+              <div id="priv-toggle" class="toggle on" data-click="G.togglePrivacy"></div>
             </div>
           </div>
 
@@ -807,7 +807,7 @@
           <div class="settings-card">
             <div class="settings-section-title" style="display:flex;align-items:center;justify-content:space-between">
               Known Devices (Owner Detection)
-              <button class="btn btn-ghost btn-sm" onclick="G.scanNetwork()" id="scan-btn">Scan Network</button>
+              <button class="btn btn-ghost btn-sm" data-click="G.scanNetwork" id="scan-btn">Scan Network</button>
             </div>
             <div class="tip-box">
               <strong>iPhone users:</strong> iOS randomizes your MAC by default. To use your real MAC:
@@ -824,7 +824,7 @@
             <div class="device-add-row">
               <input id="dev-name" class="input" placeholder="Device name (e.g. Manikanta's Phone)"/>
               <input id="dev-mac"  class="input" placeholder="MAC address (e.g. a4:c3:f0:12:34:56)"/>
-              <button class="btn btn-primary btn-sm" onclick="G.addDevice()">Add</button>
+              <button class="btn btn-primary btn-sm" data-click="G.addDevice">Add</button>
             </div>
             <div id="dev-msg" class="msg hidden"></div>
           </div>
@@ -856,14 +856,14 @@
             <div class="input-group">
               <span class="input-label">Act-without-asking threshold — <strong id="ai-thr-val">0.85</strong></span>
               <input id="ai-thr" type="range" min="50" max="99" step="1" value="85"
-                     oninput="document.getElementById('ai-thr-val').textContent=(this.value/100).toFixed(2)"/>
+                     data-input="UI.showScaled" data-args='[{"$": "this"}, "ai-thr-val", 100, 2]'/>
             </div>
             <div id="ai-decision-meta" class="ha-sub"></div>
 
 
             <div class="form-row" style="margin-top:12px">
-              <button class="btn btn-ghost btn-sm" onclick="H.testAI()">Test NIM</button>
-              <button class="btn btn-primary btn-sm" onclick="H.saveAI()">Save AI settings</button>
+              <button class="btn btn-ghost btn-sm" data-click="H.testAI">Test NIM</button>
+              <button class="btn btn-primary btn-sm" data-click="H.saveAI">Save AI settings</button>
             </div>
             <div id="ai-msg" class="msg hidden"></div>
           </div>
@@ -883,7 +883,7 @@
               <div class="toggle-info">
                 <div><span>Enable Night Presence Alarm</span></div>
               </div>
-              <div id="np-toggle" class="toggle on" onclick="G.toggleNightPresence()"></div>
+              <div id="np-toggle" class="toggle on" data-click="G.toggleNightPresence"></div>
             </div>
             <div class="sched-grid">
               <div class="sched-row">
@@ -933,7 +933,7 @@
               <div class="mk-step-label" style="margin-top:14px">Step 1 — Verify identity</div>
               <div class="mk-add-form">
                 <input id="mk-current" class="input" type="password" placeholder="Enter an existing master key"/>
-                <button class="btn btn-ghost btn-sm" onclick="G.requestMkOtp()">Send OTP</button>
+                <button class="btn btn-ghost btn-sm" data-click="G.requestMkOtp">Send OTP</button>
               </div>
               <!-- Steps 2 + 3: shown after OTP sent -->
               <div id="mk-otp-row" class="hidden" style="display:none;flex-direction:column;gap:10px;margin-top:14px">
@@ -942,7 +942,7 @@
                 <div class="mk-step-label" style="margin-top:4px">Step 3 — Create a new key</div>
                 <input id="mk-new-in" class="input" type="text"
                        placeholder="Enter new master key" autocomplete="new-password"
-                       oninput="G.onMkKeyInput()"/>
+                       data-input="G.onMkKeyInput"/>
                 <!-- Strength meter -->
                 <div class="mk-strength-wrap">
                   <div class="mk-strength-bar"><div id="mk-strength-fill" class="mk-strength-fill"></div></div>
@@ -950,7 +950,7 @@
                 </div>
                 <!-- Rules checklist -->
                 <div id="mk-rules" class="mk-rules"></div>
-                <button class="btn btn-primary btn-sm" onclick="G.addMasterKey()">Add Key</button>
+                <button class="btn btn-primary btn-sm" data-click="G.addMasterKey">Add Key</button>
               </div>
             </div>
             <div id="mk-msg" class="msg hidden" style="margin-top:8px"></div>
@@ -958,7 +958,7 @@
 
           <!-- Save button (outside cards) -->
           <div style="margin-top:16px">
-            <button class="btn btn-primary" onclick="G.saveSettings()">Save Settings</button>
+            <button class="btn btn-primary" data-click="G.saveSettings">Save Settings</button>
           </div>
           <div id="sys-msg" class="msg hidden"></div>
         </div>
@@ -970,10 +970,10 @@
           <div class="admin-page-header"><h2>Logs</h2></div>
           <div class="settings-card logs-card">
             <div class="log-tabs">
-              <button class="log-tab active" data-log="system" onclick="G.switchLogTab('system')">System <span class="log-tab-badge" id="log-count-system">0</span></button>
-              <button class="log-tab" data-log="detection" onclick="G.switchLogTab('detection')">Detection <span class="log-tab-badge" id="log-count-detection">0</span></button>
-              <button class="log-tab" data-log="presence" onclick="G.switchLogTab('presence')">Presence <span class="log-tab-badge" id="log-count-presence">0</span></button>
-              <button class="log-tab" data-log="voice" onclick="G.switchLogTab('voice')">Voice <span class="log-tab-badge" id="log-count-voice">0</span></button>
+              <button class="log-tab active" data-log="system" data-click="G.switchLogTab" data-args='["system"]'>System <span class="log-tab-badge" id="log-count-system">0</span></button>
+              <button class="log-tab" data-log="detection" data-click="G.switchLogTab" data-args='["detection"]'>Detection <span class="log-tab-badge" id="log-count-detection">0</span></button>
+              <button class="log-tab" data-log="presence" data-click="G.switchLogTab" data-args='["presence"]'>Presence <span class="log-tab-badge" id="log-count-presence">0</span></button>
+              <button class="log-tab" data-log="voice" data-click="G.switchLogTab" data-args='["voice"]'>Voice <span class="log-tab-badge" id="log-count-voice">0</span></button>
             </div>
             <div style="padding:16px 20px">
               <div id="log-pane-system" class="log-pane active">
@@ -991,11 +991,11 @@
             </div>
             <!-- Action bar at bottom — clear of Dynamic Island -->
             <div class="logs-bottom-bar" style="padding:0 20px 16px">
-              <input id="log-date" class="input" type="date" aria-label="Day" title="Show one day (empty: the newest lines)" style="width:150px" onchange="G.onLogDate()"/>
-              <input id="log-q" class="input" type="text" placeholder="Search all days..." style="width:160px" oninput="G.filterLogs()"/>
-              <button id="log-older" class="btn btn-ghost btn-sm" onclick="G.loadOlderLogs()" disabled>Show earlier</button>
-              <button class="btn btn-ghost btn-sm" onclick="G.exportLogs()">Export shown</button>
-              <button class="btn btn-primary btn-sm" onclick="G.downloadFullLog()">Download Full</button>
+              <input id="log-date" class="input" type="date" aria-label="Day" title="Show one day (empty: the newest lines)" style="width:150px" data-change="G.onLogDate"/>
+              <input id="log-q" class="input" type="text" placeholder="Search all days..." style="width:160px" data-input="G.filterLogs"/>
+              <button id="log-older" class="btn btn-ghost btn-sm" data-click="G.loadOlderLogs" disabled>Show earlier</button>
+              <button class="btn btn-ghost btn-sm" data-click="G.exportLogs">Export shown</button>
+              <button class="btn btn-primary btn-sm" data-click="G.downloadFullLog">Download Full</button>
             </div>
           </div>
         </div>
@@ -1006,7 +1006,7 @@
         <div class="admin-page">
           <div class="admin-page-header">
             <h2>Custom Commands</h2>
-            <button class="btn btn-primary btn-sm" onclick="G.openAddCmd()">Add Command</button>
+            <button class="btn btn-primary btn-sm" data-click="G.openAddCmd">Add Command</button>
           </div>
           <p class="cmd-desc">
             Teach Narada new phrases. Say the phrase out loud and she responds with your custom message.
@@ -1020,7 +1020,7 @@
             </div>
           </div>
           <!-- Mobile-only add button at bottom -->
-          <button class="btn btn-primary cmd-add-mobile" onclick="G.openAddCmd()">Add Command</button>
+          <button class="btn btn-primary cmd-add-mobile" data-click="G.openAddCmd">Add Command</button>
         </div>
       </div>
 
@@ -1048,8 +1048,8 @@
       <input id="m-resp" class="input" type="text" placeholder="I'm afraid I can't do that."/>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="G.closeModal('m-add-cmd')">Cancel</button>
-      <button class="btn btn-primary" onclick="G.addCmd()">Add</button>
+      <button class="btn btn-ghost" data-click="G.closeModal" data-args='["m-add-cmd"]'>Cancel</button>
+      <button class="btn btn-primary" data-click="G.addCmd">Add</button>
     </div>
   </div>
 </div>
@@ -1060,8 +1060,8 @@
     <h2 id="m-confirm-title">Are you sure?</h2>
     <p id="m-confirm-body" class="modal-confirm-body"></p>
     <div class="modal-actions">
-      <button class="btn btn-ghost" id="m-confirm-cancel" onclick="G._confirmAnswer(false)">Cancel</button>
-      <button class="btn btn-danger" id="m-confirm-ok" onclick="G._confirmAnswer(true)">Confirm</button>
+      <button class="btn btn-ghost" id="m-confirm-cancel" data-click="G._confirmAnswer" data-args='[false]'>Cancel</button>
+      <button class="btn btn-danger" id="m-confirm-ok" data-click="G._confirmAnswer" data-args='[true]'>Confirm</button>
     </div>
   </div>
 </div>
@@ -1080,8 +1080,8 @@
     </div>
     <div id="m-bk-msg" class="msg hidden"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="G.closeModal('m-backend')">Cancel</button>
-      <button class="btn btn-primary" onclick="G.saveBackendConfig()">Connect</button>
+      <button class="btn btn-ghost" data-click="G.closeModal" data-args='["m-backend"]'>Cancel</button>
+      <button class="btn btn-primary" data-click="G.saveBackendConfig">Connect</button>
     </div>
   </div>
 </div>
@@ -1094,19 +1094,19 @@
         <h2>Documentation</h2>
         <div class="docs-subtitle">Garuda system overview and reference</div>
       </div>
-      <button class="docs-close-btn" aria-label="Close documentation" onclick="document.getElementById('m-docs').classList.add('hidden')">
+      <button class="docs-close-btn" aria-label="Close documentation" data-click="UI.addClass" data-args='["m-docs", "hidden"]'>
         <span class="gi gi-close" aria-hidden="true"></span>
       </button>
     </div>
     <div class="docs-body">
       <div class="docs-tabs">
-        <button class="docs-tab active" onclick="G.switchDocsTab(this,'docs-overview')">Overview</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-dashboard')">Dashboard</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-detection')">Detection</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-narada')">Narada</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-admin')">Admin</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-access')">Access</button>
-        <button class="docs-tab" onclick="G.switchDocsTab(this,'docs-stack')">Stack</button>
+        <button class="docs-tab active" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-overview"]'>Overview</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-dashboard"]'>Dashboard</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-detection"]'>Detection</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-narada"]'>Narada</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-admin"]'>Admin</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-access"]'>Access</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-stack"]'>Stack</button>
       </div>
 
       <div id="docs-overview" class="docs-section active">
@@ -1219,7 +1219,7 @@
     </div>
 
     <div class="docs-footer">
-      <button class="btn btn-ghost docs-footer-close" onclick="document.getElementById('m-docs').classList.add('hidden')">Close</button>
+      <button class="btn btn-ghost docs-footer-close" data-click="UI.addClass" data-args='["m-docs", "hidden"]'>Close</button>
     </div>
 
   </div>
@@ -1266,7 +1266,7 @@
         <input id="fb-name" class="fb-input" type="text" placeholder="Your name (optional)" maxlength="64" aria-label="Your name" autocomplete="off">
         <div class="fb-footer">
           <small>Stored on device</small>
-          <button class="fb-submit" id="fb-submit" onclick="G.submitFeedback()">Send</button>
+          <button class="fb-submit" id="fb-submit" data-click="G.submitFeedback">Send</button>
         </div>
       </div>
       <!-- Success state -->
@@ -1282,7 +1282,7 @@
   </div>
 
   <!-- Bubble toggle -->
-  <button class="fb-bubble" id="fb-bubble" onclick="G.toggleFeedback()" aria-label="Open feedback" title="Send feedback">
+  <button class="fb-bubble" id="fb-bubble" data-click="G.toggleFeedback" aria-label="Open feedback" title="Send feedback">
     <!-- Chat bubble + signal arc -->
     <span class="gi gi-feedback fb-icon-open" aria-hidden="true"></span>
     <span class="gi gi-close fb-icon-close" aria-hidden="true"></span>
@@ -1292,9 +1292,10 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
+<script src="/static/actions.js?v=1"></script>
 <script src="/static/narada.js?v=14"></script>
 <script src="/static/island.js?v=4"></script>
-<script src="/static/app.js?v=73"></script>
-<script src="/static/home.js?v=13"></script>
+<script src="/static/app.js?v=74"></script>
+<script src="/static/home.js?v=14"></script>
 </body>
 </html>

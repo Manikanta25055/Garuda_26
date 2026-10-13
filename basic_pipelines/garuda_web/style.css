@@ -350,9 +350,9 @@ h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
 }
 .btn-ghost:hover { background: var(--btn-ghost-hover); }
 /* Sign Out — subtle red tint */
-#header .btn-ghost[onclick*="logout"],
+#header .btn-ghost[data-click="G.logout"],
 .hud-signout { color: rgba(255,69,58,0.70); }
-#header .btn-ghost[onclick*="logout"]:hover { background: rgba(255,69,58,0.12); color: #ff453a; border-color: rgba(255,69,58,0.25); }
+#header .btn-ghost[data-click="G.logout"]:hover { background: rgba(255,69,58,0.12); color: #ff453a; border-color: rgba(255,69,58,0.25); }
 .btn-link  { background: none; color: var(--accent); padding: 4px 8px; font-size: 13px; }
 .btn-link:hover { opacity: 0.75; }
 .btn-sm { padding: 6px 14px; font-size: 12px; }
@@ -3257,7 +3257,7 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 /* ── Sign out button light mode ──────────────────────────── */
-#header .btn-ghost[onclick*="logout"],
+#header .btn-ghost[data-click="G.logout"],
 .hud-signout { color: var(--danger) !important; opacity: 0.7; }
 
 /* ── Autofill fix (light mode) ───────────────────────────── */
@@ -4808,7 +4808,7 @@ body::before { will-change: transform; }
   html.plat-other .toggle:active, html.plat-other .di-chip:active, html.plat-other .di-act:active {
     opacity: 0.62; transition-duration: 0s;
   }
-  html.plat-other button, html.plat-other [onclick], html.plat-other .mode-row, html.plat-other .toggle {
+  html.plat-other button, html.plat-other [data-click], html.plat-other .mode-row, html.plat-other .toggle {
     touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   }
 }

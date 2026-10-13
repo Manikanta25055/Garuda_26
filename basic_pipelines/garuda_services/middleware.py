@@ -62,9 +62,12 @@ async def security_headers(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        # blob:/data: scripts are the voice client's audio worklets; the
-        # ElevenLabs hosts carry Narada's WebRTC voice session.
-        "script-src 'self' 'unsafe-inline' blob: data:; "
+        # No inline script: every handler in the page is a data-* attribute
+        # run by /static/actions.js, so a tag injected into the page cannot
+        # run. blob: is the voice client's audio worklets (it tries blob:
+        # before data:, which is no longer allowed); the ElevenLabs hosts
+        # carry Narada's WebRTC voice session.
+        "script-src 'self' blob:; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' blob: data:; "
         "media-src 'self' blob: mediastream:; "

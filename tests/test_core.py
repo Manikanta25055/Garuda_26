@@ -288,3 +288,17 @@ def test_a_body_sent_in_chunks_is_held_to_the_same_limit():
     r = TestClient(app).post("/api/echo", content=chunks(), headers={"content-type": "application/json"})
     assert r.status_code == 413
     assert r.json()["error"]["code"] == "too_large"
+
+
+def test_the_page_runs_no_inline_script(app_client):
+    # Every handler is a data-* attribute run by /static/actions.js, so the
+    # policy can refuse inline script and an injected tag cannot run.
+    csp = app_client.get('/').headers['content-security-policy']
+    script_src = next(d for d in csp.split(';') if d.strip().startswith('script-src'))
+    assert "'unsafe-inline'" not in script_src and 'data:' not in script_src
+    import re
+    web = os.path.join(os.path.dirname(gw.__file__), 'garuda_web')
+    for name in ('index.html', 'app.js', 'home.js', 'narada.js', 'island.js'):
+        text = open(os.path.join(web, name), encoding='utf-8').read()
+        assert not re.search(r'<[^>]*\son[a-z]+\s*=\s*["\']', text), name
+        assert '<script>' not in text.replace('`<script>`', ''), name
