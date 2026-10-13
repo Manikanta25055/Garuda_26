@@ -109,3 +109,13 @@ def test_without_a_site_it_says_so():
 def test_long_lists_are_cut_newest_end_for_logs():
     out = trim({"system_log": list(range(100)), "entries": list(range(100))})
     assert out["system_log"][0] == 60 and out["entries"][-1] == 39
+
+
+def test_narada_reads_a_digest_of_a_long_day(app_client):
+    _log_lines(gw.PERM_SYSTEM_LOG, ["[2026-09-01 04:00:00] Garuda starting: commit abc1234"]
+               + [f"[2026-09-01 20:{m:02d}:00] Alert triggered." for m in range(55)])
+    out = run("search_history", {"date": "2026-09-01", "digest": False})
+    # The one restart is among 40 lines of 56, and the count is of all of them.
+    assert out["total"] == 56 and out["entries"][0]["text"].startswith("Garuda starting")
+    assert out["kinds"][0] == {"count": 55, "kind": "Alert triggered.", "source": "system",
+                               "first": "2026-09-01 20:00:00", "last": "2026-09-01 20:54:00"}

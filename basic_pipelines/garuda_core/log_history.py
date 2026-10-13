@@ -16,6 +16,7 @@ parse_moment() turns what a person writes or copies ("[2026-10-02 14:33:05]",
 Narada read a time the same way.
 """
 import datetime
+import functools
 import os
 import re
 import threading
@@ -156,12 +157,142 @@ def read_lines(path, keep, start="", end="9999", accept=None, newest=None):
 # ── choosing what to show ────────────────────────────────────────────────────
 
 
-def matches(text, query):
-    """Every word of the query appears in the text, in any case."""
-    if not query:
+# People do not ask in the words the logs are written in: "was the lens covered"
+# is "[TAMPER] camera_blind ... camera appears blocked" in one file and "Camera
+# blindness detected" in another, and "did it restart" is "Garuda starting".
+# A search for the exact words found nothing and Narada said it never happened.
+
+# Words that say a question is being asked, not what it is about.
+_FILLER = frozenset(
+    "a an the of in to for by is was were be been did do does has have had it its and with "
+    "from that this any all me my show give tell list get history log logs event events "
+    "record records recorded entry entries time times when what how many much turn turned "
+    "switch switched got happen happened detect detected detection detections seen sighting "
+    "sightings spotted noticed there who whom which where why ever often".split())
+# Ways of saying one thing, read as its log word before the query is split.
+_PHRASES = tuple((re.compile(rx), word) for rx, word in (
+    (r"\b(?:sign(?:ed|ing)?[ -]?ins?|log(?:ged|ging)?[ -]ins?|logins)\b", "login"),
+    (r"\b(?:c[ao]me|got|reached|arrived?|returned|back) home\b", "arrived"),
+    (r"\b(?:left|leaves?|leaving) (?:the )?(?:home|house)\b|\bwent out\b", "away"),
+    (r"\bdead[ -]?man\b", "dead-man"),
+))
+# Each row is one thing; a query word that begins like any of them finds them all.
+_ALIKE = tuple(tuple(row.split("|")) for row in (
+    "cover|block|blind|blindness|obstruct|obscured|blacked",
+    "lens|camera",
+    "person|people|someone|somebody|anyone|anybody|human|visitor",
+    "knife|knives",
+    "alert|alarm",
+    "email|mail|e-mail",
+    "restart|reboot|rebooted|garuda starting",
+    "internet|wifi|wi-fi|online|offline",
+    "down|lost|outage|disconnect|dropped",
+    "phone|mobile|owner",
+    "arriv|came|return",
+    "away|left|leave|gone|depart",
+    "change|set|toggle",
+))
+
+
+def _stem(word):
+    """covered -> cover, alerts -> alert; short words and numbers are left alone."""
+    if len(word) > 4 and word.isalpha():
+        for end in ("ing", "ed", "es", "s"):
+            if word.endswith(end) and not word.endswith(("ss", "us", "is")) \
+                    and len(word) - len(end) >= 4:
+                return word[:-len(end)]
+    return word
+
+
+def _word(part):
+    """A pattern for `part` as a word of its own, in any of its endings: "mode"
+    is in "Mode night set" and "modes", and not in "[MODEL] Auto-selected"."""
+    return r"(?<![a-z0-9])" + re.escape(part) + r"(?:s|es|d|ed|ing)?(?![a-z0-9])"
+
+
+@functools.lru_cache(maxsize=64)
+def _terms(query):
+    """The query as alternatives ("scissors or hammer"), each a list of words,
+    each word a pattern for itself and for what else counts as it."""
+    out = []
+    low = query.lower()
+    for rx, word in _PHRASES:
+        low = rx.sub(word, low)
+    for part in re.split(r"\s+or\s+|[|,]", low):
+        words = [w.strip("?!.\"'()") for w in part.split()]
+        words = [w for w in words if w]
+        meant = [w for w in words if w not in _FILLER] or words
+        terms = []
+        for word in meant:
+            stem = _stem(word)
+            alike = [stem] if stem != word else []
+            for row in _ALIKE:
+                if any(word.startswith(r) or stem.startswith(r) for r in row if " " not in r):
+                    alike.extend(row)
+            terms.append(re.compile("|".join(_word(w) for w in dict.fromkeys([word] + alike))))
+        if terms:
+            out.append(tuple(terms))
+    return tuple(out)
+
+
+def matches(text, query, any_word=False):
+    """The text has every word of the query, in any case. A word is also found
+    by its stem and by the other ways of saying it (_ALIKE); "a or b" finds
+    either. any_word=True: one word of the query is enough."""
+    if not query or not query.strip():
         return True
     low = text.lower()
-    return all(word in low for word in query.lower().split())
+    return any((any if any_word else all)(t.search(low) for t in terms)
+               for terms in _terms(query))
+
+
+_NUMBERS = re.compile(r"\d[\d.:]*")
+_COMMIT = re.compile(r"\bcommit \w+")
+
+
+def kind(text):
+    """What sort of line this is, without what differs from one to the next:
+    "[DANGER] Knife conf=0.84 — alert triggered" and its 205 neighbours are
+    one kind, "[DANGER] Knife"."""
+    text = text.split("\n", 1)[0].split(" conf=", 1)[0]
+    return _NUMBERS.sub("N", _COMMIT.sub("commit …", text))[:80]
+
+
+def digest(entries, limit):
+    """At most `limit` of chronological entries, chosen to say what happened:
+    the kinds that are few come whole (a restart, a covered camera, an email),
+    the ones that repeat by their first and last line, and the newest lines
+    fill what room is left. Still in time order."""
+    if len(entries) <= limit:
+        return entries
+    groups = {}
+    for i, e in enumerate(entries):
+        groups.setdefault((e["source"], kind(e["text"])), []).append(i)
+    chosen = set()
+    for lines in sorted(groups.values(), key=len):
+        room = limit - len(chosen)
+        if room <= 0:
+            break
+        chosen.update(lines if len(lines) <= min(room, limit // 4) else
+                      ([lines[0], lines[-1]] if room > 1 else [lines[-1]]))
+    for i in range(len(entries) - 1, -1, -1):
+        if len(chosen) >= limit:
+            break
+        chosen.add(i)
+    return [entries[i] for i in sorted(chosen)]
+
+
+def summary(entries, most=24):
+    """[{count, kind, source, first, last}] over chronological entries, commonest first."""
+    seen = {}
+    for e in entries:
+        row = seen.setdefault((e["source"], kind(e["text"])), [0, e["ts"], e["ts"]])
+        row[0] += 1
+        row[2] = e["ts"]
+    rows = sorted(seen.items(), key=lambda kv: -kv[1][0])
+    return [{"count": n, "kind": k, "source": s, "first": first,
+             **({"last": last} if last != first else {})}
+            for (s, k), (n, first, last) in rows[:most]]
 
 
 def pick(entries, limit, at=""):
@@ -232,6 +363,42 @@ def _hour24(hour, ampm):
     if hour == 12:
         return 12 if pm else 0
     return hour + 12 if pm else hour
+
+
+_SPAN = re.compile(r"\b(?:(this|last|past|previous)\s+(week|month|year)"
+                   r"|(?:the\s+)?(?:last|past)\s+(\d{1,3})\s*(hours?|hrs?|days?|weeks?|months?))\b",
+                   re.I)
+
+
+def parse_span(text, now=None):
+    """(start, end, how it was read) for "this month", "last week", "last 48
+    hours", "past 7 days"; None for anything else. A week starts on Monday."""
+    m = _SPAN.search(text or "")
+    if not m:
+        return None
+    now = now or datetime.datetime.now()
+    today = datetime.datetime.combine(now.date(), datetime.time())
+    day = datetime.timedelta(days=1)
+    if m[3]:
+        n, unit = int(m[3]), m[4].lower()
+        back = (datetime.timedelta(hours=n) if unit.startswith("h") else
+                n * day * (1 if unit.startswith("d") else 7 if unit.startswith("w") else 30))
+        return now - back, now + datetime.timedelta(minutes=1), f"the last {n} {unit}"
+    which, unit = m[1].lower(), m[2].lower()
+    this = which == "this"
+    if unit == "week":
+        start = today - today.weekday() * day - (0 if this else 7) * day
+        end = start + 7 * day
+    elif unit == "month":
+        start = today.replace(day=1)
+        end = (start + 32 * day).replace(day=1)
+        if not this:
+            end, start = start, (start - day).replace(day=1)
+    else:
+        start = today.replace(month=1, day=1, year=today.year - (0 if this else 1))
+        end = start.replace(year=start.year + 1)
+    return start, end, (f"{which} {unit}: {start:%A %d %B %Y} to "
+                        f"{end - datetime.timedelta(seconds=1):%A %d %B %Y}")
 
 
 def _find_date(text, now):

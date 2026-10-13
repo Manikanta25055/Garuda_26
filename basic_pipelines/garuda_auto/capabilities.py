@@ -45,6 +45,7 @@ class Capability:
     typed: tuple = ()           # typed by the person on the confirm card, never by the model
     call: str = ""              # the one route that carries it out (site_calls.py);
                                 # without it the agent has a handler of its own
+    fixed: dict = field(default_factory=dict)   # sent with every call, whatever the model says
 
     def tool(self):
         """The function description sent to the model."""
@@ -116,11 +117,11 @@ CAPABILITIES = (
 )
 
 def _site(name, summary, call, params=None, required=(), *, role="user", tier="read",
-          security=False, typed=(), lane="planner"):
+          security=False, typed=(), lane="planner", fixed=None):
     """A capability carried out by the site's own endpoint; the planner's to use."""
     return Capability(name, summary, params or {}, tuple(required), role=role, tier=tier,
                       lane=lane, security=security, routes=(call,), typed=tuple(typed),
-                      call=call)
+                      call=call, fixed=dict(fixed or {}))
 
 
 _ID = lambda what: {"type": "string", "description": f"id of the {what}"}  # noqa: E731
@@ -175,21 +176,34 @@ CAPABILITIES += (
           "caused them. Use it for any question about the past. Give at for a moment (pass "
           "the time exactly as the person wrote or copied it, e.g. 2026-10-02 14:33:05, "
           "14:33, yesterday 9pm), date for a whole day, start and end for a range, q for "
-          "words. Entries come back in time order with exact times; total, omitted_before and "
-          "omitted_after say how many more there are, and nearest_before and nearest_after "
-          "what is either side of an empty window.",
+          "words. Entries come back in time order with exact times. total is the exact count "
+          "for the range; when there are more than can be shown, entries is a selection, "
+          "kinds lists every sort of line in the whole range with its count and first and "
+          "last time, per_day the count on each day, and earliest and latest are the first "
+          "and the last line of all. nearest_before and nearest_after are what is either side of an "
+          "empty window. What is recorded: camera covered or blocked ([TAMPER]), knife, "
+          "scissors, hammer ([DANGER]), a person ([WATCH]), Alert triggered, emails sent, "
+          "restarts (Garuda starting), internet lost and restored, the owner's phone "
+          "arriving and leaving, sign-ins, modes changed, devices switched.",
           "GET /api/history",
           {"at": {"type": "string", "description": "a moment, as written or copied"},
            "window_minutes": {"type": "integer",
                               "description": "minutes either side of at; 5 if not given"},
-           "date": {"type": "string", "description": "a whole day, e.g. 2026-10-02 or yesterday"},
+           "date": {"type": "string",
+                    "description": "a whole day (2026-10-02, yesterday), or as the person "
+                                   "said it: this week, last week, this month, last month, "
+                                   "last 48 hours, last 7 days"},
            "start": _S, "end": _S,
-           "q": {"type": "string", "description": "words that must all appear, e.g. knife"},
+           "q": {"type": "string",
+                 "description": "one or two plain words for the thing, e.g. knife, camera "
+                                "covered, restart, email, lamp off; 'a or b' finds either. "
+                                "Leave it out to see everything in the range"},
            "sources": {"type": "string",
-                       "description": "comma list of system, detection, devices; empty for all"},
+                       "description": "leave empty to search everything (best); or a comma "
+                                      "list of system, detection, devices"},
            "routine": {"type": "boolean",
                        "description": "also the routine presence checks that found nothing new"}},
-          lane="fast", security=True),
+          lane="fast", security=True, fixed={"digest": True}),
     _site("event_stats", "How many security events are stored and how many wait to be synced.",
           "GET /api/events/stats", security=True),
     _site("recent_events", "Security events (detections, alerts) after a time.",

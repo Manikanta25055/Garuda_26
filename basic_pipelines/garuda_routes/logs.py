@@ -28,10 +28,15 @@ MAX_LIMIT = 500
 DEFAULT_WINDOW_MIN = 5
 # Where to look for the nearest thing either side when a window is empty.
 NEAREST_DAYS = 7
+# From this many lines on, a result also says what kinds of line they were.
+KINDS_FROM = 8
 # Lines that say nothing happened: the presence check wrote one every 30 s
 # until 2026-10 and the logs on disk are full of them. Left out of the Activity
 # card and of what Narada reads, unless asked for (routine=1) or searched for.
 ROUTINE = re.compile(r"^\[PRESENCE\] (?:Match|No match) [—–-] \d+ active ARP entries$")
+# Written at every start under the [TAMPER] tag though nothing was tampered
+# with: a search for tampering found 320 of these around 190 covered lenses.
+STARTUP_NOTICE = "[TAMPER] Dead-man switch disabled"
 
 
 def build_logs_router(core):
@@ -105,7 +110,37 @@ def build_logs_router(core):
                                   f"({e.get('mac') or 'no mac'})")
                 for e in list(core.STATE.presence.log) if start <= e.get("ts", "") < end]
 
-    def _collect(session, sources, start, end, q, newest=None, routine=True):
+    def _its_own_device(text, q):
+        """A device line reads "Fan on — rule: ... turn on lamp and fan": a search
+        for the lamp must not find the fan's line by the rule it quotes."""
+        ctx = getattr(core, "DRISHTI_CTX", None)
+        named = {"on", "off"}
+        for d in getattr(getattr(ctx, "registry", None), "devices", []):
+            named.update(str(d.get("name", "")).lower().split())
+            named.add(str(d.get("id", "")).lower())
+        head = text.split(" — ", 1)[0].lower().split()
+        asked = [w for w in re.split(r"[^a-z0-9_]+", q.lower()) if w in named]
+        return all(w in head for w in asked) or " or " in q.lower()
+
+    def _once(entries):
+        """The camera writes a covered lens and a person to the system log and
+        to the detection log in the same second. Read together, that is one
+        event: counted twice it was "188 in system and 187 in detection"."""
+        blind = set()
+        for e in entries:
+            if e["source"] == "system" and e["text"].startswith("[TAMPER] Camera blindness"):
+                at = datetime.datetime.strptime(e["ts"], log_history.STAMP_FMT)
+                blind.update(log_history.stamp(at + datetime.timedelta(seconds=d))
+                             for d in (-2, -1, 0, 1, 2))
+        seen = {e["ts"] for e in entries
+                if e["source"] == "detection" and e["text"].lower().startswith("[watch] person")}
+        return [e for e in entries if not (
+            (e["source"] == "detection" and e["ts"] in blind
+             and e["text"].startswith("[TAMPER] camera_blind"))
+            or (e["source"] == "system" and e["ts"] in seen
+                and e["text"].startswith("[WATCH] Person (")))]
+
+    def _collect(session, sources, start, end, q, newest=None, routine=True, any_word=False):
         """Chronological entries of the given sources with start <= ts < end.
 
         newest=N: only the newest N are wanted (and one more, to tell that
@@ -118,7 +153,11 @@ def build_logs_router(core):
                     return False
                 if not routine and source == "system" and ROUTINE.match(text):
                     return False
-                return not q or log_history.matches(f"{source} {text}", q)
+                if q and source == "devices" and not any_word and not _its_own_device(text, q):
+                    return False
+                if q and text.startswith(STARTUP_NOTICE) and "dead" not in q.lower():
+                    return False
+                return not q or log_history.matches(f"{source} {text}", q, any_word)
             if source in _files():
                 lines = log_history.read_lines(_files()[source], core._LOG_KEEP_ROTATED,
                                                start, end, accept, newest)
@@ -136,7 +175,11 @@ def build_logs_router(core):
         raise HTTPException(400, message)
 
     def _history(session, at, window_minutes, start, end, date, q, sources, limit, before,
-                 routine=False):
+                 routine=False, digest=False):
+        if q and not at and re.fullmatch(r"[\d:.\s]+(?:[ap]\.?m\.?)?", q.strip(), re.I) \
+                and getattr(log_history.parse_moment(q), "has_time", False):
+            # "4:30" given as the words to look for is a time.
+            at, q, date = f"{date} {q}".strip(), "", ""
         core._do_flush_logs()               # lines still waiting in the write buffer
         allowed, refused = _allowed(session)
         asked = [s for s in re.split(r"[^a-z]+", (sources or "").lower()) if s]
@@ -148,6 +191,7 @@ def build_logs_router(core):
         limit = max(1, min(int(limit or 40), MAX_LIMIT))
         now = datetime.datetime.now()
         lo, hi, centre, read_as = "", log_history.stamp(now + datetime.timedelta(minutes=1)), "", ""
+        one_day = False
         if at:
             moment = log_history.parse_moment(at, now)
             if moment is None:
@@ -165,6 +209,9 @@ def build_logs_router(core):
                 centre = log_history.stamp(mid)
                 read_as = f"{moment.dt:%A %d %B %Y %H:%M:%S}" + (
                     "" if moment.has_date else " (no date was given: the most recent one)")
+        elif date and log_history.parse_span(date, now):
+            first, last, read_as = log_history.parse_span(date, now)
+            lo, hi = log_history.stamp(first), log_history.stamp(last)
         elif date:
             moment = log_history.parse_moment(date, now)
             if moment is None:
@@ -173,20 +220,33 @@ def build_logs_router(core):
             lo = log_history.stamp(day)
             hi = log_history.stamp(day + datetime.timedelta(days=1))
             read_as = f"the whole of {day:%A %d %B %Y}"
+            one_day = True
         if start or end:
+            # With a date as well, a start or an end inside that day narrows it
+            # (10:00 to 18:00) and one outside it widens it: Narada gave
+            # date=1 October with end=31 October for "in October", was handed
+            # the 1st alone, and went on day by day until its time ran out.
+            wider = False
             if start:
                 m = log_history.parse_moment(start, now)
                 if m is None:
                     _bad(f"could not read a time from {start!r}")
-                lo = max(lo, log_history.stamp(m.dt))
+                first = log_history.stamp(m.dt)
+                wider = one_day and first < lo
+                lo = first if wider else max(lo, first)
             if end:
                 m = log_history.parse_moment(end, now)
                 if m is None:
                     _bad(f"could not read a time from {end!r}")
                 # An end given as a day or a minute includes all of it.
-                last = m.dt + datetime.timedelta(seconds=m.precision)
-                hi = min(hi, log_history.stamp(last))
-            read_as = read_as or f"from {lo or 'the beginning'} to {hi}"
+                last = log_history.stamp(m.dt + datetime.timedelta(seconds=m.precision))
+                if one_day and last > hi:
+                    wider = True
+                    hi = min(last, log_history.stamp(now + datetime.timedelta(minutes=1)))
+                else:
+                    hi = min(hi, last)
+            if wider or not read_as:
+                read_as = f"from {lo or 'the beginning'} to {hi}"
         if before:
             m = log_history.parse_moment(before, now)
             if m is None:
@@ -199,12 +259,53 @@ def build_logs_router(core):
         # files are read only as far back as that takes; the counts are then
         # "at least" (omitted_before > 0 still means there is more).
         routine = routine or bool(q)
-        entries = _collect(session, chosen, lo, hi, q, None if centre else limit, routine)
+        # A day, a range or a search is read whole, so that the count is the
+        # count: Narada was handed the newest 40 of 206 knife detections with
+        # "total: 41" and said there had been 41. Only the open-ended page of
+        # everything (the Logs page scrolling back) stops at what it shows.
+        whole = bool(centre or lo or q) and not before
+        notes = {}
+        entries = _collect(session, chosen, lo, hi, q, None if whole else limit, routine)
+        if q and not entries:
+            wider = [s for s in allowed if s not in chosen]
+            found = _collect(session, wider, lo, hi, q, None, routine) if wider else []
+            if found:
+                notes["searched_instead"] = (f"nothing in {', '.join(chosen)}; these are from "
+                                             f"{', '.join(wider)}")
+                entries, chosen = found, wider
+            elif len(q.split()) > 1:
+                entries = _collect(session, chosen, lo, hi, q, None, routine, any_word=True)
+                if entries:
+                    notes["loose_match"] = ("no line has all of these words; these have at "
+                                            "least one, so check each is what was asked")
+        if whole and "system" in chosen and "detection" in chosen:
+            entries = _once(entries)
         kept, omitted_before, omitted_after = log_history.pick(entries, limit, centre)
         out = {"from": lo or None, "to": hi, "at": centre or None, "read_as": read_as or None,
                "query": q or None, "searched": chosen, "total": len(entries),
-               "omitted_before": omitted_before, "omitted_after": omitted_after,
-               "entries": kept}
+               "omitted_before": omitted_before, "omitted_after": omitted_after, **notes}
+        if whole and (len(entries) > len(kept) or len(entries) > KINDS_FROM):
+            # What the range held, line for line: the lines not shown, and a
+            # search for "email" that also found "Mode email_off set".
+            out["kinds"] = log_history.summary(entries)
+            # "When was the last one" asked of 126 lines sorted by how common
+            # they are got the wrong line; the two ends are said outright.
+            out["earliest"], out["latest"] = entries[0], entries[-1]
+            days = {}
+            for e in entries:
+                days[e["ts"][:10]] = days.get(e["ts"][:10], 0) + 1
+            if 1 < len(days) <= 62:
+                out["per_day"] = days
+            if digest and not centre and len(entries) > len(kept):
+                kept = log_history.digest(entries, limit)
+                del out["omitted_before"], out["omitted_after"]
+                out["not_shown"] = len(entries) - len(kept)
+                out["entries_are"] = ("a selection: every line of the kinds that are few, the "
+                                      "first and last of the kinds that repeat. kinds counts "
+                                      "every line of the range")
+        elif not whole and len(entries) > len(kept):
+            out["total_is"] = "at least this many: give a date, a range or words for an exact count"
+        out["entries"] = kept
         if not routine:
             out["routine_left_out"] = ("presence checks that found nothing new; "
                                        "ask with routine=true to include them")
@@ -216,7 +317,9 @@ def build_logs_router(core):
                                         - datetime.timedelta(days=NEAREST_DAYS))
             near_hi = log_history.stamp(datetime.datetime.strptime(hi, log_history.STAMP_FMT)
                                         + datetime.timedelta(days=NEAREST_DAYS))
-            earlier = _collect(session, chosen, near_lo, lo, q, 1, routine)
+            # A thing searched for by name is looked for as far back as the
+            # logs go: "when did a mode last change" is eleven days ago.
+            earlier = _collect(session, chosen, "" if q else near_lo, lo, q, 1, routine)
             later = _collect(session, chosen, hi, near_hi, q, None, routine)
             out["nearest_before"] = earlier[-1] if earlier else None
             out["nearest_after"] = later[0] if later else None
@@ -225,21 +328,23 @@ def build_logs_router(core):
     @router.get("/api/history")
     async def history(at: str = "", window_minutes: int = 0, start: str = "", end: str = "",
                       date: str = "", q: str = "", sources: str = "", limit: int = 40,
-                      before: str = "", routine: bool = False,
+                      before: str = "", routine: bool = False, digest: bool = False,
                       session=Depends(core.require_session)):
         """What the logs hold for a moment, a day or a range, from every file on disk.
 
         at       a time as written or copied ("2026-10-02 14:33:05", "14:33", "yesterday 9pm");
                  the window_minutes either side of it (5 by default) are returned, nearest first
-        date     a whole day; start/end a range; before pages back (up to and including
-                 that second)
+        date     a whole day, or "this week", "last month", "last 48 hours"; start/end a
+                 range; before pages back (up to and including that second)
         q        words that must all appear; sources a comma list of system, detection,
                  devices, presence, voice (the last two need the master key)
         routine  also the presence checks that found nothing new (always, when q is given)
+        digest   when there are more lines than the limit, a selection that says what
+                 happened (the rare kinds whole) instead of the newest: what Narada reads
         """
         return await asyncio.to_thread(_history, session, at[:80], window_minutes, start[:80],
                                        end[:80], date[:40], q[:200], sources[:80], limit,
-                                       before[:40], routine)
+                                       before[:40], routine, digest)
 
     @router.get("/api/history/days")
     async def history_days(source: str = "system", session=Depends(core.require_session)):

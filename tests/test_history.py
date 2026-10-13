@@ -249,3 +249,128 @@ def test_routine_presence_checks_are_left_out_unless_asked(app_client, user_head
 def test_static_files_are_asked_after_on_every_load(app_client):
     r = app_client.get("/static/app.js")
     assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+
+
+# ── asked in a person's words, counted over the whole range ──────────────────
+
+@pytest.mark.parametrize("line,asked,found", [
+    ("system [TAMPER] Camera blindness detected — lens may be covered!", "lens covered", True),
+    ("detection [TAMPER] camera_blind conf=0.00 — camera appears blocked", "lens covered", True),
+    ("detection [TAMPER] camera_blind conf=0.00 — camera appears blocked", "camera tampered", True),
+    ("system Garuda starting: commit 2a99320 (Drishti), API v1", "restart", True),
+    ("system [NETWORK] Internet connection lost — events will be queued", "internet down", True),
+    ("system [NETWORK] Internet restored — 70 queued events", "internet down", False),
+    ("system Master key login.", "who signed in", True),
+    ("system [TAMPER] Alert email sent.", "mail", True),
+    ("detection [DANGER] scissors conf=0.50", "scissors or hammer", True),
+    ("detection [DANGER] scissors conf=0.50", "scissors hammer", False),
+    ("detection [WATCH] Person conf=0.85", "people", True),
+    ("system Mode night set to True by admin", "night mode", True),
+    ("system [MODEL] Auto-selected best_v5.hef", "mode", False),       # a word, not a part of one
+    ("system [OWNER] Device (192.168.1.1) arrived", "192.168", True),
+])
+def test_a_line_is_found_by_what_a_person_calls_it(line, asked, found):
+    assert log_history.matches(line, asked) is found
+
+
+@pytest.mark.parametrize("text,start,end", [
+    ("this month", "2026-10-01 00:00:00", "2026-11-01 00:00:00"),
+    ("last month", "2026-09-01 00:00:00", "2026-10-01 00:00:00"),
+    ("this week", "2026-09-28 00:00:00", "2026-10-05 00:00:00"),       # from Monday
+    ("last week", "2026-09-21 00:00:00", "2026-09-28 00:00:00"),
+    ("last 48 hours", "2026-10-01 09:00:00", "2026-10-03 09:01:00"),
+    ("past 7 days", "2026-09-26 09:00:00", "2026-10-03 09:01:00"),
+])
+def test_a_span_as_a_person_says_it(text, start, end):
+    first, last, _ = log_history.parse_span(text, NOW)
+    assert (log_history.stamp(first), log_history.stamp(last)) == (start, end)
+    assert log_history.parse_span("yesterday", NOW) is None
+
+
+@pytest.fixture
+def a_busy_day(app_client):
+    _write(gw.PERM_SYSTEM_LOG, (
+        ["[2026-10-13 04:11:50] [TAMPER] Camera blindness detected — lens may be covered!",
+         "[2026-10-13 04:11:53] [TAMPER] Alert email sent.",
+         "[2026-10-13 04:34:31] Garuda starting: commit 2a99320 (Drishti), API v1",
+         "[2026-10-13 04:34:31] [MODEL] Auto-selected best_v5.hef + best_labels.json"]
+        + [f"[2026-10-13 20:{m:02d}:00] Alert triggered." for m in range(50)]))
+    _write(gw.PERM_DETECTION_LOG, (
+        ["[2026-10-13 04:11:50] [TAMPER] camera_blind conf=0.00 — camera appears blocked"]
+        + [f"[2026-10-13 20:{m:02d}:{s:02d}] [DANGER] Knife conf=0.8{s % 10} — alert triggered"
+           for m in range(50) for s in (0, 20, 40)]))
+    yield
+
+
+def test_a_count_is_of_the_whole_day_not_of_the_lines_shown(app_client, user_headers, a_busy_day):
+    d = _get(app_client, user_headers, date="2026-10-13", q="knife").json()
+    assert d["total"] == 150 and len(d["entries"]) == 40
+    assert d["kinds"] == [{"count": 150, "kind": "[DANGER] Knife", "source": "detection",
+                           "first": "2026-10-13 20:00:00", "last": "2026-10-13 20:49:40"}]
+
+
+def test_a_covered_camera_is_found_in_other_words_and_counted_once(
+        app_client, user_headers, a_busy_day):
+    # Narada asked the detection log for "lens covered" and was told there was nothing.
+    for asked in ({"q": "lens covered", "sources": "detection"}, {"q": "camera blocked"},
+                  {"q": "camera tampered"}):
+        d = _get(app_client, user_headers, date="2026-10-13", **asked).json()
+        assert [e["ts"] for e in d["entries"]] == ["2026-10-13 04:11:50"], asked
+    assert d["entries"][0]["source"] == "system"       # the two files' lines are one event
+
+
+def test_nothing_under_the_asked_source_looks_in_the_others(app_client, user_headers, a_busy_day):
+    d = _get(app_client, user_headers, date="2026-10-13", q="restart", sources="detection").json()
+    assert d["searched"] == ["system", "devices"] and "nothing in detection" in d["searched_instead"]
+    assert d["entries"][0]["text"].startswith("Garuda starting")
+
+
+def test_a_digest_keeps_the_rare_lines_of_a_long_day(app_client, user_headers, a_busy_day):
+    newest = _get(app_client, user_headers, date="2026-10-13").json()
+    assert all(e["ts"] >= "2026-10-13 20:" for e in newest["entries"])   # the page: the newest
+    d = _get(app_client, user_headers, date="2026-10-13", digest=True).json()
+    texts = [e["text"] for e in d["entries"]]
+    assert any("Camera blindness" in t for t in texts) and "[TAMPER] Alert email sent." in texts
+    assert d["total"] == 204 and d["not_shown"] == 164 and "omitted_before" not in d
+    assert [e["ts"] for e in d["entries"]] == sorted(e["ts"] for e in d["entries"])
+    assert {k["kind"]: k["count"] for k in d["kinds"]}["Alert triggered."] == 50
+
+
+def test_a_time_given_as_the_words_is_read_as_the_time(app_client, user_headers, a_busy_day):
+    d = _get(app_client, user_headers, date="2026-10-13", q="4:34").json()
+    assert d["at"] == "2026-10-13 04:34:29" and d["query"] is None
+    assert any(e["text"].startswith("Garuda starting") for e in d["entries"])
+
+
+def test_this_month_is_one_search(app_client, user_headers, a_busy_day, monkeypatch):
+    d = _get(app_client, user_headers, date="this month", q="email").json()
+    assert d["from"].endswith("-01 00:00:00") and "this month" in d["read_as"]
+
+
+def test_a_start_up_notice_is_not_a_tampering(app_client, user_headers):
+    _write(gw.PERM_SYSTEM_LOG, [
+        "[2026-10-13 04:11:50] [TAMPER] Camera blindness detected — lens may be covered!",
+        "[2026-10-13 04:34:31] [TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).",
+        "[2026-10-13 05:00:00] Mode night set to True by admin",
+        "[2026-10-13 05:00:01] [MODEL] Auto-selected best_v5.hef + best_labels.json"])
+    d = _get(app_client, user_headers, q="tampered").json()
+    assert [e["ts"] for e in d["entries"]] == ["2026-10-13 04:11:50"]
+    assert _get(app_client, user_headers, q="dead-man switch").json()["total"] == 1
+    assert [e["ts"] for e in _get(app_client, user_headers, q="mode changed").json()["entries"]] \
+        == ["2026-10-13 05:00:00"]
+
+
+def test_a_date_with_an_end_beyond_it_is_a_range(app_client, user_headers, logs_on_disk):
+    d = _get(app_client, user_headers, date="2026-09-30", end="2026-10-02", q="night").json()
+    assert (d["from"], d["to"]) == ("2026-09-30 00:00:00", "2026-10-03 00:00:00")
+    assert d["total"] == 2
+    # Inside the day, start and end still narrow it.
+    d = _get(app_client, user_headers, date="2026-10-02", start="2026-10-02 14:00:00",
+             end="2026-10-02 14:59:59").json()
+    assert d["from"] == "2026-10-02 14:00:00" and d["to"] == "2026-10-02 15:00:00"
+
+
+def test_the_last_time_of_a_named_thing_is_found_however_long_ago(app_client, user_headers):
+    _write(gw.PERM_SYSTEM_LOG, ["[2026-08-01 08:00:00] Mode night set to True by admin"])
+    d = _get(app_client, user_headers, date="2026-10-02", q="mode").json()
+    assert d["total"] == 0 and d["nearest_before"]["ts"] == "2026-08-01 08:00:00"

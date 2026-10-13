@@ -133,7 +133,9 @@ def fit_result(out, limit):
     if len(text) <= limit or not isinstance(out, dict):
         return text[:limit]
     out = dict(out)
-    lists = [k for k, v in out.items() if isinstance(v, list) and v]
+    # kinds is the count of everything the range held: it is what a cut answer
+    # is still right by, so it is the last thing to go.
+    lists = [k for k, v in out.items() if isinstance(v, list) and v and k != "kinds"]
     while lists and len(text) > limit:
         key = max(lists, key=lambda k: len(json.dumps(out[k], default=str)))
         items = list(out[key])
@@ -578,7 +580,7 @@ class HomeAgent:
             return {"error": f"{capability.name} is not available here"}
         # Only what the capability declares: a model cannot slip an extra field
         # (a password, say) into the endpoint's request.
-        args = {k: v for k, v in args.items() if k in capability.params}
+        args = {**{k: v for k, v in args.items() if k in capability.params}, **capability.fixed}
         if capability.tier == "confirm":
             return self._propose(capability, args, user, role)
         method, path = capability.call.split(" ", 1)
