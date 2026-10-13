@@ -244,3 +244,41 @@ def test_events_db_uses_wal_and_records_its_schema_version(app_client):
         assert conn.execute("PRAGMA user_version").fetchone()[0] == gw._EVENT_DB_MIGRATIONS[-1][0]
     finally:
         conn.close()
+
+
+def test_a_request_body_over_the_limit_is_refused(app_client):
+    # Login, feedback and password reset parse JSON for anyone; the size of what
+    # they would read was unlimited.
+    big = {"message": "a" * 1_100_000}
+    r = app_client.post("/api/feedback", json=big)
+    assert r.status_code == 413
+    assert r.json()["error"]["code"] == "too_large"
+
+    assert app_client.post("/api/feedback", json={"message": "fine"}).status_code == 200
+
+
+def test_a_body_sent_in_chunks_is_held_to_the_same_limit():
+    # No Content-Length to check up front: it is counted as it arrives.
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from pydantic import BaseModel
+    from basic_pipelines.garuda_core import http as core_http
+
+    class Body(BaseModel):
+        message: str
+
+    app = FastAPI()
+
+    @app.post("/api/echo")
+    async def echo(body: Body):
+        return {"n": len(body.message)}
+
+    core_http.install(app)
+
+    def chunks():
+        yield b'{"message": "'
+        for _ in range(25):
+            yield b"a" * 50_000
+    r = TestClient(app).post("/api/echo", content=chunks(), headers={"content-type": "application/json"})
+    assert r.status_code == 413
+    assert r.json()["error"]["code"] == "too_large"

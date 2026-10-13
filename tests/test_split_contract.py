@@ -101,5 +101,7 @@ def test_every_name_the_suite_uses_is_still_on_the_module():
 
 def test_middleware_stack_is_unchanged():
     names = [m.cls.__name__ for m in gw.fastapi_app.user_middleware]
+    # BodyLimit (garuda_core/http.py) was added on purpose, innermost.
     assert names == ["ApiVersionAlias", "BaseHTTPMiddleware", "BaseHTTPMiddleware",
-                     "BaseHTTPMiddleware", "BaseHTTPMiddleware", "CORSMiddleware"], names
+                     "BaseHTTPMiddleware", "BaseHTTPMiddleware", "CORSMiddleware",
+                     "BodyLimit"], names

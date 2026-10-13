@@ -12,15 +12,17 @@
                500 with the id to quote, never a stack trace to the browser.
   access log   one line per API call: method, path, status, time, client.
 """
+import json
 import logging
 import re
 import time
 import uuid
 
 from fastapi.encoders import jsonable_encoder
-from fastapi.exceptions import RequestValidationError
+from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware import Middleware
 
 from .logging_setup import request_id as _request_id
 
@@ -48,6 +50,63 @@ class ApiVersionAlias:
                 rewritten = "/api" + path[len(self._prefix):]
                 scope = dict(scope, path=rewritten, raw_path=rewritten.encode())
         await self.app(scope, receive, send)
+
+
+class BodyLimit:
+    """ASGI middleware: a request body over `max_bytes` is refused with 413.
+
+    Nothing limited it before. Routes that need no sign-in (login, feedback,
+    password reset) read and parse whatever JSON arrives, so one client could
+    make the Pi hold a body as large as the proxy lets through, many times a
+    minute. The largest body any page sends is a WebRTC offer, capped at 20 KB
+    by its own route. Counted as it arrives, so a body sent in chunks without
+    a Content-Length is held to the same limit.
+    """
+
+    def __init__(self, app, max_bytes=1_000_000):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        for name, value in scope.get("headers", ()):
+            if name == b"content-length":
+                try:
+                    too_big = int(value) > self.max_bytes
+                except ValueError:
+                    too_big = True
+                if too_big:
+                    return await self._refuse(send)
+        seen = 0
+
+        async def limited_receive():
+            nonlocal seen
+            message = await receive()
+            if message["type"] == "http.request":
+                seen += len(message.get("body", b""))
+                if seen > self.max_bytes:
+                    raise _TooLarge()
+            return message
+
+        try:
+            await self.app(scope, limited_receive, send)
+        except _TooLarge:
+            await self._refuse(send)
+
+    async def _refuse(self, send):
+        body = json.dumps(error_body(413, "Request body too large.")).encode()
+        await send({"type": "http.response.start", "status": 413,
+                    "headers": [(b"content-type", b"application/json"),
+                                (b"content-length", str(len(body)).encode())]})
+        await send({"type": "http.response.body", "body": body})
+
+
+class _TooLarge(HTTPException):
+    # An HTTPException, so FastAPI passes it on as a 413 instead of reporting a
+    # body it could not read as a 400; BodyLimit answers it when nothing else did.
+    def __init__(self):
+        super().__init__(413, "Request body too large.")
 
 
 def _message(detail):
@@ -111,6 +170,10 @@ def install(app, *, api_version="1", client_ip=None, quiet_paths=("/api/health",
             status_code=500, headers={"X-Request-ID": _request_id.get()})
 
     app.add_middleware(ApiVersionAlias, version=api_version)
+    # Innermost, next to the routes: a body that grows too large while it is read
+    # is refused there as a 413. Further out, the @app.middleware layers would
+    # turn the same refusal into a "could not parse" 400.
+    app.user_middleware.append(Middleware(BodyLimit))
 
 
 def tag_routes(app, groups):
