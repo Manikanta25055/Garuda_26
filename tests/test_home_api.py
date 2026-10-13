@@ -239,3 +239,14 @@ def test_env_writer_refuses_line_breaks(tmp_path):
         set_vars(env, {"NIM_API_KEY": "a\nGARUDA_EVAL_OTP_BYPASS=1"})
     set_vars(env, {"NIM_API_KEY": "nvapi-ok"})
     assert env.read_text() == "NIM_API_KEY=nvapi-ok\n"
+
+
+def test_a_lamp_switched_back_on_too_soon_says_why(api):
+    # The switch guard (garuda_auto/switch_guard.py) holds back an "on" within
+    # a second of the last switch; the person is told why, and "off" always works.
+    client, *_ = api
+    assert client.post("/api/home/devices/lamp/set", json={"action": "on"}, headers=USER).status_code == 200
+    assert client.post("/api/home/devices/lamp/set", json={"action": "off"}, headers=USER).status_code == 200
+    r = client.post("/api/home/devices/lamp/set", json={"action": "on"}, headers=USER)
+    assert r.status_code == 400 and "protect the hardware" in r.json()["detail"]
+    assert client.post("/api/home/devices/lamp/set", json={"action": "off"}, headers=USER).status_code == 200

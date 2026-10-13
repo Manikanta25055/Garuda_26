@@ -9,8 +9,10 @@ than by adding "unknown" to the state vocabulary, which would let people write
 rules about reachability -- a different concept from a device's state.
 """
 import logging
+import threading
 
 from .device_types import actions_for
+from .switch_guard import SwitchGuard
 
 log = logging.getLogger(__name__)
 
@@ -142,10 +144,14 @@ class MqttBank:
 
 
 class DeviceRouter:
-    def __init__(self, registry, relay_bank, mqtt_bank):
+    def __init__(self, registry, relay_bank, mqtt_bank, guard=None):
         self.registry = registry
         self._relays = relay_bank
         self._mqtt = mqtt_bank
+        # Every switch passes through set(), so the limit on how fast a device
+        # may be switched on lives here (switch_guard.py).
+        self.guard = guard if guard is not None else SwitchGuard.from_env()
+        self._switching = threading.Lock()
 
     def _device(self, device_id):
         device = self.registry.get(device_id)
@@ -159,13 +165,21 @@ class DeviceRouter:
             return False, f"unknown device: {device_id!r}"
         if action not in actions_for(device["type"]):
             return False, f"action {action!r} is not legal for {device_id!r}"
-        if device["transport"]["kind"] == "relay":
-            if self._relays.set(device_id, action):
-                return True, ""
-            return False, f"relay refused {device_id!r}"
-        if self._mqtt.set(device_id, action):
+        with self._switching:
+            previous = self.state(device_id)
+            held = self.guard.check(device_id, action, previous)
+            if held:
+                return False, f"{device.get('name') or device_id} {held}"
+            if device["transport"]["kind"] == "relay":
+                done = self._relays.set(device_id, action)
+                why = f"relay refused {device_id!r}"
+            else:
+                done = self._mqtt.set(device_id, action)
+                why = f"device {device_id!r} is unreachable"
+            if not done:
+                return False, why
+            self.guard.record(device_id, action, previous)
             return True, ""
-        return False, f"device {device_id!r} is unreachable"
 
     def state(self, device_id):
         device = self._device(device_id)

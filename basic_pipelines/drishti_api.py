@@ -72,7 +72,10 @@ class DrishtiContext:
             if d["transport"]["kind"] == "relay" and d.get("enabled", True)
         })
         self.mqtt_bank.bind(self.registry)
-        self.device_router = DeviceRouter(self.registry, self.relay_bank, self.mqtt_bank)
+        # The switch guard carries over: editing a device must not forget how
+        # recently every relay was switched.
+        self.device_router = DeviceRouter(self.registry, self.relay_bank, self.mqtt_bank,
+                                          guard=self.device_router.guard)
         if self.on_registry_change is not None:
             self.on_registry_change()
 

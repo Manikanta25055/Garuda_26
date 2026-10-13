@@ -38,6 +38,8 @@ class Clock:
 def _room_empties(runtime, ctx):
     """Someone is in the room with the lamp on, then leaves. Returns what the
     rules did about the empty room."""
+    runtime._clock.t += 5          # walking in takes a moment (the switch guard holds back
+                                   # an "on" within a second of the last switch)
     runtime.observe([PERSON], luma=0)
     runtime.tick()
     ctx.device_router.set("lamp", "on")
@@ -54,6 +56,9 @@ def rt(tmp_path):
     ctx.registry.add(dict(FAN))
     ctx.rebuild()
     clock = Clock()
+    # The switch guard keeps the same simulated time as the rules, so "61 s
+    # later" is 61 s later to it too, not the few milliseconds the test takes.
+    ctx.device_router.guard._clock = clock
     runtime = DrishtiRuntime(ctx, clock=clock)
     runtime.rebind()
     try:
@@ -215,7 +220,7 @@ def test_a_rule_acts_once_and_leaves_a_person_the_last_word(rt):
     """A rule acts when its condition becomes true. It used to ask again on
     every tick the condition held, so a lamp somebody switched back on was
     switched off again a fifth of a second later."""
-    runtime, ctx, _ = rt
+    runtime, ctx, clock = rt
     ctx.store.add(dict(EMPTY_ROOM_LAMP_OFF))
     ctx.device_router.set("lamp", "on")
     runtime.observe([], luma=0)
@@ -224,6 +229,7 @@ def test_a_rule_acts_once_and_leaves_a_person_the_last_word(rt):
         assert runtime.tick() == []
     assert ctx.store.rules[0]["fired_count"] == 1
     assert len(actuation_log.recent(ctx.log_path)) == 1
+    clock.t += 3
     ctx.device_router.set("lamp", "on")           # somebody wants it on
     assert runtime.tick() == []
     assert ctx.device_router.state("lamp") == "on"
