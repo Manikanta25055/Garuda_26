@@ -11,6 +11,11 @@ const H = (() => {
   const api = (m, u, b) => G._apiFn(m, u, b);
   const esc = v => String(v ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // A value inside an inline handler (onclick="H.x('...')") is script, not text:
+  // the browser decodes &#39; back to ' before running it, so esc() alone let a
+  // quote in a name or id end the string. JSON makes it a script string; esc()
+  // then keeps it inside the attribute.
+  const jsArg = v => esc(JSON.stringify(String(v ?? '')));
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   let _role = 'user';
@@ -107,7 +112,7 @@ const H = (() => {
       </div>
       <div class="ha-glance-on">${on.length ? on.map(d => `<span class="ha-chip on">${esc(d.name)}</span>`).join('') : '<span class="ha-sub">Everything is off.</span>'}</div>
       <div class="ha-glance-actions">
-        ${scenes.slice(0, 3).map(s => `<button class="btn btn-ghost btn-sm" onclick="H.runScene('${esc(s.id)}')">${esc(s.name)}</button>`).join('')}
+        ${scenes.slice(0, 3).map(s => `<button class="btn btn-ghost btn-sm" onclick="H.runScene(${jsArg(s.id)})">${esc(s.name)}</button>`).join('')}
         <button class="btn btn-ghost btn-sm ha-danger-btn" onclick="H.allOff()">All off</button>
       </div>`;
     if (!_overview) autoLoadOverview();
@@ -145,8 +150,8 @@ const H = (() => {
       <div class="ha-notice ${esc(n.kind)}">
         <div class="ha-notice-text">${esc(n.text)}<span class="ha-sub"> · ${ago(n.ts)}</span></div>
         <div class="ha-notice-actions">
-          ${(n.actions || []).map((a, i) => `<button class="btn btn-primary btn-sm" onclick="H.noticeAction('${esc(n.id)}', ${i})">${esc(a.label)}</button>`).join('')}
-          <button class="btn btn-ghost btn-sm" onclick="H.dismissNotice('${esc(n.id)}')">Dismiss</button>
+          ${(n.actions || []).map((a, i) => `<button class="btn btn-primary btn-sm" onclick="H.noticeAction(${jsArg(n.id)}, ${i})">${esc(a.label)}</button>`).join('')}
+          <button class="btn btn-ghost btn-sm" onclick="H.dismissNotice(${jsArg(n.id)})">Dismiss</button>
         </div>
       </div>`).join('');
 
@@ -154,11 +159,11 @@ const H = (() => {
     $('ha-scenes').innerHTML = (o.scenes || []).length
       ? o.scenes.map(s => `
         <div class="ha-scene">
-          <button class="ha-scene-run" onclick="H.runScene('${esc(s.id)}')">
+          <button class="ha-scene-run" onclick="H.runScene(${jsArg(s.id)})">
             <span class="ha-scene-name">${esc(s.name)}</span>
             <span class="ha-sub">${s.actions.map(a => `${esc(deviceName(a.device))} ${esc(a.action)}`).join(' · ')}</span>
           </button>
-          ${isAdmin() ? `<button class="ha-x" title="Delete scene" aria-label="Delete scene ${esc(s.name)}" onclick="H.deleteScene('${esc(s.id)}')">&times;</button>` : ''}
+          ${isAdmin() ? `<button class="ha-x" title="Delete scene" aria-label="Delete scene ${esc(s.name)}" onclick="H.deleteScene(${jsArg(s.id)})">&times;</button>` : ''}
         </div>`).join('')
       : `<div class="ha-empty">${isAdmin() ? 'No scenes yet. Group devices into one tap — “Leave home”, “Study”.' : 'No scenes yet.'}</div>`;
 
@@ -189,7 +194,7 @@ const H = (() => {
     const off = d.enabled === false;
     return `<button class="ha-tile ${on ? 'on' : ''} ${!d.available || off ? 'unavail' : ''}"
         ${!d.available || off ? 'disabled' : ''} aria-pressed="${on}"
-        onclick="H.toggleDevice('${esc(d.id)}', this)">
+        onclick="H.toggleDevice(${jsArg(d.id)}, this)">
       <div class="ha-tile-top"><span class="ha-dot"></span><span class="ha-sub">${esc(d.type)}</span></div>
       <div class="ha-tile-name">${esc(d.name)}</div>
       <div class="ha-tile-state">${off ? 'Disabled' : !d.available ? 'Unreachable' : on ? 'On' : 'Off'}</div>
@@ -304,9 +309,9 @@ const H = (() => {
       <div class="ha-rule-line"><b>Then</b> ${esc(p.rendered.then)}</div>
       ${p.conflict ? `<div class="ha-sub warn">Overlaps an existing rule: ${esc(p.conflict.source_utterance || p.conflict.id || '')}</div>` : ''}
       <div class="ha-proposal-actions">
-        ${isAdmin() ? `<button class="btn btn-primary btn-sm" onclick="H.confirmProposal('${esc(id)}')">Confirm</button>`
+        ${isAdmin() ? `<button class="btn btn-primary btn-sm" onclick="H.confirmProposal(${jsArg(id)})">Confirm</button>`
                     : '<span class="ha-sub">Waiting for an admin to confirm.</span>'}
-        <button class="btn btn-ghost btn-sm" onclick="H.discardProposal('${esc(id)}')">Discard</button>
+        <button class="btn btn-ghost btn-sm" onclick="H.discardProposal(${jsArg(id)})">Discard</button>
         ${inline ? `<button class="btn btn-ghost btn-sm" onclick="G.nav('auto', document.querySelector('.ios-item[data-page=auto]'))">Open Automations</button>` : ''}
       </div>
     </div>`;
@@ -416,9 +421,9 @@ const H = (() => {
         <div class="ha-manage-main"><b>${esc(d.name)}</b>
           <span class="ha-sub">${esc(d.room)} · ${esc(d.type)} · ${d.transport.kind === 'relay' ? 'relay ' + d.transport.channel : 'mqtt ' + esc(d.transport.topic_base)}</span></div>
         <input class="input input-sm ha-watts" type="number" min="0" max="5000" value="${d.watts ?? ''}" placeholder="W"
-               aria-label="Watts for ${esc(d.name)}" onchange="H.setWatts('${esc(d.id)}', this.value)"/>
-        <div class="toggle ${d.enabled === false ? '' : 'on'}" title="Enabled" onclick="H.setEnabled('${esc(d.id)}', this)"></div>
-        <button class="ha-x" title="Remove" aria-label="Remove ${esc(d.name)}" onclick="H.deleteDevice('${esc(d.id)}', '${esc(d.name)}')">&times;</button>
+               aria-label="Watts for ${esc(d.name)}" onchange="H.setWatts(${jsArg(d.id)}, this.value)"/>
+        <div class="toggle ${d.enabled === false ? '' : 'on'}" title="Enabled" onclick="H.setEnabled(${jsArg(d.id)}, this)"></div>
+        <button class="ha-x" title="Remove" aria-label="Remove ${esc(d.name)}" data-name="${esc(d.name)}" onclick="H.deleteDevice(${jsArg(d.id)}, this.dataset.name)">&times;</button>
       </div>`).join('') || '<div class="ha-empty">No devices yet.</div>';
   }
 
@@ -498,8 +503,8 @@ const H = (() => {
       <div class="ha-row">
         <div class="ha-row-main">${esc(s.text)}<div class="ha-sub">Seen on ${s.support_days} days</div></div>
         <div class="ha-row-actions">
-          ${isAdmin() ? `<button class="btn btn-primary btn-sm" onclick="H.acceptSuggestion('${esc(s.id)}')">Automate</button>` : ''}
-          <button class="btn btn-ghost btn-sm" onclick="H.dismissSuggestion('${esc(s.id)}')">Not now</button>
+          ${isAdmin() ? `<button class="btn btn-primary btn-sm" onclick="H.acceptSuggestion(${jsArg(s.id)})">Automate</button>` : ''}
+          <button class="btn btn-ghost btn-sm" onclick="H.dismissSuggestion(${jsArg(s.id)})">Not now</button>
         </div>
       </div>`).join('');
 
@@ -508,11 +513,11 @@ const H = (() => {
         <div class="ha-row-main">
           <div>“${esc(r.source_utterance)}”</div>
           <div class="ha-sub"><b>When</b> ${esc(r.rendered.when)} &nbsp; <b>Then</b> ${esc(r.rendered.then)}</div>
-          <div class="ha-sub">${r.fired_count ? `Ran ${r.fired_count}× · last ${ago(r.last_fired)}` : 'Has not run yet'}</div>
+          <div class="ha-sub">${r.fired_count ? `Ran ${Number(r.fired_count) || 0}× · last ${ago(r.last_fired)}` : 'Has not run yet'}</div>
         </div>
         ${isAdmin() ? `<div class="ha-row-actions">
-          <div class="toggle ${r.enabled === false ? '' : 'on'}" onclick="H.toggleRule('${esc(r.id)}', this)"></div>
-          <button class="ha-x" aria-label="Delete rule" data-name="${esc(r.source_utterance)}" onclick="H.deleteRule('${esc(r.id)}', this.dataset.name)">&times;</button></div>` : ''}
+          <div class="toggle ${r.enabled === false ? '' : 'on'}" onclick="H.toggleRule(${jsArg(r.id)}, this)"></div>
+          <button class="ha-x" aria-label="Delete rule" data-name="${esc(r.source_utterance)}" onclick="H.deleteRule(${jsArg(r.id)}, this.dataset.name)">&times;</button></div>` : ''}
       </div>`).join('')
       + (rules.orphaned.length ? `<div class="ha-sub warn">${rules.orphaned.length} rule(s) paused because a device they use was removed.</div>` : '')
       : '<div class="ha-empty">No rules yet. Try: “when nobody is in the room for 10 minutes, turn the lamp off”.</div>';
@@ -527,8 +532,8 @@ const H = (() => {
             ${e.next_run && e.kind !== 'once' ? ` · next ${whenLabel(e.next_run)}` : ''}${e.label ? ' · ' + esc(e.label) : ''}</div>
         </div>
         ${isAdmin() || e.created_by === me ? `<div class="ha-row-actions">
-          ${e.kind === 'daily' ? `<div class="toggle ${e.enabled === false ? '' : 'on'}" onclick="H.toggleSchedule('${esc(e.id)}', this)"></div>` : ''}
-          <button class="ha-x" aria-label="Delete schedule" data-name="${esc(e.describe)}" onclick="H.deleteSchedule('${esc(e.id)}', this.dataset.name)">&times;</button></div>` : ''}
+          ${e.kind === 'daily' ? `<div class="toggle ${e.enabled === false ? '' : 'on'}" onclick="H.toggleSchedule(${jsArg(e.id)}, this)"></div>` : ''}
+          <button class="ha-x" aria-label="Delete schedule" data-name="${esc(e.describe)}" onclick="H.deleteSchedule(${jsArg(e.id)}, this.dataset.name)">&times;</button></div>` : ''}
       </div>`).join('') : '<div class="ha-empty">Nothing scheduled.</div>';
 
     loadShortcuts();
@@ -577,10 +582,10 @@ const H = (() => {
             : last ? `Last run ${ago(last.started)} · ${esc(last.outcome)}` : 'Has not run yet'} · by ${esc(sc.created_by)}</div>
         </div>
         <div class="ha-row-actions">
-          ${live ? `<button class="btn btn-ghost btn-sm" onclick="H.cancelShortcut('${esc(sc.id)}')">Stop</button>`
-                 : `<button class="btn btn-primary btn-sm" onclick="H.runShortcut('${esc(sc.id)}')">Run</button>`}
-          ${mine && sc.trigger.type !== 'manual' ? `<div class="toggle ${sc.enabled === false ? '' : 'on'}" onclick="H.toggleShortcut('${esc(sc.id)}')"></div>` : ''}
-          ${mine ? `<button class="ha-x" aria-label="Delete shortcut" data-name="${esc(sc.name)}" onclick="H.deleteShortcut('${esc(sc.id)}', this.dataset.name)">&times;</button>` : ''}
+          ${live ? `<button class="btn btn-ghost btn-sm" onclick="H.cancelShortcut(${jsArg(sc.id)})">Stop</button>`
+                 : `<button class="btn btn-primary btn-sm" onclick="H.runShortcut(${jsArg(sc.id)})">Run</button>`}
+          ${mine && sc.trigger.type !== 'manual' ? `<div class="toggle ${sc.enabled === false ? '' : 'on'}" onclick="H.toggleShortcut(${jsArg(sc.id)})"></div>` : ''}
+          ${mine ? `<button class="ha-x" aria-label="Delete shortcut" data-name="${esc(sc.name)}" onclick="H.deleteShortcut(${jsArg(sc.id)}, this.dataset.name)">&times;</button>` : ''}
         </div>
       </div>`;
     }).join('') : '<div class="ha-empty">No shortcuts yet. Ask Narada: “make a movie night button that turns the lamp off and the TV on”.</div>';

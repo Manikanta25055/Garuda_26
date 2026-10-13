@@ -7,12 +7,19 @@ it is retained and marked orphaned rather than deleted.
 """
 import json
 import os
+import re
 import tempfile
 import threading
 import time
 
 from .rule_schema import MAX_RULES
 from .validator import validate_rule
+
+# A rule's id is written into the page's markup and its buttons; only a plain
+# identifier is kept, anything else is replaced by one the store makes.
+_RULE_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+# Counters the rule engine keeps. A new rule starts without them, whatever it says.
+_RUN_STATE = ("fired_count", "last_fired")
 
 
 def _provably_disjoint(a, b, schema):
@@ -138,7 +145,9 @@ class RuleStore:
             if len(self.rules) >= MAX_RULES:
                 return False, f"rule limit reached ({MAX_RULES})"
             rule = dict(rule)
-            if not rule.get("id"):
+            for key in _RUN_STATE:
+                rule.pop(key, None)
+            if not isinstance(rule.get("id"), str) or not _RULE_ID.match(rule["id"]):
                 rule["id"] = f"r_{int(time.time() * 1000):x}"
             rule.setdefault("cooldown_s", 60)
             rule.setdefault("enabled", True)

@@ -220,6 +220,19 @@ def test_source_utterance_is_forced_to_the_user_text(monkeypatch, schema):
     assert rule["source_utterance"] == "the exact words i said"
 
 
+def test_keys_the_model_adds_are_dropped(monkeypatch, schema):
+    # An id or a run count of the model's own went into the store and onto the
+    # admin's Automations page, inside the page's script.
+    import basic_pipelines.garuda_auto.nim_client as mod
+    padded = json.loads(RULE_JSON)
+    padded.update({"id": "x');alert(1);//", "fired_count": "<img src=x>", "enabled": False})
+    monkeypatch.setattr(mod.requests, "post",
+                        lambda *a, **k: FakeResponse(_completion(json.dumps(padded))))
+    rule, reason = NimClient("key", "m").synthesize("turn the fan off", [], schema)
+    assert rule is not None, reason
+    assert set(rule) == {"source_utterance", "when", "then", "cooldown_s"}
+
+
 # ── the event loop ──────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio

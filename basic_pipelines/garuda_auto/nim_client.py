@@ -16,7 +16,7 @@ import re
 import anyio.to_thread
 import requests
 
-from .validator import validate_rule
+from .validator import rule_from_model, validate_rule
 
 log = logging.getLogger(__name__)
 
@@ -150,7 +150,9 @@ class NimClient:
         if "error" in parsed:
             return None, str(parsed["error"])
 
-        # The model does not get to decide what the user said.
+        # The model does not get to decide what the user said, nor to add keys
+        # of its own (an id, a run count) that the store and the page trust.
+        parsed = rule_from_model(parsed)
         parsed["source_utterance"] = utterance
 
         ok, reason = validate_rule(parsed, schema)

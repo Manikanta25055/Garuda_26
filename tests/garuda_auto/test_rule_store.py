@@ -181,3 +181,14 @@ def test_a_genuinely_malformed_entry_is_kept_as_an_orphan(tmp_path, registry):
     store = RuleStore(str(path), build_schema(registry))
     assert store.rules == []
     assert [r["id"] for r in store.orphaned] == ["junk"]
+
+
+def test_an_id_that_is_not_a_plain_identifier_is_replaced(tmp_path, schema):
+    store = RuleStore(str(tmp_path / "rules.json"), schema)
+    rule = _rule("x');alert(1);//", "occupancy", "==", "empty", "fan", "off")
+    rule["fired_count"] = "<img src=x>"
+    ok, reason = store.add(rule)
+    assert ok, reason
+    stored = store.rules[0]
+    assert stored["id"].startswith("r_") and "'" not in stored["id"]
+    assert "fired_count" not in stored

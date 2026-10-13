@@ -10,6 +10,15 @@ registry, passed in by the caller.
 from .rule_schema import OPS, COOLDOWN_MIN_S, COOLDOWN_MAX_S
 
 _REQUIRED = ("source_utterance", "when", "then")
+# Everything a rule from the model may carry. Anything else it adds is dropped
+# by rule_from_model(), never stored: an "id" or "fired_count" of its own went
+# straight onto the admin's Automations page, inside the page's own script.
+MODEL_RULE_KEYS = ("source_utterance", "when", "then", "cooldown_s")
+
+
+def rule_from_model(parsed):
+    """Only the keys a rule is made of, whatever else the model put beside them."""
+    return {k: parsed[k] for k in MODEL_RULE_KEYS if k in parsed}
 
 
 def _check_condition(cond, schema):
