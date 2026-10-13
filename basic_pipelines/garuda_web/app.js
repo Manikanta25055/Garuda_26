@@ -1554,13 +1554,26 @@ const G = (() => {
   // the server leaves these out of the card, and so does the live merge.
   const _ROUTINE = /^\[PRESENCE\] (?:Match|No match) [\u2014\u2013-] \d+ active ARP entries$/;
 
+  // The filter chips: [kind, label, dot]. The server sorts a line into the same
+  // kinds (group() in garuda_core/log_history.py) when a filter is asked of it.
+  const _TL_KINDS = [['alert', 'Alerts', 'danger'], ['warning', 'Warnings', 'warn'],
+    ['watch', 'Watch', 'watch'], ['presence', 'Presence', 'presence'],
+    ['mode', 'Modes', 'mode'], ['system', 'System', '']];
+  const _TL_DOT = Object.fromEntries(_TL_KINDS.map(k => [k[0], k[2]]));
+  let _timelineKinds = new Set();   // none chosen: everything
+
+  function _tlGroup(text) {
+    if (text.startsWith('[TAMPER] Dead-man switch disabled')) return 'system';
+    if (/\[(?:TAMPER|DANGER)\]|\balert\b/i.test(text)) return 'alert';
+    if (text.includes('[WATCH]')) return 'watch';
+    if (text.includes('[PRESENCE]') || text.includes('[OWNER]')) return 'presence';
+    if (/\[MODE\]|^mode \w+ set to\b|\bmode (?:on|off)\b/i.test(text)) return 'mode';
+    if (/\[NETWORK\]|\bfail|\berror\b|\blost\b|\btimed out\b/i.test(text)) return 'warning';
+    return 'system';
+  }
   function _tlItem(time, text) {
-    let type = '';
-    if (text.includes('[TAMPER]') || text.includes('Alert triggered')) type = 'danger';
-    else if (text.includes('[WATCH]')) type = 'watch';
-    else if (text.includes('[PRESENCE]') || text.includes('[OWNER]')) type = 'presence';
-    else if (/\[MODE\]|mode (on|off)/i.test(text)) type = 'warn';
-    return { time, text, type, dateKey: time.split(' ')[0] || '' };
+    const kind = _tlGroup(text);
+    return { time, text, kind, type: _TL_DOT[kind], dateKey: time.split(' ')[0] || '' };
   }
   function _tlFromLine(entry) {
     const m = entry.match(/^\[([\d\-: ]+)\]\s*/);
@@ -1570,6 +1583,9 @@ const G = (() => {
   function _initTimeline() {
     const picker = $('activity-date');
     _timelineAuto = true;
+    _timelineKinds = new Set((_lsGet('garuda-activity-kinds') || '').split(',')
+      .filter(k => k in _TL_DOT));
+    _renderTimelineFilters();
     if (picker) {
       picker.value = picker.max = _localDay();
       picker.onchange = () => { _timelineAuto = picker.value === _localDay(); _loadTimeline(); };
@@ -1586,6 +1602,26 @@ const G = (() => {
       if (picker && _timelineDays.length) picker.min = _timelineDays[_timelineDays.length - 1];
       _renderTimeline();
     } catch (_) {}
+  }
+
+  function _renderTimelineFilters() {
+    const el = $('activity-filters');
+    if (!el) return;
+    const chip = (kind, label, dot, on) =>
+      `<button type="button" class="tl-chip" aria-pressed="${on}" data-click="G.toggleActivityKind" data-args='["${kind}"]'>${
+        dot === null ? '' : `<span class="tl-dot ${dot}"></span>`}${label}</button>`;
+    el.innerHTML = chip('', 'All', null, !_timelineKinds.size) +
+      _TL_KINDS.map(([kind, label, dot]) => chip(kind, label, dot, _timelineKinds.has(kind))).join('');
+  }
+
+  // A chip adds or removes its kind; All, or every kind chosen, is no filter.
+  function toggleActivityKind(kind) {
+    if (!kind || !_TL_DOT.hasOwnProperty(kind)) _timelineKinds.clear();
+    else if (!_timelineKinds.delete(kind)) _timelineKinds.add(kind);
+    if (_timelineKinds.size === _TL_KINDS.length) _timelineKinds.clear();
+    _lsSet('garuda-activity-kinds', [..._timelineKinds].join(','));
+    _renderTimelineFilters();
+    _loadTimeline();
   }
 
   // Step to the previous (-1) or next (+1) day that has anything in it.
@@ -1607,6 +1643,7 @@ const G = (() => {
     const req = ++_timelineReq;
     const q = new URLSearchParams({ sources: 'system', date: day, limit: '150' });
     if (older && _timelineItems.length) q.set('before', _timelineItems[_timelineItems.length - 1].time);
+    if (_timelineKinds.size) q.set('kind', [..._timelineKinds].join(','));
     if (!older) { _timelineItems = []; _timelineMore = false; _renderTimeline(true); }
     try {
       const d = await api('GET', '/api/history?' + q.toString());
@@ -1659,12 +1696,21 @@ const G = (() => {
     const prev = $('activity-prev'), next = $('activity-next');
     if (prev) prev.disabled = !_timelineDays.some(d => d < day);
     if (next) next.disabled = day >= today;
-    if (!_timelineItems.length) {
+    // Also sorted here: lines from the state push, and a server without the filter.
+    const shown = _timelineKinds.size
+      ? _timelineItems.filter(i => _timelineKinds.has(i.kind)) : _timelineItems;
+    if (!shown.length) {
+      const when = day === today ? 'today' : 'on ' + esc(day);
+      const none = _timelineKinds.size
+        ? `Nothing of this kind ${when}` + (_timelineMore ? ' in the latest lines' : '')
+        : (day === today ? 'No activity yet today' : 'No activity recorded on ' + esc(day));
       el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">\u25CB</div><span>${
-        loading ? 'Loading\u2026' : (day === today ? 'No activity yet today' : 'No activity recorded on ' + esc(day))}</span></div>`;
+        loading ? 'Loading\u2026' : none}</span></div>` + (loading ? '' :
+        _timelineMore ? '<button class="btn btn-ghost btn-sm tl-older" data-click="G.loadOlderActivity">Show earlier</button>'
+        : _timelineKinds.size ? '<button class="btn btn-ghost btn-sm tl-older" data-click="G.toggleActivityKind">Show everything</button>' : '');
       return;
     }
-    el.innerHTML = _timelineItems.map(item =>
+    el.innerHTML = shown.map(item =>
       `<div class="timeline-item">
         <div class="tl-dot ${esc(item.type)}"></div>
         <div class="tl-body">
@@ -2810,7 +2856,7 @@ const G = (() => {
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, toggleNightPresence, saveSettings,
     filterLogs, exportLogs, downloadFullLog, loadOlderLogs, onLogDate: fetchAndRenderLogs,
-    loadOlderActivity, stepActivityDay,
+    loadOlderActivity, stepActivityDay, toggleActivityKind,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence,
     loadMasterKeys, requestMkOtp, addMasterKey, deleteMasterKey, onMkKeyInput,
     loadCmds, openAddCmd, addCmd, _delCmd,

@@ -53,7 +53,7 @@ const N = (() => {
   // The conversation: [{who: 'you' | 'narada' | 'error', text}]; kept for the
   // tab's lifetime so a reload or a trip to another page does not lose it.
   const SESSION_KEY = 'narada-session', SESSION_MAX = 80;
-  let session = [], sheetOpen = false, userMinimised = false, pendingEl = null;
+  let session = [], sheetOpen = false, pendingEl = null;
 
   function voiceActive() { return voice !== 'off'; }
 
@@ -487,7 +487,7 @@ const N = (() => {
     dock.classList.toggle('has-log', session.length > 0);
     dock.classList.toggle('open', sheetOpen);
     dock.classList.toggle('has-peek', !!last && last.who !== 'you');
-    if (peek) peek.textContent = last ? mdPlain(last.text).replace(/\s*\n\s*/g, ' ') : '';
+    if (peek) peek.textContent = last ? (last.summary || mdPlain(last.text).replace(/\s*\n\s*/g, ' ')) : '';
     measureDock();
     if (exp) {
       exp.setAttribute('aria-expanded', String(sheetOpen));
@@ -495,18 +495,34 @@ const N = (() => {
     }
   }
 
-  // Add a turn. The sheet opens by itself unless it was minimised by hand;
-  // then the newest line shows above the bar instead.
+  // A reply too long for the two lines above the bar is shown there as one
+  // sentence the model writes of it; its first words stand in until that comes
+  // (and stay, if no model answers).
+  const PEEK_FITS = 110;
+  function summarise(turn) {
+    const plain = mdPlain(turn.text).trim();
+    if (plain.length <= PEEK_FITS && !plain.includes('\n')) return;
+    G._apiFn('POST', '/api/narada/summary', { text: turn.text.slice(0, 8000) }).then(res => {
+      if (!res || !res.summary || !session.includes(turn)) return;
+      turn.summary = res.summary;
+      save();
+      syncDock();
+    }).catch(() => {});
+  }
+
+  // Add a turn. It shows as two lines above the bar; the whole conversation
+  // opens when it is asked for (it used to open by itself and cover the page).
   function say(who, text, typed) {
     text = (text || '').trim();
     if (!text) return null;
     setPending(false);
-    session.push({ who, text });
+    const turn = { who, text };
+    session.push(turn);
     if (session.length > SESSION_MAX) session = session.slice(-SESSION_MAX);
     save();
     const el = bubble(who, typed ? '' : text);
-    if (!userMinimised) sheetOpen = true;
     syncDock();
+    if (who === 'narada') summarise(turn);
     if (typed && el) typeInto(el, text); else scrollLog();
     return el;
   }
@@ -527,7 +543,6 @@ const N = (() => {
 
   function toggleSheet(force) {
     sheetOpen = typeof force === 'boolean' ? force : !sheetOpen;
-    userMinimised = !sheetOpen;
     haptic('tap');
     syncDock();
     if (sheetOpen) requestAnimationFrame(scrollLog);
@@ -539,7 +554,7 @@ const N = (() => {
     setPending(false);
     const log = $('nx-log');
     if (log) log.innerHTML = '';
-    sheetOpen = false; userMinimised = false;
+    sheetOpen = false;
     haptic('tap');
     syncDock();
   }
@@ -655,6 +670,8 @@ const N = (() => {
       snapshots(res.images);
       artifactFrames(res.artifacts);
       confirmCards(res.confirm);
+      // Something to decide cannot wait behind two lines.
+      if (!sheetOpen && (res.proposal || (res.confirm || []).length)) toggleSheet(true);
       memoryChips(res.memory);
       offerChip(res.offer);
       observationChip(res.observation);
@@ -714,7 +731,6 @@ const N = (() => {
         <span class="nx-work-m">${escHtml(shortModel(model))}</span></button>
       <ol class="nx-work-l"></ol>`;
     work = { el, list: el.querySelector('.nx-work-l'), steps: 0 };
-    if (!userMinimised) sheetOpen = true;
     syncDock();
     scrollLog();
     return work;
@@ -1276,7 +1292,7 @@ const N = (() => {
       const open = e.target.closest('[data-art-open]');
       if (open) {                       // a kept page, shown again in the conversation
         const a = keptArtifacts.find(x => x.id === open.dataset.artOpen);
-        if (a) { artifactFrames([a]); sheetOpen = true; userMinimised = false; syncDock(); toggleInfo(false); scrollLog(); }
+        if (a) { artifactFrames([a]); sheetOpen = true; syncDock(); toggleInfo(false); scrollLog(); }
         return;
       }
       const btn = e.target.closest('[data-mem]');

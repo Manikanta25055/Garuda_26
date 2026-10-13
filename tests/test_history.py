@@ -374,3 +374,29 @@ def test_the_last_time_of_a_named_thing_is_found_however_long_ago(app_client, us
     _write(gw.PERM_SYSTEM_LOG, ["[2026-08-01 08:00:00] Mode night set to True by admin"])
     d = _get(app_client, user_headers, date="2026-10-02", q="mode").json()
     assert d["total"] == 0 and d["nearest_before"]["ts"] == "2026-08-01 08:00:00"
+
+
+def test_a_day_is_filtered_to_the_kinds_asked_for(app_client, user_headers):
+    _write(gw.PERM_SYSTEM_LOG, [
+        "[2026-10-02 09:00:00] [TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).",
+        "[2026-10-02 09:00:01] [CAMERA] Input resolved to: rpi",
+        "[2026-10-02 09:05:00] [WATCH] Person (0.83)",
+        "[2026-10-02 09:06:00] [TAMPER] Camera blindness detected — lens may be covered!",
+        "[2026-10-02 09:06:01] Alert triggered.",
+        "[2026-10-02 09:06:02] Failed sending email alert: [Errno -3] Temporary failure",
+        "[2026-10-02 09:07:00] [NETWORK] Internet connection lost — events will be queued locally",
+        "[2026-10-02 09:08:00] Mode dnd set to True by admin",
+        "[2026-10-02 09:09:00] [OWNER] Phone arrived — device detected on network.",
+    ])
+    def texts(kind):
+        d = _get(app_client, user_headers, date="2026-10-02", sources="system", kind=kind).json()
+        return [e["text"].split(" (")[0].split(":")[0].split(" —")[0] for e in d["entries"]]
+    assert texts("alert") == ["[TAMPER] Camera blindness detected", "Alert triggered.",
+                              "Failed sending email alert"]
+    assert texts("warning") == ["[NETWORK] Internet connection lost"]
+    assert texts("watch,presence") == ["[WATCH] Person", "[OWNER] Phone arrived"]
+    assert texts("mode") == ["Mode dnd set to True by admin"]
+    # The start-up notice carries the tamper tag and is not one.
+    assert texts("system") == ["[TAMPER] Dead-man switch disabled", "[CAMERA] Input resolved to"]
+    assert len(texts("")) == 9
+    assert _get(app_client, user_headers, date="2026-10-02", kind="bogus").status_code == 400

@@ -140,7 +140,8 @@ def build_logs_router(core):
             or (e["source"] == "system" and e["ts"] in seen
                 and e["text"].startswith("[WATCH] Person (")))]
 
-    def _collect(session, sources, start, end, q, newest=None, routine=True, any_word=False):
+    def _collect(session, sources, start, end, q, newest=None, routine=True, any_word=False,
+                 groups=()):
         """Chronological entries of the given sources with start <= ts < end.
 
         newest=N: only the newest N are wanted (and one more, to tell that
@@ -152,6 +153,8 @@ def build_logs_router(core):
                 if source == "system" and _hidden_line(session, text):
                     return False
                 if not routine and source == "system" and ROUTINE.match(text):
+                    return False
+                if groups and log_history.group(text) not in groups:
                     return False
                 if q and source == "devices" and not any_word and not _its_own_device(text, q):
                     return False
@@ -175,7 +178,7 @@ def build_logs_router(core):
         raise HTTPException(400, message)
 
     def _history(session, at, window_minutes, start, end, date, q, sources, limit, before,
-                 routine=False, digest=False):
+                 routine=False, digest=False, kind=""):
         if q and not at and re.fullmatch(r"[\d:.\s]+(?:[ap]\.?m\.?)?", q.strip(), re.I) \
                 and getattr(log_history.parse_moment(q), "has_time", False):
             # "4:30" given as the words to look for is a time.
@@ -188,6 +191,9 @@ def build_logs_router(core):
             _bad(f"unknown source {unknown[0]!r}; the sources are {', '.join(SOURCES)}")
         chosen = [s for s in (asked or allowed) if s in allowed]
         not_searched = {s: refused[s] for s in asked if s in refused}
+        groups = tuple(k for k in re.split(r"[^a-z]+", (kind or "").lower()) if k)
+        if any(k not in log_history.GROUPS for k in groups):
+            _bad(f"unknown kind; the kinds are {', '.join(log_history.GROUPS)}")
         limit = max(1, min(int(limit or 40), MAX_LIMIT))
         now = datetime.datetime.now()
         lo, hi, centre, read_as = "", log_history.stamp(now + datetime.timedelta(minutes=1)), "", ""
@@ -265,16 +271,18 @@ def build_logs_router(core):
         # everything (the Logs page scrolling back) stops at what it shows.
         whole = bool(centre or lo or q) and not before
         notes = {}
-        entries = _collect(session, chosen, lo, hi, q, None if whole else limit, routine)
+        entries = _collect(session, chosen, lo, hi, q, None if whole else limit, routine,
+                           groups=groups)
         if q and not entries:
             wider = [s for s in allowed if s not in chosen]
-            found = _collect(session, wider, lo, hi, q, None, routine) if wider else []
+            found = _collect(session, wider, lo, hi, q, None, routine, groups=groups) if wider else []
             if found:
                 notes["searched_instead"] = (f"nothing in {', '.join(chosen)}; these are from "
                                              f"{', '.join(wider)}")
                 entries, chosen = found, wider
             elif len(q.split()) > 1:
-                entries = _collect(session, chosen, lo, hi, q, None, routine, any_word=True)
+                entries = _collect(session, chosen, lo, hi, q, None, routine, any_word=True,
+                                   groups=groups)
                 if entries:
                     notes["loose_match"] = ("no line has all of these words; these have at "
                                             "least one, so check each is what was asked")
@@ -329,6 +337,7 @@ def build_logs_router(core):
     async def history(at: str = "", window_minutes: int = 0, start: str = "", end: str = "",
                       date: str = "", q: str = "", sources: str = "", limit: int = 40,
                       before: str = "", routine: bool = False, digest: bool = False,
+                      kind: str = "",
                       session=Depends(core.require_session)):
         """What the logs hold for a moment, a day or a range, from every file on disk.
 
@@ -339,12 +348,14 @@ def build_logs_router(core):
         q        words that must all appear; sources a comma list of system, detection,
                  devices, presence, voice (the last two need the master key)
         routine  also the presence checks that found nothing new (always, when q is given)
+        kind     only these kinds of line, a comma list of alert, warning, watch, presence,
+                 mode, system: the Activity card's filter
         digest   when there are more lines than the limit, a selection that says what
                  happened (the rare kinds whole) instead of the newest: what Narada reads
         """
         return await asyncio.to_thread(_history, session, at[:80], window_minutes, start[:80],
                                        end[:80], date[:40], q[:200], sources[:80], limit,
-                                       before[:40], routine, digest)
+                                       before[:40], routine, digest, kind[:80])
 
     @router.get("/api/history/days")
     async def history_days(source: str = "system", session=Depends(core.require_session)):

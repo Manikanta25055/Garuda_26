@@ -620,6 +620,12 @@
  {
   "kind": "http",
   "method": "POST",
+  "path": "/api/narada/summary",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
   "path": "/api/narada/voice/token",
   "guard": "require_session"
  },

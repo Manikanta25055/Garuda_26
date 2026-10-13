@@ -3233,6 +3233,37 @@ input[type=range]::-webkit-slider-thumb {
 .tl-dot.warn   { background: var(--warn); }
 .tl-dot.watch  { background: var(--purple); }
 .tl-dot.presence { background: var(--success); }
+.tl-dot.mode { background: transparent; box-shadow: inset 0 0 0 1.5px var(--warn); }
+
+/* Filter chips: they wrap in the desktop sidebar; below it they are one row
+   that is swiped, so the list keeps its height on a phone. */
+.tl-filters { display: flex; flex-wrap: wrap; gap: 5px; margin: -6px 0 8px; flex-shrink: 0; }
+.tl-chip {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  height: 26px; padding: 0 8px; border: none; border-radius: 13px;
+  background: var(--surface-2); color: var(--t2);
+  font: 500 11px/1 var(--font); white-space: nowrap; cursor: pointer;
+  transition: background var(--trans), color var(--trans);
+  -webkit-tap-highlight-color: transparent;
+}
+.tl-chip .tl-dot { width: 6px; height: 6px; }
+.tl-chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+/* The dark dots would vanish on a chosen chip without a ring. */
+.tl-chip[aria-pressed="true"] .tl-dot { box-shadow: 0 0 0 1.5px var(--on-accent); }
+.tl-chip[aria-pressed="true"] .tl-dot.mode { box-shadow: inset 0 0 0 1.5px var(--warn), 0 0 0 1.5px var(--on-accent); }
+.tl-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) { .tl-chip:not([aria-pressed="true"]):hover { color: var(--t1); } }
+@media (max-width: 1023px) {
+  .tl-filters {
+    flex-wrap: nowrap; overflow-x: auto; gap: 8px;
+    margin: -4px -14px 8px; padding: 2px 14px;
+    scroll-padding-inline: 14px; scroll-snap-type: x proximity;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+  }
+  .tl-filters::-webkit-scrollbar { display: none; }
+  .tl-chip { height: 36px; gap: 6px; padding: 0 14px; border-radius: 18px; font-size: 13px; scroll-snap-align: start; }
+  .tl-chip .tl-dot { width: 7px; height: 7px; }
+}
 .tl-line {
   width: 1px; flex: 1; min-height: 8px;
   background: var(--border);

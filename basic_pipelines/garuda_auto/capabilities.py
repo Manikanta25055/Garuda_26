@@ -471,7 +471,7 @@ PLUMBING = frozenset({
     "GET /api/narada/artifacts", "GET /api/narada/artifacts/{artifact_id}/view",
     "POST /api/narada/artifacts/{artifact_id}/call", "POST /api/narada/artifacts/{artifact_id}/pin",
     "DELETE /api/narada/artifacts/{artifact_id}", "GET /api/narada/info",
-    "POST /api/narada/voice/token",
+    "POST /api/narada/voice/token", "POST /api/narada/summary",
 })
 
 

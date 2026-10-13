@@ -10,7 +10,9 @@ then `python -m playwright install chromium`); without them every test here
 is skipped. CI runs them in their own job. CHROMIUM_PATH points at a browser
 Playwright did not install itself.
 """
+import json
 import os
+import re
 import socket
 import threading
 import time
@@ -266,4 +268,103 @@ def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browse
     assert page.is_visible("#fb-msg") and page.is_visible(".fb-close")
     page.click(".fb-close")
     assert not page.evaluate("document.getElementById('fb-panel').classList.contains('open')")
+    ctx.close()
+
+
+@pytest.mark.parametrize("width,height,phone", [(1440, 900, False), (390, 844, True)])
+def test_the_activity_card_is_filtered_by_its_chips(server, browser, tmp_path, monkeypatch,
+                                                    width, height, phone):
+    day = time.strftime("%Y-%m-%d")
+    log = tmp_path / "perm_system_log.txt"
+    log.write_text("".join(f"[{day} 00:0{i}:00] {text}\n" for i, text in enumerate([
+        "[CAMERA] Input resolved to: rpi", "[WATCH] Person (0.83)", "Alert triggered.",
+        "[NETWORK] Internet connection lost — events will be queued locally",
+        "Mode dnd set to True by admin", "[OWNER] Phone arrived — device detected on network."])))
+    monkeypatch.setattr(gw, "PERM_SYSTEM_LOG", str(log))
+    ctx = browser.new_context(viewport={"width": width, "height": height},
+                              is_mobile=phone, has_touch=phone)
+    page = ctx.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#activity-timeline .timeline-item", timeout=15000)
+    titles = lambda: page.locator("#activity-timeline .tl-title").all_inner_texts()
+    chip = lambda name: page.locator("#activity-filters .tl-chip", has_text=name)
+    def shows(n, first=""):            # not wait_for_function: the page's policy forbids eval
+        for _ in range(50):
+            if len(titles()) == n and titles()[0].startswith(first):
+                return True
+            page.wait_for_timeout(100)
+        return False
+    assert len(titles()) == 6 and chip("All").get_attribute("aria-pressed") == "true"
+
+    chip("Alerts").click()
+    assert shows(1, "Alert triggered.")
+    chip("Warnings").click()                             # a second chip adds to the first
+    assert shows(2, "[NETWORK]")
+    # Every chip is on the screen or can be swiped to; the page never scrolls sideways.
+    assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+    box = page.evaluate("(() => { const f = document.getElementById('activity-filters');"
+                        "return [f.scrollWidth > f.clientWidth, f.getBoundingClientRect().height,"
+                        "f.querySelector('.tl-chip').getBoundingClientRect().height]; })()")
+    assert box[0] == phone                                 # one swiped row on a phone
+    assert box[1] < (50 if phone else 70) and box[2] >= (36 if phone else 26)
+
+    page.reload()                                        # the choice is kept
+    page.wait_for_selector("#activity-timeline .timeline-item", timeout=15000)
+    assert len(titles()) == 2 and chip("Alerts").get_attribute("aria-pressed") == "true"
+    chip("Alerts").click(); chip("Warnings").click()
+    chip("Presence").click(); chip("Watch").click(); chip("Presence").click()
+    assert shows(1, "[WATCH]")
+    chip("Watch").click()
+    chip("Modes").click()
+    assert shows(1, "Mode dnd")
+    chip("All").click()
+    assert shows(6)
+    assert errors == []
+    ctx.close()
+
+
+def test_a_long_reply_is_two_lines_of_summary_until_it_is_opened(server, browser):
+    reply = "## Today\n\n" + "\n".join(f"- At {h}:00 the front door camera saw a person." for h in range(8, 20))
+    sse = "".join(f"data: {json.dumps(e)}\n\n" for e in (
+        [{"type": "start"}, {"type": "meta", "actions": [], "confirm": []}]
+        + [{"type": "token", "text": w} for w in re.findall(r"\S+\s*", reply)] + [{"type": "done"}]))
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    page.route("**/api/chat/stream", lambda r: r.fulfill(
+        status=200, headers={"Content-Type": "text/event-stream"}, body=sse))
+    page.route("**/api/narada/summary", lambda r: r.fulfill(
+        status=200, content_type="application/json",
+        body=json.dumps({"summary": "A person was seen at the front door every hour from 8 to 19."})))
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.wait_for_timeout(600)
+    page.click(".ios-item[data-page=narada]")
+    page.wait_for_timeout(500)
+    page.fill("#nx-input", "what happened today")
+    page.press("#nx-input", "Enter")
+    peek = page.locator("#nx-peek")
+    for _ in range(50):
+        if peek.inner_text().startswith("A person was seen"):
+            break
+        page.wait_for_timeout(100)
+    assert peek.inner_text() == "A person was seen at the front door every hour from 8 to 19."
+    # The reply does not open over the page: two lines above the bar, no more.
+    assert not page.evaluate("document.getElementById('nx-dock').classList.contains('open')")
+    assert page.evaluate("document.getElementById('nx-peek').getBoundingClientRect().height") <= 54
+    assert page.evaluate("document.getElementById('nx-dock').getBoundingClientRect().height") < 160
+    peek.click()                                         # the whole of it, when asked for
+    for _ in range(100):                                 # it is typed out, a few words a frame
+        if "At 19:00 the front door camera saw a person." in page.locator("#nx-log").inner_text():
+            break
+        page.wait_for_timeout(100)
+    assert page.evaluate("document.getElementById('nx-dock').classList.contains('open')")
+    assert "At 19:00 the front door camera saw a person." in page.locator("#nx-log").inner_text()
     ctx.close()

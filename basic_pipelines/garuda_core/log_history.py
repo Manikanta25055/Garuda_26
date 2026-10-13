@@ -258,6 +258,32 @@ def kind(text):
     return _NUMBERS.sub("N", _COMMIT.sub("commit …", text))[:80]
 
 
+# The Activity card's filter chips. The page sorts a line the same way
+# (_tlGroup in garuda_web/app.js), for the lines that arrive by the state push.
+GROUPS = ("alert", "warning", "watch", "presence", "mode", "system")
+_STARTUP = "[TAMPER] Dead-man switch disabled"     # said at every start: not a tampering
+_ALERT = re.compile(r"\[(?:TAMPER|DANGER)\]|\balert\b", re.I)
+_MODE = re.compile(r"\[MODE\]|^mode \w+ set to\b|\bmode (?:on|off)\b", re.I)
+_WARNING = re.compile(r"\[NETWORK\]|\bfail|\berror\b|\blost\b|\btimed out\b", re.I)
+
+
+def group(text):
+    """Which of GROUPS a line belongs to; the first that fits, alerts first."""
+    if text.startswith(_STARTUP):
+        return "system"
+    if _ALERT.search(text):
+        return "alert"
+    if "[WATCH]" in text:
+        return "watch"
+    if "[PRESENCE]" in text or "[OWNER]" in text:
+        return "presence"
+    if _MODE.search(text):
+        return "mode"
+    if _WARNING.search(text):
+        return "warning"
+    return "system"
+
+
 def digest(entries, limit):
     """At most `limit` of chronological entries, chosen to say what happened:
     the kinds that are few come whole (a restart, a covered camera, an email),
