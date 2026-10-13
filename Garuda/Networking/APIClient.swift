@@ -19,7 +19,7 @@ actor APIClient {
 
     // MARK: - Configuration
     func configure(host: String, token: String?) {
-        self.baseURL = "http://\(host)"
+        self.baseURL = GarudaConstants.baseURL(for: host)
         self.sessionToken = token
     }
 
@@ -131,7 +131,8 @@ actor APIClient {
     // MARK: - Build WebSocket URL (called by WebSocketManager)
     func buildWebSocketURL() -> URL? {
         var comps = URLComponents(string: baseURL + GarudaConstants.wsPath)
-        comps?.scheme = "ws"
+        // wss over HTTPS: the token is in this address.
+        comps?.scheme = comps?.scheme == "https" ? "wss" : "ws"
         if let token = sessionToken {
             comps?.queryItems = [URLQueryItem(name: "token", value: token)]
         }

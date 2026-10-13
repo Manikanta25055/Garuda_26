@@ -39,13 +39,16 @@ final class AppState: ObservableObject {
     init() {
         rpiHost = UserDefaults.standard.string(forKey: GarudaConstants.hostDefaultsKey)
                   ?? GarudaConstants.defaultHost
-        if let token = UserDefaults.standard.string(forKey: GarudaConstants.tokenDefaultsKey) {
-            sessionToken = token
+        // A token saved by an older build in UserDefaults moves to the Keychain.
+        if let legacy = UserDefaults.standard.string(forKey: GarudaConstants.tokenDefaultsKey) {
+            Keychain.set(legacy, for: GarudaConstants.tokenDefaultsKey)
+            UserDefaults.standard.removeObject(forKey: GarudaConstants.tokenDefaultsKey)
         }
+        sessionToken = Keychain.string(for: GarudaConstants.tokenDefaultsKey)
     }
 
     // MARK: - Computed
-    var baseURL: String { "http://\(rpiHost)" }
+    var baseURL: String { GarudaConstants.baseURL(for: rpiHost) }
     var streamURL: URL? { URL(string: "\(baseURL)\(GarudaConstants.streamPath)") }
 
     var menuBarIcon: String {
@@ -63,7 +66,7 @@ final class AppState: ObservableObject {
         self.currentRole = role
         self.displayName = displayName
         self.sessionToken = token
-        if let token { UserDefaults.standard.set(token, forKey: GarudaConstants.tokenDefaultsKey) }
+        if let token { Keychain.set(token, for: GarudaConstants.tokenDefaultsKey) }
         self.authState = .authenticated
     }
 
@@ -78,7 +81,7 @@ final class AppState: ObservableObject {
         systemLogs   = nil
         users        = []
         connectionStatus = .disconnected
-        UserDefaults.standard.removeObject(forKey: GarudaConstants.tokenDefaultsKey)
+        Keychain.remove(GarudaConstants.tokenDefaultsKey)
     }
 
     func appendDetectionEvent(_ event: DetectionEvent) {

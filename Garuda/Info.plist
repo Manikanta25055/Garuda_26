@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- App Transport Security: allow HTTP to local RPi5 IP -->
+    <!-- App Transport Security: plain HTTP only to the Pi on the home network
+         (an IP address, a .local name). Everything else must be HTTPS; this used
+         to allow HTTP to any host. -->
     <key>NSAppTransportSecurity</key>
     <dict>
-        <key>NSAllowsArbitraryLoads</key>
+        <key>NSAllowsLocalNetworking</key>
         <true/>
     </dict>
     <!-- User Notifications usage description -->

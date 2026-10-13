@@ -11,6 +11,31 @@ enum GarudaConstants {
     static let streamTimeout: TimeInterval = 10.0
     static let hostDefaultsKey = "garudaRpiHost"
     static let tokenDefaultsKey = "garudaSessionToken"
+
+    /// The server's address for `host`. HTTPS unless the host is on this
+    /// machine or the home network: the session token and passwords travel in
+    /// every request, and plain HTTP showed them to anyone on the path. A host
+    /// typed with its own scheme ("https://api.example.in") is used as typed.
+    static func baseURL(for host: String) -> String {
+        let trimmed = host.trimmingCharacters(in: .whitespaces)
+        if trimmed.hasPrefix("https://") || trimmed.hasPrefix("http://") {
+            return trimmed.hasSuffix("/") ? String(trimmed.dropLast()) : trimmed
+        }
+        return (isLocal(trimmed) ? "http://" : "https://") + trimmed
+    }
+
+    /// Loopback, a `.local` name, a name with no dots, or a private IPv4 address.
+    static func isLocal(_ host: String) -> Bool {
+        let name = (host.split(separator: ":").first.map(String.init) ?? host).lowercased()
+        if name == "localhost" || name.hasSuffix(".local") || !name.contains(".") { return true }
+        let octets = name.split(separator: ".").compactMap { Int($0) }
+        guard octets.count == 4 else { return false }
+        switch (octets[0], octets[1]) {
+        case (127, _), (10, _), (192, 168): return true
+        case (172, 16...31):                return true
+        default:                            return false
+        }
+    }
 }
 
 // MARK: - Sidebar Navigation Items
