@@ -56,13 +56,17 @@ def build_control_router(core):
     async def heartbeat(request: Request, key: Optional[str] = None):
         """Health check for external monitors (UptimeRobot etc.).
         Accepts an optional ?key= query param or X-Heartbeat-Key header to guard
-        the dead-man reset. Without a key the endpoint still returns health data
-        but does NOT reset the deadman timer (prevents unauthenticated suppression).
+        the dead-man reset. Without the right key the endpoint still returns
+        health data but does NOT reset the deadman timer.
+
+        With no HEARTBEAT_KEY set it used to reset for anyone, so whoever could
+        reach this public route could keep the dead-man switch quiet while the
+        monitor was down. It now fails loud instead: the switch is only reset by
+        a monitor that holds the key (start-up logs say so when it is missing).
         """
         _HEARTBEAT_KEY = os.environ.get("HEARTBEAT_KEY", "")
         provided = key or request.headers.get("X-Heartbeat-Key", "")
-        # Only reset dead-man's switch if key matches (or no key configured)
-        if not _HEARTBEAT_KEY or hmac.compare_digest(str(provided).encode(), _HEARTBEAT_KEY.encode()):
+        if _HEARTBEAT_KEY and hmac.compare_digest(str(provided).encode(), _HEARTBEAT_KEY.encode()):
             core.STATE.system.last_heartbeat = time.time()
             core.STATE.system.deadman_alert_sent = False
             core.STATE.system.heartbeat_ever = True

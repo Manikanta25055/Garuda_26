@@ -10,8 +10,7 @@ import os
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
 
 
 class LoginRequest(BaseModel):
@@ -28,8 +27,11 @@ class VerifyOTPRequest(BaseModel):
     otp: str
 
 class ForgotPasswordRequest(BaseModel):
-    username: Optional[str] = None   # omittable — endpoint resolves from OTP store
-    otp: str
+    # Required. When it could be left out, the code was looked up among every
+    # pending one and a wrong guess counted against none of them: the three-try
+    # limit never applied, and only the per-address lockout stood in the way.
+    username: str = Field(min_length=1, max_length=64)
+    otp: str = Field(max_length=16)
     new_password: str
 
 class SendForgotOTPRequest(BaseModel):
@@ -245,19 +247,7 @@ def build_auth_router(core):
             raise HTTPException(429, "Too many failed attempts. Try again later.")
         if not core._check_rate_limit(request):
             raise HTTPException(429, "Too many requests. Try again later.")
-        # username optional: if omitted, find user by matching OTP across store
-        if data.username:
-            u = data.username.strip()
-        else:
-            guess = data.otp.strip()
-            u = next((k for k, v in list(core.STATE.auth.forgot_otp_store.items())
-                      if hmac.compare_digest(str(v.get("otp", "")).encode(), guess.encode())), None)
-            if not u:
-                # A guess with no username used to cost nothing: no attempt was
-                # counted against anyone. It now counts against the caller.
-                if core.STATE.auth.forgot_otp_store:
-                    core._record_login_failure(ip)
-                raise HTTPException(401, "No OTP pending.")
+        u = data.username.strip()
         state = core.STATE.auth.forgot_otp_store.get(u)
         if not state:
             core.STATE.auth.user_forgot_otp = None

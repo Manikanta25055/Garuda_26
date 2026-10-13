@@ -121,8 +121,9 @@ class Settings:
             out.append(("error", "EXFIL_HOST is set but EXFIL_AES_KEY is not 64 hex characters: "
                                  "clips will not be uploaded."))
         if self.deadman_enabled and not self.heartbeat_key_set:
-            out.append(("warning", "DEADMAN_ENABLED=1 without HEARTBEAT_KEY: anyone who can reach "
-                                   "/api/heartbeat can keep the dead-man switch quiet."))
+            out.append(("error", "DEADMAN_ENABLED=1 without HEARTBEAT_KEY: /api/heartbeat only resets "
+                                 "the dead-man switch for a monitor that sends the key, so it will "
+                                 "keep alerting until HEARTBEAT_KEY is set."))
         if self.host not in ("127.0.0.1", "localhost", "::1"):
             out.append(("warning", f"Listening on {self.host}: the plain-HTTP port is reachable "
                                    "without the tunnel."))

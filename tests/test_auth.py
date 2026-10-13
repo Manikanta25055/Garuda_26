@@ -139,7 +139,7 @@ def test_forgot_reset_correct_otp(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/forgot/send-otp', json={'username': 'user'})
     otp = gw.STATE.auth.user_forgot_otp
-    r = app_client.post('/api/forgot/reset', json={'otp': otp, 'new_password': 'NewPass123'})
+    r = app_client.post('/api/forgot/reset', json={'username': 'user', 'otp': otp, 'new_password': 'NewPass123'})
     assert r.status_code == 200
     # Now login with new password should work
     r2 = app_client.post('/api/login', json={'username': 'user', 'password': 'NewPass123'})
@@ -150,7 +150,7 @@ def test_forgot_reset_correct_otp(app_client, monkeypatch):
 def test_forgot_reset_wrong_otp(app_client, monkeypatch):
     monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
     app_client.post('/api/forgot/send-otp', json={'username': 'user'})
-    r = app_client.post('/api/forgot/reset', json={'otp': '999999', 'new_password': 'x'})
+    r = app_client.post('/api/forgot/reset', json={'username': 'user', 'otp': '999999', 'new_password': 'x'})
     assert r.status_code == 401
 
 

@@ -83,6 +83,30 @@ def test_forgot_otp_lockout_after_3_wrong_attempts(app_client, monkeypatch):
     assert gw.STATE.auth.user_forgot_otp is None
 
 
+def test_forgot_reset_needs_the_username(app_client, monkeypatch):
+    """A reset that names no account used to search every pending code, and its
+    wrong guesses counted against none of them: from fresh addresses the code
+    could be guessed for as long as it lived."""
+    monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
+    app_client.post('/api/forgot/send-otp', json={'username': 'user'})
+    real = gw.STATE.auth.forgot_otp_store['user']['otp']
+    r = app_client.post('/api/forgot/reset', json={'otp': real, 'new_password': 'Pwned1234'},
+                        headers={'CF-Connecting-IP': '198.51.100.1'})
+    assert r.status_code == 422
+    # Guesses from three different addresses still use up the code's three tries.
+    for n in range(3):
+        wrong = f"{(int(real) + n + 1) % 1000000:06d}"
+        r = app_client.post('/api/forgot/reset',
+                            json={'username': 'user', 'otp': wrong, 'new_password': 'Pwned1234'},
+                            headers={'CF-Connecting-IP': f'198.51.100.{n + 10}'})
+        assert r.status_code == 401
+    assert 'user' not in gw.STATE.auth.forgot_otp_store
+    r = app_client.post('/api/forgot/reset',
+                        json={'username': 'user', 'otp': real, 'new_password': 'Pwned1234'},
+                        headers={'CF-Connecting-IP': '198.51.100.99'})
+    assert r.status_code == 401
+
+
 # ── Account enumeration prevention ───────────────────────────────────────────
 
 def test_forgot_send_otp_nonexistent_user_returns_200(app_client):

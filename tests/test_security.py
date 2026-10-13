@@ -30,13 +30,15 @@ def test_heartbeat_with_correct_key_resets_deadman(app_client, monkeypatch):
     assert gw.STATE.system.last_heartbeat >= before
 
 
-def test_heartbeat_public_when_no_key_configured(app_client, monkeypatch):
-    """If HEARTBEAT_KEY env var not set, heartbeat resets timer (backward compat)."""
+def test_heartbeat_without_a_configured_key_resets_nothing(app_client, monkeypatch):
+    """With no HEARTBEAT_KEY, an anonymous caller must not be able to keep the
+    dead-man switch quiet; the endpoint still answers for health checks."""
     monkeypatch.delenv('HEARTBEAT_KEY', raising=False)
-    before = time.time()
+    frozen_time = time.time() - 9999
+    monkeypatch.setattr(gw.STATE.system, 'last_heartbeat', frozen_time)
     r = app_client.get('/api/heartbeat')
     assert r.status_code == 200
-    assert gw.STATE.system.last_heartbeat >= before
+    assert gw.STATE.system.last_heartbeat == frozen_time
 
 
 def test_session_token_format(app_client, user_token):
