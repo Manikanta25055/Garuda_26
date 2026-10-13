@@ -3,6 +3,7 @@
 #
 #     bash scripts/deploy_garuda.sh            # the Drishti branch
 #     bash scripts/deploy_garuda.sh SomeBranch # another branch
+#     bash scripts/deploy_garuda.sh --check    # change nothing: is every fix live?
 #
 # Pushing to GitHub changes nothing here: the service runs whatever this
 # checkout holds. This fetches the branch, moves the checkout to it (fast-
@@ -17,6 +18,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PORT="${GARUDA_PORT:-8080}"
 cd "$PROJECT_DIR"
+
+if [ "$BRANCH" = "--check" ]; then
+  exec python3 "$SCRIPT_DIR/check_deploy.py"
+fi
 
 echo "[deploy] $PROJECT_DIR is on $(git rev-parse --abbrev-ref HEAD) at $(git rev-parse --short HEAD)"
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
@@ -44,7 +49,12 @@ fi
 
 LIVE="$(printf '%s' "$HEALTH" | python3 -c 'import json, sys; print(json.load(sys.stdin).get("commit", "?"))')"
 if [ "${LIVE:0:7}" = "${WANT:0:7}" ]; then
-  echo "[deploy] live: commit $LIVE. Close and reopen the site's tab to load the new pages."
+  echo "[deploy] live: commit $LIVE. Checking every fix, here and through the public site:"
+  if ! python3 "$SCRIPT_DIR/check_deploy.py" --commit "$WANT"; then
+    echo "[deploy] some fixes are not live: see FAIL above, and send that output over." >&2
+    exit 1
+  fi
+  echo "[deploy] Close and reopen the site's tab to load the new pages."
 else
   echo "[deploy] the service reports commit $LIVE, the checkout is $WANT: it is not running this checkout." >&2
   echo "[deploy] Check its WorkingDirectory with: systemctl cat garuda-web" >&2
