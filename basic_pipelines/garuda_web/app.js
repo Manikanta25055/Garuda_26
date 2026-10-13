@@ -6,9 +6,15 @@
 (function () {
   try {
     const ua = navigator.userAgent || '';
-    const apple = /iPhone|iPad|iPod/.test(ua)
-      || (/Macintosh/.test(ua) && /Safari\//.test(ua))            // Safari, Chrome and Edge on a Mac
-      || (navigator.platform === 'MacIntel');
+    // Apple's own engine draws blur and glass on the GPU almost for free:
+    // every browser on an iPhone or iPad, and Safari on a Mac. Chrome, Brave,
+    // Edge and Firefox on a Mac were counted here too (their user agents say
+    // "Macintosh" and "Safari/"), and got the full glass they stutter on.
+    const iOS = /iPhone|iPad|iPod/.test(ua)
+      || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS asks for the desktop site
+    const macSafari = /Macintosh/.test(ua) && /Safari\//.test(ua)
+      && !/(Chrome|Chromium|CriOS|Edg|OPR|Brave|Firefox|FxiOS)\//.test(ua);
+    const apple = iOS || macSafari;
     const root = document.documentElement;
     if (!apple) root.classList.add('plat-other');
     // Phones and tablets that are not Apple's get the light rendering from
@@ -24,7 +30,9 @@
 })();
 
 // Measure real frame times once the app is on screen; a device that cannot
-// hold ~25 fps drops the blur and decoration for this visit. Apple devices
+// hold ~40 fps (median frame over 25 ms, or one frame in ten over 50 ms)
+// drops the blur and decoration for this visit. It waited for ~25 fps, by
+// which point the stutter was plain to see. Apple devices
 // are left alone (Low Power Mode halves their frame rate on purpose).
 function _garudaProbeFrames() {
   const root = document.documentElement;
@@ -38,7 +46,7 @@ function _garudaProbeFrames() {
     last = t;
     if (gaps.length < 90) { requestAnimationFrame(step); return; }
     gaps.sort((a, b) => a - b);
-    if (gaps[gaps.length >> 1] > 40) root.classList.add('perf-lite');
+    if (gaps[gaps.length >> 1] > 25 || gaps[Math.floor(gaps.length * 0.9)] > 50) root.classList.add('perf-lite');
   }
   requestAnimationFrame(step);
 }

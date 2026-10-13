@@ -107,11 +107,36 @@ const DI = (() => {
   let closing = false;              // true from a close until the shape has come to rest
   const still = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+  // Per frame only the outline changes. The pill's width used to be set here
+  // too, which laid the island out again sixty times a second; it is set once
+  // per change in retarget(). The ring is drawn only while it has a colour.
+  let ringOn = false, lastD = '';
   function paint() {
-    const d = outline((shellW - cur.w) / 2, cur.w, cur.h, cur.r);
+    const d = lastD = outline((shellW - cur.w) / 2, cur.w, cur.h, cur.r);
     shell.style.clipPath = `path("${d}")`;
-    ring.setAttribute('d', d);
-    pill.style.width = cur.w.toFixed(1) + 'px';
+    if (ringOn) ring.setAttribute('d', d);
+  }
+
+  // The shadow. It was a drop-shadow filter on the whole island, which the
+  // browser re-blurred on every frame of every spring: nearly free in Safari on
+  // a Mac, the most expensive thing on screen in Chrome, Brave and on phones.
+  // Now it is a plain box-shadow on its own layer, drawn once per change and
+  // carried to its new size by a transform, which costs nothing to animate.
+  let shadow = null, shadowBox = null;
+  function placeShadow(w, h, r) {
+    if (!shadow) return;
+    const from = shadowBox ? { w: cur.w, h: cur.h } : null;
+    shadowBox = { w, h };
+    shadow.style.width = w + 'px';
+    shadow.style.height = h + 'px';
+    shadow.style.borderRadius = r + 'px';
+    shadow.style.left = ((shellW - w) / 2) + 'px';
+    if (!from || still.matches || document.hidden || !w || !h) { shadow.style.transform = ''; return; }
+    shadow.style.transition = 'none';
+    shadow.style.transform = `scale(${(from.w / w).toFixed(4)}, ${(from.h / h).toFixed(4)})`;
+    void shadow.offsetWidth;                         // start from the size on screen now
+    shadow.style.transition = '';
+    shadow.style.transform = '';
   }
   function frame(t) {
     const dt = Math.min(0.034, Math.max(0.001, (t - lastT) / 1000));
@@ -124,6 +149,9 @@ const DI = (() => {
     if (rested) { for (const k in cur) { cur[k] = to[k]; vel[k] = 0; } raf = 0; closing = false; }
     else raf = requestAnimationFrame(frame);
     paint();
+    // At rest the ring always holds the final outline, coloured or not, so a
+    // theme that gives it a colour later draws the right shape.
+    if (rested) ring.setAttribute('d', lastD);
   }
   function spring(k, c) {
     stiff = k; damp = c;
@@ -133,17 +161,23 @@ const DI = (() => {
 
   function retarget() {
     if (!shell) return;
+    const hudStyle = getComputedStyle(hud);
+    const ringColour = hudStyle.getPropertyValue('--di-ring').trim();
+    ringOn = !!ringColour && ringColour !== 'transparent' && !/,\s*0\)$/.test(ringColour);
     if (open) {
       const h = panel.offsetHeight;
       shell.style.height = (h + SLACK) + 'px';
       to.w = shellW - SLACK; to.h = h; to.r = OPEN_R;
       spring(210, 21);                    // a little past, then home
     } else {
-      to.w = parseFloat(getComputedStyle(hud).getPropertyValue('--di-w')) || 126;
+      to.w = parseFloat(hudStyle.getPropertyValue('--di-w')) || 126;
       to.h = PILL_H; to.r = PILL_R;
       if (closing) spring(330, 33);       // closing is quicker and barely bounces
       else spring(260, 20);               // a pill changing width is the playful one
     }
+    pill.style.width = to.w.toFixed(1) + 'px';
+    placeShadow(to.w, to.h, to.r);
+    ring.setAttribute('d', outline((shellW - cur.w) / 2, cur.w, cur.h, cur.r));
   }
   function measure() {
     if (!shell.offsetWidth) return;                 // not on screen (signed out, or a phone)
@@ -157,6 +191,8 @@ const DI = (() => {
     const live = $('di-live');
     if (!hud || !shell || !pill || !rest || !live || hud.dataset.di) return false;
     hud.dataset.di = '1';
+    hud.insertAdjacentHTML('afterbegin', '<div class="di-shadow" aria-hidden="true"></div>');
+    shadow = hud.querySelector('.di-shadow');
     live.insertAdjacentHTML('beforeend', `
       <div class="di-cnt di-cnt-notice"><span id="di-notice-ic"></span><span class="di-lbl" id="di-notice-lbl"></span></div>
       <div class="di-cnt di-cnt-rec"><span class="di-pip di-r"></span><span class="di-lbl">Recording</span><span class="di-grow"></span><span class="di-lbl di-num" id="di-rec-t">0:00</span></div>
@@ -202,6 +238,8 @@ const DI = (() => {
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
     setPage(page, false);
     for (const k in cur) cur[k] = to[k];
+    shadowBox = null;
+    placeShadow(to.w, to.h, to.r);
     paint();
     return true;
   }
