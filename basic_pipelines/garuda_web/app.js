@@ -923,14 +923,46 @@ const G = (() => {
   // ── Alert activity heatmap (backend-stored, lifetime-persistent) ────────
   let _lastHeatmapKey = '';
 
+  // How many weeks, and how large a square, the card has room for. Beside
+  // the console (desktop) the card is as wide as 13 weeks of 10 px squares.
+  // When it has the whole row to itself (a phone, or no console) those 13
+  // weeks filled half of it; it now reaches further back in time, older weeks
+  // to the left, and the squares grow a little so the last one meets the edge.
+  const _HM = { cell: 10, gap: 3, label: 28, weeks: 13, maxWeeks: 53, maxCell: 16 };
+  let _hmActivity = {}, _hmFit = '', _hmObserved = false;
+  function _heatmapFit(container) {
+    const card = container.closest('.hm-card');
+    const row = card && card.parentElement;
+    const tracks = row ? getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/).length : 2;
+    const room = container.clientWidth - _HM.label;
+    if (tracks !== 1 || room <= 0) return { weeks: _HM.weeks, cell: _HM.cell };
+    const weeks = Math.max(_HM.weeks, Math.min(_HM.maxWeeks, Math.floor((room + _HM.gap) / (_HM.cell + _HM.gap))));
+    const cell = Math.min(_HM.maxCell, Math.floor(((room - (weeks - 1) * _HM.gap) / weeks) * 100) / 100);
+    return { weeks, cell };
+  }
+
   function renderHeatmap(activity) {
     activity = activity || {};
+    _hmActivity = activity;
     const container = $('heatmap');
     if (!container) return;
+    if (!_hmObserved && window.ResizeObserver) {
+      // A rotated phone or a resized window: draw again only if the fit changed.
+      _hmObserved = true;
+      new ResizeObserver(() => {
+        const f = _heatmapFit(container);
+        if (f.weeks + ':' + f.cell !== _hmFit) renderHeatmap(_hmActivity);
+      }).observe(container);
+    }
 
     const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const CELL = 10, GAP = 3, COL_W = CELL + GAP;
-    const NUM_WEEKS = 13;
+    const fit = _heatmapFit(container);
+    _hmFit = fit.weeks + ':' + fit.cell;
+    const CELL = fit.cell, GAP = _HM.gap, COL_W = CELL + GAP;
+    const NUM_WEEKS = fit.weeks;
+    container.style.setProperty('--hm-cell', CELL + 'px');
+    const meta = container.closest('.hm-card')?.querySelector('.dash-card-meta');
+    if (meta) meta.textContent = `${NUM_WEEKS} weeks · local`;
 
     // Find start Sunday: go back to the Sunday that is ≤ (NUM_WEEKS-1)*7 days ago
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -2813,6 +2845,7 @@ document.addEventListener('DOMContentLoaded', G.init);
   let _fbCat    = 'general';
   let _fbInbox  = [];
   let _fbFilter = 'all';
+  let _fbTab    = 'send';     // an admin's tab: 'send' or 'inbox'
 
   function _isAdmin() {
     const s = G.getSession ? G.getSession() : null;
@@ -2846,47 +2879,71 @@ document.addEventListener('DOMContentLoaded', G.init);
   }
 
   // ── Show correct view for current role ────────────────────
+  // Everyone can write. An admin also has the inbox, as a second tab: an
+  // admin used to get only the inbox, so the person most likely to have
+  // something to say about the house had nowhere to say it.
   function _applyRole() {
-    const admin = _isAdmin();
-    const sendTab  = document.getElementById('fb-tab-send');
-    const tabBar   = document.getElementById('fb-tabs');
-    // Tab bar is never shown — each role gets exactly one view
-    if (tabBar) tabBar.style.display = 'none';
-    if (admin) {
+    const tabBar = document.getElementById('fb-tabs');
+    if (!tabBar) return;
+    if (_isAdmin()) {
       _ensureInbox();
-      if (sendTab)  sendTab.style.display  = 'none';
-      const it = document.getElementById('fb-tab-inbox');
-      if (it) it.style.display = '';
+      if (!tabBar.children.length) {
+        tabBar.innerHTML =
+          '<button type="button" class="fb-tab" role="tab" data-tab="send" data-click="G.fbSwitchTab" data-args=\'["send"]\'>Write</button>' +
+          '<button type="button" class="fb-tab" role="tab" data-tab="inbox" data-click="G.fbSwitchTab" data-args=\'["inbox"]\'>Inbox<span class="fb-tab-count" id="fb-tab-count"></span></button>';
+      }
+      tabBar.style.display = '';
     } else {
-      if (sendTab)  sendTab.style.display  = '';
-      const it = document.getElementById('fb-tab-inbox');
-      if (it) it.style.display = 'none';
+      tabBar.innerHTML = '';
+      tabBar.style.display = 'none';
     }
+    G.fbSwitchTab(_isAdmin() ? _fbTab : 'send');
   }
+
+  G.fbSwitchTab = function(tab) {
+    _fbTab = (tab === 'inbox' && _isAdmin()) ? 'inbox' : 'send';
+    const sendTab = document.getElementById('fb-tab-send');
+    const inbox = document.getElementById('fb-tab-inbox');
+    if (sendTab) sendTab.style.display = _fbTab === 'send' ? '' : 'none';
+    if (inbox) inbox.style.display = _fbTab === 'inbox' ? '' : 'none';
+    document.querySelectorAll('#fb-tabs .fb-tab').forEach(t => {
+      const on = t.dataset.tab === _fbTab;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', String(on));
+    });
+    const title = document.getElementById('fb-title');
+    if (title) title.textContent = _fbTab === 'inbox' ? 'Feedback inbox' : 'Send feedback';
+    if (_fbTab === 'inbox' && _fbOpen) G.fbLoadInbox();
+  };
+
+  function _setOpen(open) {
+    _fbOpen = open;
+    document.getElementById('fb-panel').classList.toggle('open', open);
+    document.getElementById('fb-bubble').classList.toggle('is-open', open);
+  }
+  G.closeFeedback = function() { _setOpen(false); };
 
   // ── Open / close ──────────────────────────────────────────
   G.toggleFeedback = function() {
-    _fbOpen = !_fbOpen;
-    document.getElementById('fb-panel').classList.toggle('open', _fbOpen);
-    document.getElementById('fb-bubble').classList.toggle('is-open', _fbOpen);
-    if (_fbOpen) {
-      if (_isAdmin()) G.fbLoadInbox();
-      else {
-        const m = document.getElementById('fb-msg');
-        if (m) m.focus();
-      }
+    _setOpen(!_fbOpen);
+    if (!_fbOpen) return;
+    _applyRole();
+    if (_isAdmin()) G.fbLoadInbox();          // keeps the Inbox tab's count current
+    // A keyboard is there to type; on a phone, focusing at once would throw
+    // the on-screen keyboard over the form before it has been read.
+    if (_fbTab === 'send' && !matchMedia('(pointer: coarse)').matches) {
+      const m = document.getElementById('fb-msg');
+      if (m) m.focus();
     }
   };
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && _fbOpen) _setOpen(false); });
 
   // Close on outside click
   document.addEventListener('pointerdown', e => {
     if (!_fbOpen) return;
     const wrap = document.getElementById('fb-wrap');
-    if (wrap && !wrap.contains(e.target)) {
-      _fbOpen = false;
-      document.getElementById('fb-panel').classList.remove('open');
-      document.getElementById('fb-bubble').classList.remove('is-open');
-    }
+    // The More sheet's own row opens the panel; a press there is not "outside".
+    if (wrap && !wrap.contains(e.target) && !e.target.closest('.more-sheet, .more-panel')) _setOpen(false);
   });
 
   // ── After-login hook (called from afterLogin in G) ────────
@@ -2899,7 +2956,7 @@ document.addEventListener('DOMContentLoaded', G.init);
   G._fbOnLogout = function() {
     if (_prevFbOnLogout) _prevFbOnLogout();
     _fbOpen = false;
-    _fbRating = 0; _fbCat = 'general'; _fbInbox = []; _fbFilter = 'all';
+    _fbRating = 0; _fbCat = 'general'; _fbInbox = []; _fbFilter = 'all'; _fbTab = 'send';
     document.getElementById('fb-panel').classList.remove('open');
     document.getElementById('fb-bubble').classList.remove('is-open');
     // Reset to send view for next login
@@ -2921,8 +2978,6 @@ document.addEventListener('DOMContentLoaded', G.init);
     _previewStars(0);
   };
 
-  // ── Tab switching (kept for G.fbSwitchTab compatibility) ──
-  G.fbSwitchTab = function() {}; // no-op — roles are fixed per session
 
   // ── Inbox load ────────────────────────────────────────────
   G.fbLoadInbox = async function() {
@@ -2957,6 +3012,8 @@ document.addEventListener('DOMContentLoaded', G.init);
     const rated = _fbInbox.filter(e => e.rating > 0);
     const avg   = rated.length ? (rated.reduce((s, e) => s + e.rating, 0) / rated.length).toFixed(1) : null;
     summary.textContent = total + ' entr' + (total === 1 ? 'y' : 'ies') + (avg ? ' · avg ' + avg + ' ★' : '');
+    const count = document.getElementById('fb-tab-count');
+    if (count) count.textContent = total ? ' ' + total : '';
     if (!entries.length) {
       list.innerHTML = '<div class="fb-inbox-empty">' +
         (_fbFilter === 'all' ? 'No feedback yet.' : 'No entries for this category.') + '</div>';
@@ -3076,6 +3133,7 @@ document.addEventListener('DOMContentLoaded', G.init);
     try {
       await G._apiFn('POST', '/api/feedback', payload);
       _showFeedbackSuccess(btn);
+      if (_isAdmin()) G.fbLoadInbox();
     } catch(err) {
       const detail = (err && (err.detail || err.message)) || 'Failed to send feedback.';
       G.showToast(detail, 'error');

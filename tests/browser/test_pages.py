@@ -225,3 +225,45 @@ def test_an_injected_inline_script_does_not_run(server, browser):
     page.wait_for_timeout(200)
     assert page.evaluate("window.__pwned === undefined && window.__pwned2 === undefined")
     ctx.close()
+
+
+def test_an_admin_can_write_feedback_and_read_it_in_the_inbox(admin_page):
+    # An admin used to get only the inbox: nowhere to write anything.
+    for key in [k for k in gw.STATE.auth.rate_store if str(k).startswith("fb:")]:
+        gw.STATE.auth.rate_store.pop(key, None)
+    p = admin_page
+    p.page.click("#fb-bubble")
+    p.page.wait_for_timeout(400)
+    assert p.page.is_visible("#fb-msg") and p.page.is_visible("#fb-tabs .fb-tab[data-tab=inbox]")
+    p.page.fill("#fb-msg", "browser test: the relay clicks twice")
+    p.page.click("#fb-submit")
+    p.page.wait_for_selector("#fb-success.show", timeout=3000)
+    p.page.wait_for_timeout(2000)                      # it closes itself after the thanks
+    p.page.click("#fb-bubble")
+    p.page.click("#fb-tabs .fb-tab[data-tab=inbox]")
+    p.page.wait_for_timeout(600)
+    assert "browser test: the relay clicks twice" in p.page.inner_text("#fb-inbox-list")
+    p.page.click(".fb-close")
+    assert not p.js("document.getElementById('fb-panel').classList.contains('open')")
+    p.assert_clean()
+
+
+def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browser):
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    page = ctx.new_page()
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.wait_for_timeout(600)
+    page.click(".ios-item[data-page=more]")
+    page.wait_for_timeout(400)
+    page.locator(".more-row", has_text="Send feedback").first.click()
+    page.wait_for_timeout(600)
+    # Top, so the on-screen keyboard cannot cover the box and Send.
+    assert page.evaluate("document.getElementById('fb-panel').getBoundingClientRect().top") < 120
+    assert page.is_visible("#fb-msg") and page.is_visible(".fb-close")
+    page.click(".fb-close")
+    assert not page.evaluate("document.getElementById('fb-panel').classList.contains('open')")
+    ctx.close()

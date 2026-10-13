@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=79"/>
+  <link rel="stylesheet" href="/static/style.css?v=80"/>
 </head>
 <body>
 <div id="app">
@@ -1228,10 +1228,18 @@
 <!-- Feedback widget -->
 <div class="fb-wrap" id="fb-wrap">
   <!-- Panel -->
-  <div class="fb-panel" id="fb-panel" role="dialog" aria-label="Feedback">
+  <div class="fb-panel" id="fb-panel" role="dialog" aria-labelledby="fb-title">
 
-    <!-- Admin tabs injected by JS -->
-    <div class="fb-tabs" id="fb-tabs"></div>
+    <!-- Title and a way out: on phones there is no floating button to close it. -->
+    <div class="fb-head">
+      <h3 class="fb-title" id="fb-title">Send feedback</h3>
+      <button type="button" class="fb-close" data-click="G.closeFeedback" aria-label="Close feedback">
+        <span class="gi gi-close" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <!-- Admins: Write | Inbox (app.js). Everyone else only writes. -->
+    <div class="fb-tabs" id="fb-tabs" role="tablist"></div>
 
     <!-- ── Send tab ── -->
     <div id="fb-tab-send">
@@ -1265,7 +1273,7 @@
         <!-- Optional name -->
         <input id="fb-name" class="fb-input" type="text" placeholder="Your name (optional)" maxlength="64" aria-label="Your name" autocomplete="off">
         <div class="fb-footer">
-          <small>Stored on device</small>
+          <small>Goes to the house admin</small>
           <button class="fb-submit" id="fb-submit" data-click="G.submitFeedback">Send</button>
         </div>
       </div>
@@ -1295,7 +1303,7 @@
 <script src="/static/actions.js?v=1"></script>
 <script src="/static/narada.js?v=14"></script>
 <script src="/static/island.js?v=4"></script>
-<script src="/static/app.js?v=74"></script>
+<script src="/static/app.js?v=75"></script>
 <script src="/static/home.js?v=14"></script>
 </body>
 </html>
