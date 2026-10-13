@@ -6,8 +6,9 @@ After=network.target
 Type=simple
 User=manikanta
 WorkingDirectory=/home/manikanta/Projects/Garuda_26
-Environment=GARUDA_MON_USER=user
-Environment=GARUDA_MON_PASS=user
+# GARUDA_MON_USER and GARUDA_MON_PASS (a non-admin account kept for the
+# monitor) come from this file, chmod 600; a password written here is in git.
+EnvironmentFile=/home/manikanta/Projects/Garuda_26/.monitor.env
 ExecStart=/usr/bin/python3 /home/manikanta/Projects/Garuda_26/monitor_metrics.py --hours 48 --interval 10
 Restart=on-failure
 RestartSec=10

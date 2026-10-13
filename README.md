@@ -9,7 +9,7 @@ Hardware platform: **Raspberry Pi 5 + Hailo-8L AI HAT** (26 TOPS neural processi
 
 **Live demo:** [garuda.veeramanikanta.in](https://garuda.veeramanikanta.in)  
 NOTE: backend is served through api.veeramanikanta.in  
-Credentails - user, user  
+Demo sign-in details are shared with reviewers privately; ask the corresponding author.
 
 
 ---
@@ -305,15 +305,8 @@ All training was done on a RunPod cloud instance (RTX 4090, 24 GB VRAM). Trainin
 aws configure
 ```
 
-> Credentails to access the S3 server:  
-> Access key - user_3CCqL5IC5SyiZKCYMAuUzHtWOTS  
-> Secret access key - rps_0OS1AFV1HVS9HDV2S7449IKHRW9G4LTVJSJ9H1NR1mkvk1  
-> region - us-il-1  
-> format - json  
-  
-(Please use this only for the evaluation purposes)  
-
-**NO MISUSES ARE ENTERTAINED**  
+S3 credentials for evaluation are shared with reviewers privately; ask the
+corresponding author. Keys are never published in this repository.  
 
 ### Dataset sources (publicly citable)
 

@@ -32,6 +32,7 @@ Garuda.xcodeproj/xcuserdata/
 # which would carry the same keys into a commit.
 .env
 .env.*
+.monitor.env
 !.env.example
 
 # Python

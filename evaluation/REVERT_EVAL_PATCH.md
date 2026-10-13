@@ -65,7 +65,7 @@ systemctl status garuda.service
 # svc_eval must no longer exist (or its login must fail even with bypass env gone)
 curl -s -X POST http://127.0.0.1:8080/api/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"svc_eval","password":"eval_admin_X92!"}'
+  -d '{"username":"svc_eval","password":"<svc_eval password>"}'
 # expect: 401 or 403 with "Admin accounts must sign in via the Admin Access flow."
 
 # existing admin still needs OTP
@@ -87,5 +87,6 @@ curl -s -X POST http://127.0.0.1:8080/api/login \
 ## Credentials (for reference only; should be invalidated after revert)
 
 - Service admin username: `svc_eval`
-- Service admin password: `eval_admin_X92!`
+- Service admin password: (removed from the repository; the account must be deleted
+  or its password changed, since it was published here before)
 - PBKDF2 hash stored: `pbkdf2:sha256:600000:1647ae03d8538cf1fa7bcf3d1022a396:f5982c498bb5c6839af4337e62a2530a3e2b3a24898c4d8c13150d214a6888cf`
