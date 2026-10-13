@@ -197,6 +197,18 @@ def test_deleting_a_rule_removes_it(client):
     assert ctx.store.rules == []
 
 
+def test_a_user_cannot_switch_off_or_delete_a_rule(client):
+    # As on /api/home: the automations an admin confirmed are the admin's to change.
+    test_client, ctx = client
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    rule_id = ctx.store.rules[0]["id"]
+    test_client.cookies.set(drishti_auth.COOKIE_NAME, drishti_auth.create_session("guest", "user"))
+    assert test_client.post(f"/api/drishti/rules/{rule_id}/toggle").status_code == 403
+    assert test_client.delete(f"/api/drishti/rules/{rule_id}").status_code == 403
+    assert ctx.store.rules[0].get("enabled", True) is True
+
+
 def test_activity_returns_recorded_actuations(client):
     from basic_pipelines.garuda_auto import actuation_log
     test_client, ctx = client

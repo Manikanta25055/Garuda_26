@@ -319,14 +319,16 @@ def build_router(ctx):
             "orphaned": ctx.store.orphaned,
         }
 
+    # Admin only, as on /api/home: a household member could otherwise switch
+    # off or delete the automations an admin confirmed.
     @router.delete("/rules/{rule_id}")
-    async def delete_rule(rule_id: str, session=Depends(require_drishti_session)):
+    async def delete_rule(rule_id: str, session=Depends(require_drishti_admin)):
         if not ctx.store.delete(rule_id):
             raise HTTPException(status_code=404, detail="no such rule")
         return {"ok": True}
 
     @router.post("/rules/{rule_id}/toggle")
-    async def toggle_rule(rule_id: str, session=Depends(require_drishti_session)):
+    async def toggle_rule(rule_id: str, session=Depends(require_drishti_admin)):
         for rule in ctx.store.rules:
             if rule.get("id") == rule_id:
                 rule["enabled"] = not rule.get("enabled", True)

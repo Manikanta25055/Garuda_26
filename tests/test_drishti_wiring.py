@@ -124,3 +124,14 @@ def test_the_rule_thread_stops_with_the_app():
     source = inspect.getsource(Garuda_web._lifespan)
     assert "DRISHTI_RUNTIME.start()" in source
     assert "DRISHTI_RUNTIME.stop()" in source
+
+
+@pytest.mark.integration
+def test_drishti_sign_in_never_opens_the_admin_side(app_client):
+    # Drishti's sign-in has no emailed code, so an admin's password alone must
+    # not make an admin session there; the admin pages are Garuda's, behind it.
+    authenticate = Garuda_web.DRISHTI_CTX.authenticate
+    assert authenticate("admin", "root") == "user"
+    assert authenticate("user", "user") == "user"
+    assert authenticate("admin", "wrong") is None
+    assert authenticate("nobody", "root") is None

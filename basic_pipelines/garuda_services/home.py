@@ -29,11 +29,19 @@ def _drishti_authenticate(username, password):
     script, so the live globals are __main__'s, and an import would produce a
     second copy whose USERS is still the empty dict it starts as. Passing the
     function in keeps the one live table.
+
+    An admin account is signed in as a user here. Garuda asks an admin for the
+    emailed one-time code as well as the password; this sign-in has no second
+    step, so it must not open the admin side. Admin work is on Garuda's own
+    pages (/api/home), behind that code.
     """
     user = core.STATE.auth.users.get(username)
-    if user is None or not core._verify_password(password, user["password"]):
+    # An unknown name costs the same hash as a wrong password, so the time
+    # taken does not say which names exist.
+    stored = user["password"] if user else core._DUMMY_PASSWORD_HASH
+    if not core._verify_password(password, stored) or user is None:
         return None
-    return user.get("role", "user")
+    return "user"
 
 
 def _drishti_system_state():
