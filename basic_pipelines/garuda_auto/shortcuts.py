@@ -30,7 +30,9 @@ modes, presence, alerts, and the clock ("time" as HH:MM, "weekday", "hour").
     {"between": ["22:00", "06:00"]}        a window on the clock, may cross midnight
 
 A shortcut runs as the person who made it, with the role they have at that
-moment; run by hand it runs as whoever pressed the button. Capabilities that
+moment; run by hand it runs as whoever pressed the button, but never with
+more than its maker's role: an admin running a user's shortcut runs it as a
+user, so a step checked only at run time cannot borrow the admin's rights. Capabilities that
 need a person's tap (the confirm tier) cannot be steps.
 """
 import json
@@ -589,6 +591,9 @@ class ShortcutEngine:
         role = role or self.role_of(by)
         if role is None:
             return False, f"{by or 'its maker'} can no longer sign in", None
+        maker = shortcut.get("created_by", "")
+        if role == "admin" and maker and maker != by and self.role_of(maker) != "admin":
+            role = "user"
         with self._lock:
             if shortcut_id in self._running:
                 return False, "it is already running", None

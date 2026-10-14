@@ -128,14 +128,17 @@ actor APIClient {
         try await request("/api/session")
     }
 
-    // MARK: - Build WebSocket URL (called by WebSocketManager)
-    func buildWebSocketURL() -> URL? {
+    // MARK: - Build WebSocket request (called by WebSocketManager)
+    // The token goes in a header, not the address, so it stays out of proxy
+    // and server logs.
+    func buildWebSocketRequest() -> URLRequest? {
         var comps = URLComponents(string: baseURL + GarudaConstants.wsPath)
-        // wss over HTTPS: the token is in this address.
         comps?.scheme = comps?.scheme == "https" ? "wss" : "ws"
+        guard let url = comps?.url else { return nil }
+        var req = URLRequest(url: url)
         if let token = sessionToken {
-            comps?.queryItems = [URLQueryItem(name: "token", value: token)]
+            req.setValue(token, forHTTPHeaderField: "X-Garuda-Token")
         }
-        return comps?.url
+        return req
     }
 }

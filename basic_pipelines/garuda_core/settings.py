@@ -112,8 +112,9 @@ class Settings:
             out.append(("warning", "Narada voice is half configured: both ELEVENLABS_API_KEY and "
                                    "ELEVENLABS_SPEECH_ENGINE_ID are needed (scripts/setup_narada_voice.py)."))
         if self.eval_otp_bypass:
-            out.append(("error", "GARUDA_EVAL_OTP_BYPASS=1: an admin can sign in without the email "
-                                 "code. This is for the test harness only; remove it."))
+            out.append(("error", "GARUDA_EVAL_OTP_BYPASS=1 is set. It no longer does anything (the "
+                                 "bypass was removed from the code); remove it and delete any "
+                                 "service admin it was set up for."))
         if self.eval_token_set:
             out.append(("warning", "GARUDA_EVAL_TOKEN is set: the /api/eval endpoints are live and "
                                    "skip the rate limit for whoever holds the token."))

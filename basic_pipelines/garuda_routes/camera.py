@@ -26,7 +26,7 @@ def build_camera_router(core):
     @router.get("/stream")
     async def mjpeg_stream(request: Request, token: Optional[str] = None):
         # Authenticate via cookie or ?token= query param
-        session_token = request.cookies.get("garuda_session") or token
+        session_token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token") or token
         session = core.get_session(session_token)
         if not session:
             raise HTTPException(401, "Not authenticated")
@@ -43,7 +43,7 @@ def build_camera_router(core):
     # ── Snapshot ──────────────────────────────────────────────────────────────────
     @router.get("/api/snapshot")
     async def snapshot(request: Request, token: Optional[str] = None):
-        session_token = request.cookies.get("garuda_session") or token
+        session_token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token") or token
         if not core.get_session(session_token):
             raise HTTPException(401, "Not authenticated")
         with core.STATE.camera.frame_lock:

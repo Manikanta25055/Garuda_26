@@ -87,3 +87,21 @@ def test_old_pages_make_room_but_kept_ones_stay(tmp_path):
     assert len(store.all()) == mod.MAX_KEPT and store.get(first["id"]) is not None
     assert ArtifactStore(str(tmp_path)).html(first["id"]) == PAGE
     assert store.html("../../etc/passwd") is None
+
+
+def test_an_admin_cannot_run_or_list_someone_elses_page(app_client, admin_headers, user_headers, monkeypatch):
+    """A user's page relayed with the admin's session would run as the admin."""
+    store = ArtifactStore()
+    monkeypatch.setattr(gw, "ARTIFACTS", store)
+    monkeypatch.setattr(gw.AGENT, "artifacts", store)
+    entry, _ = store.add("Weekly energy report", PAGE, by="user")
+    url = f"/api/narada/artifacts/{entry['id']}/call"
+    r = app_client.post(url, json={"capability": "get_house_state"}, headers=admin_headers)
+    assert r.status_code == 403
+    assert app_client.post(url, json={"capability": "get_house_state"},
+                           headers=user_headers).status_code == 200
+    listed = app_client.get("/api/narada/artifacts", headers=admin_headers).json()["artifacts"]
+    assert entry["id"] not in [a["id"] for a in listed]
+    # Removing it is still the admin's to do.
+    assert app_client.request("DELETE", f"/api/narada/artifacts/{entry['id']}",
+                              headers=admin_headers).status_code == 200

@@ -73,10 +73,16 @@ def build_master_keys_router(core):
         return {"keys": masked, "count": len(core.STATE.auth.master_keys)}
 
     @router.post("/api/master_key/request_otp")
-    async def master_key_request_otp(data: dict, session=Depends(core.require_admin)):
+    async def master_key_request_otp(data: dict, request: Request, session=Depends(core.require_admin)):
         """Step 1 of adding a master key: verify an existing key, then email OTP."""
+        # Same lockout as /verify: without it this was a free oracle for
+        # guessing the master key from any admin session.
+        ip = core._get_client_ip(request)
+        if core._is_login_locked(ip):
+            raise HTTPException(429, "Too many failed attempts. Try again later.")
         current = str(data.get("current_key") or "").strip()
         if not await asyncio.to_thread(core._master_key_matches, current, core.STATE.auth.master_keys):
+            core._record_login_failure(ip)
             raise HTTPException(401, "Current master key is incorrect.")
         core.STATE.auth.master_key_otp = core.generate_otp_code(6)
         core.STATE.auth.master_otp_ts = time.time()

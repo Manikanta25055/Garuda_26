@@ -187,6 +187,9 @@ def load_master_keys():
     # If no key file, seed from MASTER_KEY env var (set in .env)
     bootstrap = os.environ.get("MASTER_KEY", "").strip()
     if bootstrap:
+        if len(bootstrap) < 16:
+            core.log_system_update("[SECURITY] MASTER_KEY is shorter than 16 characters. It is a "
+                                   "standalone admin sign-in; replace it with a generated key.")
         core.STATE.auth.master_keys[:] = [core._mk_hash(bootstrap)]
         core.save_master_keys()  # persist to file for future runs
 

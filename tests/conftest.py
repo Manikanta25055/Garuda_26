@@ -227,6 +227,7 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw.STATE.auth, 'persisted_refresh',  {})
     monkeypatch.setattr(gw, 'REFRESH_TOKENS_FILE', str(tmp_data / 'system_logs/refresh_tokens.json'))
     monkeypatch.setattr(gw.STATE.auth, 'login_failures',     {})
+    monkeypatch.setattr(gw.STATE.auth, 'admin_otp_failures', [])
     monkeypatch.setattr(gw.STATE.auth, 'forgot_otp_store',   {})
     monkeypatch.setattr(gw, 'PERM_SYSTEM_LOG',     str(tmp_data / 'system_logs/perm_system_log.txt'))
     monkeypatch.setattr(gw, 'PERM_VOICE_LOG',      str(tmp_data / 'system_logs/perm_voice_log.txt'))

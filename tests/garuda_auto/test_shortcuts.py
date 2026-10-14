@@ -168,6 +168,16 @@ def test_a_shortcut_runs_as_its_maker_with_the_role_they_have_now(house):
     assert not ok and "no longer" in reason
 
 
+def test_an_admin_running_a_users_shortcut_runs_it_as_a_user(house):
+    """A step checked only at run time must not borrow the runner's admin rights."""
+    sid = house.add(program(), by="asha")
+    house.engine.run(sid, by="admin", role="admin", wait=True)
+    assert house.done[-1][2:] == ("admin", "user")
+    mine = house.add(program(name="Mine"))
+    house.engine.run(mine, by="admin", role="admin", wait=True)
+    assert house.done[-1][2:] == ("admin", "admin")
+
+
 def test_one_shortcut_can_run_another(house):
     inner = house.add(program(name="Inner"))
     outer_clean = house.engine.check({"name": "Outer", "steps": [{"run": inner}]}, "admin")

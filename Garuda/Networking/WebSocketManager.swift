@@ -10,7 +10,7 @@ final class WebSocketManager: ObservableObject {
     private var reconnectTask: Task<Void, Never>? = nil
     private var receiveTask: Task<Void, Never>? = nil
     private var isConnected: Bool = false
-    private var targetURL: URL? = nil
+    private var targetRequest: URLRequest? = nil
     private let urlSession: URLSession
 
     // Callbacks set by SessionManager
@@ -24,14 +24,14 @@ final class WebSocketManager: ObservableObject {
     }
 
     // MARK: - Connect
-    func connect(to url: URL) {
-        self.targetURL = url
-        openConnection(to: url)
+    func connect(with request: URLRequest) {
+        self.targetRequest = request
+        openConnection(with: request)
     }
 
-    private func openConnection(to url: URL) {
+    private func openConnection(with request: URLRequest) {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
-        webSocketTask = urlSession.webSocketTask(with: url)
+        webSocketTask = urlSession.webSocketTask(with: request)
         webSocketTask?.resume()
         isConnected = true
         onConnectionChange?(true)
@@ -94,12 +94,12 @@ final class WebSocketManager: ObservableObject {
     // MARK: - Auto-Reconnect
     private func scheduleReconnect() {
         reconnectTask?.cancel()
-        guard let url = targetURL else { return }
+        guard let request = targetRequest else { return }
         reconnectTask = Task { [weak self] in
             guard let self else { return }
             try? await Task.sleep(for: .seconds(GarudaConstants.wsReconnectDelay))
             guard !Task.isCancelled else { return }
-            self.openConnection(to: url)
+            self.openConnection(with: request)
         }
     }
 }

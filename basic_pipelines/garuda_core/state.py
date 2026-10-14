@@ -153,6 +153,7 @@ class Auth:
     admin_otp_user: str | None = None   # server-side stored username for OTP step 2
     admin_otp_ts: float = 0   # epoch when admin OTP was generated
     admin_otp_attempts: int = 0   # failed verify attempts; cleared on success or expiry
+    admin_otp_failures: list = field(default_factory=list)   # times of wrong admin codes, across codes; cleared on success
     forgot_otp_store: dict = field(default_factory=dict)   # username → {otp, ts, attempts}  (per-user, no race condition)
     user_forgot_otp: str | None = None   # test-facing alias: last generated forgot OTP string
     forgot_otp_user: str | None = None

@@ -383,3 +383,16 @@ def test_privacy_reports_when_no_camera_is_wired(client):
     test_client, ctx = client
     ctx.set_privacy = None
     assert test_client.post("/api/drishti/privacy", json={"on": True}).status_code == 503
+
+
+def test_a_non_admin_cannot_delete_or_switch_off_a_rule(client, context):
+    test_client, ctx = client
+    _, app = context
+    test_client.post("/api/drishti/devices", json=LAMP)
+    ctx.store.add(dict(RULE))
+    rule_id = ctx.store.rules[0]["id"]
+    user = TestClient(app)
+    user.cookies.set(drishti_auth.COOKIE_NAME, drishti_auth.create_session("guest", "user"))
+    assert user.post(f"/api/drishti/rules/{rule_id}/toggle").status_code == 403
+    assert user.delete(f"/api/drishti/rules/{rule_id}").status_code == 403
+    assert ctx.store.rules[0].get("enabled", True) is True
