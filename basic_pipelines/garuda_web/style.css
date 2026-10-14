@@ -3612,6 +3612,9 @@ input:-webkit-autofill:focus {
 .fb-submit:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
 /* Success state */
+/* The form's layout lives here, not inline: the reset after a send clears
+   the inline display, and the gaps went with it. */
+.fb-form-body { display: flex; flex-direction: column; gap: 14px; }
 .fb-success {
   display: none;
   flex-direction: column;

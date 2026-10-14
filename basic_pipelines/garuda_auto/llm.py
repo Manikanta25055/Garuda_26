@@ -134,7 +134,7 @@ class NimChat:
         raise error
 
     def chat(self, messages, *, tools=None, max_tokens=1024, temperature=0.2,
-             timeout=None, extra=None, hedge_after=None, on_text=None):
+             timeout=None, extra=None, hedge_after=None, on_text=None, keep_partial=True):
         """Return the first choice's message dict. Raises NimUnavailable.
 
         `extra` is merged into the request body (see NO_THINKING); a model
@@ -143,6 +143,9 @@ class NimChat:
         is streamed and each piece of text is handed to it as it arrives (a
         spoken reply starts on its first sentence); tool calls are put back
         together from their pieces, and the message is the same as without.
+        A stream that breaks after some text keeps that text (`keep_partial`,
+        for speech: what was said cannot be unsaid); otherwise on_text(None)
+        says "start again" and the next model is asked.
         """
         if not self.api_key:
             raise NimUnavailable("no NVIDIA NIM API key is configured")
@@ -182,13 +185,15 @@ class NimChat:
                     else f"the model service refused the request (HTTP {status})")
             try:
                 if on_text:
-                    payload = _read_stream(resp, on_text)
+                    payload = _read_stream(resp, on_text, keep_partial)
                 else:
                     payload = resp.json()
                 message = payload["choices"][0]["message"]
             except requests.exceptions.RequestException as exc:
                 last = f"{model}: {type(exc).__name__} while streaming"
                 log.warning("NIM %s stream broke: %s", model, type(exc).__name__)
+                if on_text and not keep_partial:
+                    on_text(None)
                 continue
             except (ValueError, KeyError, IndexError, TypeError):
                 last = f"{model}: malformed response"
@@ -224,12 +229,17 @@ def _close_quietly(future):
         pass
 
 
-def _read_stream(resp, on_text):
+def _read_stream(resp, on_text, keep_partial=True):
     """Read a streamed chat completion (server-sent events) into the payload
     a plain request returns, handing each piece of text to `on_text`."""
     content, calls, finish, usage, said = [], {}, None, None, False
     try:
-        for raw in resp.iter_lines(decode_unicode=True):
+        # Bytes, decoded here as UTF-8: an event stream names no charset, so
+        # requests would decode it as Latin-1, and "Here's" became "Hereâ" and
+        # two control characters (boxes on screen, nonsense in the voice).
+        for raw in resp.iter_lines():
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", "replace")
             if not raw or not raw.startswith("data:"):
                 continue
             data = raw[5:].strip()
@@ -255,7 +265,7 @@ def _read_stream(resp, on_text):
     except requests.exceptions.RequestException:
         # Broken after Narada began to speak: keep what was said rather than
         # start again on another model and repeat it.
-        if not said:
+        if not said or not keep_partial:
             raise
         finish = "error"
     finally:

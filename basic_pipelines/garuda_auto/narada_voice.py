@@ -23,20 +23,39 @@ import re
 import threading
 import time
 
+from ..narada_brain import guards
+
 log = logging.getLogger(__name__)
 
 TTS_MODEL = "eleven_v4_turbo"     # scripts/setup_narada_voice.py configures the engine with it
 INFO_TTL_S = 60                  # the info panel must not hammer the ElevenLabs API
 BINDING_TTL_S = 15 * 60          # longer than the 10-minute conversation cap
 UNKNOWN_REPLY = "This conversation was not started from Garuda. Please reopen Narada."
-# NIM usually answers in one to two seconds. Only past this point is a short
-# filler spoken first, the way a person says "hmm" while they think; any
-# sooner and the filler itself delays (and bills for) most answers.
-FILLER_AFTER_S = 2.2
-PLANNER_CHECK_S = 2.0
-PLANNER_LINE = "This one takes some building. Give me a moment."
-FILLERS = ("Mm, one sec.", "Sure, let me check.", "Okay, on it.", "Hmm, give me a moment.",
-           "Right, one moment.")
+# How ElevenLabs treats the reply stream, measured 2026-10-15 against a scratch
+# engine (the reason for every number below):
+# - After each chunk it waits the engine's cascade_timeout_seconds (now 15, was
+#   4) for the next. Past that it gives up on the attempt and sends the same
+#   transcript again (same event_id, which the SDK drops as a duplicate), and
+#   after two retries it ends the call: "Generating the LLM response took too
+#   long", the browser's "Server error". A blank chunk resets the wait and is
+#   never said, so a long silence is bridged with one every KEEPALIVE_S.
+# - It holds short text back until about a sentence's worth has come or the
+#   response ends: "Mm, one sec." alone was never heard while Narada thought.
+#   Each filler is a whole sentence of 50+ characters, which is said at once.
+# - A response ends at its final message; nothing sent after it is said. So a
+#   job that runs long is told once, the spoken turn ends, and the answer goes
+#   to the chat when it is ready (the page polls /api/narada/voice/turns).
+FILLER_AFTER_S = 1.8
+PLANNER_CHECK_S = 1.0
+KEEPALIVE_S = 5.0
+GIVE_UP_S = 11.0
+PLANNER_LINE = "This one takes some building, so I'll put it on your screen as soon as it's ready."
+LATER_LINE = "This is taking a little longer, so I'll put the answer on your screen when it's ready."
+FILLERS = ("Okay, give me a second, I'm just checking that for you.",
+           "Sure, let me look into that, it'll only take a moment.",
+           "Right, one moment while I pull that up for you.",
+           "Hmm, let me check on that, give me just a second.",
+           "Okay, I'm on it, just give me a moment to look.")
 
 
 def _spoken(text):
@@ -62,12 +81,15 @@ class NaradaVoice:
         self.voice_id = voice_id or ""
         self._info = None                  # (expires, dict)
         self._reply_fn = reply_fn
-        # Whether the brain can hand its answer over as it writes it.
+        # Whether the brain can hand its answer over as it writes it, and be
+        # stopped when the person talks over it.
         try:
-            params = inspect.signature(reply_fn).parameters.values()
-            self._streams = any(p.name == "on_text" or p.kind is p.VAR_KEYWORD for p in params)
+            params = list(inspect.signature(reply_fn).parameters.values())
+            anykw = any(p.kind is p.VAR_KEYWORD for p in params)
+            self._streams = anykw or any(p.name == "on_text" for p in params)
+            self._cancels = anykw or any(p.name == "cancel" for p in params)
         except (TypeError, ValueError):
-            self._streams = False          # (text, user, role, scope) -> dict
+            self._streams = self._cancels = False   # (text, user, role, scope) -> dict
         self._on_turn = on_turn            # (user, heard, said) -> None, for the logs
         self._clock = clock
         self._client = client
@@ -169,12 +191,14 @@ class NaradaVoice:
             return False
         return bool(live) and live.get("lane") == "planner"
 
-    async def reply_for(self, conversation_id, transcript, on_text=None, meta=None):
-        """Reply text for the latest user turn of one conversation.
+    async def reply_for(self, conversation_id, transcript, on_text=None, meta=None, cancel=None):
+        """What to say for the latest user turn of one conversation: the
+        spoken part of the answer. The whole answer is kept for the chat.
 
-        With `on_text`, the brain hands over the answer a sentence at a time
-        as it is written; meta["streamed"] is then whether the final answer
-        already went that way (so it is not said twice).
+        With `on_text`, the brain hands over the spoken part a sentence at a
+        time as it is written; meta["streamed"] is then whether it already
+        went that way (so it is not said twice). `cancel`, a threading.Event,
+        stops the brain at its next step when this turn is replaced.
         """
         heard = next((m.content for m in reversed(transcript) if m.role == "user"), "").strip()
         if not heard:
@@ -184,16 +208,22 @@ class NaradaVoice:
             log.warning("narada voice: transcript for unbound conversation %s", conversation_id)
             return UNKNOWN_REPLY
         user, role, scope = bound
+        kw = {}
+        if on_text and self._streams:
+            kw["on_text"] = on_text
+        if cancel is not None and self._cancels:
+            kw["cancel"] = cancel
         try:
-            if on_text and self._streams:
-                result = await asyncio.to_thread(self._reply_fn, heard, user, role, scope,
-                                                 on_text=on_text)
-            else:
-                result = await asyncio.to_thread(self._reply_fn, heard, user, role, scope)
-            said = _spoken(result.get("reply", ""))
+            result = await asyncio.to_thread(self._reply_fn, heard, user, role, scope, **kw)
+            if result.get("lane") == "cancelled":
+                return None                 # replaced by a newer turn: nothing to show
+            reply = result.get("reply", "")
+            # The agent has already split its answer into the spoken part and
+            # the shown one; anything else (a taught phrase) is split here.
+            said = _spoken(reply if "display_reply" in result else guards.split_spoken(reply)[0])
             if meta is not None:
                 meta["streamed"] = bool(result.get("streamed"))
-        except Exception as exc:
+        except Exception:
             log.exception("narada voice: reply failed")
             said = "Something went wrong. Please check the current state before trying again."
             result = {"reply": said}
@@ -202,7 +232,8 @@ class NaradaVoice:
         with self._lock:
             turns = self._turns.setdefault(conversation_id, [])
             turns.append({"id": turns[-1]["id"] + 1 if turns else 1, "heard": heard,
-                          "response": result.get("display_reply") or result.get("reply") or "Done.",
+                          "response": result.get("display_reply") or guards.strip_more(result.get("reply"))
+                          or "Done.",
                           **{k: result[k] for k in ("lane", "actions", "proposal", "memory", "offer",
                                                    "observation", "confirm", "artifacts", "steps",
                                                    "images", "planner", "route", "model") if k in result}})
@@ -233,54 +264,80 @@ class NaradaVoice:
         await session.run()
 
     async def speak(self, conversation_id, transcript):
-        """Stream the reply as it is written: each sentence is spoken as soon
-        as the brain finishes it. A filler covers a slow start, the planner's
-        line a long job; the final answer is said only if it was not streamed.
-        An interruption cancels this generator (the SDK does, on the next
-        transcript), which stops the rest of the answer at once."""
+        """Say the spoken part of the answer as it is written, a sentence at a
+        time, and end the turn as soon as it is said: the details are still
+        being written, for the chat. A filler covers a slow start, a blank
+        chunk keeps ElevenLabs waiting through tool calls, and a job that runs
+        long is told once and handed to the screen. An interruption cancels
+        this generator (the SDK does, on the next transcript), which stops the
+        speech at once and the brain at its next step."""
         loop = asyncio.get_running_loop()
         queue = asyncio.Queue()
         meta = {}
+        cancel = threading.Event()
 
-        def heard(sentence):                       # from the brain's thread
+        def heard(sentence):                       # from the brain's thread; None = spoken part over
             loop.call_soon_threadsafe(queue.put_nowait, sentence)
 
-        task = asyncio.ensure_future(self.reply_for(conversation_id, transcript,
-                                                    on_text=heard, meta=meta))
-        started, spoke, filled, told = loop.time(), False, False, False
+        task = asyncio.ensure_future(self.reply_for(conversation_id, transcript, on_text=heard,
+                                                    meta=meta, cancel=cancel))
+        started = last_out = last_said = loop.time()
+        spoke = filled = handed_over = False
         getter = None
         try:
             while True:
+                now = loop.time()
+                if not (spoke or filled):
+                    wait_s = FILLER_AFTER_S - (now - started)
+                else:
+                    wait_s = min(PLANNER_CHECK_S, KEEPALIVE_S - (now - last_out))
                 getter = asyncio.ensure_future(queue.get())
-                wait_s = (max(0.0, FILLER_AFTER_S - (loop.time() - started))
-                          if not (spoke or filled) else PLANNER_CHECK_S)
-                done, _ = await asyncio.wait({getter, task}, timeout=wait_s,
+                done, _ = await asyncio.wait({getter, task}, timeout=max(0.0, wait_s),
                                              return_when=asyncio.FIRST_COMPLETED)
+                now = loop.time()
                 if getter in done:
+                    sentence = getter.result()
+                    if sentence is None:
+                        handed_over = not task.done()
+                        break                       # the spoken part is over; the rest is for the chat
                     spoke = True
-                    yield getter.result()
+                    last_out = last_said = now
+                    yield sentence
                     continue
                 getter.cancel()
                 if task in done:
-                    while not queue.empty():         # said before the brain returned
+                    while not queue.empty():        # said before the brain returned
+                        sentence = queue.get_nowait()
+                        if sentence is None:
+                            break
                         spoke = True
-                        yield queue.get_nowait()
+                        yield sentence
                     break
                 if not spoke and not filled:
                     filled = True
+                    last_out = last_said = now
                     yield random.choice(FILLERS) + " "
-                elif not told and self._planning(conversation_id):
-                    # A request that goes to the planner can take a minute. Said
-                    # once, so the silence that follows is understood; the steps
-                    # show on the screen (the page asks /api/narada/progress).
-                    told = True
-                    yield PLANNER_LINE + " "
-            said = task.result()
-            if not meta.get("streamed"):
-                for sentence in _sentences(said or ""):
-                    yield sentence
+                elif self._planning(conversation_id):
+                    # A request that goes to the planner can take minutes; its
+                    # steps show on the screen (the page asks /api/narada/progress).
+                    handed_over = True
+                    yield PLANNER_LINE
+                    break
+                elif now - last_said >= GIVE_UP_S:
+                    handed_over = True
+                    yield LATER_LINE
+                    break
+                elif now - last_out >= KEEPALIVE_S:
+                    last_out = now
+                    yield " "
+            if not handed_over and task.done():
+                said = task.result()
+                if said and not meta.get("streamed"):
+                    for sentence in _sentences(said):
+                        yield sentence
         finally:
             if getter is not None and not getter.done():
                 getter.cancel()
-            if not task.done():
-                task.cancel()      # interrupted: a newer turn replaced this one
+            if not task.done() and not handed_over:
+                cancel.set()       # interrupted: a newer turn replaced this one
+                task.cancel()

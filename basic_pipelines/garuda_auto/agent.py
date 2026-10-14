@@ -200,11 +200,18 @@ class HomeAgent:
     # ── entry point ───────────────────────────────────────────────────────────
 
     def handle(self, text, *, user="", role="user", scope="home", voice=False, progress=None,
-               on_text=None):
+               on_text=None, cancel=None, on_draft=None):
         """`progress(event)` is told what is happening while the turn runs: which
         lane and model took it, each step as it starts and ends. `on_text`, for
-        a spoken turn, is handed the answer a sentence at a time as the model
-        writes it; result["streamed"] says the final answer went that way."""
+        a spoken turn, is handed the spoken part of the answer a sentence at a
+        time as the model writes it, then None once that part is over (the rest
+        is for the chat only); result["streamed"] says the spoken part went that
+        way. `cancel` (a threading.Event) set by the caller stops the turn at
+        its next step, before any further model call or tool: a voice turn the
+        person talked over must not go on to switch something. `on_draft`, for
+        a typed turn, is handed the answer's text as the model writes it, and
+        None when a draft is dropped (a round that turned into tool calls, a
+        model that broke off); the checked reply replaces the draft."""
         text = (text or "").strip()[:MAX_INPUT_CHARS]
         if not text:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
@@ -216,6 +223,8 @@ class HomeAgent:
         self._turn.steps = []
         self._turn.progress = progress
         self._turn.on_text = on_text if voice else None
+        self._turn.cancel = cancel
+        self._turn.on_draft = None if voice else on_draft
         self._turn.voice = voice
         self._turn.user = user
         self._turn.in_planner = False
@@ -236,6 +245,10 @@ class HomeAgent:
             try:
                 result = self._agent(text, user, role, scope=scope, voice=voice,
                                      planner=self._wants_planner(route))
+            except _Cancelled:
+                # Replaced by a newer turn: nothing more is done, said or remembered.
+                self._live.pop(user, None)
+                return {"reply": "", "lane": "cancelled", "actions": list(self._turn.actions)}
             except NimUnavailable as exc:
                 result = self._after_failure(text, route, user, role, scope, voice, str(exc))
             finally:
@@ -443,8 +456,11 @@ class HomeAgent:
             system += persona.VOICE_STYLE
         chat = self.planner if planner else self.chat
         say = getattr(self._turn, "on_text", None)
-        speech = (_Speech(say, lambda t: self.brain.check_reply(t, voice=True))
+        cancel = getattr(self._turn, "cancel", None)
+        speech = (_Speech(say, lambda t: self.brain.check_reply(t, voice=True), cancel=cancel)
                   if say and not planner else None)
+        draft_to = getattr(self._turn, "on_draft", None)
+        draft = _Draft(draft_to) if draft_to and not speech and not planner else None
         tools = self._tools(planner, role)
         if scope == "security":
             tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]
@@ -469,6 +485,7 @@ class HomeAgent:
                     "injection": self._turn.injected}
 
         for _ in range(PLANNER_ROUNDS if planner else MAX_ROUNDS):
+            _check(cancel)
             if planner:
                 left = deadline - time.monotonic()
                 if left < 5:
@@ -477,28 +494,36 @@ class HomeAgent:
                                     temperature=0.2, timeout=min(PLANNER_TIMEOUT_S, left),
                                     extra=PLANNER_EXTRA)
             else:
-                if speech:
-                    speech.round_spoken = False
+                if draft:
+                    draft.reset()               # a new round writes a new draft
                 message = chat.chat(messages, tools=tools,
                                     max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
                                     temperature=0.3,
                                     timeout=VOICE_TIMEOUT_S if voice else TEXT_TIMEOUT_S,
                                     extra=NO_THINKING, hedge_after=HEDGE_AFTER_S,
-                                    on_text=speech.feed if speech else None)
-                if speech:
-                    speech.flush()             # the last sentence, or a "let me check" before tools
+                                    on_text=speech.feed if speech else draft.feed if draft else None,
+                                    keep_partial=draft is None)
             calls = message.get("tool_calls") or []
+            if speech:
+                # The last sentence, or a "let me check" before tools. A final
+                # answer ends the spoken part even if it never reached [[more]].
+                speech.flush(final=not calls)
             if not calls:
-                display_reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.")
-                reply = guards.fit_spoken(display_reply) if voice else display_reply
-                if self._turn.injected and not voice:
-                    # Said every time: a turn that read an injected instruction and
+                written = self.brain.check_reply((message.get("content") or "").strip() or "Done.")
+                spoken, display_reply = guards.split_spoken(written)
+                if self._turn.injected:
+                    # Shown every time: a turn that read an injected instruction and
                     # told nobody is how a poisoned name stays in the house unnoticed.
-                    reply += "\n\n" + guards.injection_note(self._turn.injection_text)
+                    note = guards.injection_note(self._turn.injection_text)
+                    # In the chat only: a spoken reply is not lengthened by it.
+                    display_reply += "\n\n" + note
+                reply = spoken if voice else display_reply
+                # Remembered whole: a follow-up ("and the third one?") refers to
+                # what was shown, not only to what was said.
                 return {**finish(reply), "display_reply": display_reply,
-                        "streamed": bool(speech and speech.round_spoken),
+                        "streamed": bool(speech and speech.spoken),
                         "_turn": _for_memory(messages[first:])
-                        + [{"role": "assistant", "content": reply}]}
+                        + [{"role": "assistant", "content": display_reply}]}
             if not planner and any(c.get("function", {}).get("name") == "hand_to_planner"
                                    or c.get("function", {}).get("name") not in offered
                                    for c in calls):
@@ -516,6 +541,7 @@ class HomeAgent:
             messages.append({"role": "assistant", "content": message.get("content") or "",
                              "tool_calls": calls})
             for call in calls:
+                _check(cancel)
                 fn = call.get("function", {})
                 try:
                     args = json.loads(fn.get("arguments") or "{}")
@@ -898,38 +924,139 @@ def _for_memory(messages):
     return out
 
 
-class _Speech:
-    """Text streamed from the model, said a sentence at a time.
+class _Cancelled(Exception):
+    """The turn was replaced by a newer one (see handle's `cancel`)."""
 
-    Each sentence goes through the same check as a whole reply (an answer
-    that recites the instructions is replaced; lists and markdown become
-    speech) before it is handed on, so streaming skips no guard. A line break
-    ends one (list items); so does a stop after a number when a capital
-    follows ("at 04.11. Then"), but not a list's "3. was" mid-line.
+
+def _check(cancel):
+    if cancel is not None and cancel.is_set():
+        raise _Cancelled()
+
+
+class _Draft:
+    """A typed answer shown as the model writes it.
+
+    Pieces go straight to the page, except that the instruction-leak guard
+    reads the draft as it grows: one verbatim instruction sentence can be an
+    honest answer (guards.protect), the second ends the draft, and the
+    checked reply that follows replaces it.
     """
-    _END = re.compile(r"(?<!\d)[.!?]+[\"')\]]*\s+|[.!?]+[\"')\]]*\s+(?=[A-Z\"'(])|\n+")
 
-    def __init__(self, say, check):
-        self.say, self.check, self.buf = say, check, ""
-        self.round_spoken = False
+    def __init__(self, to):
+        self.to, self.text, self.stopped = to, "", False
+
+    def reset(self):
+        if self.text or self.stopped:
+            self.to(None)
+        self.text, self.stopped = "", False
 
     def feed(self, piece):
-        self.buf += piece
-        while True:
-            m = self._END.search(self.buf)
-            if not m:
-                return
-            head, self.buf = self.buf[:m.end()], self.buf[m.end():]
-            self._out(head)
+        if piece is None:                  # the model broke off; another one starts over
+            self.reset()
+            return
+        if self.stopped:
+            return
+        self.text += piece
+        if guards.leaked_sentences(self.text, persona.protected_text()) >= guards._LEAK_SENTENCES:
+            self.stopped = True
+            self.to(None)
+            return
+        self.to(piece)
 
-    def flush(self):
+
+class _Speech:
+    """The spoken part of an answer, streamed from the model a sentence at a time.
+
+    Each sentence goes through the same check as a whole reply (lists and
+    markdown become speech) before it is handed on, and the instruction-leak
+    guard reads everything said so far, so streaming skips no guard. A line
+    break ends a sentence (list items); so does a stop after a number when a
+    capital follows ("at 04.11. Then"), but not a list's "3. was" mid-line.
+
+    Only the opening is said (guards.split_spoken): speech ends at the
+    model's [[more]] marker, or after a few sentences without one, and then
+    `say(None)` tells the caller the spoken part is over. The rest of the
+    answer is still written, for the chat.
+    """
+    _END = re.compile(r"(?<!\d)[.!?]+[\"')\]]*\s+|[.!?]+[\"')\]]*\s+(?=[A-Z\"'(])|\n+")
+    _MARK = guards.MORE
+
+    def __init__(self, say, check, cancel=None):
+        self.say, self.check, self.cancel, self.buf = say, check, cancel, ""
+        self.spoken = ""                   # everything said, for the leak guard
+        self.sentences = 0
+        self.done = False
+
+    def feed(self, piece):
+        _check(self.cancel)                # stops the model's stream mid-answer
+        if self.done:
+            return
+        self.buf += piece
+        at = self.buf.find(self._MARK)
+        if at >= 0:
+            head, rest = self.buf[:at], self.buf[at + len(self._MARK):]
+            self.buf = ""
+            self._sentences(head + "\n")
+            if self.spoken:
+                self._finish(cut=False)
+                return
+            # A marker before anything worth saying: the details are all there
+            # is, so their opening is said (capped like an answer without one).
+            self.buf = self._sentences(rest)
+            return
+        # Hold back what may be the start of the marker ("[[mo").
+        keep = next((n for n in range(len(self._MARK) - 1, 0, -1)
+                     if self.buf.endswith(self._MARK[:n])), 0)
+        ready, held = (self.buf[:-keep], self.buf[-keep:]) if keep else (self.buf, "")
+        self.buf = self._sentences(ready) + held
+
+    def flush(self, final=False):
+        if self.done:
+            return
         head, self.buf = self.buf, ""
         self._out(head)
+        if final:
+            self._finish(cut=False)
+
+    def _sentences(self, text):
+        """Say each whole sentence in `text`; return the unfinished rest."""
+        while not self.done:
+            m = self._END.search(text)
+            if not m:
+                return text
+            head, text = text[:m.end()], text[m.end():]
+            self._out(head)
+        return ""
+
+    def _finish(self, cut):
+        if self.done:
+            return
+        self.done = True
+        if cut:
+            self.say(guards.ON_SCREEN + " ")
+        self.say(None)
 
     def _out(self, text):
-        if not text.strip():
+        if self.done or not text.strip():
+            return
+        if self.spoken and guards.is_structure(text):
+            self._finish(cut=True)             # a list or table: for the eye, not the ear
             return
         clean = (self.check(text) or "").strip()
-        if clean:
-            self.round_spoken = True
-            self.say(clean + " ")
+        if not clean:
+            return
+        if guards.leaked_sentences(self.spoken + " " + clean, persona.protected_text()) \
+                >= guards._LEAK_SENTENCES:
+            # Sentence by sentence each piece looked harmless; together they
+            # recite the instructions. Stop here, as check_reply would have.
+            self.spoken += " " + guards.LEAK_REPLY
+            self.say(guards.LEAK_REPLY + " ")
+            self._finish(cut=False)
+            return
+        if self.sentences >= guards.SPOKEN_SENTENCES or (
+                self.sentences and len(self.spoken) + len(clean) > guards.SPOKEN_CHARS):
+            self._finish(cut=True)
+            return
+        self.sentences += 1
+        self.spoken += " " + clean
+        self.say(clean + " ")

@@ -141,15 +141,18 @@ def test_a_quick_answer_is_spoken_without_a_filler():
     assert _collect(v.speak("conv_1", [msg("user", "fan on")])) == ["Done, the fan's on."]
 
 
-def test_a_long_answer_is_streamed_whole_a_sentence_at_a_time():
-    # Speech starts on the first sentence, and the whole answer is said:
-    # nothing is cut (the owner's call), and "3." stays in its sentence.
+def test_a_long_answer_is_said_as_its_opening_and_points_at_the_screen():
+    # Only the opening is said, so a long answer never keeps the person
+    # waiting through all of it; the chat shows the whole thing. "3." stays
+    # in its sentence.
     reply = ("There were three things. First, tamper alerts at 04.11 on 13 Oct. "
              "Then 206 knife detections! Also item 3. was a door opening.")
     v = voice(reply=lambda *a: {"reply": reply})
     v.issue_token("mani", "user", "home")
     chunks = _collect(v.speak("conv_1", [msg("user", "what happened?")]))
-    assert len(chunks) == 4 and "".join(chunks) == reply
+    assert chunks == ["There were three things. ", "First, tamper alerts at 04.11 on 13 Oct. ",
+                      "Then 206 knife detections! ", "The rest is on your screen."]
+    assert v.turns_for("conv_1", "mani", "user", "home")[0]["response"] == reply
 
 
 def test_a_slow_answer_gets_a_filler_first(monkeypatch):
@@ -166,17 +169,110 @@ def test_a_slow_answer_gets_a_filler_first(monkeypatch):
     assert chunks[1] == "All quiet at home."
 
 
-def test_a_turn_that_goes_to_the_planner_says_so_once(monkeypatch):
+def test_a_turn_that_goes_to_the_planner_says_so_and_hands_the_answer_to_the_screen(monkeypatch):
     import time as _time
     monkeypatch.setattr(narada_voice, "FILLER_AFTER_S", 0.02)
     monkeypatch.setattr(narada_voice, "PLANNER_CHECK_S", 0.05)
 
     def slow(*a):
         _time.sleep(0.4)
-        return {"reply": "Your shortcut is waiting on the screen."}
+        return {"reply": "Your shortcut is waiting on the screen.",
+                "display_reply": "Your shortcut **Bedtime** is waiting on the screen."}
     v = voice(reply=slow)
     v.live_fn = lambda user: {"lane": "planner", "step": "create_shortcut"} if user == "mani" else None
     v.issue_token("mani", "admin", "home")
-    chunks = _collect(v.speak("conv_1", [msg("user", "make a bedtime routine")]))
-    assert [c.strip() for c in chunks[1:]] == [narada_voice.PLANNER_LINE,
-                                               "Your shortcut is waiting on the screen."]
+
+    async def run():
+        chunks = [c async for c in v.speak("conv_1", [msg("user", "make a bedtime routine")])]
+        early = v.turns_for("conv_1", "mani", "admin", "home")
+        await asyncio.sleep(0.6)            # the job goes on after the spoken turn ended
+        return chunks, early, v.turns_for("conv_1", "mani", "admin", "home")
+    chunks, early, later = asyncio.run(run())
+    assert chunks[0].strip() in narada_voice.FILLERS and chunks[1:] == [narada_voice.PLANNER_LINE]
+    assert early == [] and later[0]["response"] == "Your shortcut **Bedtime** is waiting on the screen."
+
+def test_the_spoken_turn_ends_with_its_opening_while_the_details_are_still_written():
+    import threading
+    import time as _time
+    finished = threading.Event()
+
+    def brain(text, user, role, scope, on_text=None, cancel=None):
+        on_text("Two things stood out today. ")
+        on_text(None)                       # the spoken part is over
+        _time.sleep(0.4)                    # the details are still being written
+        finished.set()
+        return {"reply": "Two things stood out today.", "streamed": True,
+                "display_reply": "Two things stood out today.\n\n1. Tamper\n2. Knife"}
+    v = voice(reply=brain)
+    v.issue_token("mani", "user", "home")
+
+    async def run():
+        t0 = asyncio.get_running_loop().time()
+        chunks = [c async for c in v.speak("conv_1", [msg("user", "news?")])]
+        took = asyncio.get_running_loop().time() - t0
+        await asyncio.sleep(0.6)
+        return chunks, took
+    chunks, took = asyncio.run(run())
+    assert chunks == ["Two things stood out today. "] and took < 0.3
+    assert finished.is_set()                # not cancelled when the speech ended
+    assert v.turns_for("conv_1", "mani", "user", "home")[0]["response"].endswith("2. Knife")
+
+
+def test_an_interrupted_turn_tells_the_brain_to_stop():
+    import threading
+    import time as _time
+    seen = {}
+    started = threading.Event()
+
+    def brain(text, user, role, scope, on_text=None, cancel=None):
+        seen["cancel"] = cancel
+        on_text("Let me check that. ")
+        started.set()
+        for _ in range(50):
+            if cancel.is_set():
+                return {"reply": "", "lane": "cancelled", "actions": []}
+            _time.sleep(0.02)
+        return {"reply": "Too late.", "streamed": True}
+    turns = []
+    v = voice(reply=brain, turns=turns)
+    v.issue_token("mani", "user", "home")
+
+    async def run():
+        gen = v.speak("conv_1", [msg("user", "lamp on")])
+        first = await gen.__anext__()
+        await gen.aclose()                  # what the SDK does on the next transcript
+        await asyncio.sleep(0.3)
+        return first
+    assert asyncio.run(run()) == "Let me check that. "
+    assert seen["cancel"].is_set()
+    assert turns == [] and v.turns_for("conv_1", "mani", "user", "home") == []
+
+
+def test_a_long_silence_is_bridged_and_then_handed_to_the_screen(monkeypatch):
+    import time as _time
+    monkeypatch.setattr(narada_voice, "FILLER_AFTER_S", 0.02)
+    monkeypatch.setattr(narada_voice, "PLANNER_CHECK_S", 0.02)
+    monkeypatch.setattr(narada_voice, "KEEPALIVE_S", 0.1)
+    monkeypatch.setattr(narada_voice, "GIVE_UP_S", 0.35)
+
+    def slow(*a, **k):
+        _time.sleep(0.8)
+        return {"reply": "Here it is.", "display_reply": "Here it is, in full."}
+    v = voice(reply=slow)
+    v.issue_token("mani", "user", "home")
+
+    async def run():
+        chunks = [c async for c in v.speak("conv_1", [msg("user", "a big question")])]
+        await asyncio.sleep(0.8)
+        return chunks
+    chunks = asyncio.run(run())
+    assert chunks[0].strip() in narada_voice.FILLERS and chunks[-1] == narada_voice.LATER_LINE
+    assert set(chunks[1:-1]) == {" "} and len(chunks[1:-1]) >= 2   # blank chunks keep ElevenLabs waiting
+    assert v.turns_for("conv_1", "mani", "user", "home")[0]["response"] == "Here it is, in full."
+
+
+def test_every_filler_is_long_enough_to_be_said_at_once():
+    # ElevenLabs holds back text shorter than about a sentence; "Mm, one sec."
+    # was never heard. 50+ characters measured as said at once.
+    assert all(len(f) >= 45 for f in narada_voice.FILLERS)
+    assert len(narada_voice.PLANNER_LINE) >= 45 and len(narada_voice.LATER_LINE) >= 45

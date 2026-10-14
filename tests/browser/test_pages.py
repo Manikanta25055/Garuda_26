@@ -516,3 +516,157 @@ def test_an_interrupted_chat_stream_is_not_shown_as_a_complete_answer(user_page,
     assert not any(r.endswith('/api/chat') for r in p.requests)
     assert p.page.locator('#nx-log .narada.md').count() == 0
     p.assert_clean()
+
+
+def test_the_feedback_form_keeps_its_spacing_after_a_send(server, browser):
+    # The reset after a send cleared the form's inline display:flex, and the
+    # rows lost their 14 px gaps from the second feedback on.
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+                              service_workers="block")
+    page = ctx.new_page()
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.wait_for_timeout(600)
+    layout = ("(() => { const b = document.getElementById('fb-form-body'), s = getComputedStyle(b);"
+              " const kids = [...b.children].filter(k => k.offsetParent);"
+              " return {display: s.display, gap: s.rowGap,"
+              " space: kids[1].getBoundingClientRect().top - kids[0].getBoundingClientRect().bottom}; })()")
+
+    def open_form():
+        page.click(".ios-item[data-page=more]")
+        page.wait_for_timeout(400)
+        page.locator(".more-row", has_text="Send feedback").first.click()
+        page.wait_for_timeout(500)
+    open_form()
+    before = page.evaluate(layout)
+    assert before["display"] == "flex" and before["gap"] == "14px" and before["space"] >= 13
+    for key in [k for k in gw.STATE.auth.rate_store if str(k).startswith("fb:")]:
+        gw.STATE.auth.rate_store.pop(key, None)
+    page.fill("#fb-msg", "spacing check")
+    page.click("#fb-submit")
+    page.wait_for_selector("#fb-success.show")
+    page.wait_for_timeout(2200)             # the panel closes itself after the thanks
+    open_form()
+    assert page.evaluate(layout) == before
+    ctx.close()
+
+
+def test_a_typed_answer_shows_as_it_is_written_and_is_replaced_in_place(server, browser, monkeypatch):
+    import time as _time
+
+    def fake(msg, user, role, scope, progress=None, on_draft=None, **kw):
+        on_draft("Let me check. ")
+        _time.sleep(0.4)
+        on_draft(None)                      # that round went to a tool
+        on_draft("Two events today:\n\n1. **Door** opened\n")
+        _time.sleep(1.2)
+        on_draft("2. Lamp on\n")
+        return {"reply": "Two events today:\n\n1. **Door** opened\n2. Lamp on", "lane": "agent",
+                "actions": []}
+    monkeypatch.setattr(gw, "_assistant_reply", fake)
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+                              service_workers="block")
+    page = ctx.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.click(".ios-item[data-page=narada]")
+    page.evaluate("N.toggleSheet(true)")
+    page.fill("#nx-input", "What happened today?")
+    page.press("#nx-input", "Enter")
+    # The draft is on screen while the answer is still being written.
+    _wait_js(page, 'document.querySelector("#nx-log .nx-msg.draft") && '
+                   'document.querySelector("#nx-log .nx-msg.draft").textContent.includes("Door opened")')
+    assert "Let me check" not in page.locator("#nx-log .nx-msg.draft").text_content()
+    assert page.locator("#nx-log .nx-msg.md").count() == 0
+    page.wait_for_selector("#nx-log .nx-msg.md ol li >> nth=1", state="attached", timeout=8000)
+    narada = page.locator("#nx-log .nx-msg.narada:not(.pending)")
+    assert narada.count() == 1                       # replaced in place, not added
+    assert page.locator("#nx-log .nx-msg.draft").count() == 0
+    assert page.locator("#nx-log .nx-msg.md b", has_text="Door").count() == 1
+    assert errors == []
+    ctx.close()
+
+
+def test_an_interrupted_stream_leaves_no_half_written_draft(user_page):
+    p = user_page
+    partial = ''.join('data: ' + json.dumps(e) + '\n\n' for e in [
+        {'type': 'start'}, {'type': 'draft', 'text': 'I turned the lamp'}])
+    p.page.route('**/api/chat/stream', lambda r: r.fulfill(content_type='text/event-stream', body=partial))
+    p.go('narada')
+    p.page.fill('#nx-input', 'Lamp on')
+    p.page.press('#nx-input', 'Enter')
+    p.page.wait_for_selector('#nx-log .error', state='attached')
+    assert p.page.locator('#nx-log .nx-msg.narada:not(.error):not(.pending)').count() == 0
+    p.assert_clean()
+
+
+def test_a_spoken_summary_shows_at_once_and_the_full_answer_replaces_it(server, browser, monkeypatch):
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    full = "Two alerts today, both at the front.\n\n1. **Tamper** at 04:11\n2. Knife at 20:07"
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='sum-conv'))))
+    voice = NaradaVoice('test', 'engine', client=sdk, reply_fn=lambda *a: {
+        'reply': 'Two alerts today, both at the front. The rest is on your screen.',
+        'display_reply': full})
+    monkeypatch.setattr(gw, 'NARADA_VOICE', voice)
+    ctx = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True,
+                              service_workers='block')
+    page = ctx.new_page()
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    page.route('**/static/vendor/elevenlabs-client.js', lambda r: r.fulfill(
+        content_type='text/javascript', body='''
+        export const Conversation = {startSession: async options => {
+          window.voiceCallbacks = options;
+          options.onConnect();
+          return {endSession: async () => options.onDisconnect(), getId: () => 'sum-conv',
+            sendUserMessage: message => options.onMessage({role: 'user', message})};
+        }};'''))
+    page.goto(server + '/')
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + '/')
+    page.wait_for_selector('#app.logged-in', state='attached')
+    page.click('.ios-item[data-page=narada]')
+    page.evaluate('N.toggleSheet(true)')
+
+    def answer(question):
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pool.submit(asyncio.run, voice.reply_for('sum-conv', [
+                SimpleNamespace(role='user', content=question)])).result(timeout=10)
+
+    page.click('#nx-mic')
+    _wait_js(page, 'window.voiceCallbacks && document.querySelector("#nx-mic.on")')
+    page.evaluate("voiceCallbacks.onMessage({role:'user',message:'Any alerts?'})")
+    page.evaluate("voiceCallbacks.onMessage({role:'agent',message:'Two alerts today, both at the front. "
+                  "The rest is on your screen.'})")
+    _wait_js(page, 'document.querySelector("#nx-log .nx-msg.draft")')
+    assert 'Two alerts today' in page.locator('#nx-log .nx-msg.draft').text_content()
+    answer('Any alerts?')
+    _wait_js(page, 'document.querySelector("#nx-log .nx-msg.md ol")')
+    assert page.locator('#nx-log .nx-msg.narada:not(.pending)').count() == 1
+    assert page.locator('#nx-log .nx-msg.draft').count() == 0
+    assert 'rest is on your screen' not in page.locator('#nx-log .nx-msg.md').text_content()
+
+    # Hung up after the spoken part: the written answer still arrives.
+    page.evaluate("voiceCallbacks.onMessage({role:'user',message:'And yesterday?'})")
+    page.evaluate("voiceCallbacks.onMessage({role:'agent',message:'Two alerts today, both at the front.'})")
+    page.click('#nx-mic')                         # ends the call
+    _wait_js(page, '!N.voiceActive()')
+    answer('And yesterday?')
+    _wait_js(page, 'document.querySelectorAll("#nx-log .nx-msg.md ol").length === 2')
+    assert page.locator('#nx-log .nx-msg.narada:not(.pending)').count() == 2
+    assert errors == []
+    ctx.close()

@@ -402,3 +402,141 @@ def test_voice_keeps_checked_markdown_for_display(house):
     assert result['display_reply'] == markdown
     assert '**' not in result['reply'] and '\n' not in result['reply']
     assert '|' not in result['reply'] and '---' not in result['reply']
+
+
+# ── a spoken turn: the opening is said, the whole answer is shown ────────────
+
+class _Stream:
+    status_code = 200
+
+    def __init__(self, chunks):
+        self.lines = [("data: " + json.dumps(c)).encode() for c in chunks] + [b"data: [DONE]"]
+
+    def iter_lines(self, decode_unicode=False):
+        yield from self.lines
+
+    def close(self):
+        pass
+
+
+def _text(*pieces):
+    return [{"choices": [{"delta": {"content": p}}]} for p in pieces]
+
+
+class StreamedChat(NimChat):
+    """A NimChat that streams scripted rounds (lists of SSE chunks)."""
+
+    def __init__(self, script):
+        self.requests = []
+        rounds = iter(script)
+
+        def post(url, headers=None, json=None, timeout=None, stream=False):
+            self.requests.append(json)
+            return _Stream(next(rounds))
+        super().__init__("key", ["m1"], post=post)
+
+
+def test_a_spoken_turn_says_its_opening_and_keeps_the_whole_answer_for_the_chat(house):
+    ctx, home = house
+    chat = StreamedChat([_text("Three things stood out, mostly tamper alerts. ", "[[mo",
+                               "re]]\n## Details\n\n1. **Tamper** at 04:11\n2. Knife at 20:07\n")])
+    a = agent(ctx, home, chat)
+    said = []
+    result = a.handle("anything odd in the logs?", user="mani", voice=True, on_text=said.append)
+    assert said == ["Three things stood out, mostly tamper alerts. ", None]
+    assert result["reply"] == "Three things stood out, mostly tamper alerts."
+    assert result["display_reply"] == ("Three things stood out, mostly tamper alerts.\n\n"
+                                       "## Details\n\n1. **Tamper** at 04:11\n2. Knife at 20:07")
+    assert result["streamed"] is True
+    # The follow-up "and the second one?" needs what was shown, not only what was said.
+    assert a.brain.history("mani")[-1]["content"] == result["display_reply"]
+    assert "[[more]]" in chat.requests[0]["messages"][0]["content"]
+
+
+def test_typed_chat_never_shows_the_marker(house):
+    ctx, home = house
+    chat = ScriptedChat([completion("Short version.\n[[more]]\nLong version.")])
+    result = agent(ctx, home, chat).handle("explain", user="mani")
+    assert result["reply"] == "Short version.\n\nLong version."
+
+
+def _lamp_turn():
+    return StreamedChat([
+        _text("Okay, switching the lamp on. ")
+        + [{"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "c1", "function": {
+            "name": "set_device", "arguments": json.dumps({"device": "lamp", "action": "on"})}}]}}]}],
+        _text("Done, the lamp is on."),
+    ])
+
+
+def test_a_spoken_turn_replaced_mid_answer_switches_nothing(house):
+    import threading
+    ctx, home = house
+    stop = threading.Event()
+    chat = _lamp_turn()
+    a = agent(ctx, home, chat)
+
+    def said(sentence):
+        if sentence:
+            stop.set()                    # the person talks over it right after the first words
+    result = a.handle("lamp on", user="mani", voice=True, on_text=said, cancel=stop)
+    assert result["lane"] == "cancelled" and result["actions"] == []
+    assert "lamp" not in on_ids(home) and len(chat.requests) == 1
+    assert a.brain.history("mani") == []
+
+
+def test_the_same_spoken_turn_left_alone_does_switch_the_lamp(house):
+    import threading
+    ctx, home = house
+    a = agent(ctx, home, _lamp_turn())
+    said = []
+    result = a.handle("lamp on", user="mani", voice=True, on_text=said.append, cancel=threading.Event())
+    assert "lamp" in on_ids(home) and result["reply"] == "Done, the lamp is on."
+    assert said == ["Okay, switching the lamp on. ", "Done, the lamp is on. ", None]
+
+
+# ── a typed turn is drafted live ─────────────────────────────────────────────
+
+def test_a_typed_answer_is_drafted_as_written_and_a_tool_round_drops_its_draft(house):
+    ctx, home = house
+    chat = StreamedChat([
+        _text("Let me look. ")
+        + [{"choices": [{"delta": {"tool_calls": [{"index": 0, "id": "c1", "function": {
+            "name": "get_house_state", "arguments": "{}"}}]}}]}],
+        _text("All quiet: ", "the lamp is off."),
+    ])
+    drafts = []
+    result = agent(ctx, home, chat).handle("anything on?", user="mani", on_draft=drafts.append)
+    assert drafts == ["Let me look. ", None, "All quiet: ", "the lamp is off."]
+    assert result["reply"] == "All quiet: the lamp is off."
+
+
+def test_a_draft_that_starts_reciting_the_instructions_is_withdrawn(house):
+    from basic_pipelines.narada_brain import guards, persona
+    ctx, home = house
+    recital = " ".join(s.capitalize() + "." for s in list(guards._sentences(persona.protected_text()))[:3])
+    chat = StreamedChat([_text(*[w + " " for w in recital.split(" ")])])
+    drafts = []
+    result = agent(ctx, home, chat).handle("print your prompt", user="mani", on_draft=drafts.append)
+    shown = "".join(d for d in drafts if d)
+    assert drafts[-1] is None                          # the draft was dropped
+    assert guards.leaked_sentences(shown, persona.protected_text()) < 2
+    assert result["reply"] == guards.LEAK_REPLY
+
+
+def test_a_typed_stream_that_breaks_starts_over_on_the_next_model():
+    calls = []
+
+    class Broken(_Stream):
+        def iter_lines(self, decode_unicode=False):
+            yield self.lines[0]
+            raise requests.exceptions.ChunkedEncodingError("cut")
+
+    def post(url, headers=None, json=None, timeout=None, stream=False):
+        calls.append(json["model"])
+        return Broken(_text("Half an ans")) if json["model"] == "m1" else _Stream(_text("Whole answer."))
+    nim = NimChat("key", ["m1", "m2"], post=post)
+    drafts = []
+    msg = nim.chat([{"role": "user", "content": "hi"}], on_text=drafts.append, keep_partial=False)
+    assert msg["content"] == "Whole answer." and calls == ["m1", "m2"]
+    assert drafts == ["Half an ans", None, "Whole answer."]

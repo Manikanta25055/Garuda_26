@@ -204,3 +204,28 @@ def test_invalid_feedback_does_not_use_the_submission_allowance(app_client):
     for _ in range(6):
         assert app_client.post('/api/feedback', json={'message': '  '}).status_code == 400
     assert app_client.post('/api/feedback', json={'message': 'A valid message'}).status_code == 200
+
+
+def test_chat_stream_sends_the_draft_then_the_checked_reply(app_client, user_headers, monkeypatch):
+    import json
+
+    def fake(msg, user, role, scope, progress=None, on_draft=None, **kw):
+        on_draft("Rough ")
+        on_draft(None)
+        on_draft("Final answer")
+        return {"reply": "Final answer, checked.", "lane": "agent", "actions": []}
+    monkeypatch.setattr(gw, "_assistant_reply", fake)
+    r = app_client.post('/api/chat/stream', json={'message': 'status'}, headers=user_headers)
+    events = [json.loads(line[6:]) for line in r.text.splitlines() if line.startswith('data: ')]
+    assert [e['type'] for e in events] == ['start', 'draft', 'draft_reset', 'draft', 'meta', 'token', 'done']
+    assert [e.get('text') for e in events if e['type'] == 'draft'] == ["Rough ", "Final answer"]
+    assert events[5]['text'] == "Final answer, checked."
+
+
+def test_a_taught_phrase_answers_only_as_whole_words(monkeypatch):
+    monkeypatch.setattr(gw.STATE.config, "custom_voice_commands", {"hi": "Hello there!"})
+    monkeypatch.setattr(gw.AGENT, "handle", lambda *a, **kw: {"reply": "agent", "lane": "agent", "actions": []})
+    assert gw._assistant_reply("hi narada", "u")["reply"] == "Hello there!"
+    assert gw._assistant_reply("Hi!", "u")["reply"] == "Hello there!"
+    assert gw._assistant_reply("is this on?", "u")["reply"] == "agent"
+    assert gw._assistant_reply("which lamp", "u")["reply"] == "agent"

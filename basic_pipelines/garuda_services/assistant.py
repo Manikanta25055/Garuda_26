@@ -6,6 +6,7 @@ live module, handed over once by bind(). Garuda_web imports these functions
 back under the same names.
 """
 import os
+import re
 import time
 
 core = None
@@ -68,7 +69,7 @@ def _voice_turn_logged(user, heard, said):
 
 
 def _assistant_reply(msg, user="", role="user", scope="home", voice=False, progress=None,
-                     on_text=None):
+                     on_text=None, cancel=None, on_draft=None):
     """Narada's one brain for chat and voice.
 
     Phrases the owner taught on the Commands page return their fixed reply
@@ -77,10 +78,12 @@ def _assistant_reply(msg, user="", role="user", scope="home", voice=False, progr
     """
     lower = msg.lower()
     for phrase, resp in core.STATE.config.custom_voice_commands.items():
-        if phrase in lower:
+        # Whole words only: a taught "hi" must not answer "is this on?".
+        if phrase and re.search(r"(?<!\w)" + re.escape(phrase.lower().strip()) + r"(?!\w)", lower):
             return {"reply": resp, "lane": "custom", "actions": []}
     return core.AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice,
-                             progress=progress, on_text=on_text)
+                             progress=progress, on_text=on_text, cancel=cancel,
+                             on_draft=on_draft)
 
 
 def _ai_configure(fields, actor):

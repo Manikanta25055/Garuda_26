@@ -198,3 +198,28 @@ def test_brain_without_a_directory_keeps_nothing_on_disk(tmp_path):
     brain.record("mani", turn("q", "a"))
     assert [m["content"] for m in brain.history("mani")] == ["q", "a"]
     assert list(tmp_path.iterdir()) == []
+
+
+def test_split_spoken_says_the_opening_and_shows_everything():
+    spoken, shown = guards.split_spoken("Two alerts today.\n[[more]]\n1. **Tamper** at 04:11\n2. Knife")
+    assert spoken == "Two alerts today."
+    assert shown == "Two alerts today.\n\n1. **Tamper** at 04:11\n2. Knife"
+    # No marker and short: said whole, shown whole.
+    assert guards.split_spoken("The lamp is on.") == ("The lamp is on.", "The lamp is on.")
+    # No marker and long: a few sentences, then a pointer to the screen.
+    spoken, shown = guards.split_spoken("One. Two. Three. Four. Five.")
+    assert spoken == "One. Two. Three. " + guards.ON_SCREEN and shown == "One. Two. Three. Four. Five."
+    # A marker with nothing before it: the details are said in short form.
+    assert guards.split_spoken("[[more]]\nAll quiet.")[0] == "All quiet."
+    assert guards.strip_more("A\n[[ more ]]\nB") == "A\n\nB"
+
+
+def test_speech_ends_where_a_table_or_list_starts():
+    reply = ("Here's a quick comparison of the lamp and fan:\n\n| Device | State |\n|---|---|\n"
+             "| Lamp | Off |\n\nBoth are off.")
+    spoken, shown = guards.split_spoken(reply)
+    assert spoken == "Here's a quick comparison of the lamp and fan: " + guards.ON_SCREEN
+    assert shown == reply
+    spoken, _ = guards.split_spoken("## Plan\n1. Lamp off\n2. Fan low")
+    assert spoken == "Plan. " + guards.ON_SCREEN
+    assert guards.is_structure("**Phase 1: Wind Down**") and not guards.is_structure("**Tamper** at 04:11.")

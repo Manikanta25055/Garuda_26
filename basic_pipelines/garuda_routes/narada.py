@@ -82,7 +82,9 @@ def build_narada_router(core):
     @router.post("/api/chat/stream")
     async def chat_stream(data: ChatRequest, request: Request, session=Depends(core.require_session)):
         """SSE chat: what Narada is doing while it works (which model took the
-        request, each step as it starts and ends), then the reply, word by word."""
+        request, each step as it starts and ends), the answer as the model writes
+        it ("draft"; "draft_reset" drops it), then the checked reply, which
+        replaces the draft."""
         msg = data.message.strip()
         if not msg:
             raise HTTPException(400, "Empty message")
@@ -93,21 +95,23 @@ def build_narada_router(core):
         scope = core._product_for_host(request.headers.get("host"))
 
         def _agent_worker():
-            # The agent answers in one piece after its tool calls, so the reply is
-            # replayed word by word to keep the chat's typing feel.
+            # The draft is shown as it is written; the reply that follows is the
+            # one the guards checked, so it replaces the draft rather than adding to it.
+            def draft(piece):
+                loop.call_soon_threadsafe(queue.put_nowait, ("draft", piece))
             try:
                 result = core._assistant_reply(
                     msg, user, role, scope,
                     progress=lambda event: loop.call_soon_threadsafe(
-                        queue.put_nowait, ("progress", event)))
+                        queue.put_nowait, ("progress", event)),
+                    on_draft=draft)
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
             meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer",
                                                "observation", "confirm", "artifacts", "images",
                                                "steps", "planner", "model")}
             loop.call_soon_threadsafe(queue.put_nowait, ("meta", meta))
-            for word in re.findall(r"\S+\s*", result["reply"]):
-                loop.call_soon_threadsafe(queue.put_nowait, ("token", word))
+            loop.call_soon_threadsafe(queue.put_nowait, ("token", result["reply"]))
             loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
         threading.Thread(target=_agent_worker, daemon=True).start()
@@ -135,6 +139,10 @@ def build_narada_router(core):
                     break
                 if kind == "meta":
                     yield f"data: {json.dumps({'type': 'meta', **payload_val})}\n\n"
+                    continue
+                if kind == "draft":
+                    yield (f"data: {json.dumps({'type': 'draft_reset'})}\n\n" if payload_val is None
+                           else f"data: {json.dumps({'type': 'draft', 'text': payload_val})}\n\n")
                     continue
                 yield f"data: {json.dumps({'type': 'token', 'text': payload_val})}\n\n"
 

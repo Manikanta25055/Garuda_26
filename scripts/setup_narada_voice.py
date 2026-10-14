@@ -46,6 +46,14 @@ def read_env():
     return out
 
 
+# How long ElevenLabs waits for the next piece of a reply before it gives up
+# on the attempt and asks again; two such retries end the call ("Generating the
+# LLM response took too long"). The default, 4 s, was shorter than a turn with
+# a tool call. 15 is the most it allows; narada_voice.KEEPALIVE_S stays well
+# under it. Measured 2026-10-15 (see narada_voice.py).
+CASCADE_TIMEOUT_S = 15
+
+
 def engine_config(ws_url, voice):
     return dict(
         name="Narada",
@@ -104,12 +112,14 @@ async def main():
     voice = await ensure_voice(client, voice, args.owner)
     config = engine_config(ws_url, voice)
     engine_id = env.get("ELEVENLABS_SPEECH_ENGINE_ID", "")
+    # Not a named argument in the SDK yet: sent as an extra body field.
+    extra = {"additional_body_parameters": {"cascade_timeout_seconds": CASCADE_TIMEOUT_S}}
     if engine_id:
         config.pop("overrides")  # fixed at create time; update() does not take it
-        await client.speech_engine.update(engine_id, **config)
+        await client.speech_engine.update(engine_id, **config, request_options=extra)
         print(f"Updated Speech Engine {engine_id} -> {ws_url}")
     else:
-        engine = await client.speech_engine.create(**config)
+        engine = await client.speech_engine.create(**config, request_options=extra)
         engine_id = engine.engine_id
         print(f"Created Speech Engine {engine_id} -> {ws_url}")
     set_vars(ENV_PATH, {"ELEVENLABS_SPEECH_ENGINE_ID": engine_id,

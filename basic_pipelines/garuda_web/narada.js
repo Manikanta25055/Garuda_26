@@ -53,12 +53,16 @@ const N = (() => {
   // ── Voice session ──────────────────────────────────────────
   let conv = null, voice = 'off';     // off | connecting | on
   let voiceEpoch = 0, voiceId = '', voiceCursor = 0, voiceHeard = false, typedEcho = null;
+  let voiceAwaiting = false;          // a spoken question whose written answer has not come yet
   let clientMod = null, busy = false, lastUserAt = 0;
   let lastReply = null, infoOpen = false, infoData = null, keptArtifacts = [];
   // The conversation: [{who: 'you' | 'narada' | 'error', text}]; kept for the
   // tab's lifetime so a reload or a trip to another page does not lose it.
   const SESSION_KEY = 'narada-session', SESSION_MAX = 80;
   let session = [], sheetOpen = false, pendingEl = null;
+  // A typed answer as the model writes it, shown as plain words (half a bold
+  // mark would flicker) until the checked reply replaces it in the same place.
+  let draftEl = null, draftText = '', draftRaf = 0;
 
   function voiceActive() { return voice !== 'off'; }
 
@@ -710,10 +714,58 @@ const N = (() => {
     session.push(turn);
     if (session.length > SESSION_MAX) session = session.slice(-SESSION_MAX);
     save();
-    const el = bubble(who, typed ? '' : text);
+    // An answer already on screen as a draft is set in its formatting where
+    // it stands: typing it out again would repeat what was just read.
+    // A spoken reply still showing as a draft stays when the person speaks
+    // again; a typed draft cut short by an error goes.
+    if (who === 'you' && draftEl && draftText.trim()) say('narada', draftText);
+    const drafted = who === 'narada' ? takeDraft() : null;
+    if (who !== 'narada') dropDraft();
+    const el = drafted || bubble(who, typed ? '' : text);
+    if (drafted) setReply(drafted, text);
     syncDock();
     if (who === 'narada') summarise(turn);
-    if (typed && el) typeInto(el, text); else scrollLog();
+    if (typed && el && !drafted) typeInto(el, text); else scrollLog();
+    return el;
+  }
+
+  function draftPiece(piece) {
+    if (piece === null) {                 // a round that went to tools, or a model that broke off
+      dropDraft();
+      setPending(true);
+      return;
+    }
+    draftText += piece;
+    if (draftRaf) return;                 // one paint per frame, however fast the words come
+    draftRaf = requestAnimationFrame(() => {
+      draftRaf = 0;
+      if (!draftText.trim()) return;
+      if (!draftEl) {
+        setPending(false);
+        draftEl = bubble('narada', '');
+        if (!draftEl) return;
+        draftEl.classList.add('draft');
+      }
+      draftEl.textContent = mdPlain(draftText);
+      if (!conv) {                        // in a call the voice itself says when it talks
+        synthTalkUntil = performance.now() + 900;
+        setState('talking');
+      }
+      scrollLog();
+    });
+  }
+
+  function dropDraft() {
+    if (draftRaf) { cancelAnimationFrame(draftRaf); draftRaf = 0; }
+    if (draftEl) draftEl.remove();
+    draftEl = null; draftText = '';
+  }
+
+  function takeDraft() {
+    if (draftRaf) { cancelAnimationFrame(draftRaf); draftRaf = 0; }
+    const el = draftEl;
+    draftEl = null; draftText = '';
+    if (el) el.classList.remove('draft');
     return el;
   }
 
@@ -818,6 +870,10 @@ const N = (() => {
           if (epoch !== voiceEpoch) return;
           ++voiceEpoch;
           clearTimeout(voiceWatch);
+          // The call ended before the written answer came (hung up after the
+          // spoken part, or a job handed to the screen): it is still fetched.
+          if (voiceAwaiting && voiceId) lateVoiceTurn(voiceId, voiceCursor, voiceEpoch);
+          voiceAwaiting = false;
           const wasOn = voice !== 'off';
           conv = null; voice = 'off'; voiceId = '';
           setPending(false);
@@ -835,6 +891,10 @@ const N = (() => {
           const who = m.role || m.source;
           if (who === 'user') {
             voiceHeard = true;
+            // What was said for the last question stays, even if its written
+            // answer never came (a turn the person talked over).
+            if (draftEl && draftText.trim()) say('narada', draftText);
+            voiceAwaiting = true;
             if (typedEcho !== m.message) say('you', m.message);
             typedEcho = null;
             lastUserAt = performance.now();
@@ -845,6 +905,10 @@ const N = (() => {
             // fetched as original Markdown; audio strips their structure.
             say('narada', m.message);
             pollMemory();                 // a spoken reply carries no chips of its own
+          } else if (m.message && voiceAwaiting) {
+            // What is being said, until the whole written answer replaces it.
+            dropDraft();
+            draftPiece(m.message);
           }
         },
         onError: (message, info) => {
@@ -870,6 +934,8 @@ const N = (() => {
     const c = conv;
     ++voiceEpoch;
     clearTimeout(voiceWatch);
+    if (voiceAwaiting && voiceId) lateVoiceTurn(voiceId, voiceCursor, voiceEpoch);
+    voiceAwaiting = false;
     voice = 'off'; conv = null; voiceId = '';
     setPending(false);
     // Heard and felt on the tap itself; closing the session can take a
@@ -956,18 +1022,24 @@ const N = (() => {
       got = true;
       if (ev.type === 'progress') workEvent(ev.event);
       else if (ev.type === 'meta') meta = ev;
+      else if (ev.type === 'draft') draftPiece(ev.text);
+      else if (ev.type === 'draft_reset') draftPiece(null);
       else if (ev.type === 'token') reply += ev.text;
       else if (ev.type === 'done') complete = true;
     };
     try {
       await G._apiStream('/api/chat/stream', { message: text }, onEvent);
     } catch (e) {
+      dropDraft();
       if (e && e.status === 401 && !got) {
         await G._apiFn('GET', '/api/session');          // renews the sign-in, or signs out
         await G._apiStream('/api/chat/stream', { message: text }, onEvent);
       } else throw e;
     }
-    if (!meta || !complete) throw { detail: 'The reply was interrupted. Check the current state before retrying an action.' };
+    if (!meta || !complete) {
+      dropDraft();
+      throw { detail: 'The reply was interrupted. Check the current state before retrying an action.' };
+    }
     return { ...meta, response: reply };
   }
 
@@ -1048,6 +1120,25 @@ const N = (() => {
   // Audio messages lose Markdown and can include filler. Read the original
   // results from Garuda, even while a filler or the answer is being spoken.
   let voiceWatch = 0;
+  function lateVoiceTurn(id, cursor, epoch) {
+    const until = performance.now() + 120000;
+    const tick = async () => {
+      if (epoch !== voiceEpoch) return;          // a new call or message took over
+      try {
+        const data = await G._apiFn('GET', '/api/narada/voice/turns?conversation_id='
+          + encodeURIComponent(id) + '&after=' + cursor);
+        if (epoch !== voiceEpoch) return;
+        const turns = (data.turns || []).filter(t => t.id > cursor);
+        if (turns.length) { turns.forEach(t => showResult(t, false)); return; }
+      } catch (e) {
+        if (e && [401, 403, 404].includes(e.status)) return finishLate();
+      }
+      if (performance.now() < until) setTimeout(tick, 1500); else finishLate();
+    };
+    const finishLate = () => { if (epoch === voiceEpoch && draftEl && draftText.trim()) say('narada', draftText); };
+    tick();
+  }
+
   function watchVoiceTurn(epoch) {
     clearTimeout(voiceWatch);
     let seen = 0;
@@ -1059,6 +1150,7 @@ const N = (() => {
         if (epoch !== voiceEpoch) return;
         for (const turn of data.turns || []) {
           if (turn.id <= voiceCursor) continue;
+          voiceAwaiting = false;
           showResult(turn, false, (performance.now() - lastUserAt) / 1000);
           voiceCursor = turn.id;
         }
