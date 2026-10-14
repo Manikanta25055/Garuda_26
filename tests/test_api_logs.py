@@ -77,3 +77,14 @@ def test_master_key_add_new_key(app_client, admin_headers, monkeypatch):
     # Stored hashed, never as typed.
     assert 'Xy7!Pk2@Qr9#Mn5' not in gw.STATE.auth.master_keys
     assert gw._master_key_matches('Xy7!Pk2@Qr9#Mn5', gw.STATE.auth.master_keys)
+
+
+def test_guessing_the_master_key_through_request_otp_locks_out(app_client, admin_headers, monkeypatch):
+    """Wrong current keys count toward the lockout, as on /verify."""
+    monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
+    codes = [app_client.post('/api/master_key/request_otp', json={'current_key': f'guess-{i}'},
+                             headers=admin_headers).status_code for i in range(gw._LOGIN_MAX_ATTEMPTS)]
+    assert set(codes) == {401}
+    r = app_client.post('/api/master_key/request_otp',
+                        json={'current_key': 'test-master-key-12345'}, headers=admin_headers)
+    assert r.status_code == 429
