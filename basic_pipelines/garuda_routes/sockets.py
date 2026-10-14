@@ -56,8 +56,10 @@ def build_sockets_router(core):
         if not core._ws_connect_allowed(websocket):
             await websocket.close(code=4029)
             return
-        # Accept token from cookie (same-origin) or query param (cross-origin)
-        token = websocket.cookies.get("garuda_session") or token
+        # Accept token from cookie (same-origin), header (the macOS app, which
+        # keeps it out of the address) or query param (cross-origin browsers)
+        token = (websocket.cookies.get("garuda_session")
+                 or websocket.headers.get("X-Garuda-Token") or token)
         session = core.get_session(token)
         if not session:
             await websocket.close(code=4001)

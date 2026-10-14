@@ -83,8 +83,8 @@ final class SessionManager: ObservableObject {
         }
 
         // Start WebSocket
-        if let wsURL = await apiClient.buildWebSocketURL() {
-            wsManager.connect(to: wsURL)
+        if let wsRequest = await apiClient.buildWebSocketRequest() {
+            wsManager.connect(with: wsRequest)
         }
 
         // Start periodic polling

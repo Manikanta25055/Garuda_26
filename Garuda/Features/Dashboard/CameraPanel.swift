@@ -11,7 +11,7 @@ struct CameraPanel: View {
         ZStack {
             // Main stream or fallback placeholder
             if let url = appState.streamURL {
-                LiveStreamView(url: url)
+                LiveStreamView(url: url, token: appState.sessionToken)
             } else {
                 streamFallback
             }

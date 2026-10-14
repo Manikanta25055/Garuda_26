@@ -66,3 +66,13 @@ def test_socket_opens_are_limited_per_client(ws_client, monkeypatch):
         with ws_client.websocket_connect(f'/ws?token={token}'):
             pass
     assert closed.value.code == 4029
+
+
+def test_state_socket_takes_the_token_from_a_header(ws_client):
+    """The macOS app sends it as X-Garuda-Token, keeping it out of the address."""
+    token = gw.create_session('user')
+    with ws_client.websocket_connect('/ws', headers={'X-Garuda-Token': token}):
+        deadline = time.time() + 2
+        while not gw._ws_clients and time.time() < deadline:
+            time.sleep(0.01)
+        assert list(gw._ws_clients.values()) == [{'username': 'user', 'role': 'user'}]

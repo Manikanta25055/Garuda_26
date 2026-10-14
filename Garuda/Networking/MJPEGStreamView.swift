@@ -20,14 +20,16 @@ final class MJPEGStreamReceiver: NSObject, URLSessionDataDelegate, ObservableObj
     private let eoiMarker: [UInt8] = [0xFF, 0xD9]
 
     // MARK: - Start / Stop
-    func start(url: URL) {
+    func start(url: URL, token: String? = nil) {
         stop()
         buffer = Data()
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest  = GarudaConstants.streamTimeout
         config.timeoutIntervalForResource = 0  // no resource timeout (continuous stream)
         urlSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
-        dataTask = urlSession?.dataTask(with: url)
+        var req = URLRequest(url: url)
+        if let token { req.setValue(token, forHTTPHeaderField: "X-Garuda-Token") }
+        dataTask = urlSession?.dataTask(with: req)
         dataTask?.resume()
         DispatchQueue.main.async { self.isConnected = true }
     }
@@ -105,6 +107,7 @@ struct MJPEGStreamView: NSViewRepresentable {
 // MARK: - Convenience wrapper View
 struct LiveStreamView: View {
     let url: URL?
+    var token: String? = nil
 
     @StateObject private var receiver = MJPEGStreamReceiver()
 
@@ -118,14 +121,14 @@ struct LiveStreamView: View {
             }
         }
         .onAppear {
-            if let url { receiver.start(url: url) }
+            if let url { receiver.start(url: url, token: token) }
         }
         .onDisappear {
             receiver.stop()
         }
         .onChange(of: url) { _, newURL in
             receiver.stop()
-            if let newURL { receiver.start(url: newURL) }
+            if let newURL { receiver.start(url: newURL, token: token) }
         }
     }
 
