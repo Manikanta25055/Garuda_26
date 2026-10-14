@@ -19,6 +19,7 @@ actions; anyone signed in may switch devices and set a one-off timer, which is
 the same power the dashboard buttons already give them.
 """
 import json
+import re
 import logging
 import threading
 import time
@@ -198,9 +199,12 @@ class HomeAgent:
 
     # ── entry point ───────────────────────────────────────────────────────────
 
-    def handle(self, text, *, user="", role="user", scope="home", voice=False, progress=None):
+    def handle(self, text, *, user="", role="user", scope="home", voice=False, progress=None,
+               on_text=None):
         """`progress(event)` is told what is happening while the turn runs: which
-        lane and model took it, each step as it starts and ends."""
+        lane and model took it, each step as it starts and ends. `on_text`, for
+        a spoken turn, is handed the answer a sentence at a time as the model
+        writes it; result["streamed"] says the final answer went that way."""
         text = (text or "").strip()[:MAX_INPUT_CHARS]
         if not text:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
@@ -211,6 +215,7 @@ class HomeAgent:
         self._turn.images = []
         self._turn.steps = []
         self._turn.progress = progress
+        self._turn.on_text = on_text if voice else None
         self._turn.voice = voice
         self._turn.user = user
         self._turn.in_planner = False
@@ -437,6 +442,9 @@ class HomeAgent:
         if voice:
             system += persona.VOICE_STYLE
         chat = self.planner if planner else self.chat
+        say = getattr(self._turn, "on_text", None)
+        speech = (_Speech(say, lambda t: self.brain.check_reply(t, voice=True))
+                  if say and not planner else None)
         tools = self._tools(planner, role)
         if scope == "security":
             tools = [t for t in tools if t["function"]["name"] in SECURITY_TOOLS]
@@ -469,11 +477,16 @@ class HomeAgent:
                                     temperature=0.2, timeout=min(PLANNER_TIMEOUT_S, left),
                                     extra=PLANNER_EXTRA)
             else:
+                if speech:
+                    speech.round_spoken = False
                 message = chat.chat(messages, tools=tools,
                                     max_tokens=VOICE_MAX_TOKENS if voice else TEXT_MAX_TOKENS,
                                     temperature=0.3,
                                     timeout=VOICE_TIMEOUT_S if voice else TEXT_TIMEOUT_S,
-                                    extra=NO_THINKING, hedge_after=HEDGE_AFTER_S)
+                                    extra=NO_THINKING, hedge_after=HEDGE_AFTER_S,
+                                    on_text=speech.feed if speech else None)
+                if speech:
+                    speech.flush()             # the last sentence, or a "let me check" before tools
             calls = message.get("tool_calls") or []
             if not calls:
                 reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.",
@@ -482,7 +495,7 @@ class HomeAgent:
                     # Said every time: a turn that read an injected instruction and
                     # told nobody is how a poisoned name stays in the house unnoticed.
                     reply += "\n\n" + guards.injection_note(self._turn.injection_text)
-                return {**finish(reply),
+                return {**finish(reply), "streamed": bool(speech and speech.round_spoken),
                         "_turn": _for_memory(messages[first:])
                         + [{"role": "assistant", "content": reply}]}
             if not planner and any(c.get("function", {}).get("name") == "hand_to_planner"
@@ -882,3 +895,40 @@ def _for_memory(messages):
             message = {**message, "tool_calls": trimmed}
         out.append(message)
     return out
+
+
+class _Speech:
+    """Text streamed from the model, said a sentence at a time.
+
+    Each sentence goes through the same check as a whole reply (an answer
+    that recites the instructions is replaced; lists and markdown become
+    speech) before it is handed on, so streaming skips no guard. A line break
+    ends one (list items); so does a stop after a number when a capital
+    follows ("at 04.11. Then"), but not a list's "3. was" mid-line.
+    """
+    _END = re.compile(r"(?<!\d)[.!?]+[\"')\]]*\s+|[.!?]+[\"')\]]*\s+(?=[A-Z\"'(])|\n+")
+
+    def __init__(self, say, check):
+        self.say, self.check, self.buf = say, check, ""
+        self.round_spoken = False
+
+    def feed(self, piece):
+        self.buf += piece
+        while True:
+            m = self._END.search(self.buf)
+            if not m:
+                return
+            head, self.buf = self.buf[:m.end()], self.buf[m.end():]
+            self._out(head)
+
+    def flush(self):
+        head, self.buf = self.buf, ""
+        self._out(head)
+
+    def _out(self, text):
+        if not text.strip():
+            return
+        clean = (self.check(text) or "").strip()
+        if clean:
+            self.round_spoken = True
+            self.say(clean + " ")

@@ -16,6 +16,7 @@ ElevenLabs signs with our API key.
 Blocking SDK calls (token issue) run in a thread; the WebSocket side is async.
 """
 import asyncio
+import inspect
 import logging
 import random
 import re
@@ -60,7 +61,13 @@ class NaradaVoice:
         self.engine_id = engine_id or ""
         self.voice_id = voice_id or ""
         self._info = None                  # (expires, dict)
-        self._reply_fn = reply_fn          # (text, user, role, scope) -> dict
+        self._reply_fn = reply_fn
+        # Whether the brain can hand its answer over as it writes it.
+        try:
+            params = inspect.signature(reply_fn).parameters.values()
+            self._streams = any(p.name == "on_text" or p.kind is p.VAR_KEYWORD for p in params)
+        except (TypeError, ValueError):
+            self._streams = False          # (text, user, role, scope) -> dict
         self._on_turn = on_turn            # (user, heard, said) -> None, for the logs
         self._clock = clock
         self._client = client
@@ -151,8 +158,13 @@ class NaradaVoice:
             return False
         return bool(live) and live.get("lane") == "planner"
 
-    async def reply_for(self, conversation_id, transcript):
-        """Reply text for the latest user turn of one conversation."""
+    async def reply_for(self, conversation_id, transcript, on_text=None, meta=None):
+        """Reply text for the latest user turn of one conversation.
+
+        With `on_text`, the brain hands over the answer a sentence at a time
+        as it is written; meta["streamed"] is then whether the final answer
+        already went that way (so it is not said twice).
+        """
         heard = next((m.content for m in reversed(transcript) if m.role == "user"), "").strip()
         if not heard:
             return None
@@ -162,8 +174,14 @@ class NaradaVoice:
             return UNKNOWN_REPLY
         user, role, scope = bound
         try:
-            result = await asyncio.to_thread(self._reply_fn, heard, user, role, scope)
+            if on_text and self._streams:
+                result = await asyncio.to_thread(self._reply_fn, heard, user, role, scope,
+                                                 on_text=on_text)
+            else:
+                result = await asyncio.to_thread(self._reply_fn, heard, user, role, scope)
             said = _spoken(result.get("reply", ""))
+            if meta is not None:
+                meta["streamed"] = bool(result.get("streamed"))
         except Exception as exc:
             log.exception("narada voice: reply failed")
             said = f"Something went wrong ({type(exc).__name__}). Nothing was changed."
@@ -193,24 +211,54 @@ class NaradaVoice:
         await session.run()
 
     async def speak(self, conversation_id, transcript):
-        """Stream the reply: a filler first if the brain is slow, then the answer."""
-        task = asyncio.ensure_future(self.reply_for(conversation_id, transcript))
+        """Stream the reply as it is written: each sentence is spoken as soon
+        as the brain finishes it. A filler covers a slow start, the planner's
+        line a long job; the final answer is said only if it was not streamed.
+        An interruption cancels this generator (the SDK does, on the next
+        transcript), which stops the rest of the answer at once."""
+        loop = asyncio.get_running_loop()
+        queue = asyncio.Queue()
+        meta = {}
+
+        def heard(sentence):                       # from the brain's thread
+            loop.call_soon_threadsafe(queue.put_nowait, sentence)
+
+        task = asyncio.ensure_future(self.reply_for(conversation_id, transcript,
+                                                    on_text=heard, meta=meta))
+        started, spoke, filled, told = loop.time(), False, False, False
+        getter = None
         try:
-            done, _ = await asyncio.wait({task}, timeout=FILLER_AFTER_S)
-            if not done:
-                yield random.choice(FILLERS) + " "
-            # A request that goes to the planner can take a minute. Said once,
-            # so the silence that follows is understood; the steps themselves
-            # show on the screen (the page asks /api/narada/progress).
-            told = False
-            while not task.done():
-                await asyncio.wait({task}, timeout=PLANNER_CHECK_S)
-                if not told and not task.done() and self._planning(conversation_id):
+            while True:
+                getter = asyncio.ensure_future(queue.get())
+                wait_s = (max(0.0, FILLER_AFTER_S - (loop.time() - started))
+                          if not (spoke or filled) else PLANNER_CHECK_S)
+                done, _ = await asyncio.wait({getter, task}, timeout=wait_s,
+                                             return_when=asyncio.FIRST_COMPLETED)
+                if getter in done:
+                    spoke = True
+                    yield getter.result()
+                    continue
+                getter.cancel()
+                if task in done:
+                    while not queue.empty():         # said before the brain returned
+                        spoke = True
+                        yield queue.get_nowait()
+                    break
+                if not spoke and not filled:
+                    filled = True
+                    yield random.choice(FILLERS) + " "
+                elif not told and self._planning(conversation_id):
+                    # A request that goes to the planner can take a minute. Said
+                    # once, so the silence that follows is understood; the steps
+                    # show on the screen (the page asks /api/narada/progress).
                     told = True
                     yield PLANNER_LINE + " "
-            said = await task
-            for sentence in _sentences(said or ""):
-                yield sentence
+            said = task.result()
+            if not meta.get("streamed"):
+                for sentence in _sentences(said or ""):
+                    yield sentence
         finally:
+            if getter is not None and not getter.done():
+                getter.cancel()
             if not task.done():
                 task.cancel()      # interrupted: a newer turn replaced this one

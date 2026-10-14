@@ -473,6 +473,7 @@ PLUMBING = frozenset({
     "POST /api/narada/artifacts/{artifact_id}/call", "POST /api/narada/artifacts/{artifact_id}/pin",
     "DELETE /api/narada/artifacts/{artifact_id}", "GET /api/narada/info",
     "POST /api/narada/voice/token", "POST /api/narada/summary",
+    "POST /api/narada/voice/error",     # the browser reporting a voice error to the log
 })
 
 

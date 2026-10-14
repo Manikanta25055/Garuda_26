@@ -9,6 +9,7 @@ remembers which one answered so the settings page can show it.
 
 Blocking by design. Callers on the event loop go through `anyio.to_thread`.
 """
+import json
 import logging
 import threading
 import time
@@ -98,11 +99,12 @@ class NimChat:
         return alive or list(self.models)
 
     def _send(self, body, timeout):
+        kw = {"stream": True} if body.get("stream") else {}
         return self._post(
             f"{self.base_url}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}",
                      "Content-Type": "application/json"},
-            json=body, timeout=(CONNECT_TIMEOUT_S, timeout))
+            json=body, timeout=(CONNECT_TIMEOUT_S, timeout), **kw)
 
     def _send_hedged(self, body, timeout, hedge_after):
         """Send; if nothing is back after hedge_after seconds, send a twin and
@@ -126,16 +128,21 @@ class NimChat:
                     error = exc
                     continue
                 if getattr(resp, "status_code", 200) < 500 or not pending:
+                    for other in pending:          # a streamed twin holds a connection open
+                        other.add_done_callback(_close_quietly)
                     return resp
         raise error
 
     def chat(self, messages, *, tools=None, max_tokens=1024, temperature=0.2,
-             timeout=None, extra=None, hedge_after=None):
+             timeout=None, extra=None, hedge_after=None, on_text=None):
         """Return the first choice's message dict. Raises NimUnavailable.
 
         `extra` is merged into the request body (see NO_THINKING); a model
         that refuses it is asked again without. `hedge_after` races a second
-        identical request when the first is slow.
+        identical request when the first is slow. With `on_text`, the answer
+        is streamed and each piece of text is handed to it as it arrives (a
+        spoken reply starts on its first sentence); tool calls are put back
+        together from their pieces, and the message is the same as without.
         """
         if not self.api_key:
             raise NimUnavailable("no NVIDIA NIM API key is configured")
@@ -143,6 +150,8 @@ class NimChat:
         for model in self._candidates():
             body = {"model": model, "messages": messages,
                     "max_tokens": max_tokens, "temperature": temperature}
+            if on_text:
+                body["stream"] = True
             if tools:
                 body["tools"] = tools
                 body["tool_choice"] = "auto"
@@ -172,8 +181,15 @@ class NimChat:
                     "the NIM key was rejected" if status in (401, 403)
                     else f"the model service refused the request (HTTP {status})")
             try:
-                payload = resp.json()
+                if on_text:
+                    payload = _read_stream(resp, on_text)
+                else:
+                    payload = resp.json()
                 message = payload["choices"][0]["message"]
+            except requests.exceptions.RequestException as exc:
+                last = f"{model}: {type(exc).__name__} while streaming"
+                log.warning("NIM %s stream broke: %s", model, type(exc).__name__)
+                continue
             except (ValueError, KeyError, IndexError, TypeError):
                 last = f"{model}: malformed response"
                 continue
@@ -199,3 +215,52 @@ class NimChat:
             "calls": self.calls,
             "tokens_used": self.tokens_used,
         }
+
+
+def _close_quietly(future):
+    try:
+        future.result().close()
+    except Exception:
+        pass
+
+
+def _read_stream(resp, on_text):
+    """Read a streamed chat completion (server-sent events) into the payload
+    a plain request returns, handing each piece of text to `on_text`."""
+    content, calls, finish, usage, said = [], {}, None, None, False
+    try:
+        for raw in resp.iter_lines(decode_unicode=True):
+            if not raw or not raw.startswith("data:"):
+                continue
+            data = raw[5:].strip()
+            if data == "[DONE]":
+                break
+            chunk = json.loads(data)
+            usage = chunk.get("usage") or usage
+            for choice in chunk.get("choices") or []:
+                delta = choice.get("delta") or {}
+                piece = delta.get("content")
+                if piece:
+                    content.append(piece)
+                    said = True
+                    on_text(piece)
+                for tc in delta.get("tool_calls") or []:
+                    slot = calls.setdefault(tc.get("index", 0), {"id": "", "type": "function",
+                                                                  "function": {"name": "", "arguments": ""}})
+                    slot["id"] = tc.get("id") or slot["id"]
+                    fn = tc.get("function") or {}
+                    slot["function"]["name"] += fn.get("name") or ""
+                    slot["function"]["arguments"] += fn.get("arguments") or ""
+                finish = choice.get("finish_reason") or finish
+    except requests.exceptions.RequestException:
+        # Broken after Narada began to speak: keep what was said rather than
+        # start again on another model and repeat it.
+        if not said:
+            raise
+        finish = "error"
+    finally:
+        resp.close()
+    message = {"role": "assistant", "content": "".join(content)}
+    if calls:
+        message["tool_calls"] = [calls[i] for i in sorted(calls)]
+    return {"choices": [{"message": message, "finish_reason": finish}], "usage": usage or {}}

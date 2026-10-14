@@ -910,7 +910,8 @@ ARTIFACT_BLOCKED = _shortcuts_mod.NOT_STEPS
 NARADA_VOICE = NaradaVoice(
     os.environ.get("ELEVENLABS_API_KEY", ""),
     os.environ.get("ELEVENLABS_SPEECH_ENGINE_ID", ""),
-    reply_fn=lambda text, user, role, scope: _assistant_reply(text, user, role, scope, voice=True),
+    reply_fn=lambda text, user, role, scope, on_text=None: _assistant_reply(
+        text, user, role, scope, voice=True, on_text=on_text),
     on_turn=_voice_turn_logged,
     voice_id=os.environ.get("ELEVENLABS_VOICE_ID", ""),
 )

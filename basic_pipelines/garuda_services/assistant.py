@@ -67,7 +67,8 @@ def _voice_turn_logged(user, heard, said):
     core.append_voice_response(said, user_name=user)
 
 
-def _assistant_reply(msg, user="", role="user", scope="home", voice=False, progress=None):
+def _assistant_reply(msg, user="", role="user", scope="home", voice=False, progress=None,
+                     on_text=None):
     """Narada's one brain for chat and voice.
 
     Phrases the owner taught on the Commands page return their fixed reply
@@ -79,7 +80,7 @@ def _assistant_reply(msg, user="", role="user", scope="home", voice=False, progr
         if phrase in lower:
             return {"reply": resp, "lane": "custom", "actions": []}
     return core.AGENT.handle(msg, user=user, role=role, scope=scope, voice=voice,
-                             progress=progress)
+                             progress=progress, on_text=on_text)
 
 
 def _ai_configure(fields, actor):
