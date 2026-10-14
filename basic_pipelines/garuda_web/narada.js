@@ -635,10 +635,12 @@ const N = (() => {
     const c = conv;
     voice = 'off'; conv = null;
     setPending(false);
+    // Heard and felt on the tap itself; closing the session can take a
+    // second, and the chime waiting for it read as lag.
+    haptic('stop');
     if (c) { try { await c.endSession(); } catch (_) {} }
     setState('idle');
     window.Feel?.voice(false);
-    haptic('stop');
   }
 
   function toggleVoice() {
@@ -865,7 +867,7 @@ const N = (() => {
         if (window.H && H.refresh) H.refresh();
       }
       card.querySelectorAll('.nx-card-b button').forEach(b => b.remove());
-      haptic('tap');
+      if (what === 'cancel') haptic('tap'); else window.Feel?.play('success');
     } catch (e) {
       msg.textContent = (e && e.detail) || 'That did not work';
       // A card that has expired cannot be tried again; anything else can.

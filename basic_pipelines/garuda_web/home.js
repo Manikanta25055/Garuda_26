@@ -235,7 +235,7 @@ const H = (() => {
   }
 
   async function allOff() {
-    if (!await G.confirmAction({ title: 'Turn everything off?', body: 'Every device in the house is switched off.', confirmLabel: 'All off' })) return;
+    if (!await G.confirmAction({ title: 'Turn everything off?', body: 'Every device in the house is switched off.', confirmLabel: 'All off', sound: 'off' })) return;
     try {
       const r = await api('POST', '/api/home/all-off', {});
       G.showToast(r.turned_off.length ? `Turned off ${r.turned_off.join(', ')}` : 'Everything was already off', r.failed.length ? 'warning' : 'success');

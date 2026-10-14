@@ -582,7 +582,10 @@ const G = (() => {
       _confirmDone = result => {
         _confirmDone = null;
         ov.classList.add('hidden');
-        if (result && /^(delete|remove)\b/i.test(ok.textContent)) window.Feel?.play('delete');
+        // What the confirmed act sounds like: o.sound, or the trash for a
+        // Delete / Remove. Nothing plays for Cancel.
+        const cue = o.sound || (/^(delete|remove)\b/i.test(ok.textContent) ? 'delete' : null);
+        if (result && cue) window.Feel?.play(cue);
         resolve(!!result);
       };
     });

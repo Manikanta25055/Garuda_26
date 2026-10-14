@@ -12,10 +12,13 @@
    vibrate; Safari 18 ticks when a switch control flips, so a hidden one is
    flipped instead (one strength only, and only inside a tap).
 
-   Sounds are quiet, play through Web Audio (no lag), and on iOS use the
-   "ambient" audio session: the ring/silent switch mutes them and they never
-   stop the person's music. The speaker button in the top bar mutes them on
-   this device. The security alarm is not an interface sound and ignores it.
+   Sounds are quiet and play through Web Audio (no lag). On iOS they use the
+   "playback" audio session, so they are heard with the silent switch on
+   (the owner's choice; "ambient", Apple's default for interface sounds,
+   left them mute for most people). iOS gives websites no way to mix, so a
+   sound pauses music playing in another app. The speaker button in the top
+   bar is the off switch, per device. The security alarm is not an interface
+   sound and ignores it.
 
    Which control plays what: CLICK below (by its data-click handler), RULES
    (by selector), or a data-sound="name" / "~haptic" / "none" on the element.
@@ -74,20 +77,25 @@
     'H.toggleDevice': flip, 'G.toggleCamera': flip, 'G.togglePrivacy': flip, 'G.toggleNightPresence': flip,
     'H.toggleSetting': flip, 'H.toggleRule': flip, 'H.toggleSchedule': flip, 'H.toggleShortcut': flip,
     'H.setEnabled': flip,
-    'H.allOff': 'off',
     // moments
     'G.takeSnapshot': 'shutter', 'H.instruct': 'send', 'G.submitFeedback': 'send',
     'G.sendAdminOTP': 'send', 'G.sendForgotOTP': 'send', 'G.requestMkOtp': 'send', 'G.testEmail': 'send',
     // these sound when they finish (narada.js, app.js), not when pressed
     'N.submit': 'none', 'N.toggleVoice': 'none', 'G.toggleClip': 'none', 'G.logout': 'none',
+    'H.allOff': 'none',                 // "off" plays when the dialog is confirmed
     'Feel.toggle': 'none',
   };
   // Controls built without a data-click handler.
   const RULES = [
     ['.mode-row', flip],
-    ['.ios-item, .more-tile', '~light'],
+    ['.ios-item, .more-tile, #di-shell', '~light'],
+    ['.fb-star, .fb-cat', '~selection'],
   ];
 
+  const SESSION = 'playback';
+  // Only touch screens have a Taptic Engine to reach; on a Mac the hidden
+  // switch would be a stray click and nothing to feel.
+  const TOUCH_SCREEN = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
   let ctx = null, buffers = {}, loading = null, lastAt = {}, lastSound = 0, lastTouch = 0;
   let muted = false;
   try { muted = localStorage.getItem('garuda_sound') === 'off'; } catch (_) {}
@@ -101,12 +109,31 @@
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
-      session('ambient');
+      session(SESSION);
       try { ctx = new AC({ latencyHint: 'interactive' }); } catch (_) { return null; }
     }
-    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    // Not only "suspended": Safari leaves a context "interrupted" after a
+    // call or Narada's voice session, and it stays silent until resumed.
+    if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {});
     if (!loading) loading = load();
     return ctx;
+  }
+
+  // iOS lets audio start only inside a tap's touchend or click (pointerdown
+  // and touchstart do not count), and only once something actually plays
+  // in it, so a one-sample silence is played there. It runs on every tap
+  // while the context is not running, which also brings it back after an
+  // interruption.
+  function unlock() {
+    if (ctx && ctx.state === 'running') return;
+    const c = wake();
+    if (!c) return;
+    try {
+      const s = c.createBufferSource();
+      s.buffer = c.createBuffer(1, 1, 22050);
+      s.connect(c.destination);
+      s.start(0);
+    } catch (_) {}
   }
 
   function load() {
@@ -153,6 +180,7 @@
     if (now - lastTouch < 50) return;
     lastTouch = now;
     if (navigator.vibrate) { try { navigator.vibrate(PATTERN[kind] || 8); } catch (_) {} return; }
+    if (!TOUCH_SCREEN) return;
     if (!iosSwitch) {
       iosSwitch = document.createElement('label');
       iosSwitch.className = 'sx-haptic';
@@ -190,6 +218,8 @@
     return null;
   }
 
+  ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, unlock, { capture: true, passive: true }));
+
   // Capture phase: read a switch before its own handler flips it.
   document.addEventListener('click', ev => {
     const el = ev.target;
@@ -197,8 +227,10 @@
     if (el.closest('button:disabled, [aria-disabled="true"]')) return;
     cue(cueFor(el));
   }, true);
-  // The first touch anywhere opens audio, so the first real cue is not lost.
-  ['pointerdown', 'keydown'].forEach(t => document.addEventListener(t, wake, { once: true, capture: true }));
+  // Decode the sounds soon after the page settles, not on the first tap:
+  // the first switch flipped should already have its click ready. The
+  // context starts suspended until unlock() runs in a tap.
+  window.addEventListener('load', () => setTimeout(wake, 1200), { once: true });
 
   // ── Public ─────────────────────────────────────────────────
   // A toast's outcome. A success right after a cue for the same act is the
@@ -209,7 +241,7 @@
   }
 
   // Narada's voice needs the normal audio session (microphone, full volume).
-  function voice(active) { session(active ? 'auto' : 'ambient'); }
+  function voice(active) { session(active ? 'auto' : SESSION); }
 
   // The alarm plays whatever the switch says. False when the sound is not
   // loaded yet, so the caller can fall back to its own tone.
