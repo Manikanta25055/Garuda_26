@@ -97,19 +97,25 @@ def build_artifacts_router(core):
     router = APIRouter(prefix="/api/narada/artifacts")
     recent = collections.defaultdict(collections.deque)      # artifact id -> times of its calls
 
-    def _mine(artifact_id, session):
+    def _mine(artifact_id, session, admin_may=True):
+        """An admin may keep or remove anyone's artifact, but never run one.
+
+        A page's script is whatever its creator dictated to Narada; relayed
+        with the admin's session it read users and settings and ran admin
+        shortcuts. So /call is the creator's alone (admin_may=False).
+        """
         entry = core.ARTIFACTS.get(artifact_id)
         if entry is None:
             raise HTTPException(404, "No such artifact")
-        if session["role"] != "admin" and entry["by"] != session["username"]:
+        if entry["by"] != session["username"] and not (admin_may and session["role"] == "admin"):
             raise HTTPException(403, "That artifact is someone else's.")
         return entry
 
     @router.get("")
     async def list_artifacts(session=Depends(core.require_session)):
-        admin = session["role"] == "admin"
-        return {"artifacts": [a for a in core.ARTIFACTS.all()
-                              if admin or a["by"] == session["username"]]}
+        # Only the person's own: the list carries each page's view key, and
+        # the chat opens whatever it lists.
+        return {"artifacts": [a for a in core.ARTIFACTS.all() if a["by"] == session["username"]]}
 
     @router.get("/{artifact_id}/view")
     async def view_artifact(artifact_id: str, k: str = ""):
@@ -130,7 +136,7 @@ def build_artifacts_router(core):
     async def call_from_artifact(artifact_id: str, data: ArtifactCallRequest,
                                  session=Depends(core.require_session)):
         """A page asking for a capability, relayed by the chat page as this person."""
-        _mine(artifact_id, session)
+        _mine(artifact_id, session, admin_may=False)
         capability = core.AGENT_CAPABILITIES.get(data.capability)
         if capability is None or capability.name in core.ARTIFACT_BLOCKED:
             raise HTTPException(400, f"A page cannot use {data.capability}.")
