@@ -45,7 +45,10 @@ UNKNOWN_REPLY = "This conversation was not started from Garuda. Please reopen Na
 # - A response ends at its final message; nothing sent after it is said. So a
 #   job that runs long is told once, the spoken turn ends, and the answer goes
 #   to the chat when it is ready (the page polls /api/narada/voice/turns).
-FILLER_AFTER_S = 1.8
+# The model's first sentence usually comes within 2.5 s. A filler that
+# starts just before it only pushes the answer back by its own length
+# (measured end to end: filler at 1.8 s, answer at 2.1 s), so it waits.
+FILLER_AFTER_S = 3.0
 PLANNER_CHECK_S = 1.0
 KEEPALIVE_S = 5.0
 GIVE_UP_S = 11.0
@@ -201,7 +204,9 @@ class NaradaVoice:
         stops the brain at its next step when this turn is replaced.
         """
         heard = next((m.content for m in reversed(transcript) if m.role == "user"), "").strip()
-        if not heard:
+        if not re.search(r"\w", heard):
+            # ElevenLabs sends "..." for a breath or a noise; it was answered
+            # with a greeting nobody asked for (seen in the voice log).
             return None
         bound = self.binding(conversation_id)
         if bound is None:

@@ -99,6 +99,9 @@ MORE = "[[more]]"
 SPOKEN_SENTENCES = 3
 SPOKEN_CHARS = 420
 ON_SCREEN = "The rest is on your screen."
+# One more short sentence is said when it is the last one: pointing at the
+# screen for a single closing question sounded odd (measured end to end).
+SPOKEN_TAIL_CHARS = 200
 _MORE_RE = re.compile(r"\s*\[\[\s*more\s*\]\]\s*", re.I)
 
 
@@ -139,8 +142,11 @@ def split_spoken(reply):
     left_out = len(lines) > len(opening)
     pieces = [p for p in re.findall(r".+?(?:(?<!\d)[.!?:]+[\"')\]]*(?:\s+|$)|$)", spoken) if p.strip()]
     kept, total = [], 0
-    for p in pieces:
+    for n, p in enumerate(pieces):
         if kept and (len(kept) >= SPOKEN_SENTENCES or total + len(p) > SPOKEN_CHARS):
+            if n == len(pieces) - 1 and not left_out and len(p.strip()) <= SPOKEN_TAIL_CHARS:
+                kept.append(p)              # the closing line, short: said, not pointed at
+                break
             left_out = True
             break
         kept.append(p)

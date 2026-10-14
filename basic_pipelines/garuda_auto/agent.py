@@ -985,6 +985,7 @@ class _Speech:
         self.say, self.check, self.cancel, self.buf = say, check, cancel, ""
         self.spoken = ""                   # everything said, for the leak guard
         self.sentences = 0
+        self.held = []                     # past the cap: said only if the answer ends here
         self.done = False
 
     def feed(self, piece):
@@ -1034,6 +1035,9 @@ class _Speech:
         self.done = True
         if cut:
             self.say(guards.ON_SCREEN + " ")
+        else:
+            for clean in self.held:        # one short closing line, not worth a pointer
+                self.say(clean + " ")
         self.say(None)
 
     def _out(self, text):
@@ -1045,8 +1049,8 @@ class _Speech:
         clean = (self.check(text) or "").strip()
         if not clean:
             return
-        if guards.leaked_sentences(self.spoken + " " + clean, persona.protected_text()) \
-                >= guards._LEAK_SENTENCES:
+        if guards.leaked_sentences(" ".join([self.spoken, *self.held, clean]),
+                                   persona.protected_text()) >= guards._LEAK_SENTENCES:
             # Sentence by sentence each piece looked harmless; together they
             # recite the instructions. Stop here, as check_reply would have.
             self.spoken += " " + guards.LEAK_REPLY
@@ -1055,7 +1059,12 @@ class _Speech:
             return
         if self.sentences >= guards.SPOKEN_SENTENCES or (
                 self.sentences and len(self.spoken) + len(clean) > guards.SPOKEN_CHARS):
-            self._finish(cut=True)
+            # Held, not said: if the answer ends with it ("Shall I do that?"),
+            # it is said; if more follows, the screen is pointed to instead.
+            self.held.append(clean)
+            if len(self.held) > 1 or len(clean) > guards.SPOKEN_TAIL_CHARS:
+                self.held = []
+                self._finish(cut=True)
             return
         self.sentences += 1
         self.spoken += " " + clean

@@ -146,7 +146,7 @@ def test_a_long_answer_is_said_as_its_opening_and_points_at_the_screen():
     # waiting through all of it; the chat shows the whole thing. "3." stays
     # in its sentence.
     reply = ("There were three things. First, tamper alerts at 04.11 on 13 Oct. "
-             "Then 206 knife detections! Also item 3. was a door opening.")
+             "Then 206 knife detections! Also item 3. was a door opening. The rest was quiet.")
     v = voice(reply=lambda *a: {"reply": reply})
     v.issue_token("mani", "user", "home")
     chunks = _collect(v.speak("conv_1", [msg("user", "what happened?")]))
@@ -276,3 +276,11 @@ def test_every_filler_is_long_enough_to_be_said_at_once():
     # was never heard. 50+ characters measured as said at once.
     assert all(len(f) >= 45 for f in narada_voice.FILLERS)
     assert len(narada_voice.PLANNER_LINE) >= 45 and len(narada_voice.LATER_LINE) >= 45
+
+
+def test_a_noise_is_not_answered():
+    asked = []
+    v = voice(reply=lambda *a: asked.append(a) or {"reply": "Hello! How can I help?"})
+    v.issue_token("mani", "user", "home")
+    assert _collect(v.speak("conv_1", [msg("user", "...")])) == []
+    assert asked == [] and v.turns_for("conv_1", "mani", "user", "home") == []

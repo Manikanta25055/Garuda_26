@@ -184,7 +184,7 @@ def test_a_marker_before_anything_said_still_leaves_the_opening_spoken():
     said = []
     s = _Speech(said.append, lambda t: t.strip())
     for piece in ["[[more]]\n", "A good routine starts early. ", "Dim the lamp at ten. ",
-                  "Switch the fan to low. ", "Then lights off at eleven. "]:
+                  "Switch the fan to low. ", "Then lights off at eleven. ", "Sleep well. "]:
         s.feed(piece)
     s.flush(final=True)
     assert said == ["A good routine starts early. ", "Dim the lamp at ten. ", "Switch the fan to low. ",
@@ -199,3 +199,12 @@ def test_the_voice_stops_before_reading_a_table_aloud():
         s.feed(piece)
     s.flush(final=True)
     assert said == ["Here's a quick comparison of the lamp and fan: ", guards.ON_SCREEN + " ", None]
+
+
+def test_a_short_closing_line_past_the_cap_is_said_not_pointed_at():
+    said = []
+    s = _Speech(said.append, lambda t: t.strip())
+    s.feed("Dim the lamp. Turn off the fan. Switch on privacy mode. Shall I set that up? ")
+    s.flush(final=True)
+    assert said == ["Dim the lamp. ", "Turn off the fan. ", "Switch on privacy mode. ",
+                    "Shall I set that up? ", None]

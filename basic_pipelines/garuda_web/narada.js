@@ -890,6 +890,8 @@ const N = (() => {
           if (epoch !== voiceEpoch) return;
           const who = m.role || m.source;
           if (who === 'user') {
+            // "..." is how the speech service reports a noise, not words.
+            if (!/[\p{L}\p{N}]/u.test(m.message || '')) return;
             voiceHeard = true;
             // What was said for the last question stays, even if its written
             // answer never came (a turn the person talked over).

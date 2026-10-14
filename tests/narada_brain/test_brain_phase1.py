@@ -223,3 +223,7 @@ def test_speech_ends_where_a_table_or_list_starts():
     spoken, _ = guards.split_spoken("## Plan\n1. Lamp off\n2. Fan low")
     assert spoken == "Plan. " + guards.ON_SCREEN
     assert guards.is_structure("**Phase 1: Wind Down**") and not guards.is_structure("**Tamper** at 04:11.")
+
+
+def test_split_spoken_says_a_short_closing_line_instead_of_pointing_at_it():
+    assert guards.split_spoken("One. Two. Three. Shall I?")[0] == "One. Two. Three. Shall I?"
