@@ -29,15 +29,15 @@
   'use strict';
 
   const BASE = '/static/sounds/';
-  const VERSION = 1;
+  const VERSION = 2;
   // Gain per file, measured so each lands at its level: switches about
   // -28 dB, lock / delete / outcomes about -24, the alarm -11 (RMS of the
   // audible part, roughly weighted the way ears are). Clicks sit lowest,
   // outcomes a little above, the alarm far on top.
   const GAIN = {
-    on: 0.25, off: 0.21, lock: 0.31, unlock: 0.20, delete: 0.32, shutter: 0.21,
+    on: 0.25, off: 0.21, lock: 0.31, unlock: 0.20, delete: 0.50, shutter: 0.21,
     send: 0.24, receive: 0.18, success: 0.34, warning: 0.25, error: 0.42,
-    'rec-start': 0.27, 'rec-stop': 0.21, 'voice-start': 0.24, 'voice-end': 0.18,
+    'rec-start': 0.27, 'rec-stop': 0.21, 'voice-start': 0.19, 'voice-end': 0.18,
     alert: 1.0,
   };
   // The haptic each sound carries.

@@ -44,7 +44,10 @@ SOUNDS = {
     "off": ("A small premium toggle switch snapping off, a soft click slightly lower and duller", 130, 60, False),
     "lock": ("One single crisp soft click of a small premium latch closing, one click only, a smartphone screen locking", 220, 110, False),
     "unlock": ("A soft light mechanical unlatch click with a tiny airy lift, a premium device unlocking, gentle", 320, 160, False),
-    "delete": ("A soft short crumple of paper, an item dropped into the trash, gentle and quiet", 420, 200, False),
+    # The first delete was heard as "[glass breaking]": in a security app that
+    # startles. Paper, slowly, and nothing sharp.
+    "delete": ("A soft slow crumple of a single sheet of thin paper in a hand, gentle, muffled and quiet, "
+               "nothing sharp, nothing breaking", 420, 200, False),
     "shutter": ("A crisp quiet camera shutter click, a premium smartphone camera taking a photo", 300, 120, False),
     # messages
     "send": ("A quick soft whoosh that rises and fades away, a message being sent, airy and light", 380, 220, False),
@@ -56,7 +59,11 @@ SOUNDS = {
     # recording and voice
     "rec-start": ("A short soft rising electronic tone, video recording started, gentle premium interface sound", 320, 160, True),
     "rec-stop": ("A short soft falling electronic tone, video recording stopped, gentle premium interface sound", 320, 160, True),
-    "voice-start": ("A soft shimmering upward two-tone chime, a voice assistant starts listening, airy and warm", 620, 320, True),
+    # "Shimmering" made a choir: the first voice-start was heard as a woman
+    # saying "Oh well". Now plainly instrumental, and every take is checked.
+    "voice-start": ("Two soft clean electronic sine tones gliding upward in pitch, a glass bell chime, "
+                    "a voice assistant starts listening, purely instrumental, no human voice, no vocals, "
+                    "no choir, no humming", 620, 320, True),
     "voice-end": ("A soft shimmering chime that slides downward in pitch, a voice assistant stops listening, airy and warm", 620, 320, True),
     # the one loud sound
     "alert": ("An urgent clean two-tone electronic security alert chime, a home security alarm, clear and attention-grabbing", 1300, 250, True),
@@ -68,7 +75,7 @@ PICKS = {
     "off": 1,          # one 32 ms click, the warmest of four
     "lock": 4,         # click and body, 76 ms (asked twice: the first four were several clicks)
     "unlock": 1,       # latch then lift, 150 ms
-    "delete": 2,
+    "delete": 4,       # heard as "[paper rustling]" (take 2 was "[glass breaking]")
     "shutter": 2,      # one shutter, warmer than the brighter takes
     "send": 0,         # the whoosh that rises
     "receive": 1,      # one soft G5 ping
@@ -77,7 +84,7 @@ PICKS = {
     "error": 1,        # two low thuds
     "rec-start": 1,    # glides up 660 -> 1900 Hz
     "rec-stop": 2,     # glides down 750 -> 460 Hz
-    "voice-start": 1,  # shimmer rising 270 -> 1100 Hz
+    "voice-start": 7,  # a clean glide up 385 -> 668 Hz (take 1, a shimmer, had a voice in it)
     "voice-end": 4,    # shimmer falling 1000 -> 710 Hz, its mirror
     "alert": 1,        # two tones, a fifth apart, repeating
 }
@@ -85,6 +92,21 @@ PICKS = {
 # Made from another sound instead of asked for: (source, semitones). The
 # switch's on and off are one click at two pitches, so they read as a pair.
 DERIVED = {"on": ("off", 2.0)}
+
+
+def has_words(key, path):
+    """True when speech-to-text hears words in a take: a sound must not talk.
+
+    Scribe tags non-speech as "[chime]", "[swish]"; anything else is a voice.
+    """
+    import requests
+    with open(path, "rb") as f:
+        r = requests.post("https://api.elevenlabs.io/v1/speech-to-text", headers={"xi-api-key": key},
+                          data={"model_id": "scribe_v1", "tag_audio_events": "true"},
+                          files={"file": (path.name, f, "audio/mpeg")}, timeout=60)
+    r.raise_for_status()
+    import re
+    return bool(re.sub(r"[\[(][^\])]*[\])]", "", r.json().get("text", "")).strip(" .,!?"))
 
 
 def api_key(args):
@@ -193,13 +215,19 @@ def main():
                 (CACHE / f"{name}.{i}.mp3").write_bytes(generate(key, prompt, seconds, args.influence))
             takes = sorted(CACHE.glob(f"{name}.*.mp3"))
         rated = []
+        if key or os.environ.get("ELEVENLABS_API_KEY") or args.key_file:
+            key = key or api_key(args)
+            spoken = [t for t in takes if has_words(key, t)]
+            for t in spoken:
+                print(f"{name:12s} take {t.stem.split('.')[-1]} has a voice in it: left out")
+            takes = [t for t in takes if t not in spoken]
+            if not takes:
+                sys.exit(f"{name}: every take has a voice in it; ask for more with --fresh")
         for t in takes:
             clip, fit = shape(decode(t), keep, fade)
             rated.append((score(clip, fit, tonal), int(t.stem.split(".")[-1]), clip))
-        if name in picks:
-            chosen = next(r for r in rated if r[1] == int(picks[name]))
-        else:
-            chosen = max(rated, key=lambda r: r[0])
+        chosen = next((r for r in rated if name in picks and r[1] == int(picks[name])), None) \
+            or max(rated, key=lambda r: r[0])
         encode(chosen[2], OUT / f"{name}.mp3")
         chosen_clip[name] = chosen[2]
         print(f"{name:12s} take {chosen[1]} of {len(rated)}  "
