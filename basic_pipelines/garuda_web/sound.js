@@ -93,39 +93,65 @@
   ];
 
   const SESSION = 'playback';
-  // Only touch screens have a Taptic Engine to reach; on a Mac the hidden
-  // switch would be a stray click and nothing to feel.
+  // Only touch screens have a Taptic Engine to reach, or an iOS audio
+  // session to choose; on a Mac both would be work for nothing.
   const TOUCH_SCREEN = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
+  // A running AudioContext renders silence in real time on its own thread
+  // for as long as it runs. Safari's audio pipeline makes that a cost the
+  // whole page feels (every transition on a Mac lagged while it ran), so
+  // the context only runs from a press until shortly after its sound ends.
+  const IDLE_MS = 1500;
   let ctx = null, buffers = {}, loading = null, lastAt = {}, lastSound = 0, lastTouch = 0;
+  let idleTimer = 0, busyUntil = 0, voiceOn = false, everRan = false;
   let muted = false;
   try { muted = localStorage.getItem('garuda_sound') === 'off'; } catch (_) {}
 
   // ── Audio ──────────────────────────────────────────────────
   function session(type) {
+    if (!TOUCH_SCREEN) return;
     try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (_) {}
   }
 
-  function wake() {
+  // The context, made once. A context made outside a tap starts suspended
+  // and costs nothing, so the sounds can be decoded before they are needed.
+  function context() {
     if (!ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       session(SESSION);
       try { ctx = new AC({ latencyHint: 'interactive' }); } catch (_) { return null; }
+      ctx.onstatechange = () => { if (ctx.state === 'running') everRan = true; };
     }
-    // Not only "suspended": Safari leaves a context "interrupted" after a
-    // call or Narada's voice session, and it stays silent until resumed.
-    if (ctx.state !== 'running' && ctx.state !== 'closed') ctx.resume().catch(() => {});
     if (!loading) loading = load();
     return ctx;
   }
 
+  // Running, and kept running until IDLE_MS after the last sound ends.
+  // "interrupted" too: Safari leaves a context so after a call or Narada's
+  // voice session, silent until it is resumed.
+  function wake(holdMs) {
+    const c = context();
+    if (!c) return null;
+    if (c.state !== 'running' && c.state !== 'closed') c.resume().catch(() => {});
+    busyUntil = Math.max(busyUntil, performance.now() + (holdMs || 0));
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(rest, busyUntil - performance.now() + IDLE_MS);
+    return c;
+  }
+
+  function rest() {
+    if (!ctx || voiceOn || ctx.state !== 'running') return;
+    if (performance.now() < busyUntil) { idleTimer = setTimeout(rest, busyUntil - performance.now() + IDLE_MS); return; }
+    ctx.suspend().catch(() => {});
+  }
+
   // iOS lets audio start only inside a tap's touchend or click (pointerdown
   // and touchstart do not count), and only once something actually plays
-  // in it, so a one-sample silence is played there. It runs on every tap
-  // while the context is not running, which also brings it back after an
-  // interruption.
+  // in it, so a one-sample silence is played there, while the context is
+  // not running. Once it has run, a muted page leaves it asleep (the alarm
+  // can still wake it: the browser's permission stays).
   function unlock() {
-    if (ctx && ctx.state === 'running') return;
+    if (ctx && (ctx.state === 'running' || (muted && everRan))) return;
     const c = wake();
     if (!c) return;
     try {
@@ -155,20 +181,28 @@
     return 0;
   }
 
+  // Whether the sound will play (decided now, so a toast can stay quiet
+  // behind it); the audio itself starts in the next task, after the
+  // control's own handler has changed the page, so a sound can never hold
+  // up the frame that shows the change. Both land together.
   function sound(name, force) {
     if ((muted && !force) || document.hidden) return false;
     const b = buffers[name];
-    if (!wake() || !b) return false;
+    if (!b || !context()) return false;
     const now = performance.now();
     if (now - (lastAt[name] || 0) < 80) return false;
     lastAt[name] = now;
     lastSound = now;
-    const src = ctx.createBufferSource();
-    const gain = ctx.createGain();
-    gain.gain.value = GAIN[name] || 0.3;
-    src.buffer = b.buf;
-    src.connect(gain).connect(ctx.destination);
-    src.start(0, b.at);
+    setTimeout(() => {
+      const c = wake(b.buf.duration * 1000);
+      if (!c) return;
+      const src = c.createBufferSource();
+      const gain = c.createGain();
+      gain.gain.value = GAIN[name] || 0.3;
+      src.buffer = b.buf;
+      src.connect(gain).connect(c.destination);
+      src.start(0, b.at);
+    }, 0);
     return true;
   }
 
@@ -219,6 +253,9 @@
   }
 
   ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, unlock, { capture: true, passive: true }));
+  // A press starts the context, so it is running by the time the click
+  // lands (a click comes 50-150 ms after its press; resuming takes less).
+  document.addEventListener('pointerdown', () => { if (ctx && !muted) wake(); }, { capture: true, passive: true });
 
   // Capture phase: read a switch before its own handler flips it.
   document.addEventListener('click', ev => {
@@ -229,8 +266,8 @@
   }, true);
   // Decode the sounds soon after the page settles, not on the first tap:
   // the first switch flipped should already have its click ready. The
-  // context starts suspended until unlock() runs in a tap.
-  window.addEventListener('load', () => setTimeout(wake, 1200), { once: true });
+  // context stays suspended until unlock() runs in a tap.
+  window.addEventListener('load', () => setTimeout(context, 1200), { once: true });
 
   // ── Public ─────────────────────────────────────────────────
   // A toast's outcome. A success right after a cue for the same act is the
@@ -241,11 +278,18 @@
   }
 
   // Narada's voice needs the normal audio session (microphone, full volume).
-  function voice(active) { session(active ? 'auto' : SESSION); }
+  function voice(active) {
+    voiceOn = active;
+    session(active ? 'auto' : SESSION);
+    if (!active && ctx) wake();                  // the end chime, then rest
+  }
 
   // The alarm plays whatever the switch says. False when the sound is not
   // loaded yet, so the caller can fall back to its own tone.
   function alarm() { return sound('alert', true); }
+
+  // For tests: whether audio is running right now.
+  function state() { return ctx ? ctx.state : 'none'; }
 
   function paintButton() {
     const b = document.getElementById('sound-btn');
@@ -266,5 +310,6 @@
   document.addEventListener('DOMContentLoaded', paintButton);
   if (document.readyState !== 'loading') paintButton();
 
-  window.Feel = { play, sound: name => sound(name), touch, toast, voice, alarm, toggle, get muted() { return muted; } };
+  window.Feel = { play, sound: name => sound(name), touch, toast, voice, alarm, toggle, state,
+                  get muted() { return muted; } };
 })();

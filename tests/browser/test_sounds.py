@@ -136,3 +136,19 @@ def test_an_outcome_is_heard_once(admin):
     assert h.after(lambda: admin.js("G.showToast('Saved', 'success')"), 300) == ["success"]
     assert h.after(lambda: admin.js("G.showToast('Just so you know', 'info')"), 300) == []
     assert h.after(lambda: admin.js("G.showToast('That did not work', 'error')"), 300) == ["error"]
+
+
+def test_audio_sleeps_between_sounds(admin):
+    # A running context renders silence in real time; in Safari that lagged
+    # every transition on the page. It runs for a sound and rests after.
+    admin.page.mouse.click(5, 300)                                    # a tap opens audio
+    admin.js("G.showToast('Saved', 'success')")
+    admin.page.wait_for_timeout(200)
+    assert admin.js("Feel.state()") == "running"
+    admin.page.wait_for_timeout(2800)                                 # the chime (0.65 s) and the rest
+    assert admin.js("Feel.state()") == "suspended"
+    admin.page.mouse.move(400, 300)
+    admin.page.mouse.down()                                          # a press wakes it before the click
+    admin.page.wait_for_timeout(120)
+    assert admin.js("Feel.state()") == "running"
+    admin.page.mouse.up()
