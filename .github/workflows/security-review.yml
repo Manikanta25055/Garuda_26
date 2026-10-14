@@ -1,0 +1,31 @@
+name: security review
+
+# Claude reads each pull request's diff for security problems (injection,
+# auth bypass, leaked secrets, unsafe deserialisation...) and comments on the
+# lines it flags. Needs the CLAUDE_API_KEY repository secret.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write  # to comment findings on the PR
+
+jobs:
+  claude:
+    # The action is not hardened against prompt injection, and forks get no
+    # secrets anyway: review only branches pushed to this repository.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+      # Pinned to a commit so the reviewer cannot change under us.
+      - uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda
+        with:
+          comment-pr: true
+          claude-api-key: ${{ secrets.CLAUDE_API_KEY }}
+          # Papers, datasets and the iOS app's assets carry no server code.
+          exclude-directories: "IEEE Access Paper,Paper Writing,Patent Writing,datasets,doc,Documents,resources"
