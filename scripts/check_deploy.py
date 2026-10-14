@@ -33,9 +33,15 @@ def say(kind, what, detail=""):
     print(f"  {kind:<4}  {what}" + (f"  ({detail})" if detail else ""))
 
 
+# Cloudflare refuses Python's own user agent ("Python-urllib/3.x") with a 403
+# before the request reaches the tunnel, so the public checks name themselves.
+USER_AGENT = "garuda-check-deploy/1 (+curl-compatible)"
+
+
 def fetch(url, method="GET", body=None, headers=None, timeout=15):
     """(status, headers, text); status 0 when nothing answered."""
-    req = urllib.request.Request(url, data=body, method=method, headers=headers or {})
+    req = urllib.request.Request(url, data=body, method=method,
+                                 headers={"User-Agent": USER_AGENT, **(headers or {})})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
             return r.status, r.headers, r.read().decode("utf-8", "replace")
