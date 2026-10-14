@@ -25,15 +25,13 @@ from garuda_auto.narada_voice import TTS_MODEL  # noqa: E402
 
 ENV_PATH = ROOT / ".env"
 DEFAULT_HOST = "garuda.veeramanikanta.in"
-# Eric: smooth, conversational. (George, the first pick, reads like a narrator.)
-DEFAULT_VOICE = "cjVigY5qzO86Huf0OWal"
-# Indian English needs a paid ElevenLabs plan: the built-in voices are all
-# American or British, and on the free plan the API refuses voice-library
-# voices (402 paid_plan_required) and voice design (403), both tried
-# 2026-10-01. On Starter or above:
-#     python3 scripts/setup_narada_voice.py --voice pzxut4zZz4GImZNlqQ3H
-# (Raju, "Natural Conversationalist"; also Kaanha 3ilI2SPo3zMSLH6nREK8 and
-# Sid 0muxiGNHAVvmM1qWRtyV, same owner). The voice is added to the account.
+# Raju, "Natural Conversationalist": Indian English, the voice the owner
+# wanted from the start. Library voices need a paid plan (the free plan
+# answered 402 paid_plan_required, 2026-10-01); the account is on Starter
+# since 2026-10-14. Same owner: Kaanha 3ilI2SPo3zMSLH6nREK8, Sid
+# 0muxiGNHAVvmM1qWRtyV. The free plan's fallback was Eric,
+# cjVigY5qzO86Huf0OWal (built in). The voice is added to the account.
+DEFAULT_VOICE = "pzxut4zZz4GImZNlqQ3H"
 LIBRARY_VOICE_OWNER = "7398804d9eaf2f463899a907587c33a390591775784f87857b6d0e1e4e3e66f6"
 KEYWORDS = ["Narada", "Garuda", "Drishti", "DND", "privacy mode", "night mode"]
 
@@ -59,13 +57,13 @@ def engine_config(ws_url, voice):
         tts={"model_id": TTS_MODEL, "voice_id": voice, "expressive_mode": True,
              "stability": 0.32, "similarity_boost": 0.8, "speed": 1.0},
         asr={"provider": "scribe_realtime", "keywords": KEYWORDS},
-        # Hands-free until ~30 s of silence; the free plan is 10k characters
-        # a month, so conversations are capped at five minutes.
+        # Hands-free until ~30 s of silence. Starter is 40k characters a
+        # month (the free plan's 10k capped calls at five minutes): ten.
         # Eager: answer as soon as the sentence sounds finished instead of
         # waiting out a pause. Speculative: start on the likely-final words.
         turn={"turn_model": "turn_v3", "turn_eagerness": "eager",
               "speculative_turn": True, "silence_end_call_timeout": 30},
-        conversation={"max_duration_seconds": 300},
+        conversation={"max_duration_seconds": 600},
         call_limits={"agent_concurrency_limit": 2},
         overrides={"first_message": True},
         privacy={"record_voice": False},

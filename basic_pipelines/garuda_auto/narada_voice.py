@@ -25,8 +25,8 @@ log = logging.getLogger(__name__)
 
 TTS_MODEL = "eleven_v4_turbo"     # scripts/setup_narada_voice.py configures the engine with it
 INFO_TTL_S = 60                  # the info panel must not hammer the ElevenLabs API
-BINDING_TTL_S = 15 * 60          # longer than the 5-minute conversation cap
-MAX_SPOKEN_CHARS = 400           # free plan: 10k characters a month
+BINDING_TTL_S = 15 * 60          # longer than the 10-minute conversation cap
+MAX_SPOKEN_CHARS = 700           # Starter: 40k characters a month (free was 10k, and 400)
 UNKNOWN_REPLY = "This conversation was not started from Garuda. Please reopen Narada."
 # NIM usually answers in one to two seconds. Only past this point is a short
 # filler spoken first, the way a person says "hmm" while they think; any
