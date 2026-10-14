@@ -95,6 +95,34 @@ def day_counts(path, keep):
     return dict(total)
 
 
+# UTF-8 that was read as Latin-1 and written back: "Here’s" became "Hereâ" and
+# two control characters. The voice log has such lines from before 2026-10-15
+# (the model's stream was decoded as Latin-1), and the history search handed
+# them back to the model, which copied them and made them worse.
+_MOJIBAKE = re.compile("[\u00c2\u00c3\u00e2][\u0080-\u00bf]")
+
+
+_HIGH_RUN = re.compile("[\u0080-\u00ff]+")
+
+
+def _unmangle_run(m):
+    run = m.group(0)
+    for _ in range(3):                      # it went round more than once on some lines
+        if not _MOJIBAKE.search(run):
+            break
+        try:
+            run = run.encode("latin-1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            break
+    return run
+
+
+def unmangle(text):
+    """Undo UTF-8 read as Latin-1, run by run (a line also holds real "→" or
+    "—"); text that is not that is left as it is."""
+    return _HIGH_RUN.sub(_unmangle_run, text) if _MOJIBAKE.search(text) else text
+
+
 def _read_file(p, start, end):
     """[stamp, text] of one file's lines with start <= stamp < end, in file order.
 
@@ -110,11 +138,11 @@ def _read_file(p, start, end):
                 m = _STAMP.match(line)
                 if m is None:
                     if current is not None and line:
-                        current[1] += "\n" + line
+                        current[1] += "\n" + unmangle(line)
                     continue
                 ts = m.group(1)
                 if start <= ts < end:
-                    current = [ts, line[m.end():]]
+                    current = [ts, unmangle(line[m.end():])]
                     out.append(current)
                 else:
                     current = None

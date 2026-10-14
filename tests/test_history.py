@@ -400,3 +400,20 @@ def test_a_day_is_filtered_to_the_kinds_asked_for(app_client, user_headers):
     assert texts("system") == ["[TAMPER] Dead-man switch disabled", "[CAMERA] Input resolved to"]
     assert len(texts("")) == 9
     assert _get(app_client, user_headers, date="2026-10-02", kind="bogus").status_code == 400
+
+
+def test_garbled_voice_lines_are_read_back_as_written(tmp_path):
+    # Before 2026-10-15 the model's stream was decoded as Latin-1, so the voice
+    # log holds "no oneâ\x80\x99s" (and worse, after a round trip through the
+    # model), next to real "→" and "—". Read back, they are what was said.
+    from basic_pipelines.garuda_core import log_history
+    p = tmp_path / "voice.txt"
+    p.write_text("[2026-10-15 00:45:46] You said: anyone home?\n"
+                 "→ [2026-10-15 00:45:46] no oneâ\x80\x99s home — lamp off\n"
+                 "[2026-10-15 00:46:19] You said: sure? It\u00e2\u0080\u0099s late\n"
+                 "→ [2026-10-15 00:46:19] no oneÃ¢Â\x80Â\x99s home\n"
+                 "[2026-10-15 00:47:00] Café, naïve — fine\n", encoding="utf-8")
+    texts = [t for _, t in log_history._read_file(str(p), "", "9999")]
+    assert texts == ["You said: anyone home?\n→ [2026-10-15 00:45:46] no one’s home — lamp off",
+                     "You said: sure? It’s late\n→ [2026-10-15 00:46:19] no one’s home",
+                     "Café, naïve — fine"]

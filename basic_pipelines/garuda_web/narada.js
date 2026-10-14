@@ -68,6 +68,7 @@ const N = (() => {
   // mark would flicker) until the checked reply replaces it in the same place.
   let draftEl = null, draftText = '', draftRaf = 0;
   let waitingCards = [];              // cards the server holds for this person's Confirm
+  let waveRaf = 0, waveAt = 0, waveLevel = 0, waveHist = new Float32Array(64);   // the voice in the text field
 
   function voiceActive() { return voice !== 'off'; }
 
@@ -539,6 +540,7 @@ const N = (() => {
       mic.setAttribute('aria-label', voice === 'off' ? 'Talk to Narada'
         : held ? 'Talk (hold to end the conversation)' : 'End conversation');
     }
+    waveOn(voice === 'on' && micOpen);
     const dock = $('nx-dock');
     if (dock) dock.dataset.state = state;
     if (status) {
@@ -708,6 +710,7 @@ const N = (() => {
   // (and stay, if no model answers).
   const PEEK_FITS = 110;
   function summarise(turn) {
+    if (turn.summary) return;                // already written, by the voice turn
     const plain = mdPlain(turn.text).trim();
     if (plain.length <= PEEK_FITS && !plain.includes('\n')) return;
     G._apiFn('POST', '/api/narada/summary', { text: turn.text.slice(0, 8000) }).then(res => {
@@ -720,11 +723,12 @@ const N = (() => {
 
   // Add a turn. It shows as two lines above the bar; the whole conversation
   // opens when it is asked for (it used to open by itself and cover the page).
-  function say(who, text, typed) {
+  function say(who, text, typed, summary) {
     text = (text || '').trim();
     if (!text) return null;
     setPending(false);
     const turn = { who, text };
+    if (summary) turn.summary = summary;       // what Narada said aloud of a long answer
     session.push(turn);
     if (session.length > SESSION_MAX) session = session.slice(-SESSION_MAX);
     save();
@@ -1005,6 +1009,56 @@ const N = (() => {
     else stopVoice();
   }
 
+  // ── The voice in the text field ───────────────────────────
+  // The microphone's level (ElevenLabs' input volume), smoothed with a quick
+  // rise and a slow fall, one bar every 55 ms, newest on the right.
+  const WAVE_STEP_MS = 55;
+  function waveOn(on) {
+    const bar = $('nx-bar');
+    if (!bar) return;
+    bar.classList.toggle('listening', on);
+    if (on && !waveRaf) { waveHist.fill(0); waveLevel = 0; waveRaf = requestAnimationFrame(waveTick); }
+  }
+  function waveTick(now) {
+    const bar = $('nx-bar'), cv = $('nx-wave');
+    if (!cv || !bar || !(conv && voice === 'on' && micOpen)) {
+      if (bar) bar.classList.remove('listening');
+      waveRaf = 0;
+      return;
+    }
+    let v = 0;
+    try { v = conv.getInputVolume ? conv.getInputVolume() || 0 : 0; } catch (_) {}
+    waveLevel = v > waveLevel ? waveLevel + (v - waveLevel) * 0.6 : waveLevel * 0.88;
+    if (now - waveAt >= WAVE_STEP_MS) {
+      waveAt = now;
+      waveHist.copyWithin(0, 1);
+      waveHist[waveHist.length - 1] = Math.min(1, Math.pow(waveLevel * 2.6, 0.75));
+    }
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    }
+    const g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    const bw = 2.5, gap = 3.2, n = Math.min(waveHist.length, Math.floor((w - 6) / (bw + gap)));
+    const mid = h / 2, tall = Math.min(18, h * 0.45);
+    g.lineCap = 'round';
+    g.lineWidth = bw;
+    for (let i = 0; i < n; i++) {
+      const level = waveHist[waveHist.length - n + i];
+      const half = Math.max(0.01, level * tall / 2);
+      const x = 3 + i * (bw + gap) + bw / 2;
+      g.strokeStyle = `rgba(255,255,255,${(0.14 + 0.44 * (i / Math.max(1, n - 1))).toFixed(3)})`;
+      g.beginPath();
+      g.moveTo(x, mid - half);
+      g.lineTo(x, mid + half);
+      g.stroke();
+    }
+    waveRaf = requestAnimationFrame(waveTick);
+  }
+
   function closeMic() {
     if (!conv || !micOpen) return;
     micOpen = false;
@@ -1093,7 +1147,7 @@ const N = (() => {
   function showResult(res, typed = false, seconds = 0) {
     workDone(res);
     lastReply = { ...res, seconds };
-    say('narada', res.response || '…', typed);
+    say('narada', res.response || '…', typed, res.summary);
     window.Feel?.sound('receive');
     // A drafted automation needs a Confirm button, so it goes into the
     // conversation; what ran and which model answered go to the "i" panel.

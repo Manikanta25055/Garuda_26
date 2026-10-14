@@ -837,3 +837,100 @@ def test_a_call_starts_on_a_token_fetched_before_the_tap_and_a_quick_restart_ski
     assert len(issued) == 2
     assert errors == []
     ctx.close()
+
+
+def test_the_voice_shows_in_the_text_field_only_while_the_microphone_listens(server, browser, monkeypatch):
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='wave-conv'))))
+    voice = NaradaVoice('test', 'engine', client=sdk, reply_fn=lambda *a: {'reply': 'ok'})
+    monkeypatch.setattr(gw, 'NARADA_VOICE', voice)
+    ctx = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True,
+                              service_workers='block')
+    page = ctx.new_page()
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    page.route('**/static/vendor/elevenlabs-client.js', lambda r: r.fulfill(
+        content_type='text/javascript', body='''
+        export const Conversation = {startSession: async options => {
+          window.voiceCallbacks = options; window.level = 0.25;
+          options.onConnect();
+          return {endSession: async () => options.onDisconnect(), setMicMuted: () => {},
+                  getInputVolume: () => window.level, getId: () => 'wave-conv', sendUserMessage: () => {}};
+        }};'''))
+    page.goto(server + '/')
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + '/')
+    page.wait_for_selector('#app.logged-in', state='attached')
+    page.click('.ios-item[data-page=narada]')
+    # Lit pixels in the newest fifth of the field (the right end): bars roll leftwards.
+    lit = ("(() => { const c = document.getElementById('nx-wave'); if (!c.width) return 0;"
+           " const x = Math.floor(c.width * 0.8);"
+           " const d = c.getContext('2d').getImageData(x, 0, c.width - x, c.height).data; let n = 0;"
+           " for (let i = 3; i < d.length; i += 4) if (d[i] > 20) n++; return n; })()")
+    assert not page.locator('#nx-bar.listening').count()
+    page.click('#nx-mic')
+    _wait_js(page, 'document.querySelector("#nx-bar.listening")')
+    page.wait_for_timeout(900)
+    loud = page.evaluate(lit)
+    assert loud > 60                                           # bars drawn from the voice
+    page.evaluate("window.level = 0.12")
+    page.wait_for_timeout(1200)
+    page.locator('#nx-bar').screenshot(path='/tmp/garuda-narada-wave.png')
+    assert page.evaluate("getComputedStyle(document.getElementById('nx-wave')).opacity") == '1'
+    page.evaluate('window.level = 0')
+    page.wait_for_timeout(1500)
+    assert page.evaluate(lit) < loud / 3                       # quiet: back to small dots
+    # Typing hides it.
+    page.fill('#nx-input', 'hello')
+    page.wait_for_timeout(900)                                 # the 0.35 s fade, with room
+    assert page.evaluate("getComputedStyle(document.getElementById('nx-wave')).opacity") == '0'
+    page.fill('#nx-input', '')
+    # The question is in: the microphone closes and the voice goes from the field.
+    with voice._lock:
+        voice._heard['wave-conv'] = {'n': 1, 'text': 'Is the lamp on?'}
+    _wait_js(page, '!document.querySelector("#nx-bar.listening")')
+    assert errors == []
+    ctx.close()
+
+
+def test_the_voice_log_scrolls_reads_clean_and_keeps_up_while_open(admin_page):
+    # The owner: the Voice section of the Logs page was stuck, not scrollable,
+    # and did not update.
+    import datetime as _dt
+    p = admin_page
+    now = _dt.datetime.now()
+    os.makedirs(os.path.dirname(gw.PERM_VOICE_LOG), exist_ok=True)
+    with open(gw.PERM_VOICE_LOG, "w", encoding="utf-8") as f:
+        for n in range(80):
+            stamp = (now - _dt.timedelta(minutes=90 - n)).strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{stamp}] You said: question {n}\n→ [{stamp}] answer {n}, no oneâ\x80\x99s home\n")
+    p.go('a-logs')
+    p.page.click('.log-tab[data-log=voice]')
+    p.page.wait_for_selector('#a-vlog .log-line', state='attached', timeout=8000)
+    pane = "document.getElementById('a-vlog')"
+    assert p.js(f"getComputedStyle({pane}).overflowY") == 'auto'
+    assert p.js(f"{pane}.scrollHeight > {pane}.clientHeight + 100")
+    p.js(f"{pane}.scrollTop = 0")
+    assert p.js(f"{pane}.scrollTop") == 0                       # it moves: scrollable
+    assert "no one’s home" in p.page.locator('#a-vlog').text_content()
+    assert "â" not in p.page.locator('#a-vlog').text_content()
+    # A turn spoken while the page is open shows up without a reload.
+    gw.append_voice_log("You said: brand new question")
+    p.page.click('.log-tab[data-log=system]')
+    p.page.click('.log-tab[data-log=voice]')
+    for _ in range(80):
+        if "brand new question" in (p.page.locator('#a-vlog').text_content() or ""):
+            break
+        p.page.wait_for_timeout(100)
+    assert "brand new question" in p.page.locator('#a-vlog').text_content()
+    gw.append_voice_log("You said: and one more, on the timer")
+    for _ in range(140):
+        if "on the timer" in (p.page.locator('#a-vlog').text_content() or ""):
+            break
+        p.page.wait_for_timeout(100)
+    assert "on the timer" in p.page.locator('#a-vlog').text_content()
+    p.assert_clean()

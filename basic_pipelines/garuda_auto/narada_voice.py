@@ -273,7 +273,8 @@ class NaradaVoice:
                           or "Done.",
                           **{k: result[k] for k in ("lane", "actions", "proposal", "memory", "offer",
                                                    "observation", "confirm", "artifacts", "steps",
-                                                   "images", "planner", "route", "model") if k in result}})
+                                                   "images", "planner", "route", "model", "summary")
+                             if k in result}})
             del turns[:-32]
         if self._on_turn:
             try:

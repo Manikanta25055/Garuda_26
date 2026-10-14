@@ -2252,6 +2252,8 @@ const G = (() => {
       _LOG_KINDS.forEach((k, i) => { _logLines[k] = got[i].lines; _logMore[k] = got[i].more; });
       _logsLoaded = true;
       renderLogs();
+      clearTimeout(_logLiveTimer);
+      _logLiveTimer = setTimeout(_refreshLogTab, 10000);
     } catch(e) {
       if (req !== _logReq) return;
       // 403 means logs not unlocked — re-show gate
@@ -2297,6 +2299,34 @@ const G = (() => {
       _logMore[kind] = got.more;
       _renderLogPane(kind, 'older');
     } catch(_) { showToast('Could not read earlier lines.', 'error'); }
+  }
+
+  // The open tab, read again while the page shows the newest lines: the state
+  // push carries only the system log, so Voice, Detection and Presence stood
+  // still until the page was opened again.
+  let _logLiveTimer = null;
+  async function _refreshLogTab() {
+    clearTimeout(_logLiveTimer);
+    if (_currentPage !== 'a-logs' || !_logsUnlocked || !_logsLoaded) return;
+    const kind = _logTab, { day, q } = _logFilters();
+    if (!q && (!day || day === _localDay()) && !document.hidden) {
+      const req = _logReq;
+      try {
+        const got = await _fetchLogKind(kind);
+        if (req === _logReq && kind === _logTab) {
+          const cur = _logLines[kind], have = new Set(cur.map(_logKey));
+          const fresh = got.lines.filter(e => !have.has(_logKey(e)));
+          // A line that grew (a reply joins its question) is replaced, not repeated.
+          const keep = cur.filter(e => !got.lines.some(g => g.ts === e.ts && g.text !== e.text
+                                                                  && g.text.startsWith(e.text)));
+          if (fresh.length) {
+            _logLines[kind] = keep.concat(fresh).sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0));
+            _renderLogPane(kind, 'live');
+          }
+        }
+      } catch (_) { /* the next tick tries again */ }
+    }
+    _logLiveTimer = setTimeout(_refreshLogTab, 10000);
   }
 
   // New lines from the state push, while the page shows the newest (no past day, no filter).
@@ -2379,6 +2409,7 @@ const G = (() => {
     if (paneEl) paneEl.classList.add('active');
     _logTab = tab;
     _syncLogOlder();
+    _refreshLogTab();                         // what was added since the page opened
   }
 
   // ── Docs tab switching ─────────────────────────────────────

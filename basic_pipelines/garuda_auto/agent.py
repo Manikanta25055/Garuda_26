@@ -50,6 +50,7 @@ MAX_ROUNDS = 5
 VOICE_TIMEOUT_S = 20
 TEXT_TIMEOUT_S = 30
 HEDGE_AFTER_S = 1.5
+SUMMARY_TIMEOUT_S = 8           # the one sentence said for a long spoken answer
 VOICE_MAX_TOKENS = 4096
 TEXT_MAX_TOKENS = 4096
 MAX_INPUT_CHARS = 2000
@@ -516,11 +517,21 @@ class HomeAgent:
             calls = message.get("tool_calls") or []
             if speech:
                 # The last sentence, or a "let me check" before tools. A final
-                # answer ends the spoken part even if it never reached [[more]].
+                # short answer ends the spoken part here; a long one waits for
+                # its summary below.
                 speech.flush(final=not calls)
             if not calls:
                 written = self.brain.check_reply((message.get("content") or "").strip() or "Done.")
                 spoken, display_reply = guards.split_spoken(written)
+                summary = ""
+                if voice and (speech.long if speech else spoken.endswith(guards.ON_SCREEN)):
+                    # Too long to say: its one-sentence summary is said, the one
+                    # the closed chat shows, not its first lines and a pointer.
+                    summary = self._summary(display_reply)
+                    if summary:
+                        spoken = summary
+                if speech and not speech.done:
+                    speech.finish(spoken)
                 if self._turn.injected:
                     # Shown every time: a turn that read an injected instruction and
                     # told nobody is how a poisoned name stays in the house unnoticed.
@@ -531,6 +542,7 @@ class HomeAgent:
                 # Remembered whole: a follow-up ("and the third one?") refers to
                 # what was shown, not only to what was said.
                 return {**finish(reply), "display_reply": display_reply,
+                        **({"summary": summary} if summary else {}),
                         "streamed": bool(speech and speech.spoken),
                         "_turn": _for_memory(messages[first:])
                         + [{"role": "assistant", "content": display_reply}]}
@@ -600,6 +612,20 @@ class HomeAgent:
                       else "That took too long; try asking for one part of it at a time.")
 
     # ── tools ─────────────────────────────────────────────────────────────────
+
+    def _summary(self, text):
+        """One sentence for a long answer, written by the quick model; '' when
+        none comes in time (the answer's opening is said instead)."""
+        try:
+            message = self.chat.chat(
+                [{"role": "system", "content": persona.REPLY_SUMMARY_INSTRUCTION},
+                 {"role": "user", "content": f"<reply>\n{text[:8000]}\n</reply>"}],
+                max_tokens=80, temperature=0.2, timeout=SUMMARY_TIMEOUT_S, extra=NO_THINKING,
+                hedge_after=HEDGE_AFTER_S)
+        except NimUnavailable:
+            return ""
+        said = re.sub(r"\s+", " ", message.get("content") or "").strip().strip('"*')
+        return (self.brain.check_reply(said, voice=True) or "")[:240] if said else ""
 
     def _snapshot_for_noticing(self):
         """Recorded data only: the log, device states, noticed routines, modes."""
@@ -974,32 +1000,37 @@ class _Draft:
 
 
 class _Speech:
-    """The spoken part of an answer, streamed from the model a sentence at a time.
+    """What is said aloud of an answer the model is still writing.
+
+    A short answer is said as it is: its sentences are held only until the
+    answer ends (a few tenths of a second) or turns out long. A long one (a
+    list, a table or a heading, or more than a few sentences) is not read out
+    in part: the agent says its one-sentence summary instead, the one the
+    closed chat shows (the owner: "say what the collapsed window shows").
+    The model's own [[more]] marks a short opening it wrote to be said; that
+    is said as soon as it is complete.
 
     Each sentence goes through the same check as a whole reply (lists and
-    markdown become speech) before it is handed on, and the instruction-leak
-    guard reads everything said so far, so streaming skips no guard. A line
-    break ends a sentence (list items); so does a stop after a number when a
-    capital follows ("at 04.11. Then"), but not a list's "3. was" mid-line.
-
-    Only the opening is said (guards.split_spoken): speech ends at the
-    model's [[more]] marker, or after a few sentences without one, and then
-    `say(None)` tells the caller the spoken part is over. The rest of the
-    answer is still written, for the chat.
+    markdown become speech), and the instruction-leak guard reads everything
+    held or said together, so streaming skips no guard. A line break ends a
+    sentence; so does a stop after a number when a capital follows ("at
+    04.11. Then"), but not a list's "3. was" mid-line. `say(None)` tells the
+    caller the spoken part is over.
     """
     _END = re.compile(r"(?<!\d)[.!?]+[\"')\]]*\s+|[.!?]+[\"')\]]*\s+(?=[A-Z\"'(])|\n+")
     _MARK = guards.MORE
 
     def __init__(self, say, check, cancel=None):
         self.say, self.check, self.cancel, self.buf = say, check, cancel, ""
-        self.spoken = ""                   # everything said, for the leak guard
-        self.sentences = 0
-        self.held = []                     # past the cap: said only if the answer ends here
+        self.spoken = ""                   # everything said
+        self.said = 0                      # sentences said
+        self.held = []                     # sentences waiting for the answer's end
+        self.long = False                  # too long to say: the summary is said instead
         self.done = False
 
     def feed(self, piece):
         _check(self.cancel)                # stops the model's stream mid-answer
-        if self.done:
+        if self.done or self.long:
             return
         self.buf += piece
         at = self.buf.find(self._MARK)
@@ -1007,11 +1038,10 @@ class _Speech:
             head, rest = self.buf[:at], self.buf[at + len(self._MARK):]
             self.buf = ""
             self._sentences(head + "\n")
-            if self.spoken:
-                self._finish(cut=False)
+            if self.held and not self.long:
+                self.finish()              # the model's own spoken opening
                 return
-            # A marker before anything worth saying: the details are all there
-            # is, so their opening is said (capped like an answer without one).
+            # A marker before anything worth saying: the details are all there is.
             self.buf = self._sentences(rest)
             return
         # Hold back what may be the start of the marker ("[[mo").
@@ -1021,16 +1051,39 @@ class _Speech:
         self.buf = self._sentences(ready) + held
 
     def flush(self, final=False):
+        """The round is over: a final answer, or words before a tool call."""
         if self.done:
             return
         head, self.buf = self.buf, ""
         self._out(head)
+        if self.long:
+            return                         # the agent says the summary (finish(summary))
         if final:
-            self._finish(cut=False)
+            self.finish()
+        else:
+            self._say_held()               # "let me check" is said while the tool runs
+
+    def finish(self, text=None):
+        """End the spoken part: with `text` (a long answer's summary), or with
+        what was held (a short answer)."""
+        if self.done:
+            return
+        self.done = True
+        if text:
+            self.held = [text]
+        self._say_held()
+        self.say(None)
+
+    def _say_held(self):
+        for clean in self.held:
+            self.spoken += " " + clean
+            self.said += 1
+            self.say(clean + " ")
+        self.held = []
 
     def _sentences(self, text):
-        """Say each whole sentence in `text`; return the unfinished rest."""
-        while not self.done:
+        """Take each whole sentence in `text`; return the unfinished rest."""
+        while not (self.done or self.long):
             m = self._END.search(text)
             if not m:
                 return text
@@ -1038,22 +1091,11 @@ class _Speech:
             self._out(head)
         return ""
 
-    def _finish(self, cut):
-        if self.done:
-            return
-        self.done = True
-        if cut:
-            self.say(guards.ON_SCREEN + " ")
-        else:
-            for clean in self.held:        # one short closing line, not worth a pointer
-                self.say(clean + " ")
-        self.say(None)
-
     def _out(self, text):
-        if self.done or not text.strip():
+        if self.done or self.long or not text.strip():
             return
-        if self.spoken and guards.is_structure(text):
-            self._finish(cut=True)             # a list or table: for the eye, not the ear
+        if guards.is_structure(text):
+            self.long = True               # a list or table: for the eye, not the ear
             return
         clean = (self.check(text) or "").strip()
         if not clean:
@@ -1062,19 +1104,12 @@ class _Speech:
                                    persona.protected_text()) >= guards._LEAK_SENTENCES:
             # Sentence by sentence each piece looked harmless; together they
             # recite the instructions. Stop here, as check_reply would have.
-            self.spoken += " " + guards.LEAK_REPLY
-            self.say(guards.LEAK_REPLY + " ")
-            self._finish(cut=False)
+            self.held = [guards.LEAK_REPLY]
+            self.finish()
             return
-        if self.sentences >= guards.SPOKEN_SENTENCES or (
-                self.sentences and len(self.spoken) + len(clean) > guards.SPOKEN_CHARS):
-            # Held, not said: if the answer ends with it ("Shall I do that?"),
-            # it is said; if more follows, the screen is pointed to instead.
-            self.held.append(clean)
-            if len(self.held) > 1 or len(clean) > guards.SPOKEN_TAIL_CHARS:
-                self.held = []
-                self._finish(cut=True)
+        count = len(self.held) + self.said
+        size = len(self.spoken) + sum(len(h) for h in self.held) + len(clean)
+        if count >= guards.SPOKEN_SENTENCES + 1 or size > guards.SPOKEN_CHARS + guards.SPOKEN_TAIL_CHARS:
+            self.long = True
             return
-        self.sentences += 1
-        self.spoken += " " + clean
-        self.say(clean + " ")
+        self.held.append(clean)

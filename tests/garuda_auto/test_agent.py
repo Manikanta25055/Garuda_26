@@ -396,10 +396,13 @@ def test_a_model_that_acted_and_then_dropped_is_not_followed_by_a_second_action(
 def test_voice_keeps_checked_markdown_for_display(house):
     ctx, home = house
     markdown = '## Today\n\n1. **Door** opened\n2. Lamp on\n\nTime | Event\n--- | ---\n9 | Door'
-    chat = ScriptedChat([completion(markdown)])
+    chat = ScriptedChat([completion(markdown), completion("Two things today: the door opened, then the lamp.")])
     a = agent(ctx, home, chat)
     result = a.handle('What happened today?', user='u', voice=True, scope='security')
     assert result['display_reply'] == markdown
+    # Too long to say whole: its one-sentence summary is said, and kept for the closed chat.
+    assert result['reply'] == result['summary'] == "Two things today: the door opened, then the lamp."
+    assert "<reply>" in chat.requests[1]["messages"][1]["content"]
     assert '**' not in result['reply'] and '\n' not in result['reply']
     assert '|' not in result['reply'] and '---' not in result['reply']
 
@@ -540,3 +543,25 @@ def test_a_typed_stream_that_breaks_starts_over_on_the_next_model():
     msg = nim.chat([{"role": "user", "content": "hi"}], on_text=drafts.append, keep_partial=False)
     assert msg["content"] == "Whole answer." and calls == ["m1", "m2"]
     assert drafts == ["Half an ans", None, "Whole answer."]
+
+
+def test_a_long_spoken_answer_says_its_summary_not_its_first_lines(house):
+    # The owner: "make him speak the summarised content the collapsed window shows".
+    ctx, home = house
+    answer = _text("Here's how the lamp and fan compare:\n\n", "| Device | State |\n|---|---|\n",
+                   "| Lamp | Off |\n| Fan | Off |\n")
+    asked = []
+
+    def post(url, headers=None, json=None, timeout=None, stream=False):
+        asked.append(json)
+        if stream:
+            return _Stream(answer)
+        return Resp(200, completion("Both the lamp and the fan are off."))
+    chat = NimChat("key", ["m1"], post=post)
+    said = []
+    result = agent(ctx, home, chat).handle("compare the lamp and fan", user="mani", voice=True,
+                                           on_text=said.append)
+    assert said == ["Both the lamp and the fan are off. ", None]
+    assert result["summary"] == result["reply"] == "Both the lamp and the fan are off."
+    assert "| Lamp | Off |" in result["display_reply"]
+    assert len(asked) == 2 and "<reply>" in asked[1]["messages"][1]["content"]

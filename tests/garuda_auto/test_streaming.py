@@ -113,12 +113,24 @@ def test_only_the_part_before_the_marker_is_said_even_split_across_pieces():
     assert said == ["Three things stood out, mostly tamper alerts early on 13 Oct. ", None]
 
 
-def test_without_a_marker_a_long_answer_is_cut_to_a_few_sentences_and_points_at_the_screen():
+def test_a_long_answer_is_not_read_out_in_part_its_summary_is_said():
     said = []
     s = _Speech(said.append, lambda t: t.strip())
     s.feed("One is here. Two is here. Three is here. Four is here. Five is here. ")
     s.flush(final=True)
-    assert said == ["One is here. ", "Two is here. ", "Three is here. ", guards.ON_SCREEN + " ", None]
+    assert said == [] and s.long and not s.done           # nothing of it read out
+    s.finish("Five things are here.")
+    assert said == ["Five things are here. ", None]
+
+
+def test_a_short_answer_is_said_whole_when_it_ends():
+    said = []
+    s = _Speech(said.append, lambda t: t.strip())
+    s.feed("The lamp is on. ")
+    assert said == []                                      # held until the answer ends
+    s.feed("The fan is off. Shall I switch it on?")
+    s.flush(final=True)
+    assert said == ["The lamp is on. ", "The fan is off. ", "Shall I switch it on? ", None]
 
 
 def test_a_replaced_turn_stops_the_stream_mid_answer():
@@ -187,8 +199,7 @@ def test_a_marker_before_anything_said_still_leaves_the_opening_spoken():
                   "Switch the fan to low. ", "Then lights off at eleven. ", "Sleep well. "]:
         s.feed(piece)
     s.flush(final=True)
-    assert said == ["A good routine starts early. ", "Dim the lamp at ten. ", "Switch the fan to low. ",
-                    guards.ON_SCREEN + " ", None]
+    assert said == [] and s.long
 
 
 def test_the_voice_stops_before_reading_a_table_aloud():
@@ -198,7 +209,7 @@ def test_the_voice_stops_before_reading_a_table_aloud():
                   "|---|---|\n| Lamp | Light |\n"]:
         s.feed(piece)
     s.flush(final=True)
-    assert said == ["Here's a quick comparison of the lamp and fan: ", guards.ON_SCREEN + " ", None]
+    assert said == [] and s.long                        # a table is summarised, not read
 
 
 def test_a_short_closing_line_past_the_cap_is_said_not_pointed_at():
