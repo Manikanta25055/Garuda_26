@@ -107,8 +107,13 @@
   try { muted = localStorage.getItem('garuda_sound') === 'off'; } catch (_) {}
 
   // ── Audio ──────────────────────────────────────────────────
+  // While Narada listens, the session must allow the microphone: Safari
+  // refuses capture under "playback" ("AudioSession category is not
+  // compatible with audio capture"), and "auto" is not enough, since with a
+  // chime playing it resolves to playback too. Nothing may change it then.
+  const CALL = 'play-and-record';
   function session(type) {
-    if (!TOUCH_SCREEN) return;
+    if (!TOUCH_SCREEN || (voiceOn && type !== CALL)) return;
     try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (_) {}
   }
 
@@ -284,10 +289,11 @@
     if (type === 'success' || type === 'warning' || type === 'error') play(type);
   }
 
-  // Narada's voice needs the normal audio session (microphone, full volume).
+  // A Narada call: the microphone's session, then back to the sounds' own.
   function voice(active) {
-    voiceOn = active;
-    session(active ? 'auto' : SESSION);
+    if (active) { voiceOn = true; session(CALL); return; }
+    voiceOn = false;
+    session(SESSION);
     if (!active && ctx) wake();                  // the end chime, then rest
   }
 
