@@ -220,12 +220,15 @@ def build_narada_router(core):
     async def narada_voice_turns(request: Request, conversation_id: str = Query(max_length=200),
                                  after: int = Query(default=0, ge=0),
                                  session=Depends(core.require_session)):
-        turns = core.NARADA_VOICE.turns_for(
-            conversation_id, session["username"], session["role"],
-            core._product_for_host(request.headers.get("host")), after)
+        who = (conversation_id, session["username"], session["role"],
+               core._product_for_host(request.headers.get("host")))
+        turns = core.NARADA_VOICE.turns_for(*who, after)
         if turns is None:
             raise HTTPException(404, "Voice conversation not found or expired.")
-        return {"turns": turns}
+        # One request for the page's half-second poll in a call: the answers,
+        # the question just heard (it closes the microphone), and the planner's steps.
+        return {"turns": turns, "heard": core.NARADA_VOICE.heard_for(*who),
+                "progress": core.AGENT.live_for(session["username"])}
 
     # ── What Narada knows ─────────────────────────────────────────────────────
     # One memory for the household: anyone signed in may read and correct it.
@@ -316,6 +319,13 @@ def build_narada_router(core):
     # The model proposes these; nothing happens until the person who asked taps
     # Confirm. The action then runs as them, through the site's own endpoint,
     # so the endpoint's guard and checks decide here too.
+
+    @router.get("/api/narada/actions")
+    async def narada_actions(session=Depends(core.require_session)):
+        """The cards still waiting for this person's Confirm. The page draws any
+        it no longer has: a card lived only in the page, and a reload, a trip to
+        another page or a phone that dropped the tab took the button away."""
+        return {"cards": core.AGENT.confirmations.cards(session["username"])}
 
     @router.post("/api/narada/actions/{action_id}/confirm")
     async def narada_action_confirm(action_id: str, data: ActionConfirmRequest, request: Request,

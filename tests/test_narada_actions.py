@@ -44,9 +44,31 @@ def test_a_user_is_not_even_shown_an_admin_card(app_client):
     assert out == {"error": "only an admin can do that"} and cards == []
 
 
-def test_nothing_is_proposed_by_voice(app_client):
+def test_a_spoken_request_gets_its_card_in_the_chat(app_client):
+    # A spoken answer is shown in the chat beside the call, cards and all, so
+    # the card is made as for a typed one; it still waits for a tap.
     out, cards = propose("emergency_stop", voice=True)
-    assert "tap" in out["error"] and cards == []
+    assert "NOT done" in out["waiting"] and cards[0]["title"] == "Emergency stop"
+
+
+def test_waiting_cards_can_be_asked_for_again_and_only_by_their_owner(app_client, admin_headers,
+                                                                      user_headers):
+    _, cards = propose("emergency_stop")
+    r = app_client.get("/api/narada/actions", headers=admin_headers)
+    assert r.status_code == 200 and cards[0]["id"] in [c["id"] for c in r.json()["cards"]]
+    assert cards[0]["id"] not in [c["id"] for c in
+                                  app_client.get("/api/narada/actions", headers=user_headers).json()["cards"]]
+    app_client.post(f"/api/narada/actions/{cards[0]['id']}/cancel", headers=admin_headers)
+    assert cards[0]["id"] not in [c["id"] for c in
+                                  app_client.get("/api/narada/actions", headers=admin_headers).json()["cards"]]
+
+
+def test_a_shortcut_card_keeps_its_steps_when_asked_for_again(app_client):
+    gw.AGENT._turn.confirms = []
+    card = gw.AGENT.confirmations.add(gw.AGENT_CAPABILITIES["emergency_stop"], {}, "admin")
+    card["shortcut"] = {"name": "Bedtime", "when": "at 22:00", "steps": ["lamp off"]}
+    again = [c for c in gw.AGENT.confirmations.cards("admin") if c["id"] == card["id"]]
+    assert again and again[0]["shortcut"]["name"] == "Bedtime"
 
 
 def test_cancel_drops_the_card(app_client, admin_headers):

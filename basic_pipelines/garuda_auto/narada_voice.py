@@ -23,7 +23,6 @@ import re
 import threading
 import time
 
-from ..narada_brain import guards
 
 log = logging.getLogger(__name__)
 
@@ -42,23 +41,35 @@ UNKNOWN_REPLY = "This conversation was not started from Garuda. Please reopen Na
 # - It holds short text back until about a sentence's worth has come or the
 #   response ends: "Mm, one sec." alone was never heard while Narada thought.
 #   Each filler is a whole sentence of 50+ characters, which is said at once.
-# - A response ends at its final message; nothing sent after it is said. So a
-#   job that runs long is told once, the spoken turn ends, and the answer goes
-#   to the chat when it is ready (the page polls /api/narada/voice/turns).
-# The model's first sentence usually comes within 2.5 s. A filler that
+# - A response ends at its final message; nothing sent after it is said, and
+#   ElevenLabs cuts one off about 48 s in (what came later was dropped). So a
+#   slow turn, the planner's included, is held open up to HOLD_S and its answer
+#   said when it comes; past that Narada says it is still going, the spoken
+#   turn ends, and the answer goes to the chat when it is ready (the page polls
+#   /api/narada/voice/turns).
+# The model's first sentence usually comes within 1-4 s. A filler that
 # starts just before it only pushes the answer back by its own length
-# (measured end to end: filler at 1.8 s, answer at 2.1 s), so it waits.
-FILLER_AFTER_S = 3.0
+# (measured end to end: filler at 1.8 s, answer at 2.1 s; at 3.0 s, answer
+# at 3.4 s), so it is kept for turns that wait on tools. The screen says
+# "Thinking" from the moment the question is in.
+FILLER_AFTER_S = 4.5
 PLANNER_CHECK_S = 1.0
 KEEPALIVE_S = 5.0
-GIVE_UP_S = 11.0
-PLANNER_LINE = "This one takes some building, so I'll put it on your screen as soon as it's ready."
-LATER_LINE = "This is taking a little longer, so I'll put the answer on your screen when it's ready."
+HOLD_S = 35.0
+PLANNER_LINE = "This one takes some building, so give me a little while to put it together."
+LATER_LINE = "It's still going, so I'll put the answer on your screen as soon as it's ready."
 FILLERS = ("Okay, give me a second, I'm just checking that for you.",
            "Sure, let me look into that, it'll only take a moment.",
            "Right, one moment while I pull that up for you.",
            "Hmm, let me check on that, give me just a second.",
            "Okay, I'm on it, just give me a moment to look.")
+
+
+def _guards():
+    # Imported when first needed: scripts/setup_narada_voice.py imports this
+    # module on its own, where the package (and narada_brain) is not there.
+    from ..narada_brain import guards
+    return guards
 
 
 def _spoken(text):
@@ -99,6 +110,10 @@ class NaradaVoice:
         self._lock = threading.Lock()
         self._bindings = {}                # conversation_id -> (user, role, scope, expires)
         self._turns = {}                   # bounded display results, separate from speech
+        # conversation_id -> {"n", "text"}: the last question heard, the moment
+        # it arrives. The page shows it and closes the microphone at once; the
+        # speech service tells the browser about a turn ~3 s later (measured).
+        self._heard = {}
         # (user) -> what Narada is doing for them right now, or None (agent.live_for).
         self.live_fn = None
 
@@ -150,6 +165,7 @@ class NaradaVoice:
         with self._lock:
             self._bindings = {k: v for k, v in self._bindings.items() if v[3] > now}
             self._turns = {k: v for k, v in self._turns.items() if k in self._bindings}
+            self._heard = {k: v for k, v in self._heard.items() if k in self._bindings}
             self._bindings[conversation_id] = (user, role, scope, now + BINDING_TTL_S)
             self._turns[conversation_id] = []
         return {"token": resp.token, "conversation_id": conversation_id}
@@ -161,6 +177,22 @@ class NaradaVoice:
             if not bound or bound[3] <= self._clock() or bound[:3] != (user, role, scope):
                 return None
             return [t for t in self._turns.get(conversation_id, []) if t["id"] > after]
+
+    def heard_for(self, conversation_id, user, role, scope):
+        """The last question heard in a conversation, for its bound caller only."""
+        with self._lock:
+            bound = self._bindings.get(conversation_id)
+            if not bound or bound[3] <= self._clock() or bound[:3] != (user, role, scope):
+                return None
+            return dict(self._heard[conversation_id]) if conversation_id in self._heard else None
+
+    def _note_heard(self, conversation_id, transcript):
+        heard = next((m.content for m in reversed(transcript) if m.role == "user"), "").strip()
+        if not re.search(r"\w", heard) or self.binding(conversation_id) is None:
+            return
+        with self._lock:
+            n = self._heard.get(conversation_id, {}).get("n", 0) + 1
+            self._heard[conversation_id] = {"n": n, "text": heard[:2000]}
 
     def binding(self, conversation_id):
         with self._lock:
@@ -225,7 +257,7 @@ class NaradaVoice:
             reply = result.get("reply", "")
             # The agent has already split its answer into the spoken part and
             # the shown one; anything else (a taught phrase) is split here.
-            said = _spoken(reply if "display_reply" in result else guards.split_spoken(reply)[0])
+            said = _spoken(reply if "display_reply" in result else _guards().split_spoken(reply)[0])
             if meta is not None:
                 meta["streamed"] = bool(result.get("streamed"))
         except Exception:
@@ -237,7 +269,7 @@ class NaradaVoice:
         with self._lock:
             turns = self._turns.setdefault(conversation_id, [])
             turns.append({"id": turns[-1]["id"] + 1 if turns else 1, "heard": heard,
-                          "response": result.get("display_reply") or guards.strip_more(result.get("reply"))
+                          "response": result.get("display_reply") or _guards().strip_more(result.get("reply"))
                           or "Done.",
                           **{k: result[k] for k in ("lane", "actions", "proposal", "memory", "offer",
                                                    "observation", "confirm", "artifacts", "steps",
@@ -284,10 +316,11 @@ class NaradaVoice:
         def heard(sentence):                       # from the brain's thread; None = spoken part over
             loop.call_soon_threadsafe(queue.put_nowait, sentence)
 
+        self._note_heard(conversation_id, transcript)
         task = asyncio.ensure_future(self.reply_for(conversation_id, transcript, on_text=heard,
                                                     meta=meta, cancel=cancel))
-        started = last_out = last_said = loop.time()
-        spoke = filled = handed_over = False
+        started = last_out = loop.time()
+        spoke = filled = handed_over = told = False
         getter = None
         try:
             while True:
@@ -306,7 +339,7 @@ class NaradaVoice:
                         handed_over = not task.done()
                         break                       # the spoken part is over; the rest is for the chat
                     spoke = True
-                    last_out = last_said = now
+                    last_out = now
                     yield sentence
                     continue
                 getter.cancel()
@@ -318,17 +351,17 @@ class NaradaVoice:
                         spoke = True
                         yield sentence
                     break
-                if not spoke and not filled:
+                if not told and self._planning(conversation_id):
+                    # The planner can take a while; said once (instead of a
+                    # filler), and its steps show on the screen meanwhile.
+                    told = filled = True
+                    last_out = now
+                    yield PLANNER_LINE + " "
+                elif not spoke and not filled:
                     filled = True
-                    last_out = last_said = now
+                    last_out = now
                     yield random.choice(FILLERS) + " "
-                elif self._planning(conversation_id):
-                    # A request that goes to the planner can take minutes; its
-                    # steps show on the screen (the page asks /api/narada/progress).
-                    handed_over = True
-                    yield PLANNER_LINE
-                    break
-                elif now - last_said >= GIVE_UP_S:
+                elif now - started >= HOLD_S:
                     handed_over = True
                     yield LATER_LINE
                     break
@@ -343,6 +376,9 @@ class NaradaVoice:
         finally:
             if getter is not None and not getter.done():
                 getter.cancel()
-            if not task.done() and not handed_over:
-                cancel.set()       # interrupted: a newer turn replaced this one
+            # Interrupted: a newer turn replaced this one, and it stops. A job
+            # the planner has started is the person's request, not a sentence
+            # being said: it goes on, and its answer reaches the chat.
+            if not task.done() and not handed_over and not told:
+                cancel.set()
                 task.cancel()

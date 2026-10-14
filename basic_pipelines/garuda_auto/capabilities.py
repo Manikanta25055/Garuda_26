@@ -468,6 +468,7 @@ PLUMBING = frozenset({
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
     "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/progress",
     "POST /api/narada/actions/{action_id}/confirm", "POST /api/narada/actions/{action_id}/cancel",
+    "GET /api/narada/actions",          # the page drawing back cards it lost
     # Artifacts are made by show_artifact; these show, keep and serve them.
     "GET /api/narada/artifacts", "GET /api/narada/artifacts/{artifact_id}/view",
     "POST /api/narada/artifacts/{artifact_id}/call", "POST /api/narada/artifacts/{artifact_id}/pin",

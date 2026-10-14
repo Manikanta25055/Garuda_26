@@ -663,10 +663,120 @@ def test_a_spoken_summary_shows_at_once_and_the_full_answer_replaces_it(server, 
     # Hung up after the spoken part: the written answer still arrives.
     page.evaluate("voiceCallbacks.onMessage({role:'user',message:'And yesterday?'})")
     page.evaluate("voiceCallbacks.onMessage({role:'agent',message:'Two alerts today, both at the front.'})")
-    page.click('#nx-mic')                         # ends the call
+    page.evaluate('N.stopVoice()')                # ends the call (the mic is closed: a tap would open it)
     _wait_js(page, '!N.voiceActive()')
     answer('And yesterday?')
     _wait_js(page, 'document.querySelectorAll("#nx-log .nx-msg.md ol").length === 2')
     assert page.locator('#nx-log .nx-msg.narada:not(.pending)').count() == 2
+    assert errors == []
+    ctx.close()
+
+
+def test_a_waiting_card_comes_back_after_a_reload_and_the_closed_bar_says_so(server, browser):
+    # The owner asked for a shortcut by voice, closed and opened the chat, and
+    # never saw a Confirm button: the card lived only in the page.
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+                              service_workers="block")
+    page = ctx.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    card = gw.AGENT.confirmations.add(gw.AGENT_CAPABILITIES["add_tracked_phone"],
+                                      {"name": "Asha's phone", "mac": "aa:bb:cc:dd:ee:01"}, "user")
+    try:
+        page.click(".ios-item[data-page=narada]")
+        sel = f'#nx-log .nx-card[data-action="{card["id"]}"]'
+        page.wait_for_selector(sel, state="attached", timeout=5000)
+        page.reload()
+        page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+        page.click(".ios-item[data-page=narada]")
+        page.wait_for_selector(sel, state="attached", timeout=5000)
+        assert page.locator(sel).count() == 1
+        page.evaluate("N.toggleSheet(false)")
+        assert page.locator("#nx-peek").text_content().startswith("Needs your confirmation: Add tracked phone")
+        page.evaluate("N.toggleSheet(true)")
+        page.wait_for_timeout(400)
+        assert page.locator(sel).count() == 1           # opened again: not drawn twice
+        page.locator(sel + " [data-card=cancel]").click()
+        page.wait_for_selector(sel + ".closed", state="attached", timeout=5000)
+        page.evaluate("N.toggleSheet(false)")
+        assert "Needs your confirmation" not in (page.locator("#nx-peek").text_content() or "")
+        assert errors == []
+    finally:
+        gw.AGENT.confirmations.take(card["id"], "user")
+        ctx.close()
+
+
+def test_the_microphone_closes_once_a_question_is_in_and_opens_only_on_a_tap(server, browser, monkeypatch):
+    # The owner: once my question is captured, stop listening, so voices in
+    # the room cannot cut the answer; listen again only when I tap.
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='mic-conv'))))
+    voice = NaradaVoice('test', 'engine', client=sdk, reply_fn=lambda *a: {'reply': 'Quiet.'})
+    monkeypatch.setattr(gw, 'NARADA_VOICE', voice)
+    ctx = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True,
+                              service_workers='block')
+    page = ctx.new_page()
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    page.route('**/static/vendor/elevenlabs-client.js', lambda r: r.fulfill(
+        content_type='text/javascript', body='''
+        export const Conversation = {startSession: async options => {
+          window.voiceCallbacks = options; window.micLog = []; window.ended = 0;
+          options.onConnect();
+          return {endSession: async () => { window.ended++; options.onDisconnect(); },
+            setMicMuted: m => window.micLog.push(m), getId: () => 'mic-conv',
+            sendUserMessage: message => options.onMessage({role: 'user', message})};
+        }};'''))
+    page.goto(server + '/')
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + '/')
+    page.wait_for_selector('#app.logged-in', state='attached')
+    page.click('.ios-item[data-page=narada]')
+    page.evaluate('N.toggleSheet(true)')
+    page.click('#nx-mic')
+    _wait_js(page, 'window.voiceCallbacks && document.querySelector("#nx-mic.on")')
+    assert page.evaluate('window.micLog') == []                     # listening for the question
+    # The server hears the question: shown at once, microphone closed.
+    with voice._lock:
+        voice._heard['mic-conv'] = {'n': 1, 'text': 'Any alerts today?'}
+    _wait_js(page, 'window.micLog.length === 1')
+    assert page.evaluate('window.micLog') == [True]
+    assert page.locator('#nx-log .nx-msg.you', has_text='Any alerts today?').count() == 1
+    # The speech service's own copy of the turn, seconds later, is the same turn.
+    page.evaluate("voiceCallbacks.onMessage({role:'user',message:'Any alerts today?'})")
+    assert page.locator('#nx-log .nx-msg.you', has_text='Any alerts today?').count() == 1
+    # Narada answers and finishes: the microphone stays closed.
+    with voice._lock:
+        voice._turns['mic-conv'].append({'id': 1, 'heard': 'Any alerts today?', 'response': 'None today.'})
+    page.evaluate("voiceCallbacks.onModeChange({mode:'speaking'})")
+    _wait_js(page, 'document.querySelector("#nx-log .nx-msg.md")')
+    page.evaluate("voiceCallbacks.onModeChange({mode:'listening'})")
+    page.wait_for_timeout(700)
+    assert page.evaluate('window.micLog') == [True]
+    assert 'Tap the mic to talk' in page.locator('#nx-status').text_content()
+    assert page.locator('#nx-mic.held').count() == 1
+    # A tap opens it, and the call goes on.
+    page.click('#nx-mic')
+    assert page.evaluate('window.micLog') == [True, False] and page.evaluate('window.ended') == 0
+    assert page.locator('#nx-status').text_content() == 'Listening'
+    # Holding the button ends the call.
+    box = page.locator('#nx-mic').bounding_box()
+    page.mouse.move(box['x'] + box['width'] / 2, box['y'] + box['height'] / 2)
+    page.mouse.down()
+    page.wait_for_timeout(800)
+    page.mouse.up()
+    _wait_js(page, '!N.voiceActive()')
+    assert page.evaluate('window.ended') == 1
+    page.wait_for_timeout(300)
+    assert not page.evaluate('N.voiceActive()')                    # the release did not start a new call
     assert errors == []
     ctx.close()

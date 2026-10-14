@@ -69,5 +69,46 @@ def test_voice_display_turns_require_the_bound_session(app_client, user_headers,
     result = app_client.get(path, headers=user_headers)
     assert result.status_code == 200
     assert result.json()['turns'][0]['response'] == '1. One\n2. Two'
-    assert app_client.get(path + '&after=1', headers=user_headers).json() == {'turns': []}
+    assert app_client.get(path + '&after=1', headers=user_headers).json()['turns'] == []
     assert app_client.get(path + '&after=-1', headers=user_headers).status_code == 422
+
+
+def test_the_question_heard_is_there_at_once_for_its_caller_only(app_client, user_headers, admin_headers,
+                                                                 monkeypatch):
+    # The page closes the microphone the moment a question is in, and shows it:
+    # the speech service tells the browser ~3 s later.
+    import time as _time
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='heard-conv'))))
+
+    def slow(*a, **k):
+        _time.sleep(0.5)
+        return {'reply': 'Quiet.'}
+    voice = NaradaVoice('test', 'engine', client=sdk, reply_fn=slow)
+    monkeypatch.setattr(gw, 'NARADA_VOICE', voice)
+    assert app_client.post('/api/narada/voice/token', headers=user_headers).status_code == 200
+    path = '/api/narada/voice/turns?conversation_id=heard-conv'
+    assert app_client.get(path, headers=user_headers).json()['heard'] is None
+
+    async def ask(text):
+        gen = voice.speak('heard-conv', [SimpleNamespace(role='user', content=text)])
+        first = asyncio.ensure_future(gen.__anext__())
+        await asyncio.sleep(0.05)
+        body = app_client.get(path, headers=user_headers).json()
+        first.cancel()                      # what the SDK does when a call ends
+        try:
+            await first
+        except (asyncio.CancelledError, StopAsyncIteration):
+            pass
+        await gen.aclose()
+        return body
+    import concurrent.futures
+    with concurrent.futures.ThreadPoolExecutor(1) as pool:
+        body = pool.submit(asyncio.run, ask('is the lamp on?')).result(timeout=10)
+        assert body['heard'] == {'n': 1, 'text': 'is the lamp on?'} and body['turns'] == []
+        pool.submit(asyncio.run, ask('...')).result(timeout=10)        # a noise is not a question
+        assert app_client.get(path, headers=user_headers).json()['heard']['n'] == 1
+    assert app_client.get(path, headers=admin_headers).status_code == 404

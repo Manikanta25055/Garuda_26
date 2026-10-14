@@ -69,6 +69,11 @@ PLANNER_BUDGET_S = 300          # one job, all its model calls together
 PLANNER_EXTRA = None            # request fields for the planner model (see llm.NO_THINKING)
 # The routing model's word for "this needs the planner", and how sure it must be.
 PLANNER_INTENTS = ("build", "automation_rule")
+# What a request to make something says (see _wants_planner).
+_MAKING = re.compile(
+    r"\b(make|build|create|set ?up|setup|add|draft|write|design|automat\w*|shortcuts?|routines?|"
+    r"schedul\w*|scenes?|rules?|dashboards?|pages?|artifacts?|charts?|whenever|every (day|night|morning|evening|week\w*))\b|"
+    r"\b(when|if)\b.+\b(turn|switch|then)\b", re.I)
 # Said to the quick model when there is a planner to hand over to. Without it
 # the quick model answered "I have no tool for that" to a request the planner
 # could have done (renaming a device), or made up a tool of its own.
@@ -244,7 +249,7 @@ class HomeAgent:
         else:
             try:
                 result = self._agent(text, user, role, scope=scope, voice=voice,
-                                     planner=self._wants_planner(route))
+                                     planner=self._wants_planner(route, text))
             except _Cancelled:
                 # Replaced by a newer turn: nothing more is done, said or remembered.
                 self._live.pop(user, None)
@@ -365,13 +370,18 @@ class HomeAgent:
         return (planner is not None and planner.configured
                 and not getattr(self._turn, "no_planner", False))
 
-    def _wants_planner(self, route):
-        """The routing model's call: is this a job for the planner?"""
+    def _wants_planner(self, route, text=""):
+        """The routing model's call: is this a job for the planner? Only for a
+        request to make something: the routing model also called "go through my
+        logs and find patterns" a build (0.98), and a question sent to the
+        planner waited ten times as long for an answer the quick model gives
+        with its own tools. The quick model can still hand anything over."""
         if not route or not self._planner_ready():
             return False
         intent = route.get("intent") or {}
         return (intent.get("backend") == OFFLINE_BACKEND and intent.get("value") in PLANNER_INTENTS
-                and intent.get("confidence", 0) >= self.decision.threshold)
+                and intent.get("confidence", 0) >= self.decision.threshold
+                and bool(_MAKING.search(text or "")))
 
     def _tools(self, planner=False, role="admin"):
         # What Narada can do is one table: capabilities.py.
@@ -671,9 +681,8 @@ class HomeAgent:
         """A confirm-tier capability is shown to the person as a card, not done."""
         if capability.role == "admin" and role != "admin":
             return {"error": "only an admin can do that"}
-        if getattr(self._turn, "voice", False):
-            return {"error": "not done: this needs a tap on a card, which a spoken "
-                             "conversation cannot show. Ask them to type it in Narada's chat."}
+        # A spoken turn gets the card too: its answer, cards and all, is shown
+        # in the chat beside the call (/api/narada/voice/turns).
         missing = [r for r in capability.required if r in capability.params and r not in args]
         if missing:
             return {"error": f"{', '.join(missing)} needed"}

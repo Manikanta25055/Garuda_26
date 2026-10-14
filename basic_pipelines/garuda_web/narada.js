@@ -54,6 +54,10 @@ const N = (() => {
   let conv = null, voice = 'off';     // off | connecting | on
   let voiceEpoch = 0, voiceId = '', voiceCursor = 0, voiceHeard = false, typedEcho = null;
   let voiceAwaiting = false;          // a spoken question whose written answer has not come yet
+  // The microphone is open only while the person means to speak: it closes the
+  // moment a question is in and opens again on their tap, so a voice in the
+  // room cannot talk over the answer or cut it off (the owner's call).
+  let micOpen = false, heardN = 0, lastHeard = null, swallowClick = false;
   let clientMod = null, busy = false, lastUserAt = 0;
   let lastReply = null, infoOpen = false, infoData = null, keptArtifacts = [];
   // The conversation: [{who: 'you' | 'narada' | 'error', text}]; kept for the
@@ -63,6 +67,7 @@ const N = (() => {
   // A typed answer as the model writes it, shown as plain words (half a bold
   // mark would flicker) until the checked reply replaces it in the same place.
   let draftEl = null, draftText = '', draftRaf = 0;
+  let waitingCards = [];              // cards the server holds for this person's Confirm
 
   function voiceActive() { return voice !== 'off'; }
 
@@ -523,18 +528,22 @@ const N = (() => {
   function _syncChrome() {
     const hud = $('top-hud'), lbl = $('di-voice-lbl'), mic = $('nx-mic'), status = $('nx-status');
     if (hud) hud.classList.toggle('di-talk', state === 'talking');
-    if (lbl) lbl.textContent = state === 'talking' ? 'Speaking' : state === 'thinking' ? 'Thinking' : state === 'working' ? 'Working' : 'Listening';
+    const held = voice === 'on' && !micOpen;
+    if (lbl) lbl.textContent = state === 'talking' ? 'Speaking' : state === 'thinking' ? 'Thinking'
+      : state === 'working' ? 'Working' : held ? 'Tap to talk' : 'Listening';
     if (mic) {
       mic.classList.toggle('on', voice !== 'off');
+      mic.classList.toggle('held', held);
       mic.classList.toggle('connecting', voice === 'connecting');
       mic.setAttribute('aria-pressed', String(voice !== 'off'));
-      mic.setAttribute('aria-label', voice === 'off' ? 'Talk to Narada' : 'End conversation');
+      mic.setAttribute('aria-label', voice === 'off' ? 'Talk to Narada'
+        : held ? 'Talk (hold to end the conversation)' : 'End conversation');
     }
     const dock = $('nx-dock');
     if (dock) dock.dataset.state = state;
     if (status) {
       status.textContent = {
-        idle: voice === 'on' ? 'Listening' : 'Tap the core to talk · or type',
+        idle: voice === 'on' ? (micOpen ? 'Listening' : 'Tap the mic to talk · hold to end') : 'Tap the core to talk · or type',
         connecting: 'Connecting…',
         listening: 'Listening',
         thinking: 'Thinking',
@@ -680,8 +689,13 @@ const N = (() => {
     const last = session.length ? session[session.length - 1] : null;
     dock.classList.toggle('has-log', session.length > 0);
     dock.classList.toggle('open', sheetOpen);
-    dock.classList.toggle('has-peek', !!last && last.who !== 'you');
-    if (peek) peek.textContent = last ? (last.summary || mdPlain(last.text).replace(/\s*\n\s*/g, ' ')) : '';
+    // A card waiting for a tap outranks the last line: closed, the bar must
+    // still say that something needs a Confirm.
+    const card = waitingCards[waitingCards.length - 1];
+    dock.classList.toggle('has-peek', !!card || (!!last && last.who !== 'you'));
+    if (peek) peek.textContent = card
+      ? 'Needs your confirmation: ' + (card.shortcut ? card.title + ': ' + card.shortcut.name : card.title)
+      : last ? (last.summary || mdPlain(last.text).replace(/\s*\n\s*/g, ' ')) : '';
     measureDock();
     if (exp) {
       exp.setAttribute('aria-expanded', String(sheetOpen));
@@ -787,7 +801,7 @@ const N = (() => {
     sheetOpen = typeof force === 'boolean' ? force : !sheetOpen;
     haptic('tap');
     syncDock();
-    if (sheetOpen) requestAnimationFrame(scrollLog);
+    if (sheetOpen) { requestAnimationFrame(scrollLog); pendingCards(); }
   }
 
   function clearSession() {
@@ -853,6 +867,7 @@ const N = (() => {
     if (voice !== 'off') return;
     const epoch = ++voiceEpoch;
     voiceCursor = 0; voiceHeard = false; typedEcho = null;
+    micOpen = false; heardN = 0; lastHeard = null;
     voice = 'connecting';
     setState('connecting');
     window.Feel?.voice(true);
@@ -865,7 +880,7 @@ const N = (() => {
         conversationToken: tok.token,
         connectionType: 'webrtc',
         overrides: { agent: { firstMessage: GREETINGS[Math.floor(Math.random() * GREETINGS.length)] } },
-        onConnect: () => { if (epoch !== voiceEpoch) return; voice = 'on'; setState('listening'); _syncChrome(); },
+        onConnect: () => { if (epoch !== voiceEpoch) return; voice = 'on'; micOpen = true; setState('listening'); _syncChrome(); },
         onDisconnect: () => {
           if (epoch !== voiceEpoch) return;
           ++voiceEpoch;
@@ -875,7 +890,7 @@ const N = (() => {
           if (voiceAwaiting && voiceId) lateVoiceTurn(voiceId, voiceCursor, voiceEpoch);
           voiceAwaiting = false;
           const wasOn = voice !== 'off';
-          conv = null; voice = 'off'; voiceId = '';
+          conv = null; voice = 'off'; voiceId = ''; micOpen = false;
           setPending(false);
           setState('idle');
           window.Feel?.voice(false);
@@ -884,24 +899,13 @@ const N = (() => {
         onModeChange: ({ mode }) => {
           if (epoch !== voiceEpoch) return;
           if (mode === 'speaking') { setState('talking'); haptic('talk'); }
-          else if (voice === 'on') setState('listening');
+          else if (voice === 'on') setState(micOpen ? 'listening' : voiceAwaiting ? 'thinking' : 'idle');
         },
         onMessage: (m) => {
           if (epoch !== voiceEpoch) return;
           const who = m.role || m.source;
           if (who === 'user') {
-            // "..." is how the speech service reports a noise, not words.
-            if (!/[\p{L}\p{N}]/u.test(m.message || '')) return;
-            voiceHeard = true;
-            // What was said for the last question stays, even if its written
-            // answer never came (a turn the person talked over).
-            if (draftEl && draftText.trim()) say('narada', draftText);
-            voiceAwaiting = true;
-            if (typedEcho !== m.message) say('you', m.message);
-            typedEcho = null;
-            lastUserAt = performance.now();
-            setState('thinking');
-            setPending(true);
+            userHeard(m.message, 'sdk');
           } else if (m.message && !voiceHeard) {
             // Only the greeting comes from the speech transcript. Replies are
             // fetched as original Markdown; audio strips their structure.
@@ -938,7 +942,7 @@ const N = (() => {
     clearTimeout(voiceWatch);
     if (voiceAwaiting && voiceId) lateVoiceTurn(voiceId, voiceCursor, voiceEpoch);
     voiceAwaiting = false;
-    voice = 'off'; conv = null; voiceId = '';
+    voice = 'off'; conv = null; voiceId = ''; micOpen = false;
     setPending(false);
     // Heard and felt on the tap itself; closing the session can take a
     // second, and the chime waiting for it read as lag.
@@ -949,7 +953,52 @@ const N = (() => {
   }
 
   function toggleVoice() {
-    if (voice === 'off') startVoice(); else stopVoice();
+    if (swallowClick) { swallowClick = false; return; }   // that press was a hold: the call ended
+    if (voice === 'off') startVoice();
+    else if (voice === 'on' && !micOpen) openMic();       // ready to speak again
+    else stopVoice();
+  }
+
+  function closeMic() {
+    if (!conv || !micOpen) return;
+    micOpen = false;
+    try { conv.setMicMuted(true); } catch (_) {}
+    _syncChrome();
+  }
+
+  function openMic() {
+    if (!conv || micOpen) return;
+    micOpen = true;
+    try { conv.setMicMuted(false); } catch (_) {}
+    haptic('start');
+    setState('listening');
+    _syncChrome();
+  }
+
+  const heardKey = t => String(t || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+  // A question is in: from this server the moment it arrives ("server"), or
+  // from the speech service's own message ~3 s later ("sdk"). Whichever comes
+  // first shows it and closes the microphone; the other is the same turn.
+  function userHeard(text, from) {
+    if (!/[\p{L}\p{N}]/u.test(text || '')) return;     // "..." is a noise, not words
+    const key = heardKey(text), now = performance.now();
+    if (lastHeard && lastHeard.key === key && now - lastHeard.at < 20000
+        && (lastHeard.typed || (lastHeard.from !== from && !lastHeard.matched))) {
+      lastHeard.matched = true;
+      return;
+    }
+    lastHeard = { key, at: now, from, matched: false };
+    voiceHeard = true;
+    // What was said for the last question stays, even if its written
+    // answer never came (a turn the person talked over).
+    if (draftEl && draftText.trim()) say('narada', draftText);
+    voiceAwaiting = true;
+    say('you', text);
+    lastUserAt = now;
+    closeMic();
+    setState('thinking');
+    setPending(true);
   }
 
   // ── Typing ─────────────────────────────────────────────────
@@ -964,6 +1013,9 @@ const N = (() => {
     setPending(true);
     if (conv && voice === 'on') {           // mid-conversation: Narada answers aloud
       voiceHeard = true; typedEcho = text;
+      lastHeard = { key: heardKey(text), at: performance.now(), typed: true };
+      voiceAwaiting = true;
+      closeMic();
       lastUserAt = performance.now();
       try {
         conv.sendUserMessage(text);
@@ -1150,14 +1202,18 @@ const N = (() => {
         const data = await G._apiFn('GET', '/api/narada/voice/turns?conversation_id='
           + encodeURIComponent(voiceId) + '&after=' + voiceCursor);
         if (epoch !== voiceEpoch) return;
+        if (data.heard && data.heard.n > heardN) {
+          heardN = data.heard.n;
+          userHeard(data.heard.text, 'server');
+        }
         for (const turn of data.turns || []) {
           if (turn.id <= voiceCursor) continue;
           voiceAwaiting = false;
           showResult(turn, false, (performance.now() - lastUserAt) / 1000);
           voiceCursor = turn.id;
+          if (!micOpen && state === 'thinking') setState('idle');
         }
-        const p = (await G._apiFn('GET', '/api/narada/progress')).progress;
-        if (epoch !== voiceEpoch) return;
+        const p = data.progress;
         if (p && p.lane === 'planner') {
           workStatus(p.step ? 'Working · ' + words(p.step) : 'Planning');
           if (p.done > seen) { seen = p.done; workPulse = performance.now() / 1000; }
@@ -1169,7 +1225,8 @@ const N = (() => {
           return;
         }
       }
-      if (epoch === voiceEpoch) voiceWatch = setTimeout(tick, 1000);
+      // Twice a second: a question just heard must close the microphone quickly.
+      if (epoch === voiceEpoch) voiceWatch = setTimeout(tick, 500);
     };
     tick();
   }
@@ -1185,7 +1242,26 @@ const N = (() => {
       return `<li style="--d:${depth}"${/:$/.test(line) ? ' class="branch"' : ''}>${escHtml(line.trim())}</li>`;
     }).join('');
   }
-  function confirmCards(cards) {
+  // Cards waiting for a Confirm. A card lived only in the page: a reload, a
+  // trip to another page or a phone that dropped the tab took the button
+  // away while the server still held the action. The page asks again.
+  async function pendingCards() {
+    try {
+      const data = await G._apiFn('GET', '/api/narada/actions');
+      const cards = (data && data.cards) || [];
+      const shown = new Set([...document.querySelectorAll('#nx-log .nx-card[data-action]')]
+        .filter(el => !el.classList.contains('closed')).map(el => el.dataset.action));
+      confirmCards(cards.filter(c => !shown.has(c.id)), true);
+      waitingCards = cards;
+      syncDock();
+    } catch (_) { /* signed out or offline: the page's own copy stands */ }
+  }
+
+  function confirmCards(cards, again) {
+    if (!again && (cards || []).length) {
+      waitingCards = waitingCards.concat(cards);
+      syncDock();
+    }
     for (const c of cards || []) {
       const el = bubble('extra', '');
       if (!el) continue;
@@ -1225,11 +1301,14 @@ const N = (() => {
         if (window.H && H.refresh) H.refresh();
       }
       card.querySelectorAll('.nx-card-b button').forEach(b => b.remove());
+      waitingCards = waitingCards.filter(c => c.id !== card.dataset.action);
+      syncDock();
       if (what === 'cancel') haptic('tap'); else window.Feel?.play('success');
     } catch (e) {
       msg.textContent = (e && e.detail) || 'That did not work';
       // A card that has expired cannot be tried again; anything else can.
       if (!/expired/i.test(msg.textContent)) buttons.forEach(b => { b.disabled = false; });
+      else { waitingCards = waitingCards.filter(c => c.id !== card.dataset.action); syncDock(); }
       haptic('error');
     }
   }
@@ -1639,6 +1718,19 @@ const N = (() => {
     input.addEventListener('focus', () => $('nx-dock').classList.add('focus'));
     input.addEventListener('blur', () => $('nx-dock').classList.remove('focus'));
     restore();
+    // Holding the mic button ends the call; a tap in a call opens the microphone.
+    const micBtn = $('nx-mic');
+    if (micBtn) {
+      let hold = 0;
+      const release = () => { clearTimeout(hold); hold = 0; };
+      micBtn.addEventListener('pointerdown', () => {
+        release();
+        swallowClick = false;
+        if (voice === 'off') return;
+        hold = setTimeout(() => { hold = 0; swallowClick = true; stopVoice(); }, 650);
+      });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => micBtn.addEventListener(ev, release));
+    }
     // Memory: chips in the conversation, and the panel's buttons and forms.
     $('nx-log').addEventListener('click', e => {
       const act = e.target.closest('[data-card], [data-art-act], [data-work]');
@@ -1684,7 +1776,7 @@ const N = (() => {
   function onNav(pageId) {
     if (pageId !== 'narada') closeFullArtifact();
     // Facts kept after a conversation went quiet show their chip the next time the page is open.
-    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); pollMemory(); }
+    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); pollMemory(); pendingCards(); }
     else stop();                               // a live conversation keeps going in the island
   }
 

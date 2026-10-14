@@ -1,3 +1,4 @@
+import pytest
 """The planner lane: who is sent to it, what it is offered, what it leaves behind."""
 import json
 
@@ -51,7 +52,7 @@ def test_the_page_is_not_carried_into_the_next_conversation(house):
         completion(tool_calls=[call("show_artifact", {"title": "Energy", "html": PAGE})]),
         completion("Done."), completion("Yes.")])
     a = agent(ctx, home, planner, planner=planner, artifacts=ArtifactStore())
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     a.handle("chart it", user="mani", role="admin")
     a.handle("and again?", user="mani", role="admin")
     remembered = json.dumps(planner.requests[2]["messages"])
@@ -63,12 +64,30 @@ def test_the_routing_models_word_sends_a_request_straight_to_the_planner(house):
     planner = ScriptedChat([completion("Planned.")])
     a = agent(ctx, home, ScriptedChat([]), planner=planner)
     sure = {"value": "build", "confidence": 0.97, "backend": "router"}
-    assert a._wants_planner({"intent": sure})
-    assert not a._wants_planner({"intent": {**sure, "confidence": 0.5}})
-    assert not a._wants_planner({"intent": {**sure, "backend": "local"}})
-    assert not a._wants_planner({"intent": {**sure, "value": "device_control"}})
+    make = "build me a morning routine"
+    assert a._wants_planner({"intent": sure}, make)
+    assert not a._wants_planner({"intent": {**sure, "confidence": 0.5}}, make)
+    assert not a._wants_planner({"intent": {**sure, "backend": "local"}}, make)
+    assert not a._wants_planner({"intent": {**sure, "value": "device_control"}}, make)
     a.decision.route = lambda *args: {"intent": sure}
-    assert a.handle("build me a morning routine", user="mani", role="admin")["planner"]
+    assert a.handle(make, user="mani", role="admin")["planner"]
+
+
+@pytest.mark.parametrize("text, planner", [
+    # Measured 2026-10-15: the routing model calls these "build" at 0.96-0.98.
+    ("Okay. Uh, I just want you to bring up the logs and check for the, for the past 48 hours. "
+     "Could you find any unusual patterns or range of timing patterns that you can tell me, please?", False),
+    ("Go through my logs and tell me if you find anything interesting.", False),
+    ("Okay. Uh, I want you to bring up an automation for me, please. So it should be like, uh, if I am "
+     "home, the lamp should turn on for only 10 minutes and then turn off.", True),
+    ("make a page that shows today's alerts", True),
+    ("whenever the door opens at night, switch the lamp on", True),
+])
+def test_only_a_request_to_make_something_goes_straight_to_the_planner(house, text, planner):
+    ctx, home = house
+    a = agent(ctx, home, ScriptedChat([]), planner=ScriptedChat([]))
+    sure = {"value": "build", "confidence": 0.98, "backend": "router"}
+    assert a._wants_planner({"intent": sure}, text) is planner
 
 
 def test_an_artifact_is_refused_in_a_spoken_turn_and_in_a_poisoned_one(house):
@@ -87,7 +106,7 @@ def test_the_planner_is_told_the_facts_a_shortcut_can_test(house):
     ctx, home = house
     planner = ScriptedChat([completion("ok")])
     a = agent(ctx, home, planner, planner=planner, facts_fn=lambda: {"occupancy": "empty"})
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     a.handle("make a routine", user="mani", role="admin")
     assert '{"occupancy": "empty"}' in planner.requests[0]["messages"][0]["content"]
 
@@ -121,7 +140,7 @@ def test_the_planner_cannot_run_a_tool_it_was_not_offered(house):
         completion(tool_calls=[call("create_automation", {"instruction": "when empty turn off the lamp"})]),
         completion("I will use a shortcut instead.")])
     a = agent(ctx, home, planner, planner=planner)
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     result = a.handle("when the room is empty turn off the lamp", user="mani", role="admin")
     assert result["steps"] == [{"tool": "create_automation", "ok": False, "waiting": False}]
     assert result["proposal"] is None and len(ctx.pending.all()) == 0
@@ -170,7 +189,7 @@ def test_when_the_planner_does_not_answer_the_quick_model_still_does(house):
     ctx, home = house
     quick = ScriptedChat([completion("I can switch things, but building that needs the planner.")])
     a = agent(ctx, home, quick, planner=Dead())
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     result = a.handle("make me a bedtime routine", user="mani", role="admin")
     assert result["lane"] == "agent" and "planner model did not answer" in result["reply"]
     # No way back to the planner in that turn, and it is whole again for the next.
@@ -189,7 +208,7 @@ def test_a_planner_that_stops_part_way_says_what_was_done(house):
             return super().chat(messages, **kw)
     planner = Half([completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})])])
     a = agent(ctx, home, ScriptedChat([]), planner=planner)
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     result = a.handle("lamp on then build a routine", user="mani", role="admin")
     assert "part-way" in result["reply"] and result["actions"] == ["Lamp on"]
     assert [d["id"] for d in home.on_devices()] == ["lamp"]
@@ -199,7 +218,7 @@ def test_the_planner_is_not_offered_what_this_person_may_not_do(house):
     ctx, home = house
     planner = ScriptedChat([completion("ok"), completion("ok")])
     a = agent(ctx, home, planner, planner=planner)
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     a.handle("build something", user="asha", role="user")
     a.handle("build something", user="mani", role="admin")
     as_user, as_admin = set(names(planner.requests[0])), set(names(planner.requests[1]))
@@ -214,7 +233,7 @@ def test_a_planner_job_has_a_time_budget(house, monkeypatch):
     monkeypatch.setattr(mod, "PLANNER_BUDGET_S", 0)
     planner = ScriptedChat([completion("never asked")])
     a = agent(ctx, home, planner, planner=planner)
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     result = a.handle("build something", user="mani", role="admin")
     assert planner.requests == [] and "too long" in result["reply"]
 
@@ -258,6 +277,6 @@ def test_a_refused_tool_does_not_poison_the_rest_of_the_turn(house):
         completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})]),
         completion("The lamp is on.")])
     a = agent(ctx, home, planner, planner=planner)
-    a._wants_planner = lambda route: True
+    a._wants_planner = lambda route, text="": True
     result = a.handle("lamp on", user="mani", role="admin")
     assert not result["injection"] and result["actions"] == ["Lamp on"]

@@ -29,12 +29,15 @@ class Confirmations:
         now = self._clock()
         entry = {"id": secrets.token_hex(6), "capability": capability.name, "args": dict(args),
                  "user": user, "key": key, "expires": now + TTL_S}
+        # Kept with the action: the page asks for it again when its copy is gone
+        # (a reload, a phone that dropped the tab), so the Confirm button returns.
+        entry["card"] = self.card(entry, capability)
         with self._lock:
             self._prune(now)
             while len(self._waiting) >= MAX_WAITING:
                 self._waiting.pop(next(iter(self._waiting)))
             self._waiting[entry["id"]] = entry
-        return self.card(entry, capability)
+        return entry["card"]
 
     @staticmethod
     def card(entry, capability):
@@ -68,6 +71,10 @@ class Confirmations:
         with self._lock:
             self._prune(self._clock())
             return [dict(e) for e in self._waiting.values() if e["user"] == user]
+
+    def cards(self, user):
+        """The cards still waiting for `user`, oldest first."""
+        return [e["card"] for e in self.waiting(user) if e.get("card")]
 
     def _prune(self, now):
         for action_id in [i for i, e in self._waiting.items() if e["expires"] < now]:

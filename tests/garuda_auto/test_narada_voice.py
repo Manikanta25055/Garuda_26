@@ -169,53 +169,55 @@ def test_a_slow_answer_gets_a_filler_first(monkeypatch):
     assert chunks[1] == "All quiet at home."
 
 
-def test_a_turn_that_goes_to_the_planner_says_so_and_hands_the_answer_to_the_screen(monkeypatch):
+def test_a_planner_turn_says_so_and_then_says_its_answer(monkeypatch):
     import time as _time
     monkeypatch.setattr(narada_voice, "FILLER_AFTER_S", 0.02)
     monkeypatch.setattr(narada_voice, "PLANNER_CHECK_S", 0.05)
 
     def slow(*a):
         _time.sleep(0.4)
-        return {"reply": "Your shortcut is waiting on the screen.",
-                "display_reply": "Your shortcut **Bedtime** is waiting on the screen."}
+        return {"reply": "Your bedtime shortcut is ready for your Confirm.",
+                "display_reply": "Your shortcut **Bedtime** is ready for your Confirm."}
     v = voice(reply=slow)
     v.live_fn = lambda user: {"lane": "planner", "step": "create_shortcut"} if user == "mani" else None
+    v.issue_token("mani", "admin", "home")
+    chunks = _collect(v.speak("conv_1", [msg("user", "make a bedtime routine")]))
+    words = [c.strip() for c in chunks if c.strip()]
+    assert words == [narada_voice.PLANNER_LINE, "Your bedtime shortcut is ready for your Confirm."]
+    assert v.turns_for("conv_1", "mani", "admin", "home")[0]["response"].startswith("Your shortcut **Bedtime**")
+
+
+def test_a_planner_job_outlasting_the_hold_goes_to_the_screen_and_survives_an_interruption(monkeypatch):
+    import threading
+    import time as _time
+    monkeypatch.setattr(narada_voice, "FILLER_AFTER_S", 0.02)
+    monkeypatch.setattr(narada_voice, "PLANNER_CHECK_S", 0.02)
+    monkeypatch.setattr(narada_voice, "KEEPALIVE_S", 0.1)
+    monkeypatch.setattr(narada_voice, "HOLD_S", 0.3)
+    seen = {}
+
+    def slow(text, user, role, scope, on_text=None, cancel=None):
+        seen["cancel"] = cancel
+        _time.sleep(0.8)
+        return {"reply": "Built.", "display_reply": "Built: **Bedtime**."}
+    v = voice(reply=slow)
+    v.live_fn = lambda user: {"lane": "planner"}
     v.issue_token("mani", "admin", "home")
 
     async def run():
         chunks = [c async for c in v.speak("conv_1", [msg("user", "make a bedtime routine")])]
-        early = v.turns_for("conv_1", "mani", "admin", "home")
-        await asyncio.sleep(0.6)            # the job goes on after the spoken turn ended
-        return chunks, early, v.turns_for("conv_1", "mani", "admin", "home")
-    chunks, early, later = asyncio.run(run())
-    assert chunks[0].strip() in narada_voice.FILLERS and chunks[1:] == [narada_voice.PLANNER_LINE]
-    assert early == [] and later[0]["response"] == "Your shortcut **Bedtime** is waiting on the screen."
-
-def test_the_spoken_turn_ends_with_its_opening_while_the_details_are_still_written():
-    import threading
-    import time as _time
-    finished = threading.Event()
-
-    def brain(text, user, role, scope, on_text=None, cancel=None):
-        on_text("Two things stood out today. ")
-        on_text(None)                       # the spoken part is over
-        _time.sleep(0.4)                    # the details are still being written
-        finished.set()
-        return {"reply": "Two things stood out today.", "streamed": True,
-                "display_reply": "Two things stood out today.\n\n1. Tamper\n2. Knife"}
-    v = voice(reply=brain)
-    v.issue_token("mani", "user", "home")
-
-    async def run():
-        t0 = asyncio.get_running_loop().time()
-        chunks = [c async for c in v.speak("conv_1", [msg("user", "news?")])]
-        took = asyncio.get_running_loop().time() - t0
-        await asyncio.sleep(0.6)
-        return chunks, took
-    chunks, took = asyncio.run(run())
-    assert chunks == ["Two things stood out today. "] and took < 0.3
-    assert finished.is_set()                # not cancelled when the speech ended
-    assert v.turns_for("conv_1", "mani", "user", "home")[0]["response"].endswith("2. Knife")
+        # Interrupted while a second job is being built: the job goes on.
+        gen = v.speak("conv_1", [msg("user", "and a morning one")])
+        await gen.__anext__()               # the planner line
+        await gen.aclose()
+        await asyncio.sleep(1.0)
+        return chunks
+    chunks = asyncio.run(run())
+    words = [c.strip() for c in chunks if c.strip()]
+    assert words == [narada_voice.PLANNER_LINE, narada_voice.LATER_LINE]
+    assert " " in chunks                                   # blank chunks kept ElevenLabs waiting
+    assert not seen["cancel"].is_set()
+    assert [t["response"] for t in v.turns_for("conv_1", "mani", "admin", "home")] == ["Built: **Bedtime**."] * 2
 
 
 def test_an_interrupted_turn_tells_the_brain_to_stop():
@@ -253,7 +255,7 @@ def test_a_long_silence_is_bridged_and_then_handed_to_the_screen(monkeypatch):
     monkeypatch.setattr(narada_voice, "FILLER_AFTER_S", 0.02)
     monkeypatch.setattr(narada_voice, "PLANNER_CHECK_S", 0.02)
     monkeypatch.setattr(narada_voice, "KEEPALIVE_S", 0.1)
-    monkeypatch.setattr(narada_voice, "GIVE_UP_S", 0.35)
+    monkeypatch.setattr(narada_voice, "HOLD_S", 0.35)
 
     def slow(*a, **k):
         _time.sleep(0.8)
@@ -276,6 +278,8 @@ def test_every_filler_is_long_enough_to_be_said_at_once():
     # was never heard. 50+ characters measured as said at once.
     assert all(len(f) >= 45 for f in narada_voice.FILLERS)
     assert len(narada_voice.PLANNER_LINE) >= 45 and len(narada_voice.LATER_LINE) >= 45
+    # ElevenLabs drops what comes ~48 s into one answer: the hold ends well before.
+    assert narada_voice.HOLD_S <= 40 and narada_voice.KEEPALIVE_S < 15
 
 
 def test_a_noise_is_not_answered():
@@ -284,3 +288,17 @@ def test_a_noise_is_not_answered():
     v.issue_token("mani", "user", "home")
     assert _collect(v.speak("conv_1", [msg("user", "...")])) == []
     assert asked == [] and v.turns_for("conv_1", "mani", "user", "home") == []
+
+
+def test_the_setup_script_still_imports_the_voice_module_on_its_own():
+    # scripts/setup_narada_voice.py puts basic_pipelines on the path and imports
+    # garuda_auto as a top-level package: a package-relative import at module
+    # level broke it.
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[2]
+    out = subprocess.run([sys.executable, "-c", "import setup_narada_voice as s; print(s.CASCADE_TIMEOUT_S)"],
+                         cwd=root / "scripts", capture_output=True, text=True, timeout=60)
+    assert out.returncode == 0, out.stderr[-800:]
+    assert out.stdout.strip() == "15"

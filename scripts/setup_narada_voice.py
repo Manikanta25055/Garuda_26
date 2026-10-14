@@ -65,12 +65,15 @@ def engine_config(ws_url, voice):
         tts={"model_id": TTS_MODEL, "voice_id": voice, "expressive_mode": True,
              "stability": 0.32, "similarity_boost": 0.8, "speed": 1.0},
         asr={"provider": "scribe_realtime", "keywords": KEYWORDS},
-        # Hands-free until ~30 s of silence. Starter is 40k characters a
+        # The call ends after ~30 s of silence. Starter is 40k characters a
         # month (the free plan's 10k capped calls at five minutes): ten.
-        # Eager: answer as soon as the sentence sounds finished instead of
-        # waiting out a pause. Speculative: start on the likely-final words.
-        turn={"turn_model": "turn_v3", "turn_eagerness": "eager",
-              "speculative_turn": True, "silence_end_call_timeout": 30},
+        # The page closes the microphone the moment a question is in and
+        # opens it again on a tap (2026-10-15, the owner's call), so a turn
+        # must not end early: "normal" waits out an "uh", and no speculative
+        # turn starts on words the person had not finished. (Was eager +
+        # speculative, which also ran the brain twice per question.)
+        turn={"turn_model": "turn_v3", "turn_eagerness": "normal",
+              "speculative_turn": False, "silence_end_call_timeout": 30},
         conversation={"max_duration_seconds": 600},
         call_limits={"agent_concurrency_limit": 2},
         overrides={"first_message": True},

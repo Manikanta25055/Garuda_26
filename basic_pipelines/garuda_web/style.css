@@ -4375,6 +4375,9 @@ body:has(#page-narada.active) { position: fixed; inset: 0; width: 100%; }
 .nx-mic.on { background: #fff; color: #000; }
 .nx-mic.on .gi { opacity: 0; transform: scale(0.5); }
 .nx-mic.on .nx-mic-stop { opacity: 1; transform: none; }
+/* In a call with the microphone closed: the mic is back, and a tap opens it. */
+.nx-mic.on.held .gi { opacity: 1; transform: none; }
+.nx-mic.on.held .nx-mic-stop { opacity: 0; transform: scale(0.5); }
 .nx-mic.on::after {
   content: ''; position: absolute; inset: -4px; border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.8); opacity: 0.6;

@@ -523,6 +523,12 @@
  },
  {
   "kind": "http",
+  "method": "GET",
+  "path": "/api/narada/actions",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
   "method": "POST",
   "path": "/api/narada/actions/{action_id}/cancel",
   "guard": "require_session"
@@ -626,13 +632,13 @@
  {
   "kind": "http",
   "method": "POST",
-  "path": "/api/narada/voice/token",
+  "path": "/api/narada/voice/error",
   "guard": "require_session"
  },
  {
   "kind": "http",
   "method": "POST",
-  "path": "/api/narada/voice/error",
+  "path": "/api/narada/voice/token",
   "guard": "require_session"
  },
  {
@@ -746,7 +752,7 @@
  {
   "kind": "http",
   "method": "GET",
-  "path": "/favicon.ico",
+  "path": "/apple-touch-icon-precomposed.png",
   "guard": "none"
  },
  {
@@ -758,7 +764,7 @@
  {
   "kind": "http",
   "method": "GET",
-  "path": "/apple-touch-icon-precomposed.png",
+  "path": "/favicon.ico",
   "guard": "none"
  },
  {
