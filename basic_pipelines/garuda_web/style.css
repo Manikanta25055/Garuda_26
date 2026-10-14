@@ -47,6 +47,8 @@
 /* Drawn by scripts/draw_icons.py in the same hand, until the owner draws his own. */
 .gi-mic { --gi: url("/static/icons/mic.svg?v=3"); }
 .gi-send { --gi: url("/static/icons/send.svg?v=3"); }
+.gi-sound { --gi: url("/static/icons/sound.svg?v=1"); }
+.gi-sound-off { --gi: url("/static/icons/sound-off.svg?v=1"); }
 .gi-expand { --gi: url("/static/icons/expand.svg?v=3"); }
 .gi-minimise { --gi: url("/static/icons/minimise.svg?v=3"); }
 .gi-all-clear { --gi: url("/static/icons/all-clear.svg?v=3"); }
@@ -892,6 +894,9 @@ textarea:-webkit-autofill {
 .top-act:hover { color: var(--t1); }
 .top-act:active { transform: scale(0.94); }
 .top-act svg { width: 16px; height: 16px; }
+.sound-btn .gi { width: 18px; height: 18px; }
+.sound-btn .s-off, .sound-btn.is-muted .s-on { display: none; }
+.sound-btn.is-muted .s-off { display: inline-block; }
 .top-act.hud-signout { color: rgba(255,69,58,0.78); }
 .top-act.hud-signout:hover { color: var(--danger); background: rgba(255,69,58,0.10); }
 @media (max-width: 768px) {
@@ -4383,7 +4388,7 @@ body:has(#page-narada.active) { position: fixed; inset: 0; width: 100%; }
 .nx-send { background: #fff; color: #000; }
 .nx-send .gi { width: 20px; height: 20px; }
 .nx-bar:has(.nx-input:placeholder-shown) .nx-send { opacity: 0.3; pointer-events: none; }
-.nx-haptic { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; }
+.nx-haptic, .sx-haptic { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; }
 
 /* The "i" panel owns the bottom-right corner on Narada. */
 body:has(#page-narada.active) .fb-wrap { display: none !important; }

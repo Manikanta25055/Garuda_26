@@ -69,10 +69,13 @@ const N = (() => {
   // <input switch> gives a system tick, so a hidden one is clicked instead.
   let lastHaptic = 0;
   const PATTERNS = { tap: 8, start: [10, 50, 16], stop: 14, talk: 5, error: [28, 60, 28], send: 9 };
+  // The moments that are also heard (sound.js); taps and talking only touch.
+  const SOUNDS = { start: 'voice-start', stop: 'voice-end', error: 'error', send: 'send' };
   function haptic(kind) {
     const now = performance.now();
     if (now - lastHaptic < 70) return;
     lastHaptic = now;
+    if (SOUNDS[kind]) window.Feel?.sound(SOUNDS[kind]);
     if (navigator.vibrate) { try { navigator.vibrate(PATTERNS[kind] || 8); } catch (_) {} return; }
     const sw = $('nx-haptic');
     if (sw && sw.parentElement) sw.parentElement.click();
@@ -574,6 +577,7 @@ const N = (() => {
     voice = 'off'; conv = null;
     setPending(false);
     setState('error');
+    window.Feel?.voice(false);
     haptic('error');
     if (window.G) G.showToast(msg, 'error');
     setTimeout(() => { if (state === 'error') setState('idle'); }, 2600);
@@ -583,6 +587,7 @@ const N = (() => {
     if (voice !== 'off') return;
     voice = 'connecting';
     setState('connecting');
+    window.Feel?.voice(true);
     haptic('start');
     try {
       const [mod, tok] = await Promise.all([loadClient(), G._apiFn('POST', '/api/narada/voice/token')]);
@@ -597,6 +602,7 @@ const N = (() => {
           conv = null; voice = 'off';
           setPending(false);
           setState('idle');
+          window.Feel?.voice(false);
           if (wasOn) haptic('stop');
         },
         onModeChange: ({ mode }) => {
@@ -631,6 +637,7 @@ const N = (() => {
     setPending(false);
     if (c) { try { await c.endSession(); } catch (_) {} }
     setState('idle');
+    window.Feel?.voice(false);
     haptic('stop');
   }
 
@@ -661,6 +668,7 @@ const N = (() => {
       workDone(res);
       lastReply = { ...res, seconds: (performance.now() - t0) / 1000 };
       say('narada', res.response || '…', true);
+      window.Feel?.sound('receive');
       // A drafted automation needs a Confirm button, so it goes into the
       // conversation; what ran and which model answered go to the "i" panel.
       if (res.proposal && window.H && H.proposalHtml) {

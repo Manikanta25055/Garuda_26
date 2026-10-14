@@ -12,7 +12,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=81"/>
+  <link rel="stylesheet" href="/static/style.css?v=82"/>
 </head>
 <body>
 <div id="app">
@@ -225,6 +225,10 @@
     <button class="theme-toggle-btn top-act" id="theme-toggle-btn" aria-label="Toggle theme" data-click="G.toggleTheme">
       <span class="gi gi-light-mode t-sun" aria-hidden="true"></span>
       <span class="gi gi-night-mode t-moon" aria-hidden="true"></span>
+    </button>
+    <button class="top-act sound-btn" id="sound-btn" aria-label="Sounds on" title="Sounds on" aria-pressed="true" data-click="Feel.toggle">
+      <span class="gi gi-sound s-on" aria-hidden="true"></span>
+      <span class="gi gi-sound-off s-off" aria-hidden="true"></span>
     </button>
     <button class="top-act hud-signout" aria-label="Power Off" title="Power Off" data-click="G.logout">
       <span class="gi gi-power" aria-hidden="true"></span>
@@ -1301,10 +1305,11 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container"></div>
 
-<script src="/static/actions.js?v=1"></script>
-<script src="/static/narada.js?v=15"></script>
+<script src="/static/sound.js?v=1"></script>
+<script src="/static/actions.js?v=2"></script>
+<script src="/static/narada.js?v=16"></script>
 <script src="/static/island.js?v=4"></script>
-<script src="/static/app.js?v=76"></script>
+<script src="/static/app.js?v=77"></script>
 <script src="/static/home.js?v=14"></script>
 </body>
 </html>

@@ -105,6 +105,7 @@ const G = (() => {
   function showToast(message, type = 'info', duration = 4000) {
     const container = document.getElementById('toast-container');
     if (!container) return;
+    window.Feel?.toast(type);
     // The same message again updates the toast already showing ("... x2")
     // instead of stacking a copy on top of it.
     const same = [...container.children].find(t =>
@@ -452,6 +453,7 @@ const G = (() => {
       _session = res;
       _storeAuth(res);
       _pendingAdmin = null;
+      window.Feel?.play('unlock');
       afterLogin();
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -471,6 +473,7 @@ const G = (() => {
       const res = await api('POST', '/api/master_key/login', { key });
       _session = res;
       _storeAuth(res);
+      window.Feel?.play('unlock');
       afterLogin();
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -489,6 +492,7 @@ const G = (() => {
       _session = res;
       _storeAuth(res);
       // remember_me → 7-day refresh token issued server-side via httpOnly cookie
+      window.Feel?.play('unlock');
       afterLogin();
     } catch(e) {
       showLoginErr(errEl, extractError(e));
@@ -572,11 +576,13 @@ const G = (() => {
     ok.className = 'btn ' + (o.danger === false ? 'btn-primary' : 'btn-danger');
     setText('m-confirm-cancel', o.cancelLabel || 'Cancel');
     ov.classList.remove('hidden');
+    if (o.danger !== false) window.Feel?.touch('warning');
     setTimeout(() => $('m-confirm-cancel')?.focus(), 30);
     return new Promise(resolve => {
       _confirmDone = result => {
         _confirmDone = null;
         ov.classList.add('hidden');
+        if (result && /^(delete|remove)\b/i.test(ok.textContent)) window.Feel?.play('delete');
         resolve(!!result);
       };
     });
@@ -596,6 +602,7 @@ const G = (() => {
   async function _doLogout() {
     if (_loggingOut) return;
     _loggingOut = true;
+    window.Feel?.play('lock');
     try { await _doLogoutInner(); } finally { _loggingOut = false; }
   }
 
@@ -879,11 +886,13 @@ const G = (() => {
         await api('POST', '/api/clip/start');
         _clipRecording = true;
         if (btn) { btn.innerHTML = _REC_ICON.stop; btn.classList.add('recording'); }
+        window.Feel?.play('rec-start');
         showToast('Recording started — auto-stops at 60 s.', 'success');
       } else {
         const r = await api('POST', '/api/clip/stop');
         _clipRecording = false;
         if (btn) { btn.innerHTML = _REC_ICON.rec; btn.classList.remove('recording'); }
+        window.Feel?.play('rec-stop');
         showToast('Clip saved: ' + ((r.path || '').split('/').pop() || 'done'), 'success');
       }
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
@@ -1337,8 +1346,9 @@ const G = (() => {
         }).catch(() => {});
       } catch(e) {}
     }
-    _beep();
-    _alarmInterval = setInterval(_beep, 1400);
+    const ring = () => { if (!window.Feel?.alarm()) _beep(); };
+    ring();
+    _alarmInterval = setInterval(ring, 1400);
   }
 
   function _stopAlarm() {
@@ -2192,6 +2202,7 @@ const G = (() => {
     try {
       await api('POST', '/api/master_key/verify', { key });
       _logsUnlocked = true;
+      window.Feel?.play('unlock');
       $('logs-gate')?.classList.add('hidden');
       if ($('lg-key')) $('lg-key').value = '';
       fetchAndRenderLogs();
@@ -2713,6 +2724,7 @@ const G = (() => {
     if (!el) return;
     el.textContent = (typeof txt === 'string') ? txt : JSON.stringify(txt);
     el.classList.remove('hidden');
+    window.Feel?.play('error');
   }
 
   function openDocs() { show('m-docs'); }

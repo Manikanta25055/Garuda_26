@@ -10,7 +10,8 @@
      <button data-click="G.nav" data-args='["devices", {"$": "this"}]'>
 
    data-click / data-change / data-input / data-submit   the function, as
-       "Namespace.name"; only G, H, N and UI (below) can be named
+       "Namespace.name"; only G, H, N, Feel (sound.js) and UI (below) can be
+       named
    data-args   a JSON array of arguments. Plain values pass as they are; an
        object stands for something live:
          {"$": "this"}    the element carrying the attribute
@@ -24,7 +25,7 @@
 (function () {
   'use strict';
 
-  const NAMESPACES = new Set(['G', 'H', 'N', 'UI']);
+  const NAMESPACES = new Set(['G', 'H', 'N', 'Feel', 'UI']);
   const NAME = /^[A-Za-z_$][\w$]*$/;
 
   // The few handlers that were expressions rather than a call.
