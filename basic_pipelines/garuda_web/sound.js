@@ -12,8 +12,8 @@
    vibrate; Safari 18 ticks when a switch control flips, so a hidden one is
    flipped instead (one strength only, and only inside a tap).
 
-   Sounds are quiet and play through Web Audio (no lag). On iOS they use the
-   "playback" audio session, so they are heard with the silent switch on
+   Sounds are quiet and play through Web Audio (no lag). On a phone they use
+   the "playback" audio session, so they are heard with the silent switch on
    (the owner's choice; "ambient", Apple's default for interface sounds,
    left them mute for most people). iOS gives websites no way to mix, so a
    sound pauses music playing in another app. The speaker button in the top
@@ -92,10 +92,14 @@
     ['.fb-star, .fb-cat', '~selection'],
   ];
 
-  const SESSION = 'playback';
-  // Only touch screens have a Taptic Engine to reach, or an iOS audio
-  // session to choose; on a Mac both would be work for nothing.
+  // Only touch screens have a Taptic Engine to reach.
   const TOUCH_SCREEN = window.matchMedia && matchMedia('(hover: none) and (pointer: coarse)').matches;
+  // The audio session at rest: "playback" on a phone (heard through the
+  // silent switch), "auto" elsewhere. Safari keeps the session in the tab's
+  // web process, not the page, so a value set by an earlier build outlives
+  // a reload; it is set on every device, at once, to clear one left behind
+  // (a stale "playback" on a Mac kept refusing Narada the microphone).
+  const SESSION = TOUCH_SCREEN ? 'playback' : 'auto';
   // A running AudioContext renders silence in real time on its own thread
   // for as long as it runs. Safari's audio pipeline makes that a cost the
   // whole page feels (every transition on a Mac lagged while it ran), so
@@ -105,6 +109,8 @@
   let idleTimer = 0, busyUntil = 0, voiceOn = false, everRan = false;
   let muted = false;
   try { muted = localStorage.getItem('garuda_sound') === 'off'; } catch (_) {}
+  // (session() is hoisted; voiceOn is false here)
+  queueMicrotask(() => session(SESSION));
 
   // ── Audio ──────────────────────────────────────────────────
   // While Narada listens, the session must allow the microphone: Safari
@@ -113,7 +119,7 @@
   // chime playing it resolves to playback too. Nothing may change it then.
   const CALL = 'play-and-record';
   function session(type) {
-    if (!TOUCH_SCREEN || (voiceOn && type !== CALL)) return;
+    if (voiceOn && type !== CALL) return;
     try { if (navigator.audioSession) navigator.audioSession.type = type; } catch (_) {}
   }
 

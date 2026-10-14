@@ -163,39 +163,44 @@ def test_audio_sleeps_between_sounds(admin):
         admin.page.wait_for_timeout(2600)
 
 
-# Safari's navigator.audioSession, recorded: Chromium has none.
+# Safari's navigator.audioSession, recorded: Chromium has none. It starts
+# at whatever an earlier page in the tab left (Safari keeps it per process).
 SESSION = """Object.defineProperty(navigator, 'audioSession', { value: {
-  _t: 'auto', get type() { return this._t; },
+  _t: %r, get type() { return this._t; },
   set type(v) { this._t = v; (window.__sessions = window.__sessions || []).push(v); } } });"""
 
 
-def test_a_narada_call_gets_the_microphone_session_on_a_phone(server, browser):  # noqa: F811
-    # Safari refuses the microphone under "playback" ("AudioSession category
-    # is not compatible with audio capture"): a call must switch to
-    # play-and-record, and nothing may switch it back until the call ends.
+@pytest.mark.parametrize("device, left_behind, rest", [("phone", "auto", "playback"),
+                                                        ("mac", "playback", "auto")])
+def test_a_narada_call_gets_the_microphone_session(server, browser, device, left_behind, rest):  # noqa: F811
+    # Safari refuses the microphone unless the session is auto or
+    # play-and-record ("AudioSession category is not compatible with audio
+    # capture"). A call switches to play-and-record and nothing may switch
+    # it back until the call ends; at rest the page clears a stale value.
     real = browser.new_context
 
-    def phone(**kw):
-        kw.update(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
+    def make(**kw):
+        if device == "phone":
+            kw.update(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
         ctx = _recording(real(**kw))
-        ctx.add_init_script(SESSION)
+        ctx.add_init_script(SESSION % left_behind)
         return ctx
-    browser.new_context = phone
+    browser.new_context = make
     try:
         p = Page(browser, server, "admin")
     finally:
         browser.new_context = real
     try:
-        if not p.js("matchMedia('(hover: none) and (pointer: coarse)').matches"):
-            pytest.skip("this engine does not emulate a touch screen")
-        p.page.wait_for_timeout(1800)
-        assert p.js("navigator.audioSession.type") == "playback"         # the sounds' own, set at load
+        touch = p.js("matchMedia('(hover: none) and (pointer: coarse)').matches")
+        if touch != (device == "phone"):
+            pytest.skip("this engine does not emulate this device")
+        assert p.js("navigator.audioSession.type") == rest                 # set at load
         p.js("Feel.voice(true)")
         assert p.js("navigator.audioSession.type") == "play-and-record"
         p.js("Feel.sound('voice-start'); Feel.toast('success')")          # sounds during the call
-        p.page.wait_for_timeout(400)
+        p.page.wait_for_timeout(1800)                                      # and the context made at load
         assert p.js("navigator.audioSession.type") == "play-and-record"
         p.js("Feel.voice(false)")
-        assert p.js("navigator.audioSession.type") == "playback"
+        assert p.js("navigator.audioSession.type") == rest
     finally:
         p.close()
