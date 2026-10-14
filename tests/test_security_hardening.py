@@ -510,3 +510,17 @@ def test_inline_handlers_do_not_quote_values_with_html_escaping_alone():
     path = os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines', 'garuda_web', 'home.js')
     with open(path, encoding='utf-8') as f:
         assert "'${esc(" not in f.read()
+
+
+def test_drishti_password_sign_in_never_yields_an_admin(app_client):
+    """Drishti has no emailed code, so an admin password there signs in as a user."""
+    from basic_pipelines.garuda_services.home import _drishti_authenticate
+    assert _drishti_authenticate('admin', 'root') == 'user'
+    assert _drishti_authenticate('admin', 'wrong') is None
+
+
+def test_removing_a_users_sessions_also_ends_their_drishti_sessions(app_client):
+    token = gw._drishti_auth.create_session('user', 'user')
+    assert gw._drishti_auth.get_session(token) is not None
+    gw._invalidate_user_sessions('user')
+    assert gw._drishti_auth.get_session(token) is None
