@@ -462,6 +462,7 @@ NEVER = {
 # Not actions at all: pages, liveness, streams, and the conversation itself.
 PLUMBING = frozenset({
     "GET /", "GET /favicon.ico", "GET /manifest.json", "GET /sw.js", "- /static",
+    "GET /apple-touch-icon.png", "GET /apple-touch-icon-precomposed.png",
     "GET /api/health", "GET /api/ready", "GET /api/meta", "GET /api/heartbeat",
     "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
