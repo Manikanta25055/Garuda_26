@@ -19,8 +19,12 @@
                  something; each finished step sends a ring outward
      talking     rings bloom with Narada's own voice, low notes inside
 
-   All dots are drawn in a few batched fills per frame (grouped by colour
-   and brightness), which keeps ~4,000 dots smooth on a phone.
+   The field is drawn on the GPU (WebGL): positions are uploaded once and a
+   shader works out every dot's energy with the same math as energy(). On a
+   MacBook that is ~29,000 dots; as canvas arcs they cost 20+ ms of main
+   thread a frame (far more in Safari), every frame of a conversation. The
+   2D canvas below is the fallback (no WebGL, or a lost GPU context), drawn
+   in a few batched fills per frame (grouped by colour and brightness).
 
    Voice runs through ElevenLabs (microphone, speech-to-text, speaking the
    reply). What Narada says and does is decided on the Pi by NVIDIA NIM:
@@ -87,6 +91,7 @@ const N = (() => {
     ink = cs.getPropertyValue('--t1').trim() || ink;
     accent = cs.getPropertyValue('--accent').trim() || accent;
     danger = cs.getPropertyValue('--danger').trim() || danger;
+    if (gl) { inkRGB = glColor(ink); dangerRGB = glColor(danger); }
   }
 
   function resize() {
@@ -100,6 +105,7 @@ const N = (() => {
     CH = Math.round(r.height * DPR);
     canvas.width = CW; canvas.height = CH;
     buildField(r);
+    glUpload();
   }
 
   // Concentric rings from the core to the farthest corner. Dot size falls
@@ -237,6 +243,175 @@ const N = (() => {
   const buckets = [[], []];
   for (let c = 0; c < 2; c++) for (let k = 0; k < ALPHA_STEPS; k++) buckets[c].push([]);
 
+  // ── GPU renderer ───────────────────────────────────────────
+  const STATE_ID = { idle: 0, listening: 1, thinking: 2, working: 3, talking: 4, connecting: 5, error: 6 };
+  const T0 = performance.now() / 1000;      // times go up relative to this: float precision
+  let gl = null, glp = null, glU = null, glBuf = null, glN = 0, pointMax = 64;
+  let inkRGB = [0.07, 0.07, 0.07], dangerRGB = [1, 0.27, 0.23];
+
+  const VS = `
+    precision highp float;
+    attribute vec2 aPos;
+    attribute vec4 aDot;            // ang, rf (-1: the core), size, bin
+    attribute float aRbin;
+    uniform vec2 uRes;
+    uniform float uT, uSince, uWork, uState, uDpr, uCore, uHr2;
+    uniform vec3 uPointer;          // x, y, on
+    uniform float uLevel[${RAYS}];
+    uniform float uRing[${RINGS}];
+    uniform vec3 uInk, uDanger;
+    varying float vAlpha, vRad;
+    varying vec3 vColor;
+    const float PI = 3.14159265, TAU = 6.2831853;
+    float angDist(float a, float b) { float d = mod(abs(a - b), TAU); return d > PI ? TAU - d : d; }
+    void main() {
+      vec2 xy = aPos;
+      float rf = aDot.y;
+      if (rf < 0.0) {               // the core
+        vAlpha = 1.0; vRad = uCore;
+        vColor = uState == 6.0 ? uDanger : uInk;
+        gl_Position = vec4(xy.x / uRes.x * 2.0 - 1.0, 1.0 - xy.y / uRes.y * 2.0, 0.0, 1.0);
+        gl_PointSize = 2.0 * uCore + 2.0;
+        return;
+      }
+      float ang = aDot.x, t = uT;
+      int a = int(aDot.w + 0.5), rb = int(aRbin + 0.5);
+      float lvl = uLevel[a];
+      float breath = 0.16 + 0.16 * (0.5 + 0.5 * sin(t * 1.25 - rf * 5.5));
+      float e = breath;
+      if (uState == 1.0) {
+        float reach = 0.1 + lvl * 1.1;
+        e = rf <= reach ? max(breath, 1.0 - (rf / max(reach, 0.01)) * 0.5) : breath;
+      } else if (uState == 2.0) {
+        float d = angDist(ang, t * 3.1 - PI / 2.0) + abs(rf - 0.55) * 2.2;
+        e = max(breath * 0.8, exp(-d * 2.2) * (0.7 + 0.3 * sin(t * 6.0 - rf * 9.0)));
+      } else if (uState == 3.0) {
+        float d1 = angDist(ang, t * 2.3 - PI / 2.0) + abs(rf - 0.38) * 2.4;
+        float d2 = angDist(ang, PI / 2.0 - t * 1.7) + abs(rf - 0.74) * 2.4;
+        float age = t - uWork;
+        float ring = age < 2.4 ? exp(-abs(rf - age * 0.75) * 8.0) * exp(-age * 1.1) : 0.0;
+        e = max(max(breath * 0.8, exp(-d1 * 2.2) * 0.9), max(exp(-d2 * 2.4) * 0.72, ring));
+      } else if (uState == 4.0) {
+        e = clamp(breath + uRing[rb] * 0.75 * (1.0 - rf * 0.3) + lvl * 0.3 * (1.0 - rf), 0.0, 1.0);
+      } else if (uState == 5.0) {
+        float lit = mod((t - uSince) * 1.6, 1.6);
+        e = max(breath, exp(-abs(rf - lit) * 9.0) * 0.9);
+      } else if (uState == 6.0) {
+        e = breath + 0.6 * exp(-(t - uSince) * 2.5) * max(0.0, 1.0 - rf);
+      }
+      if (rf > 1.0) e *= exp(-(rf - 1.0) * 1.1);
+      if (uPointer.z > 0.5) {
+        vec2 d = uPointer.xy - xy;
+        float d2 = dot(d, d);
+        if (d2 < uHr2 * 4.0) {
+          float pull = exp(-d2 / uHr2);
+          e = clamp(e + pull * 0.6, 0.0, 1.0);
+          xy += d * pull * 0.08;
+        }
+      }
+      float size = aDot.z * (0.42 + 0.58 * clamp(e * 1.25, 0.0, 1.0));
+      vAlpha = clamp(0.1 + 0.9 * e, 0.0, 1.0);
+      vRad = max(size, 0.55 * uDpr);
+      vColor = (uState == 6.0 && e > 0.62) ? uDanger : uInk;
+      gl_Position = vec4(xy.x / uRes.x * 2.0 - 1.0, 1.0 - xy.y / uRes.y * 2.0, 0.0, 1.0);
+      gl_PointSize = vAlpha < 0.036 ? 0.0 : 2.0 * vRad + 2.0;
+    }`;
+  const FS = `
+    precision mediump float;
+    varying float vAlpha, vRad;
+    varying vec3 vColor;
+    void main() {
+      float r = length(gl_PointCoord * 2.0 - 1.0) * (vRad + 1.0);
+      float a = vAlpha * clamp(vRad - r + 0.5, 0.0, 1.0);   // a one-pixel soft edge
+      if (a <= 0.0) discard;
+      gl_FragColor = vec4(vColor * a, a);
+    }`;
+
+  function glSetup() {
+    let g = null;
+    try { g = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false }); } catch (_) {}
+    if (!g) return false;
+    const sh = (type, src) => {
+      const o = g.createShader(type); g.shaderSource(o, src); g.compileShader(o);
+      if (!g.getShaderParameter(o, g.COMPILE_STATUS)) throw new Error(g.getShaderInfoLog(o));
+      return o;
+    };
+    try {
+      const prog = g.createProgram();
+      g.attachShader(prog, sh(g.VERTEX_SHADER, VS));
+      g.attachShader(prog, sh(g.FRAGMENT_SHADER, FS));
+      g.linkProgram(prog);
+      if (!g.getProgramParameter(prog, g.LINK_STATUS)) throw new Error(g.getProgramInfoLog(prog));
+      gl = g; glp = prog;
+    } catch (err) {
+      console.warn('narada: WebGL field unavailable, drawing on canvas', err);
+      return false;
+    }
+    glU = {};
+    for (const n of ['uRes', 'uT', 'uSince', 'uWork', 'uState', 'uDpr', 'uCore', 'uHr2', 'uPointer',
+                     'uLevel', 'uRing', 'uInk', 'uDanger']) glU[n] = gl.getUniformLocation(glp, n);
+    glU.aPos = gl.getAttribLocation(glp, 'aPos');
+    glU.aDot = gl.getAttribLocation(glp, 'aDot');
+    glU.aRbin = gl.getAttribLocation(glp, 'aRbin');
+    glBuf = gl.createBuffer();
+    pointMax = (gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) || [1, 64])[1];
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    canvas.addEventListener('webglcontextlost', ev => { ev.preventDefault(); gl = null; });
+    canvas.addEventListener('webglcontextrestored', () => { if (glSetup()) { glUpload(); readColors(); } });
+    return true;
+  }
+
+  // Positions and the static per-dot values, once per resize; the core last.
+  function glUpload() {
+    if (!gl || !D) return;
+    const n = D.n + 1, f = new Float32Array(n * 7);
+    for (let i = 0; i < D.n; i++) {
+      f.set([D.x[i], D.y[i], D.ang[i], D.rf[i], D.size[i], D.bin[i], D.rbin[i]], i * 7);
+    }
+    f.set([cx, cy, 0, -1, 0, 0, 0], D.n * 7);
+    glN = n;
+    gl.bindBuffer(gl.ARRAY_BUFFER, glBuf);
+    gl.bufferData(gl.ARRAY_BUFFER, f, gl.STATIC_DRAW);
+  }
+
+  function glColor(css) {
+    const c = document.createElement('canvas').getContext('2d');
+    c.fillStyle = '#000'; c.fillStyle = css; c.fillRect(0, 0, 1, 1);
+    const d = c.getImageData(0, 0, 1, 1).data;
+    return [d[0] / 255, d[1] / 255, d[2] / 255];
+  }
+
+  function glDraw(t, since, hoverOn, corePx) {
+    gl.viewport(0, 0, CW, CH);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(glp);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glBuf);
+    const stride = 28;
+    gl.enableVertexAttribArray(glU.aPos);
+    gl.vertexAttribPointer(glU.aPos, 2, gl.FLOAT, false, stride, 0);
+    gl.enableVertexAttribArray(glU.aDot);
+    gl.vertexAttribPointer(glU.aDot, 4, gl.FLOAT, false, stride, 8);
+    gl.enableVertexAttribArray(glU.aRbin);
+    gl.vertexAttribPointer(glU.aRbin, 1, gl.FLOAT, false, stride, 24);
+    gl.uniform2f(glU.uRes, CW, CH);
+    gl.uniform1f(glU.uT, t - T0);
+    gl.uniform1f(glU.uSince, since - T0);
+    gl.uniform1f(glU.uWork, workPulse - T0);
+    gl.uniform1f(glU.uState, STATE_ID[state] || 0);
+    gl.uniform1f(glU.uDpr, DPR);
+    gl.uniform1f(glU.uCore, Math.min(corePx, pointMax / 2 - 1));
+    const hr = Rfx * 0.32;
+    gl.uniform1f(glU.uHr2, hr * hr);
+    gl.uniform3f(glU.uPointer, pointer ? pointer.x : 0, pointer ? pointer.y : 0, hoverOn ? 1 : 0);
+    gl.uniform1fv(glU.uLevel, level);
+    gl.uniform1fv(glU.uRing, ringLevel);
+    gl.uniform3fv(glU.uInk, inkRGB);
+    gl.uniform3fv(glU.uDanger, dangerRGB);
+    gl.drawArrays(gl.POINTS, 0, glN);
+  }
+
   function schedule() {
     if (!visible || pending) return;
     pending = true;
@@ -249,13 +424,24 @@ const N = (() => {
 
   function draw(now) {
     pending = false; raf = 0;
-    if (!visible || !ctx || !D) { schedule(); return; }
+    if (!visible || !(ctx || gl) || !D) { schedule(); return; }
     const t = now / 1000, since = stateSince / 1000;
     updateLevels(t);
     if (state === 'talking' && !conv && now > synthTalkUntil) setState('idle');
+    const hoverOn = pointer && (state === 'idle' || state === 'listening');
+
+    if (gl) {
+      let peak = 0;
+      for (let i = 0; i < RAYS; i++) peak = Math.max(peak, level[i]);
+      const pulse = state === 'thinking' || state === 'working' ? 0.5 + 0.5 * Math.sin(t * 6)
+        : state === 'idle' ? 0.5 + 0.5 * Math.sin(t * 1.25) : peak;
+      glDraw(t, since, hoverOn, coreR * (1 + 0.28 * pulse));
+      _driveIsland(peak);
+      schedule();
+      return;
+    }
 
     for (let c = 0; c < 2; c++) for (let k = 0; k < ALPHA_STEPS; k++) buckets[c][k].length = 0;
-    const hoverOn = pointer && (state === 'idle' || state === 'listening');
     const hr = Rfx * 0.32, hr2 = hr * hr;
     const active = state !== 'idle';
     for (let i = 0; i < D.n; i++) {
@@ -1288,7 +1474,7 @@ const N = (() => {
   function init() {
     canvas = $('nx-glyph');
     if (!canvas) return;
-    ctx = canvas.getContext('2d');
+    if (!glSetup()) ctx = canvas.getContext('2d');
     readColors();
     resize();
     new ResizeObserver(resize).observe(canvas);
