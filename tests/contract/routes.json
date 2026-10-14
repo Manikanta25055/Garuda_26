@@ -740,6 +740,18 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/apple-touch-icon.png",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/apple-touch-icon-precomposed.png",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/manifest.json",
   "guard": "none"
  },

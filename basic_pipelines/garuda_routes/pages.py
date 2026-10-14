@@ -1,4 +1,4 @@
-"""The page itself and the three files a browser asks for by fixed name: favicon, web-app manifest, service worker.
+"""The page itself and the files a browser asks for by fixed name: favicon, apple-touch-icon, web-app manifest, service worker.
 
 Moved out of Garuda_web.py (2026-10). Handler bodies are unchanged except
 that names belonging to Garuda_web are read, and assigned, through `core`.
@@ -34,6 +34,14 @@ def build_pages_router(core):
     async def favicon():
         p = core._static_dir / "favicon.ico"
         return FileResponse(str(p), media_type="image/x-icon") if p.exists() else Response(status_code=204)
+
+    # Safari asks for these at the site root for Favorites, the Start Page and
+    # Top Sites, whatever the page links; a 404 there shows a letter instead.
+    @router.get("/apple-touch-icon.png", include_in_schema=False)
+    @router.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
+    async def apple_touch_icon():
+        p = core._static_dir / "apple-touch-icon.png"
+        return FileResponse(str(p), media_type="image/png") if p.exists() else Response(status_code=404)
 
     @router.get("/manifest.json")
     async def pwa_manifest():
