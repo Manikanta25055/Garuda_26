@@ -503,3 +503,10 @@ def test_wrong_codes_count_toward_the_address_lockout(app_client, monkeypatch):
     r = app_client.post('/api/admin/verify-otp',
                         json={'username': 'admin', 'otp': str(gw.STATE.auth.admin_otp)})
     assert r.status_code == 429
+
+
+def test_inline_handlers_do_not_quote_values_with_html_escaping_alone():
+    """&#39; decodes back to ' before an inline handler runs; use jsArg()."""
+    path = os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines', 'garuda_web', 'home.js')
+    with open(path, encoding='utf-8') as f:
+        assert "'${esc(" not in f.read()
