@@ -6,11 +6,22 @@ that names belonging to Garuda_web are read, and assigned, through `core`.
 import asyncio
 import datetime
 import hmac
-import os
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
+
+# Wrong admin codes allowed per hour, across every code sent. Each code has its
+# own three tries, but asking for a new code used to reset them, so knowing the
+# password was enough to walk the whole million-code space.
+ADMIN_OTP_FAILURES_PER_HOUR = 10
+
+
+def _admin_otp_blocked(core) -> bool:
+    now = time.time()
+    fails = core.STATE.auth.admin_otp_failures
+    fails[:] = [t for t in fails if now - t < 3600]
+    return len(fails) >= ADMIN_OTP_FAILURES_PER_HOUR
 
 
 class LoginRequest(BaseModel):
@@ -76,13 +87,8 @@ def build_auth_router(core):
         if user.get("role") == "admin":
             # Only said once the password has been proved: before, any name could
             # be tested for "is this an admin?" without knowing anything.
-            # Test-only bypass for the P1-4 evaluation harness. Set GARUDA_EVAL_OTP_BYPASS=1
-            # in the environment before starting the server to allow a named service admin
-            # (GARUDA_EVAL_SERVICE_ADMIN) to sign in via /api/login without the email OTP.
-            _bypass = os.environ.get("GARUDA_EVAL_OTP_BYPASS", "") == "1"
-            _allowed = os.environ.get("GARUDA_EVAL_SERVICE_ADMIN", "")
-            if not (_bypass and _allowed and u == _allowed):
-                raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
+            # No exceptions: the evaluation harness's env-gated bypass is gone.
+            raise HTTPException(403, "Admin accounts must sign in via the Admin Access flow.")
         # Auto-migrate plaintext passwords to hashed
         if not user["password"].startswith("pbkdf2:"):
             user["password"] = await asyncio.to_thread(core._hash_password, p)
@@ -185,6 +191,9 @@ def build_auth_router(core):
         if user is None or not password_ok or user.get("role") != "admin":
             core._record_login_failure(ip)
             raise HTTPException(401, "Invalid admin credentials.")
+        if _admin_otp_blocked(core):
+            raise HTTPException(429, "Too many wrong codes in the last hour. Try again later, "
+                                     "or sign in with a master key.")
         # Auto-migrate plaintext passwords to hashed
         if not user["password"].startswith("pbkdf2:"):
             user["password"] = await asyncio.to_thread(core._hash_password, p)
@@ -205,6 +214,9 @@ def build_auth_router(core):
         """Admin login step 2: verify OTP, issue session."""
         if not core._check_rate_limit(request):
             raise HTTPException(429, "Too many requests. Try again later.")
+        ip = core._get_client_ip(request)
+        if core._is_login_locked(ip) or _admin_otp_blocked(core):
+            raise HTTPException(429, "Too many failed attempts. Try again later.")
         if not core.STATE.auth.admin_otp or not core.STATE.auth.admin_otp_user:
             raise HTTPException(401, "No OTP pending. Please restart login.")
         if time.time() - core.STATE.auth.admin_otp_ts > 300:
@@ -215,12 +227,17 @@ def build_auth_router(core):
             raise HTTPException(401, "Too many incorrect attempts. Please restart login.")
         if not hmac.compare_digest(data.otp.strip().encode(), str(core.STATE.auth.admin_otp).encode()):
             core.STATE.auth.admin_otp_attempts += 1
+            core.STATE.auth.admin_otp_failures.append(time.time())
+            core._record_login_failure(ip)
+            if _admin_otp_blocked(core):
+                core.log_system_update("[SECURITY] Admin sign-in codes blocked for an hour after "
+                                       f"{ADMIN_OTP_FAILURES_PER_HOUR} wrong codes (last from {ip}).")
             raise HTTPException(401, "Invalid OTP.")
         u = core.STATE.auth.admin_otp_user   # use server-stored username, not client-supplied
         core.STATE.auth.admin_otp = None; core.STATE.auth.admin_otp_user = None; core.STATE.auth.admin_otp_ts = 0; core.STATE.auth.admin_otp_attempts = 0
+        core.STATE.auth.admin_otp_failures.clear()
         if u not in core.STATE.auth.users or core.STATE.auth.users[u]["role"] != "admin":
             raise HTTPException(401, "Account not authorised.")
-        ip = core._get_client_ip(request)
         core._clear_login_failure(ip)
         access_token = core.create_session(u)
         refresh_token = core.create_refresh_token(u)

@@ -462,3 +462,44 @@ def test_signed_in_pages_do_not_share_the_anonymous_budget(app_client, admin_tok
     headers = {'X-Garuda-Token': admin_token}
     statuses = [app_client.get('/api/users', headers=headers).status_code for _ in range(40)]
     assert 429 not in statuses
+
+
+# ── 2026-10-14 review fixes ───────────────────────────────────────────────────
+
+def test_eval_bypass_env_no_longer_lets_an_admin_skip_the_code(app_client, monkeypatch):
+    monkeypatch.setenv('GARUDA_EVAL_OTP_BYPASS', '1')
+    monkeypatch.setenv('GARUDA_EVAL_SERVICE_ADMIN', 'admin')
+    r = app_client.post('/api/login', json={'username': 'admin', 'password': 'root'})
+    assert r.status_code == 403
+
+
+def test_asking_for_a_new_code_does_not_reset_the_wrong_code_budget(app_client, monkeypatch):
+    """Ten wrong codes in an hour, across any number of codes, stops admin sign-in."""
+    monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
+    monkeypatch.setattr(gw, '_LOGIN_MAX_ATTEMPTS', 1000)   # isolate the per-account budget
+    wrong = 0
+    while wrong < 10:
+        assert app_client.post('/api/admin/send-otp',
+                               json={'username': 'admin', 'password': 'root'}).status_code == 200
+        for _ in range(3):
+            if wrong == 10:
+                break
+            otp = '000000' if gw.STATE.auth.admin_otp != '000000' else '111111'
+            r = app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': otp})
+            assert r.status_code == 401
+            wrong += 1
+    r = app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
+    assert r.status_code == 429
+
+
+def test_wrong_codes_count_toward_the_address_lockout(app_client, monkeypatch):
+    monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
+    for _ in range(2):
+        app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
+        for _ in range(3):
+            app_client.post('/api/admin/verify-otp', json={'username': 'admin', 'otp': '000000'})
+    # Five failures lock the address: even the right code is refused now.
+    app_client.post('/api/admin/send-otp', json={'username': 'admin', 'password': 'root'})
+    r = app_client.post('/api/admin/verify-otp',
+                        json={'username': 'admin', 'otp': str(gw.STATE.auth.admin_otp)})
+    assert r.status_code == 429
