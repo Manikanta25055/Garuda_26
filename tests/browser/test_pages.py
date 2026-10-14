@@ -615,8 +615,9 @@ def test_a_spoken_summary_shows_at_once_and_the_full_answer_replaces_it(server, 
     from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
 
     full = "Two alerts today, both at the front.\n\n1. **Tamper** at 04:11\n2. Knife at 20:07"
+    ids = iter(['sum-conv'] + ['sum-conv-next-%d' % n for n in range(20)])   # a new id per token, as ElevenLabs does
     sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
-        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='sum-conv'))))
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id=next(ids)))))
     voice = NaradaVoice('test', 'engine', client=sdk, reply_fn=lambda *a: {
         'reply': 'Two alerts today, both at the front. The rest is on your screen.',
         'display_reply': full})
@@ -778,5 +779,61 @@ def test_the_microphone_closes_once_a_question_is_in_and_opens_only_on_a_tap(ser
     assert page.evaluate('window.ended') == 1
     page.wait_for_timeout(300)
     assert not page.evaluate('N.voiceActive()')                    # the release did not start a new call
+    assert errors == []
+    ctx.close()
+
+
+def test_a_call_starts_on_a_token_fetched_before_the_tap_and_a_quick_restart_skips_the_greeting(
+        server, browser, monkeypatch):
+    # Measured 2026-10-15 against ElevenLabs: tap to connected 3.8-4.2 s with
+    # the token fetched on the tap, 3.1-3.4 s with it fetched beforehand.
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    issued = []
+
+    def token(**kw):
+        issued.append(kw)
+        return SimpleNamespace(token='tok%d' % len(issued), conversation_id='pre-conv-%d' % len(issued))
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(get_webrtc_token=token)))
+    monkeypatch.setattr(gw, 'NARADA_VOICE', NaradaVoice('test', 'engine', client=sdk,
+                                                        reply_fn=lambda *a: {'reply': 'ok'}))
+    ctx = browser.new_context(viewport={'width': 390, 'height': 844}, is_mobile=True, has_touch=True,
+                              service_workers='block')
+    page = ctx.new_page()
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    page.route('**/static/vendor/elevenlabs-client.js', lambda r: r.fulfill(
+        content_type='text/javascript', body='''
+        export const Conversation = {startSession: async options => {
+          (window.calls = window.calls || []).push({token: options.conversationToken,
+                                                    greeting: options.overrides.agent.firstMessage});
+          window.voiceCallbacks = options;
+          options.onConnect();
+          return {endSession: async () => options.onDisconnect(), setMicMuted: () => {},
+                  getId: () => 'x', sendUserMessage: () => {}};
+        }};'''))
+    page.goto(server + '/')
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + '/')
+    page.wait_for_selector('#app.logged-in', state='attached')
+    page.evaluate("sessionStorage.removeItem('narada-call-ended')")
+    page.click('.ios-item[data-page=narada]')
+    page.wait_for_timeout(1500)
+    assert len(issued) == 1                                 # fetched when the page opened
+    page.click('#nx-mic')
+    _wait_js(page, 'window.calls && window.calls.length === 1')
+    assert len(issued) == 1                                 # the tap used it: no request on the tap
+    first = page.evaluate('window.calls[0]')
+    assert first['token'] == 'tok1' and first['greeting']   # a first call is greeted
+    page.evaluate('N.stopVoice()')
+    page.wait_for_timeout(1200)
+    assert len(issued) == 2                                 # the next call's token, after the call ended
+    page.click('#nx-mic')
+    _wait_js(page, 'window.calls.length === 2')
+    again = page.evaluate('window.calls[1]')
+    assert again == {'token': 'tok2', 'greeting': ''}       # straight back to listening
+    assert len(issued) == 2
     assert errors == []
     ctx.close()

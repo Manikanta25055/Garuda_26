@@ -821,6 +821,51 @@ const N = (() => {
     return clientMod;
   }
 
+  // ── A call ready before the tap ────────────────────────────
+  // A token took 0.4-0.85 s to issue (measured from the Pi, before the phone's
+  // own round trip) and was fetched on the tap. It is fetched when the page
+  // opens and again when a call ends instead. An unused token leaves nothing
+  // at ElevenLabs (no conversation exists until a browser joins) and lives
+  // 15 minutes; one older than 10 is not used. It belongs to the person who
+  // was signed in when it was fetched.
+  const TOKEN_FRESH_MS = 10 * 60 * 1000;
+  let readyToken = null, tokenFetch = null;
+  const whoAmI = () => ((G.getSession && G.getSession()) || {}).username || '';
+
+  function prefetchVoice() {
+    if (voice !== 'off' || !whoAmI()) return;
+    loadClient().catch(() => {});
+    if (tokenFetch || (readyToken && readyToken.who === whoAmI()
+        && performance.now() - readyToken.at < TOKEN_FRESH_MS)) return;
+    const who = whoAmI();
+    tokenFetch = G._apiFn('POST', '/api/narada/voice/token')
+      .then(tok => { readyToken = { tok, who, at: performance.now() }; })
+      .catch(() => {})
+      .finally(() => { tokenFetch = null; });
+  }
+
+  async function takeToken() {
+    if (tokenFetch) await tokenFetch;
+    const t = readyToken;
+    readyToken = null;                      // a conversation is joined once
+    if (t && t.who === whoAmI() && performance.now() - t.at < TOKEN_FRESH_MS) return t.tok;
+    return G._apiFn('POST', '/api/narada/voice/token');
+  }
+
+  // A call started again soon after the last one ended goes straight to
+  // listening: the greeting said a moment ago is not said again.
+  const QUICK_RESTART_MS = 3 * 60 * 1000, CALL_END_KEY = 'narada-call-ended';
+  function callEnded() {
+    try { sessionStorage.setItem(CALL_END_KEY, String(Date.now())); } catch (_) {}
+    setTimeout(prefetchVoice, 400);         // the next call's token, while nothing else is happening
+  }
+  function greeting() {
+    let ended = 0;
+    try { ended = Number(sessionStorage.getItem(CALL_END_KEY)) || 0; } catch (_) {}
+    return Date.now() - ended < QUICK_RESTART_MS ? ''
+      : GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+  }
+
   // Short on purpose: every spoken character counts against the plan.
   const GREETINGS = ["Hey, I'm listening.", "Hi! What can I do?", "I'm here. Go ahead.", "Yes?"];
 
@@ -873,13 +918,13 @@ const N = (() => {
     window.Feel?.voice(true);
     haptic('start');
     try {
-      const [mod, tok] = await Promise.all([loadClient(), G._apiFn('POST', '/api/narada/voice/token')]);
+      const [mod, tok] = await Promise.all([loadClient(), takeToken()]);
       if (epoch !== voiceEpoch) return;
       voiceId = tok.conversation_id;
       const started = await mod.Conversation.startSession({
         conversationToken: tok.token,
         connectionType: 'webrtc',
-        overrides: { agent: { firstMessage: GREETINGS[Math.floor(Math.random() * GREETINGS.length)] } },
+        overrides: { agent: { firstMessage: greeting() } },
         onConnect: () => { if (epoch !== voiceEpoch) return; voice = 'on'; micOpen = true; setState('listening'); _syncChrome(); },
         onDisconnect: () => {
           if (epoch !== voiceEpoch) return;
@@ -894,7 +939,7 @@ const N = (() => {
           setPending(false);
           setState('idle');
           window.Feel?.voice(false);
-          if (wasOn) haptic('stop');
+          if (wasOn) { haptic('stop'); callEnded(); }
         },
         onModeChange: ({ mode }) => {
           if (epoch !== voiceEpoch) return;
@@ -943,6 +988,7 @@ const N = (() => {
     if (voiceAwaiting && voiceId) lateVoiceTurn(voiceId, voiceCursor, voiceEpoch);
     voiceAwaiting = false;
     voice = 'off'; conv = null; voiceId = ''; micOpen = false;
+    if (c) callEnded();
     setPending(false);
     // Heard and felt on the tap itself; closing the session can take a
     // second, and the chime waiting for it read as lag.
@@ -1776,7 +1822,11 @@ const N = (() => {
   function onNav(pageId) {
     if (pageId !== 'narada') closeFullArtifact();
     // Facts kept after a conversation went quiet show their chip the next time the page is open.
-    if (pageId === 'narada') { requestAnimationFrame(() => { resize(); start(); measureDock(); }); pollMemory(); pendingCards(); }
+    if (pageId === 'narada') {
+      requestAnimationFrame(() => { resize(); start(); measureDock(); });
+      pollMemory(); pendingCards();
+      setTimeout(prefetchVoice, 600);       // after the page has drawn
+    }
     else stop();                               // a live conversation keeps going in the island
   }
 
