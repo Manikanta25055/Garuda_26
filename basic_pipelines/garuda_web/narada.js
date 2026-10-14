@@ -52,6 +52,7 @@ const N = (() => {
 
   // ── Voice session ──────────────────────────────────────────
   let conv = null, voice = 'off';     // off | connecting | on
+  let voiceEpoch = 0, voiceId = '', voiceCursor = 0, voiceHeard = false, typedEcho = null;
   let clientMod = null, busy = false, lastUserAt = 0;
   let lastReply = null, infoOpen = false, infoData = null, keptArtifacts = [];
   // The conversation: [{who: 'you' | 'narada' | 'error', text}]; kept for the
@@ -576,7 +577,7 @@ const N = (() => {
   }
   // A table: a row of cells between pipes, then a row of dashes, then rows.
   // Without this a table came out as lines of pipes and dashes.
-  const mdRow = line => /^\s*\|.*\|\s*$/.test(line);
+  const mdRow = line => line.trim().includes('|');
   const mdRule = line => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line) && line.includes('-');
   // (An escaped \| stays in its cell; no lookbehind, which older Safari cannot parse.)
   const mdCells = line => line.trim().replace(/^\|/, '').replace(/\|$/, '').replace(/\\\|/g, '\u0000')
@@ -603,7 +604,7 @@ const N = (() => {
         continue;
       }
       const line = raw.replace(/\s+$/, '');
-      const bullet = line.match(/^\s*[-*•]\s+(.*)$/), number = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      const bullet = line.match(/^\s*[-*•▪◦‣]\s+(.*)$/), number = line.match(/^\s*\d+[.)]\s+(.*)$/);
       const head = line.match(/^\s*#{1,4}\s+(.*)$/);
       if (bullet || number) {
         const kind = bullet ? 'ul' : 'ol';
@@ -783,7 +784,11 @@ const N = (() => {
   function voiceError(msg) {
     const status = $('nx-status');
     if (status) status.dataset.err = msg;
-    voice = 'off'; conv = null;
+    const c = conv;
+    ++voiceEpoch;
+    clearTimeout(voiceWatch);
+    voice = 'off'; conv = null; voiceId = '';
+    if (c) Promise.resolve().then(() => c.endSession()).catch(() => {});
     setPending(false);
     setState('error');
     window.Feel?.voice(false);
@@ -794,51 +799,67 @@ const N = (() => {
 
   async function startVoice() {
     if (voice !== 'off') return;
+    const epoch = ++voiceEpoch;
+    voiceCursor = 0; voiceHeard = false; typedEcho = null;
     voice = 'connecting';
     setState('connecting');
     window.Feel?.voice(true);
     haptic('start');
     try {
       const [mod, tok] = await Promise.all([loadClient(), G._apiFn('POST', '/api/narada/voice/token')]);
-      if (voice !== 'connecting') return;           // cancelled meanwhile
-      conv = await mod.Conversation.startSession({
+      if (epoch !== voiceEpoch) return;
+      voiceId = tok.conversation_id;
+      const started = await mod.Conversation.startSession({
         conversationToken: tok.token,
         connectionType: 'webrtc',
         overrides: { agent: { firstMessage: GREETINGS[Math.floor(Math.random() * GREETINGS.length)] } },
-        onConnect: () => { voice = 'on'; setState('listening'); _syncChrome(); },
+        onConnect: () => { if (epoch !== voiceEpoch) return; voice = 'on'; setState('listening'); _syncChrome(); },
         onDisconnect: () => {
+          if (epoch !== voiceEpoch) return;
+          ++voiceEpoch;
+          clearTimeout(voiceWatch);
           const wasOn = voice !== 'off';
-          conv = null; voice = 'off';
+          conv = null; voice = 'off'; voiceId = '';
           setPending(false);
           setState('idle');
           window.Feel?.voice(false);
           if (wasOn) haptic('stop');
         },
         onModeChange: ({ mode }) => {
-          if (mode === 'speaking') { setPending(false); setState('talking'); haptic('talk'); }
+          if (epoch !== voiceEpoch) return;
+          if (mode === 'speaking') { setState('talking'); haptic('talk'); }
           else if (voice === 'on') setState('listening');
         },
         onMessage: (m) => {
+          if (epoch !== voiceEpoch) return;
           const who = m.role || m.source;
           if (who === 'user') {
-            say('you', m.message);
+            voiceHeard = true;
+            if (typedEcho !== m.message) say('you', m.message);
+            typedEcho = null;
             lastUserAt = performance.now();
             setState('thinking');
             setPending(true);
-            watchVoiceTurn();
-          } else if (m.message) {
+          } else if (m.message && !voiceHeard) {
+            // Only the greeting comes from the speech transcript. Replies are
+            // fetched as original Markdown; audio strips their structure.
             say('narada', m.message);
             pollMemory();                 // a spoken reply carries no chips of its own
           }
         },
         onError: (message, info) => {
+          if (epoch !== voiceEpoch) return;
           const text = typeof message === 'string' ? message : 'Voice connection failed';
           reportVoiceError(text, info);
           if (conv && voice === 'on') voiceHiccup(text);
           else voiceError(text);
         },
       });
+      if (epoch !== voiceEpoch) { await started.endSession(); return; }
+      conv = started;
+      watchVoiceTurn(epoch);
     } catch (e) {
+      if (epoch !== voiceEpoch) return;
       const detail = (e && (e.detail || e.message)) || '';
       if (/Permission|NotAllowed|denied/i.test(detail)) voiceError('Microphone access was blocked. Allow it in the browser to talk to Narada.');
       else voiceError(detail || 'Could not start the voice session.');
@@ -847,14 +868,16 @@ const N = (() => {
 
   async function stopVoice() {
     const c = conv;
-    voice = 'off'; conv = null;
+    ++voiceEpoch;
+    clearTimeout(voiceWatch);
+    voice = 'off'; conv = null; voiceId = '';
     setPending(false);
     // Heard and felt on the tap itself; closing the session can take a
     // second, and the chime waiting for it read as lag.
     haptic('stop');
-    if (c) { try { await c.endSession(); } catch (_) {} }
     setState('idle');
     window.Feel?.voice(false);
+    if (c) { try { await c.endSession(); } catch (_) {} }
   }
 
   function toggleVoice() {
@@ -872,8 +895,16 @@ const N = (() => {
     say('you', text);
     setPending(true);
     if (conv && voice === 'on') {           // mid-conversation: Narada answers aloud
-      conv.sendUserMessage(text);
-      setState('thinking');
+      voiceHeard = true; typedEcho = text;
+      lastUserAt = performance.now();
+      try {
+        conv.sendUserMessage(text);
+        setState('thinking');
+      } catch (_) {
+        typedEcho = null;
+        say('error', 'Could not send your message. Please try again.');
+        setState('listening');
+      }
       return;
     }
     busy = true;
@@ -881,29 +912,10 @@ const N = (() => {
     try {
       const t0 = performance.now();
       const res = await ask(text);
-      workDone(res);
-      lastReply = { ...res, seconds: (performance.now() - t0) / 1000 };
-      say('narada', res.response || '…', true);
-      window.Feel?.sound('receive');
-      // A drafted automation needs a Confirm button, so it goes into the
-      // conversation; what ran and which model answered go to the "i" panel.
-      if (res.proposal && window.H && H.proposalHtml) {
-        const card = bubble('extra', '');
-        if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
-      }
-      snapshots(res.images);
-      artifactFrames(res.artifacts);
-      confirmCards(res.confirm);
-      // Something to decide cannot wait behind two lines.
-      if (!sheetOpen && (res.proposal || (res.confirm || []).length)) toggleSheet(true);
-      memoryChips(res.memory);
-      offerChip(res.offer);
-      observationChip(res.observation);
-      pollMemory();                       // routines the house noticed, facts kept after a pause
-      if (infoOpen) renderInfo();
+      showResult(res, true, (performance.now() - t0) / 1000);
     } catch (e) {
       workDone(null);
-      const msg = (e && e.detail) || 'Connection error. Please try again.';
+      const msg = (e && e.detail) || 'Connection lost. Check the current state before retrying an action.';
       say('error', msg);
       voiceError(msg);
     } finally {
@@ -911,16 +923,41 @@ const N = (() => {
     }
   }
 
-  // One typed question. The answer is streamed so the steps show while Narada
-  // works; a browser or proxy that will not stream gets the plain request.
+  // Both input modes share formatting, cards and attachments.
+  function showResult(res, typed = false, seconds = 0) {
+    workDone(res);
+    lastReply = { ...res, seconds };
+    say('narada', res.response || '…', typed);
+    window.Feel?.sound('receive');
+    // A drafted automation needs a Confirm button, so it goes into the
+    // conversation; what ran and which model answered go to the "i" panel.
+    if (res.proposal && window.H && H.proposalHtml) {
+      const card = bubble('extra', '');
+      if (card) { card.innerHTML = H.proposalHtml(res.proposal); scrollLog(); }
+    }
+    snapshots(res.images);
+    artifactFrames(res.artifacts);
+    confirmCards(res.confirm);
+    // Something to decide cannot wait behind two lines.
+    if (!sheetOpen && (res.proposal || (res.confirm || []).length)) toggleSheet(true);
+    memoryChips(res.memory);
+    offerChip(res.offer);
+    observationChip(res.observation);
+    pollMemory();                       // routines the house noticed, facts kept after a pause
+    if (infoOpen) renderInfo();
+  }
+
+  // One typed question. Browsers without streaming use the plain endpoint.
+  // A failed POST may already have acted, so never replay it after a network error.
   async function ask(text) {
     if (!G._apiStream || !window.ReadableStream) return G._apiFn('POST', '/api/chat', { message: text });
-    let meta = null, reply = '', got = false;
+    let meta = null, reply = '', got = false, complete = false;
     const onEvent = ev => {
       got = true;
       if (ev.type === 'progress') workEvent(ev.event);
       else if (ev.type === 'meta') meta = ev;
       else if (ev.type === 'token') reply += ev.text;
+      else if (ev.type === 'done') complete = true;
     };
     try {
       await G._apiStream('/api/chat/stream', { message: text }, onEvent);
@@ -928,11 +965,9 @@ const N = (() => {
       if (e && e.status === 401 && !got) {
         await G._apiFn('GET', '/api/session');          // renews the sign-in, or signs out
         await G._apiStream('/api/chat/stream', { message: text }, onEvent);
-      } else if (!got && !(e && e.status)) {
-        return G._apiFn('POST', '/api/chat', { message: text });
       } else throw e;
     }
-    if (!meta) throw { detail: 'The connection dropped before Narada answered. Please try again.' };
+    if (!meta || !complete) throw { detail: 'The reply was interrupted. Check the current state before retrying an action.' };
     return { ...meta, response: reply };
   }
 
@@ -1010,24 +1045,39 @@ const N = (() => {
     if (!n) w.el.remove();
   }
 
-  // A spoken turn's steps cannot come through the voice service, so the page
-  // asks for them while it waits for the reply.
+  // Audio messages lose Markdown and can include filler. Read the original
+  // results from Garuda, even while a filler or the answer is being spoken.
   let voiceWatch = 0;
-  function watchVoiceTurn() {
+  function watchVoiceTurn(epoch) {
     clearTimeout(voiceWatch);
     let seen = 0;
     const tick = async () => {
-      if (!conv || (state !== 'thinking' && state !== 'working')) return;
+      if (epoch !== voiceEpoch || voice === 'off' || !voiceId) return;
       try {
+        const data = await G._apiFn('GET', '/api/narada/voice/turns?conversation_id='
+          + encodeURIComponent(voiceId) + '&after=' + voiceCursor);
+        if (epoch !== voiceEpoch) return;
+        for (const turn of data.turns || []) {
+          if (turn.id <= voiceCursor) continue;
+          showResult(turn, false, (performance.now() - lastUserAt) / 1000);
+          voiceCursor = turn.id;
+        }
         const p = (await G._apiFn('GET', '/api/narada/progress')).progress;
+        if (epoch !== voiceEpoch) return;
         if (p && p.lane === 'planner') {
           workStatus(p.step ? 'Working · ' + words(p.step) : 'Planning');
           if (p.done > seen) { seen = p.done; workPulse = performance.now() / 1000; }
         }
-      } catch (_) {}
-      voiceWatch = setTimeout(tick, 1500);
+      } catch (e) {
+        if (epoch !== voiceEpoch) return;
+        if (e && [401, 403, 404].includes(e.status)) {
+          voiceError('Voice session expired. Please start a new conversation.');
+          return;
+        }
+      }
+      if (epoch === voiceEpoch) voiceWatch = setTimeout(tick, 1000);
     };
-    voiceWatch = setTimeout(tick, 1800);
+    tick();
   }
 
   // ── Cards: things Narada proposes and a person confirms ────

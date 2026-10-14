@@ -128,18 +128,19 @@ HISTORY_RULES = (
     "loose_match, the lines only share a word with the question: use only those that are "
     "what was asked. Never guess or invent an event, a time or a cause.")
 
-# Spoken replies: lists and markdown read aloud badly, and a reply that
-# sounds written feels robotic. Length is the answer's own: no cap.
+# The full reply is also shown in chat; the speech layer converts its Markdown.
 VOICE_STYLE = (
     "\nYou are speaking out loud in a live conversation, in everyday Indian English. "
     "Sound like a warm, quick-witted person from the house, not a report: contractions, "
     "plain words, the rhythm of speech. Give the whole answer, as long as it needs, "
-    "said the way a person tells it: lead with the point, then the details, joined "
-    "with 'first', 'then', 'also' instead of numbers. Let the feeling show in the wording: a light 'okay', 'sure', 'ah', "
+    "lead with the point, then the details. Your reply is also displayed in the chat: "
+    "use paragraphs, numbered lists, headings and Markdown tables when they help the reader, "
+    "just as for a typed question. The speech layer handles the formatting for audio. "
+    "Let the feeling show in the wording: a light 'okay', 'sure', 'ah', "
     "'right' where a person would say it, commas where they would breathe, and vary "
     "how you begin. Do not tack a question like 'anything else?' onto every reply; ask "
-    "only when you really need an answer. Never read out lists, markdown, symbols, ids "
-    "or model names. If the person is just chatting, chat back.")
+    "only when you really need an answer. Avoid unnecessary ids or model names. "
+    "If the person is just chatting, chat back.")
 
 
 def system_prompt(user, role, *, scope="home", now=None):

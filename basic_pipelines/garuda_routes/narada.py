@@ -10,7 +10,7 @@ import re
 import threading
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -207,6 +207,17 @@ def build_narada_router(core):
         """What Narada is doing for this person right now, for a spoken turn:
         the browser cannot be sent steps through the voice service."""
         return {"progress": core.AGENT.live_for(session["username"])}
+
+    @router.get("/api/narada/voice/turns")
+    async def narada_voice_turns(request: Request, conversation_id: str = Query(max_length=200),
+                                 after: int = Query(default=0, ge=0),
+                                 session=Depends(core.require_session)):
+        turns = core.NARADA_VOICE.turns_for(
+            conversation_id, session["username"], session["role"],
+            core._product_for_host(request.headers.get("host")), after)
+        if turns is None:
+            raise HTTPException(404, "Voice conversation not found or expired.")
+        return {"turns": turns}
 
     # ── What Narada knows ─────────────────────────────────────────────────────
     # One memory for the household: anyone signed in may read and correct it.

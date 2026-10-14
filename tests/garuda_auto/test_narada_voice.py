@@ -75,13 +75,46 @@ def test_a_conversation_we_never_issued_is_refused():
     assert said == UNKNOWN_REPLY and called == []
 
 
-def test_a_failing_brain_says_nothing_changed():
+def test_a_failing_brain_does_not_claim_actions_were_rolled_back():
     def boom(*a):
         raise RuntimeError("down")
     v = voice(reply=boom)
     v.issue_token("mani", "user", "home")
     said = asyncio.run(v.reply_for("conv_1", [msg("user", "lights")]))
-    assert "Nothing was changed" in said
+    assert "check the current state" in said
+    assert "Nothing was changed" not in said
+
+
+def test_original_display_reply_and_cards_survive_speech_conversion():
+    markdown = "## Today\n\n1. **Door** opened\n2. Light on\n\n| Time | Event |\n| --- | --- |\n| 9 | Door |"
+    v = voice(reply=lambda *a: {"reply": "Door opened. Light on.", "display_reply": markdown,
+                               "confirm": [{"id": "c1"}], "artifacts": [{"id": "a1"}]})
+    v.issue_token("mani", "admin", "home")
+    asyncio.run(v.reply_for("conv_1", [msg("user", "today?")]))
+    turns = v.turns_for("conv_1", "mani", "admin", "home")
+    assert turns[0]["response"] == markdown
+    assert turns[0]["confirm"] == [{"id": "c1"}]
+    assert turns[0]["artifacts"] == [{"id": "a1"}]
+    assert v.turns_for("conv_1", "mani", "admin", "home", after=1) == []
+    for user, role, scope in [("other", "admin", "home"), ("mani", "user", "home"),
+                              ("mani", "admin", "security")]:
+        assert v.turns_for("conv_1", user, role, scope) is None
+
+
+def test_display_turns_are_bounded_and_expire_with_the_conversation():
+    now = [1000.0]
+    v = voice(clock=lambda: now[0])
+    v.issue_token("mani", "user", "home")
+    async def run():
+        for i in range(35):
+            await v.reply_for("conv_1", [msg("user", str(i))])
+    asyncio.run(run())
+    turns = v.turns_for("conv_1", "mani", "user", "home")
+    assert len(turns) == 32 and turns[-1]["id"] == 35
+    now[0] += narada_voice.BINDING_TTL_S + 1
+    assert v.turns_for("conv_1", "mani", "user", "home") is None
+    v.issue_token("mani", "user", "home")
+    assert v.turns_for("conv_1", "mani", "user", "home") == []
 
 
 def test_spoken_replies_are_said_whole():

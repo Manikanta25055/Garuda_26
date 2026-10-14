@@ -489,13 +489,14 @@ class HomeAgent:
                     speech.flush()             # the last sentence, or a "let me check" before tools
             calls = message.get("tool_calls") or []
             if not calls:
-                reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.",
-                                               voice=voice)
+                display_reply = self.brain.check_reply((message.get("content") or "").strip() or "Done.")
+                reply = guards.fit_spoken(display_reply) if voice else display_reply
                 if self._turn.injected and not voice:
                     # Said every time: a turn that read an injected instruction and
                     # told nobody is how a poisoned name stays in the house unnoticed.
                     reply += "\n\n" + guards.injection_note(self._turn.injection_text)
-                return {**finish(reply), "streamed": bool(speech and speech.round_spoken),
+                return {**finish(reply), "display_reply": display_reply,
+                        "streamed": bool(speech and speech.round_spoken),
                         "_turn": _for_memory(messages[first:])
                         + [{"role": "assistant", "content": reply}]}
             if not planner and any(c.get("function", {}).get("name") == "hand_to_planner"

@@ -391,3 +391,14 @@ def test_a_model_that_acted_and_then_dropped_is_not_followed_by_a_second_action(
             raise requests.ConnectionError("dropped")
     out = offline_agent(ctx, home, SureRouter(), NimChat("k", ["m"], post=post)).handle("fan on and lamp on")
     assert out["lane"] == "unavailable" and on_ids(home) == ["fan"]
+
+
+def test_voice_keeps_checked_markdown_for_display(house):
+    ctx, home = house
+    markdown = '## Today\n\n1. **Door** opened\n2. Lamp on\n\nTime | Event\n--- | ---\n9 | Door'
+    chat = ScriptedChat([completion(markdown)])
+    a = agent(ctx, home, chat)
+    result = a.handle('What happened today?', user='u', voice=True, scope='security')
+    assert result['display_reply'] == markdown
+    assert '**' not in result['reply'] and '\n' not in result['reply']
+    assert '|' not in result['reply'] and '---' not in result['reply']

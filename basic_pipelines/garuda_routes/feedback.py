@@ -25,6 +25,11 @@ def build_feedback_router(core):
     @router.post("/api/feedback")
     async def submit_feedback(data: FeedbackRequest, request: Request):
         """Public endpoint — no auth required. Rate-limited to 5 per hour per IP."""
+        msg = data.message.strip()
+        if not msg:
+            raise HTTPException(400, "Message cannot be empty.")
+        if len(msg) > 1000:
+            raise HTTPException(400, "Message too long (max 1000 chars).")
         ip = core._get_client_ip(request)
         now = time.time()
         # Reuse _rate_store but with a separate key to avoid conflating with API limits
@@ -35,11 +40,6 @@ def build_feedback_router(core):
             raise HTTPException(429, "Too many feedback submissions. Try again later.")
         stamps.append(now)
 
-        msg = data.message.strip()
-        if not msg:
-            raise HTTPException(400, "Message cannot be empty.")
-        if len(msg) > 1000:
-            raise HTTPException(400, "Message too long (max 1000 chars).")
         rating = max(0, min(5, int(data.rating)))
         category = data.category.strip().lower()[:16]
         if category not in ("bug", "feature", "general", "other"):
@@ -63,7 +63,13 @@ def build_feedback_router(core):
                 del entries[:-core._FEEDBACK_MAX]    # an open endpoint must not grow a file for ever
                 core._save_feedback(entries)
 
-        await asyncio.to_thread(_write_entry)
+        try:
+            await asyncio.to_thread(_write_entry)
+        except Exception:
+            # A retry after a disk failure is not another submission.
+            if now in stamps:
+                stamps.remove(now)
+            raise HTTPException(503, "Could not save feedback. Please try again.")
         core.log_system_update(f"Feedback received [{category}] from {name or 'Anonymous'}")
         return {"ok": True}
 

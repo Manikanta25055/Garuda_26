@@ -50,3 +50,24 @@ def test_a_voice_error_from_the_browser_is_logged_with_its_details(app_client, u
     assert app_client.post("/api/narada/voice/error", json=body, headers=user_headers).status_code == 200
     assert any("server_error" in m and "1011" in m and "tts stream failed" in m and "talking" in m
                for m in said), said
+
+
+def test_voice_display_turns_require_the_bound_session(app_client, user_headers, admin_headers, monkeypatch):
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='display-conv'))))
+    voice = NaradaVoice('test', 'engine', client=sdk,
+                        reply_fn=lambda *a: {'reply': 'One. Two.', 'display_reply': '1. One\n2. Two'})
+    monkeypatch.setattr(gw, 'NARADA_VOICE', voice)
+    assert app_client.post('/api/narada/voice/token', headers=user_headers).status_code == 200
+    asyncio.run(voice.reply_for('display-conv', [SimpleNamespace(role='user', content='list')]))
+    path = '/api/narada/voice/turns?conversation_id=display-conv'
+    assert app_client.get(path, headers={'Cookie': ''}).status_code in (401, 403)
+    assert app_client.get(path, headers=admin_headers).status_code == 404
+    result = app_client.get(path, headers=user_headers)
+    assert result.status_code == 200
+    assert result.json()['turns'][0]['response'] == '1. One\n2. Two'
+    assert app_client.get(path + '&after=1', headers=user_headers).json() == {'turns': []}
+    assert app_client.get(path + '&after=-1', headers=user_headers).status_code == 422

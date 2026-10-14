@@ -638,6 +638,12 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/narada/voice/turns",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/openapi.json",
   "guard": "require_admin"
  },

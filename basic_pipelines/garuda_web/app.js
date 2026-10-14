@@ -2749,6 +2749,7 @@ const G = (() => {
     let d;
     try { d = await r.json(); } catch(_) { d = { detail: r.statusText || `HTTP ${r.status}` }; }
     if (!r.ok) {
+      d.status = r.status;
       // On 401, attempt one silent token refresh before giving up
       if (r.status === 401 && !_isRetry && !_loggingOut && !['/api/refresh', '/api/login', '/api/logout'].includes(url)) {
         try {

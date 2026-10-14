@@ -44,6 +44,8 @@ def server(tmp_path_factory):
     mp.setattr(gw, "USERS_FILE", str(tmp / "users.json"))
     mp.setattr(gw, "MASTER_KEYS_FILE", str(tmp / "master_keys.json"))
     mp.setattr(gw, "REFRESH_TOKENS_FILE", str(tmp / "refresh_tokens.json"))
+    mp.setattr(gw, "FEEDBACK_FILE", str(tmp / "feedback.json"))
+    mp.setattr(gw, "FEEDBACK_BACKUP_FILE", str(tmp / "feedback.backup.json"))
     mp.setattr(gw.STATE.auth, "users", {"user": {
         "password": "user", "role": "user", "display_name": "User", "box_color": "#1565c0",
         "history": {"logins": [], "narada_activity": []}}})
@@ -88,7 +90,7 @@ class Page:
 
     def __init__(self, browser, base, how):
         self.base = base
-        self.ctx = browser.new_context(viewport={"width": 1440, "height": 900})
+        self.ctx = browser.new_context(viewport={"width": 1440, "height": 900}, service_workers="block")
         self.ctx.add_init_script(
             "document.addEventListener('securitypolicyviolation', e => (window.__csp = window.__csp || [])"
             ".push(e.violatedDirective + ' ' + (e.sourceFile || '') + ':' + e.lineNumber))")
@@ -250,7 +252,8 @@ def test_an_admin_can_write_feedback_and_read_it_in_the_inbox(admin_page):
     p.assert_clean()
 
 
-def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browser):
+@pytest.mark.parametrize("page_id", ["dashboard", "narada"])
+def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browser, page_id):
     ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
     page = ctx.new_page()
     page.goto(server + "/")
@@ -259,6 +262,7 @@ def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browse
     page.goto(server + "/")
     page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
     page.wait_for_timeout(600)
+    page.click(f".ios-item[data-page={page_id}]")
     page.click(".ios-item[data-page=more]")
     page.wait_for_timeout(400)
     page.locator(".more-row", has_text="Send feedback").first.click()
@@ -266,6 +270,12 @@ def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browse
     # Top, so the on-screen keyboard cannot cover the box and Send.
     assert page.evaluate("document.getElementById('fb-panel').getBoundingClientRect().top") < 120
     assert page.is_visible("#fb-msg") and page.is_visible(".fb-close")
+    for key in [k for k in gw.STATE.auth.rate_store if str(k).startswith("fb:")]:
+        gw.STATE.auth.rate_store.pop(key, None)
+    page.fill("#fb-msg", "Mobile feedback from " + page_id)
+    page.click("#fb-submit")
+    page.wait_for_selector("#fb-success.show")
+    assert any(e["message"] == "Mobile feedback from " + page_id for e in gw._load_feedback())
     page.click(".fb-close")
     assert not page.evaluate("document.getElementById('fb-panel').classList.contains('open')")
     ctx.close()
@@ -281,6 +291,9 @@ def test_the_activity_card_is_filtered_by_its_chips(server, browser, tmp_path, m
         "[NETWORK] Internet connection lost — events will be queued locally",
         "Mode dnd set to True by admin", "[OWNER] Phone arrived — device detected on network."])))
     monkeypatch.setattr(gw, "PERM_SYSTEM_LOG", str(log))
+    # WebSocket state merges the in-memory log into disk history. Isolate both
+    # sources from previous tests so this fixture always contains six events.
+    monkeypatch.setattr(gw, "system_updates_log", [])
     ctx = browser.new_context(viewport={"width": width, "height": height},
                               is_mobile=phone, has_touch=phone)
     page = ctx.new_page()
@@ -368,3 +381,138 @@ def test_a_long_reply_is_two_lines_of_summary_until_it_is_opened(server, browser
     assert page.evaluate("document.getElementById('nx-dock').classList.contains('open')")
     assert "At 19:00 the front door camera saw a person." in page.locator("#nx-log").inner_text()
     ctx.close()
+
+
+def _wait_js(page, expression):
+    # Chromium's wait_for_function uses eval, which this app's CSP rejects.
+    # Evaluate via the browser debugging protocol without relaxing the policy.
+    for _ in range(100):
+        if page.evaluate('Boolean(' + expression + ')'):
+            return
+        page.wait_for_timeout(100)
+    details = page.evaluate("({status: document.querySelector('#nx-status')?.outerHTML, "
+                            "mic: document.querySelector('#nx-mic')?.outerHTML, "
+                            "callbacks: !!window.voiceCallbacks})")
+    raise AssertionError(f'Browser condition did not become true: {expression}: {details}')
+
+
+@pytest.mark.parametrize('mobile', [False, True])
+def test_voice_replies_keep_the_same_formatting_as_typed_replies(server, browser, monkeypatch, mobile):
+    import asyncio
+    from types import SimpleNamespace
+    from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
+
+    reply = ('## Today\n\n**Two events** recorded.\n\n1. Door opened\n2. Lamp turned on\n\n'
+             'Time | Event\n--- | ---\n09:00 | Door opened\n09:15 | Lamp on\n\n'
+             '▪ Check the camera\n▪ Review the logs\n\n<script>alert("unsafe")</script>')
+    result = {'reply': reply, 'lane': 'agent'}
+    monkeypatch.setattr(gw, '_assistant_reply', lambda *a, **kw: result)
+    sdk = SimpleNamespace(conversational_ai=SimpleNamespace(conversations=SimpleNamespace(
+        get_webrtc_token=lambda **kw: SimpleNamespace(token='tok', conversation_id='browser-conv'))))
+    voice = NaradaVoice('test', 'engine', client=sdk,
+                        reply_fn=lambda *a: {'reply': 'Two events recorded.', 'display_reply': reply})
+    monkeypatch.setattr(gw, 'NARADA_VOICE', voice)
+    ctx = browser.new_context(viewport={'width': 390 if mobile else 1440, 'height': 844 if mobile else 900},
+                              is_mobile=mobile, has_touch=mobile, service_workers='block')
+    page = ctx.new_page()
+    errors = []
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    # Only the microphone/provider transport is simulated. Both result APIs,
+    # the actual page, its event handlers and Markdown rendering run normally.
+    page.route('**/static/vendor/elevenlabs-client.js', lambda r: r.fulfill(
+        content_type='text/javascript', body='''
+        export const Conversation = {startSession: async options => {
+          window.voiceCallbacks = options;
+          options.onConnect();
+          return {endSession: async () => options.onDisconnect(), getId: () => 'browser-conv',
+            sendUserMessage: message => options.onMessage({role: 'user', message})};
+        }};'''))
+    page.goto(server + '/')
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + '/')
+    page.wait_for_selector('#app.logged-in', state='attached')
+    page.click('.ios-item[data-page=narada]')
+    page.fill('#nx-input', 'What happened today?')
+    page.press('#nx-input', 'Enter')
+    page.wait_for_selector('#nx-log .nx-msg.md table', state='attached')
+    typed = page.locator('#nx-log .nx-msg.md').first.inner_html()
+    page.click('#nx-mic')
+    _wait_js(page, 'window.voiceCallbacks && document.querySelector("#nx-mic.on")')
+    page.evaluate("voiceCallbacks.onMessage({role:'user',message:'Tell me again'})")
+    # Fillers switch the orb to talking before the actual result exists.
+    page.evaluate("voiceCallbacks.onModeChange({mode:'speaking'});"
+                  "voiceCallbacks.onMessage({role:'agent',message:'One sec. A flattened transcript.'})")
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pool.submit(asyncio.run, voice.reply_for('browser-conv', [
+            SimpleNamespace(role='user', content='Tell me again')])).result(timeout=10)
+    _wait_js(page, 'document.querySelectorAll("#nx-log .nx-msg.md table").length === 2')
+    replies = page.locator('#nx-log .nx-msg.md')
+    assert replies.count() == 2 and replies.nth(1).inner_html() == typed
+    assert replies.nth(1).locator('ol li').count() == 2
+    assert replies.nth(1).locator('ul li').count() == 2
+    assert replies.nth(1).locator('script').count() == 0
+    page.evaluate('N.toggleSheet(true)')
+    assert page.locator('#nx-log .nx-msg.md table').last.is_visible()
+    assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+    # Text sent during a call must appear once even when the SDK echoes it.
+    page.fill('#nx-input', 'One more question')
+    page.press('#nx-input', 'Enter')
+    assert page.locator('#nx-log .nx-msg.you', has_text='One more question').count() == 1
+    # Expired bindings must stop polling and close the voice connection.
+    with voice._lock:
+        voice._bindings.clear()
+    _wait_js(page, '!N.voiceActive()')
+    assert 'Voice session expired' in page.locator('#nx-status').get_attribute('data-err')
+    page.reload()
+    page.wait_for_selector('#app.logged-in', state='attached')
+    page.click('.ios-item[data-page=narada]')
+    page.evaluate('N.toggleSheet(true)')
+    assert page.locator('#nx-log .nx-msg.md').count() == 2
+    assert page.locator('#nx-log .nx-msg.md').last.inner_html() == typed
+    if mobile:
+        page.screenshot(path='/tmp/garuda-narada-mobile.png')
+    assert errors == []
+    ctx.close()
+
+
+def test_cancelled_voice_start_cannot_reopen_the_microphone(user_page):
+    p = user_page
+    p.page.route('**/api/narada/voice/token', lambda r: r.fulfill(
+        content_type='application/json', body='{"token":"tok","conversation_id":"race"}'))
+    p.page.route('**/static/vendor/elevenlabs-client.js', lambda r: r.fulfill(
+        content_type='text/javascript', body='''
+        export const Conversation = {startSession: options => new Promise(resolve => {
+          window.finishVoiceStart = () => {
+            options.onConnect();
+            resolve({endSession: async () => {window.voiceEnded = true; options.onDisconnect();}});
+          };
+        })};'''))
+    p.go('narada')
+    p.page.click('#nx-mic')
+    _wait_js(p.page, 'window.finishVoiceStart')
+    p.page.click('#nx-mic')
+    p.js('finishVoiceStart()')
+    _wait_js(p.page, 'window.voiceEnded')
+    assert not p.js('N.voiceActive()')
+    assert not p.page.locator('#nx-mic').get_attribute('aria-pressed') == 'true'
+    p.assert_clean()
+
+
+@pytest.mark.parametrize("network_error", [False, True])
+def test_an_interrupted_chat_stream_is_not_shown_as_a_complete_answer(user_page, network_error):
+    p = user_page
+    partial = ''.join('data: ' + json.dumps(e) + '\n\n' for e in [
+        {'type': 'start'}, {'type': 'meta', 'actions': []},
+        {'type': 'token', 'text': 'I changed the'}])
+    p.page.route('**/api/chat/stream', lambda r: r.abort() if network_error else r.fulfill(
+        content_type='text/event-stream', body=partial))
+    p.go('narada')
+    p.page.fill('#nx-input', 'Change the light')
+    p.page.press('#nx-input', 'Enter')
+    p.page.wait_for_selector('#nx-log .error', state='attached')
+    assert ('Connection lost' if network_error else 'interrupted') in p.page.locator('#nx-log .error').text_content()
+    assert not any(r.endswith('/api/chat') for r in p.requests)
+    assert p.page.locator('#nx-log .narada.md').count() == 0
+    p.assert_clean()

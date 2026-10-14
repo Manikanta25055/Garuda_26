@@ -73,6 +73,7 @@ class NaradaVoice:
         self._client = client
         self._lock = threading.Lock()
         self._bindings = {}                # conversation_id -> (user, role, scope, expires)
+        self._turns = {}                   # bounded display results, separate from speech
         # (user) -> what Narada is doing for them right now, or None (agent.live_for).
         self.live_fn = None
 
@@ -123,8 +124,18 @@ class NaradaVoice:
         now = self._clock()
         with self._lock:
             self._bindings = {k: v for k, v in self._bindings.items() if v[3] > now}
+            self._turns = {k: v for k, v in self._turns.items() if k in self._bindings}
             self._bindings[conversation_id] = (user, role, scope, now + BINDING_TTL_S)
+            self._turns[conversation_id] = []
         return {"token": resp.token, "conversation_id": conversation_id}
+
+    def turns_for(self, conversation_id, user, role, scope, after=0):
+        """Only the bound caller can read a conversation's original display replies."""
+        with self._lock:
+            bound = self._bindings.get(conversation_id)
+            if not bound or bound[3] <= self._clock() or bound[:3] != (user, role, scope):
+                return None
+            return [t for t in self._turns.get(conversation_id, []) if t["id"] > after]
 
     def binding(self, conversation_id):
         with self._lock:
@@ -184,7 +195,18 @@ class NaradaVoice:
                 meta["streamed"] = bool(result.get("streamed"))
         except Exception as exc:
             log.exception("narada voice: reply failed")
-            said = f"Something went wrong ({type(exc).__name__}). Nothing was changed."
+            said = "Something went wrong. Please check the current state before trying again."
+            result = {"reply": said}
+        # Keep the checked Markdown and cards before the speech service flattens
+        # them. The browser reads this even while audio is still playing.
+        with self._lock:
+            turns = self._turns.setdefault(conversation_id, [])
+            turns.append({"id": turns[-1]["id"] + 1 if turns else 1, "heard": heard,
+                          "response": result.get("display_reply") or result.get("reply") or "Done.",
+                          **{k: result[k] for k in ("lane", "actions", "proposal", "memory", "offer",
+                                                   "observation", "confirm", "artifacts", "steps",
+                                                   "images", "planner", "route", "model") if k in result}})
+            del turns[:-32]
         if self._on_turn:
             try:
                 self._on_turn(user, heard, said)

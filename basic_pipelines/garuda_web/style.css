@@ -4391,7 +4391,8 @@ body:has(#page-narada.active) { position: fixed; inset: 0; width: 100%; }
 .nx-haptic, .sx-haptic { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; overflow: hidden; }
 
 /* The "i" panel owns the bottom-right corner on Narada. */
-body:has(#page-narada.active) .fb-wrap { display: none !important; }
+/* Keep the trigger out of the chat dock, but let More open the panel. */
+body:has(#page-narada.active) .fb-bubble { display: none; }
 .nx-info-btn {
   position: fixed; z-index: 951;
   right: max(24px, env(safe-area-inset-right));

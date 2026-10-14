@@ -131,9 +131,14 @@ def _load_feedback() -> list:
 def _save_feedback(entries: list):
     try:
         core._atomic_json_write(core.FEEDBACK_FILE, entries)
-        core._atomic_json_write(core.FEEDBACK_BACKUP_FILE, entries)
     except Exception as e:
         core.log_system_update(f"Failed to save feedback: {e}")
+        raise
+    try:
+        core._atomic_json_write(core.FEEDBACK_BACKUP_FILE, entries)
+    except Exception as e:
+        # The primary is saved; a backup failure must not encourage duplicates.
+        core.log_system_update(f"Failed to back up feedback: {e}")
 
 
 def stop_app():

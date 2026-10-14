@@ -77,6 +77,11 @@ def fit_spoken(reply):
     """
     lines = []
     for line in (reply or "").splitlines():
+        if "|" in line:
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if cells and all(re.fullmatch(r":?-{2,}:?", c) for c in cells):
+                continue
+            line = ", ".join(c for c in cells if c)
         line = re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s+", "", line)      # 1. / 2) / - / * / bullet
         line = re.sub(r"[*_`#]+", "", line).strip()                      # **bold**, `code`, # heads
         if line:
