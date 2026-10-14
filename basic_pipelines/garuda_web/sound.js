@@ -147,11 +147,12 @@
 
   // iOS lets audio start only inside a tap's touchend or click (pointerdown
   // and touchstart do not count), and only once something actually plays
-  // in it, so a one-sample silence is played there, while the context is
-  // not running. Once it has run, a muted page leaves it asleep (the alarm
-  // can still wake it: the browser's permission stays).
+  // in it, so a one-sample silence is played there. That is needed once:
+  // after the context has run, the browser's permission stays, and waking
+  // it on every tap would re-activate iOS's audio session each time (a slow
+  // system call, felt as a stall on every tap).
   function unlock() {
-    if (ctx && (ctx.state === 'running' || (muted && everRan))) return;
+    if (everRan || (ctx && ctx.state === 'running')) return;
     const c = wake();
     if (!c) return;
     try {
@@ -253,9 +254,15 @@
   }
 
   ['touchend', 'click', 'keydown'].forEach(t => document.addEventListener(t, unlock, { capture: true, passive: true }));
-  // A press starts the context, so it is running by the time the click
-  // lands (a click comes 50-150 ms after its press; resuming takes less).
-  document.addEventListener('pointerdown', () => { if (ctx && !muted) wake(); }, { capture: true, passive: true });
+  // A press on a control that will sound starts the context, so it is
+  // running by the time the click lands (a click comes 50-150 ms after its
+  // press; resuming takes less). Presses on silent controls (tabs, pages)
+  // leave audio alone.
+  document.addEventListener('pointerdown', ev => {
+    if (!ctx || muted || !(ev.target instanceof Element)) return;
+    const c = cueFor(ev.target);
+    if (c && c !== 'none' && c[0] !== '~') wake();
+  }, { capture: true, passive: true });
 
   // Capture phase: read a switch before its own handler flips it.
   document.addEventListener('click', ev => {

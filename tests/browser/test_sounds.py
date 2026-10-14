@@ -147,8 +147,17 @@ def test_audio_sleeps_between_sounds(admin):
     assert admin.js("Feel.state()") == "running"
     admin.page.wait_for_timeout(2800)                                 # the chime (0.65 s) and the rest
     assert admin.js("Feel.state()") == "suspended"
-    admin.page.mouse.move(400, 300)
-    admin.page.mouse.down()                                          # a press wakes it before the click
-    admin.page.wait_for_timeout(120)
-    assert admin.js("Feel.state()") == "running"
-    admin.page.mouse.up()
+    # A press on a silent control leaves audio asleep; on one that sounds,
+    # it wakes audio before the click lands.
+    admin.js("""(() => { for (const [id, cue] of [['quiet-btn', '~light'], ['loud-btn', 'on']]) {
+        const b = document.createElement('button'); b.id = id; b.dataset.sound = cue; b.textContent = id;
+        b.style.cssText = 'position:fixed;left:20px;top:' + (id === 'quiet-btn' ? 200 : 260) + 'px;z-index:9999';
+        document.body.appendChild(b); } })()""")
+    for sel, awake in (("#quiet-btn", "suspended"), ("#loud-btn", "running")):
+        box = admin.page.locator(sel).bounding_box()
+        admin.page.mouse.move(box["x"] + 5, box["y"] + 5)
+        admin.page.mouse.down()
+        admin.page.wait_for_timeout(120)
+        assert admin.js("Feel.state()") == awake, sel
+        admin.page.mouse.up()
+        admin.page.wait_for_timeout(2600)
