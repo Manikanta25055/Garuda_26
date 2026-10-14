@@ -9,7 +9,7 @@ WorkingDirectory=/home/manikanta/Projects/Garuda_26
 # GARUDA_MON_USER and GARUDA_MON_PASS (a non-admin account kept for the
 # monitor) come from this file, chmod 600; a password written here is in git.
 EnvironmentFile=/home/manikanta/Projects/Garuda_26/.monitor.env
-ExecStart=/usr/bin/python3 /home/manikanta/Projects/Garuda_26/monitor_metrics.py --hours 48 --interval 10
+ExecStart=/usr/bin/python3 /home/manikanta/Projects/Garuda_26/scripts/monitor_metrics.py --hours 48 --interval 10
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
