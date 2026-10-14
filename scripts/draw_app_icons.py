@@ -1,55 +1,53 @@
 #!/usr/bin/env python3
-"""Draw Drishti's app icons: the Garuda "G" tile, in Drishti's ink.
+"""Draw Drishti's app icons: a hand-written "D" on an ink tile.
 
     python3 scripts/draw_app_icons.py      # writes basic_pipelines/garuda_web/drishti/*
 
-Same composition as Garuda's icon (a rounded tile, a top-to-bottom gradient,
-one bold white letter in the middle), so the two products read as a pair.
-Drishti is black and white, so the tile is graphite to ink. The letter is
-the site's own face, DM Sans Black (1000): its stem is 0.24 of the cap height, the G's 0.26;
-700 and 800 read lighter than the G.
-Corners are a superellipse (continuous, as Apple draws them), not a
-circular arc. At 16 and 32 px the letter is drawn larger, as type is at
-small sizes, or it thins to a smudge in a tab.
+The site's icons are the owner's pen: one even line, round ends, a small
+wobble, ends that run past where they stop. scripts/draw_icons.py draws in
+that hand, and this uses the same hand (its line, arc and hand functions,
+seeded by the name) to write a D in one stroke: up the stem, over the top,
+round the bowl, and back past the stem the way a hand closes a letter.
+
+The composition pairs with Garuda's "G" tile: a rounded tile, a top-to-
+bottom gradient, one white letter in the middle. Drishti is black and white,
+so the tile runs from graphite to ink. Corners are a superellipse
+(continuous, as Apple draws them). The line is heavier at 16 and 32 px, or
+it thins to nothing in a tab.
 
 Icons that a platform masks itself (apple-touch-icon, maskable) are full
 bleed: iOS fills transparent corners with black, and Android crops the
 maskable one to its own shape. The others carry their own corners.
 """
 import io
+import sys
 from pathlib import Path
 
-from fontTools.ttLib import TTFont
-from fontTools.varLib import instancer
-from PIL import Image, ImageDraw, ImageFont
+import cairosvg
+from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import draw_icons as pen  # noqa: E402  (the site's hand)
 
 ROOT = Path(__file__).resolve().parent.parent
-WEB = ROOT / "basic_pipelines/garuda_web"
-OUT = WEB / "drishti"
-FONT = WEB / "fonts/dm-sans-var.woff2"
+OUT = ROOT / "basic_pipelines/garuda_web/drishti"
 
 TOP, BOTTOM = (58, 58, 60), (8, 8, 9)        # graphite to ink
-INK = (255, 255, 255)
-LETTER = "D"
-CAP = {16: 0.56, 32: 0.46}                    # cap height / tile; 0.36 (Garuda's G) above 32 px
-WEIGHT = 1000
+INK = "#FFFFFF"
+SCALE = 0.66                                  # the 24 px drawing's share of the tile
+STROKE = {16: 2.7, 32: 2.2}                   # in 24 px units; 1.8 above 32 px (the site's is 1.4)
 SS = 4                                        # supersampling
 
+# One stroke, as a hand writes a D.
+D = [pen.line((6.6, 19.5), (6.6, 4.5), (10.6, 4.5)) + pen.arc(10.6, 12, 7.5, -90, 90)[1:]
+     + pen.line((10.6, 19.5), (6.0, 19.45))]
 
-_FONT = {}
 
-
-def font(px):
-    if px in _FONT:
-        return _FONT[px]
-    var = TTFont(FONT)
-    bold = instancer.instantiateVariableFont(var, {"wght": WEIGHT})
-    buf = io.BytesIO()
-    bold.flavor = None
-    bold.save(buf)
-    buf.seek(0)
-    _FONT[px] = ImageFont.truetype(buf, px)
-    return _FONT[px]
+def mark(px, stroke):
+    pen.STROKE = stroke
+    svg = pen.render("drishti", D).replace("currentColor", INK)
+    png = cairosvg.svg2png(bytestring=svg.encode(), output_width=px, output_height=px)
+    return Image.open(io.BytesIO(png)).convert("RGBA")
 
 
 def squircle(size, n=4.2):
@@ -72,16 +70,8 @@ def tile(size, full_bleed):
         t = y / (s - 1)
         grad.putpixel((0, y), tuple(round(a + (b - a) * t) for a, b in zip(TOP, BOTTOM)))
     img = grad.resize((s, s)).convert("RGBA")
-
-    # The letter sized by its cap height and centred on its own ink box, so
-    # it sits in the optical middle rather than where the font's metrics say.
-    f = font(100)
-    box = ImageDraw.Draw(img).textbbox((0, 0), LETTER, font=f)
-    f = font(round(100 * CAP.get(size, 0.36) * s / (box[3] - box[1])))
-    d = ImageDraw.Draw(img)
-    x0, y0, x1, y1 = d.textbbox((0, 0), LETTER, font=f)
-    d.text(((s - (x1 - x0)) / 2 - x0, (s - (y1 - y0)) / 2 - y0), LETTER, font=f, fill=INK)
-
+    m = mark(round(s * SCALE), STROKE.get(size, 1.8))
+    img.alpha_composite(m, ((s - m.width) // 2, (s - m.height) // 2))
     if not full_bleed:
         img.putalpha(squircle(s))
     return img.resize((size, size), Image.LANCZOS)
@@ -95,9 +85,8 @@ def main():
     tile(512, False).save(OUT / "icon-512.png")
     tile(512, True).convert("RGB").save(OUT / "icon-maskable-512.png")
     # .ico: each size drawn on its own, not scaled from one, so 16 px stays crisp
-    big = tile(48, False)
-    big.save(OUT / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)],
-             append_images=[tile(16, False), tile(32, False)])
+    tile(48, False).save(OUT / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)],
+                         append_images=[tile(16, False), tile(32, False)])
     print(f"drew Drishti icons into {OUT}")
 
 
