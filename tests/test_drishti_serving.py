@@ -87,3 +87,17 @@ def test_home_automation_is_closed_on_the_security_address(client):
 def test_security_hosts_come_from_the_environment():
     assert Garuda_web._product_for_host("GARUDA.veeramanikanta.in:443") == "security"
     assert Garuda_web._product_for_host("notgaruda.veeramanikanta.in") == "home"
+
+
+def test_each_product_has_its_own_icon(client):
+    drishti = {"Host": "drishti.veeramanikanta.in"}
+    garuda = {"Host": "garuda.veeramanikanta.in"}
+    html = client.get("/", headers=drishti).text
+    assert '"/static/drishti/favicon.png?v=' in html and '"/static/drishti/apple-touch-icon.png?v=' in html
+    html = client.get("/", headers=garuda).text
+    assert '"/static/favicon.png?v=' in html and "/static/drishti/" not in html
+    for path in ("/favicon.ico", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):
+        d, g = client.get(path, headers=drishti), client.get(path, headers=garuda)
+        assert d.status_code == g.status_code == 200 and d.content != g.content, path
+    assert client.get("/manifest.json", headers=drishti).json()["name"] == "Drishti"
+    assert client.get("/manifest.json", headers=garuda).json()["short_name"] == "Garuda"
