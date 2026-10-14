@@ -84,10 +84,9 @@ def test_a_failing_brain_says_nothing_changed():
     assert "Nothing was changed" in said
 
 
-def test_spoken_replies_are_trimmed_at_a_sentence():
+def test_spoken_replies_are_said_whole():
     long = "The hall light is on. " * 40
-    out = _spoken(long)
-    assert len(out) <= narada_voice.MAX_SPOKEN_CHARS and out.endswith(".")
+    assert _spoken(long) == long.strip()                 # no cap: the owner's call
     assert _spoken("  short   reply ") == "short reply"
 
 
@@ -107,6 +106,17 @@ def test_a_quick_answer_is_spoken_without_a_filler():
     v = voice(reply=lambda *a: {"reply": "Done, the fan's on."})
     v.issue_token("mani", "user", "home")
     assert _collect(v.speak("conv_1", [msg("user", "fan on")])) == ["Done, the fan's on."]
+
+
+def test_a_long_answer_is_streamed_whole_a_sentence_at_a_time():
+    # Speech starts on the first sentence, and the whole answer is said:
+    # nothing is cut (the owner's call), and "3." stays in its sentence.
+    reply = ("There were three things. First, tamper alerts at 04.11 on 13 Oct. "
+             "Then 206 knife detections! Also item 3. was a door opening.")
+    v = voice(reply=lambda *a: {"reply": reply})
+    v.issue_token("mani", "user", "home")
+    chunks = _collect(v.speak("conv_1", [msg("user", "what happened?")]))
+    assert len(chunks) == 4 and "".join(chunks) == reply
 
 
 def test_a_slow_answer_gets_a_filler_first(monkeypatch):

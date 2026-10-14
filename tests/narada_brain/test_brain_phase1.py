@@ -164,15 +164,18 @@ def test_paraphrase_is_not_caught():
     assert guards.protect(reply, persona.protected_text())[1] is False
 
 
-def test_a_long_spoken_reply_is_cut_to_whole_sentences():
+def test_a_spoken_reply_is_said_whole_and_a_list_is_said_as_sentences():
+    # The old 300-character cut took a list's "3." for a sentence and ended
+    # answers on a bare number; the owner wants every answer whole.
     reply = ("Sure thing! Did you know the first computer bug was a real moth? "
-             + "It was stuck in a relay of the Harvard Mark II in 1947. " * 6)
-    spoken = guards.fit_spoken(reply)
-    assert len(spoken) <= guards.SPOKEN_CHARS and spoken.endswith(".")
-    assert reply.startswith(spoken)
+             + "It was stuck in a relay of the Harvard Mark II in 1947. " * 6).strip()
+    assert guards.fit_spoken(reply) == reply
+    listed = ("In the last 48 hours there were three things:\n\n1. **Tamper** alerts at 04:11.  \n"
+              "2. Knife detections spiked (206 total)\n3. The door opened twice.")
+    assert guards.fit_spoken(listed) == ("In the last 48 hours there were three things: Tamper alerts "
+                                         "at 04:11. Knife detections spiked (206 total). The door "
+                                         "opened twice.")
     assert guards.fit_spoken("Short one.") == "Short one."
-    one = guards.fit_spoken("word " * 200)
-    assert len(one) <= guards.SPOKEN_CHARS + 1 and one.endswith(".")
 
 
 # ── brain ─────────────────────────────────────────────────────────────────────

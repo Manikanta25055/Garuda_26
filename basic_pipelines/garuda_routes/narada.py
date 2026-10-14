@@ -175,6 +175,24 @@ def build_narada_router(core):
             raise HTTPException(502, "Could not reach the voice service. Try again in a moment.")
 
 
+    class VoiceErrorReport(BaseModel):
+        message: str = Field("", max_length=300)
+        type: str = Field("", max_length=80)
+        code: str = Field("", max_length=40)
+        debug: str = Field("", max_length=500)
+        state: str = Field("", max_length=20)
+        conversation: str = Field("", max_length=80)
+
+    @router.post("/api/narada/voice/error")
+    async def narada_voice_error(report: VoiceErrorReport, session=Depends(core.require_session)):
+        """An error ElevenLabs sent the browser mid-call, with what it said about it."""
+        flat = lambda v: " ".join(v.split())
+        core.log_system_update(
+            f"Narada voice error for {session['username']} ({flat(report.state) or '?'}, "
+            f"{flat(report.conversation) or 'no conversation'}): {flat(report.message)} "
+            f"[type={flat(report.type) or '-'} code={flat(report.code) or '-'}] {flat(report.debug)}")
+        return {"ok": True}
+
     @router.get("/api/narada/info")
     async def narada_info(session=Depends(core.require_session)):
         """What the "i" panel on the Narada page shows: models and usage."""

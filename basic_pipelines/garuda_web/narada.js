@@ -571,6 +571,29 @@ const N = (() => {
   // Short on purpose: every spoken character counts against the plan.
   const GREETINGS = ["Hey, I'm listening.", "Hi! What can I do?", "I'm here. Go ahead.", "Yes?"];
 
+  // Every error ElevenLabs reports goes to the server's log with its type,
+  // code and debug message (the client's own text is only "Server error:
+  // Unknown error"), so the next one has a cause, not a guess.
+  function reportVoiceError(msg, info) {
+    const i = info && typeof info === 'object' ? info : {};
+    const body = { message: String(msg || '').slice(0, 300), type: String(i.errorType || '').slice(0, 80),
+                   code: String(i.code ?? '').slice(0, 40), debug: String(i.debugMessage || '').slice(0, 500),
+                   state, conversation: conv && conv.getId ? String(conv.getId() || '') : '' };
+    G._apiFn('POST', '/api/narada/voice/error', body).catch(() => {});
+  }
+
+  // An error in the middle of a call that is still connected: said briefly,
+  // and the call goes on. Only a real disconnect ends it (onDisconnect).
+  function voiceHiccup(msg) {
+    const status = $('nx-status');
+    haptic('error');
+    if (!status) return;
+    status.dataset.err = msg;
+    const was = state;
+    setState('error');
+    setTimeout(() => { if (state === 'error' && voice === 'on') setState(was === 'error' ? 'listening' : was); }, 2600);
+  }
+
   function voiceError(msg) {
     const status = $('nx-status');
     if (status) status.dataset.err = msg;
@@ -622,7 +645,12 @@ const N = (() => {
             pollMemory();                 // a spoken reply carries no chips of its own
           }
         },
-        onError: (message) => voiceError(typeof message === 'string' ? message : 'Voice connection failed'),
+        onError: (message, info) => {
+          const text = typeof message === 'string' ? message : 'Voice connection failed';
+          reportVoiceError(text, info);
+          if (conv && voice === 'on') voiceHiccup(text);
+          else voiceError(text);
+        },
       });
     } catch (e) {
       const detail = (e && (e.detail || e.message)) || '';

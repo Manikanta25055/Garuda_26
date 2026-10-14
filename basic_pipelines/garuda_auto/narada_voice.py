@@ -18,6 +18,7 @@ Blocking SDK calls (token issue) run in a thread; the WebSocket side is async.
 import asyncio
 import logging
 import random
+import re
 import threading
 import time
 
@@ -26,7 +27,6 @@ log = logging.getLogger(__name__)
 TTS_MODEL = "eleven_v4_turbo"     # scripts/setup_narada_voice.py configures the engine with it
 INFO_TTL_S = 60                  # the info panel must not hammer the ElevenLabs API
 BINDING_TTL_S = 15 * 60          # longer than the 10-minute conversation cap
-MAX_SPOKEN_CHARS = 700           # Starter: 40k characters a month (free was 10k, and 400)
 UNKNOWN_REPLY = "This conversation was not started from Garuda. Please reopen Narada."
 # NIM usually answers in one to two seconds. Only past this point is a short
 # filler spoken first, the way a person says "hmm" while they think; any
@@ -39,13 +39,18 @@ FILLERS = ("Mm, one sec.", "Sure, let me check.", "Okay, on it.", "Hmm, give me 
 
 
 def _spoken(text):
-    """Trim a reply to something worth saying aloud, at a sentence end."""
-    text = " ".join((text or "").split())
-    if len(text) <= MAX_SPOKEN_CHARS:
-        return text
-    cut = text[:MAX_SPOKEN_CHARS]
-    end = max(cut.rfind(". "), cut.rfind("! "), cut.rfind("? "))
-    return cut[:end + 1] if end > 80 else cut.rstrip() + "..."
+    """A reply as one line to say, whole: the owner wants no length cap."""
+    return " ".join((text or "").split())
+
+
+def _sentences(text):
+    """The reply in sentence-sized pieces, each with its trailing space.
+
+    Streamed one by one, speech starts on the first sentence instead of
+    after the whole answer, and a long answer is never one huge message.
+    A list's "3." or a time's "04.11" stays with its sentence.
+    """
+    return [p for p in re.findall(r".+?(?:(?<!\d)[.!?]+[\"')\]]*(?:\s+|$)|$)", text) if p.strip()]
 
 
 class NaradaVoice:
@@ -177,7 +182,14 @@ class NaradaVoice:
         async def on_transcript(transcript):
             await session.send_response(self.speak(session.conversation_id, transcript))
 
+        async def on_error(err, *_):
+            # Reported by the SDK and otherwise dropped: a failed stream or a
+            # message it could not read. Logged so a "server error" has a cause.
+            log.warning("narada voice: session error in %s: %s: %s",
+                        session.conversation_id, type(err).__name__, str(err)[:300])
+
         session.on("user_transcript", on_transcript)
+        session.on("error", on_error)
         await session.run()
 
     async def speak(self, conversation_id, transcript):
@@ -197,8 +209,8 @@ class NaradaVoice:
                     told = True
                     yield PLANNER_LINE + " "
             said = await task
-            if said:
-                yield said
+            for sentence in _sentences(said or ""):
+                yield sentence
         finally:
             if not task.done():
                 task.cancel()      # interrupted: a newer turn replaced this one

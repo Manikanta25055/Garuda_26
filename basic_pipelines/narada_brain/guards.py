@@ -66,29 +66,22 @@ def wrap(text):
             "someone typed.]\n" + text)
 
 
-# A spoken reply is synthesised and billed by the character, and a long one is
-# a monologue. The persona asks for under 200; this is the ceiling.
-SPOKEN_CHARS = 300
+def fit_spoken(reply):
+    """A reply made fit to be said aloud, whole: it is never shortened.
 
-
-def fit_spoken(reply, limit=SPOKEN_CHARS):
-    """A spoken reply cut to whole sentences within `limit`.
-
-    Whole sentences or none, like everything else here: a voice that stops in
-    the middle of a clause sounds broken. If even the first sentence is too
-    long it is cut at a word and closed, which is the least bad option.
+    It used to be cut to 300 characters at a sentence end (a free-plan
+    budget), and a list's "3." counted as a sentence, so answers ended on
+    a bare number. The owner wants every answer whole. What a voice cannot
+    say is written out instead: list markers, bullets and markdown go, and
+    each item becomes a sentence of its own.
     """
-    reply = (reply or "").strip()
-    if len(reply) <= limit:
-        return reply
-    kept = ""
-    for sentence in re.findall(r"[^.!?]+[.!?]+[\"')\]]*\s*|[^.!?]+$", reply):
-        if len(kept) + len(sentence.rstrip()) > limit:
-            break
-        kept += sentence
-    if kept.strip():
-        return kept.strip()
-    return reply[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "."
+    lines = []
+    for line in (reply or "").splitlines():
+        line = re.sub(r"^\s*(?:[-*\u2022]|\d+[.)])\s+", "", line)      # 1. / 2) / - / * / bullet
+        line = re.sub(r"[*_`#]+", "", line).strip()                      # **bold**, `code`, # heads
+        if line:
+            lines.append(line if line[-1] in ".!?:;," else line + ".")
+    return " ".join(lines)
 
 
 def _norm(text):

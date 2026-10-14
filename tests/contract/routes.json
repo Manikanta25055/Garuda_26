@@ -631,6 +631,12 @@
  },
  {
   "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/voice/error",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
   "method": "GET",
   "path": "/api/openapi.json",
   "guard": "require_admin"

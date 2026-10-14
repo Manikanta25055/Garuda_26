@@ -43,11 +43,14 @@ MAX_ROUNDS = 5
 # quickly and race a second one when the first is slow (see llm.py). A spoken
 # turn is short by design; a typed one may be an explanation or a plan, and at
 # 10 s those were cut off as "the AI service is unavailable".
-VOICE_TIMEOUT_S = 10
+# No cap on what a reply may say (the owner's call): the token limit is only
+# a backstop against a runaway model. A whole spoken answer takes longer to
+# write than a sentence did, so the voice waits longer too.
+VOICE_TIMEOUT_S = 20
 TEXT_TIMEOUT_S = 30
 HEDGE_AFTER_S = 1.5
-VOICE_MAX_TOKENS = 700
-TEXT_MAX_TOKENS = 1500
+VOICE_MAX_TOKENS = 4096
+TEXT_MAX_TOKENS = 4096
 MAX_INPUT_CHARS = 2000
 # The planner: a slower, more capable model that is offered every capability
 # and builds things (shortcuts, artifacts, several dependent steps). People

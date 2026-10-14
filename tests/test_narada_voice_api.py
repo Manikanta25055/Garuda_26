@@ -39,3 +39,14 @@ def test_speech_engine_socket_rejects_unsigned_connections():
     ws = FakeSocket()
     asyncio.run(gw.narada_voice_ws(ws))
     assert ws.closed == 1008 and ws.accepted is None
+
+
+def test_a_voice_error_from_the_browser_is_logged_with_its_details(app_client, user_headers, monkeypatch):
+    # (that it needs a session is held by tests/contract/routes.json)
+    said = []
+    monkeypatch.setattr(gw, "log_system_update", lambda m, *a, **k: said.append(m))
+    body = {"message": "Server error: Unknown error", "type": "server_error", "code": "1011",
+            "debug": "tts stream\nfailed", "state": "talking", "conversation": "conv_1"}
+    assert app_client.post("/api/narada/voice/error", json=body, headers=user_headers).status_code == 200
+    assert any("server_error" in m and "1011" in m and "tts stream failed" in m and "talking" in m
+               for m in said), said
