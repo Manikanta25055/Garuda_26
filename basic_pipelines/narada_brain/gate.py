@@ -108,3 +108,89 @@ def traces_to(fact_text, said, *, names=()):
         return True
     heard = _provenance_tokens(said)
     return len(claim & heard) / len(claim) >= REQUIRED_OVERLAP
+
+
+# ── what a person told, as against what they asked for ───────────────────────
+# Owner's report (2026-10-16): memory filled with requests restated as facts:
+# "Admin wants to know how many alerts ...", "Admin wants the lamp off after
+# one minute from now", "Admin wants the lamp on when their device is home"
+# (a rule the house already had as an automation). The distiller was told not
+# to keep requests and questions and kept them anyway, and every one traced to
+# the person's words, because a request is made of the person's words. So the
+# words a fact may trace to are now only the sentences that tell something.
+
+_FILLER_START = re.compile(r"^(?:(?:ok(?:ay)?|so|and|but|also|hey|hi|hello|narada|yes|yeah|no|well|"
+                           r"um+|uh+|hmm+|right|alright)\b[\s,.!-]*)+", re.I)
+_QUESTION_START = re.compile(r"^(what|whats|how|why|which|who|whom|whose|where|is|are|am|was|were|"
+                             r"can|could|do|does|did|will|would|should|shall|may|has|have)\b", re.I)
+_REQUEST_START = re.compile(
+    r"^(please|kindly|(can|could|would|will) you|i (want|need|would like|d like) you to|let me know|"
+    r"turn|switch|set|schedule|toggle|run|create|make|add|remove|delete|check|search|find|look|show|"
+    r"tell|give|list|open|close|start|stop|remind|send|play|put|dim|lock|unlock|enable|disable|"
+    r"cancel|help|explain|summari[sz]e|describe|analy[sz]e|update|change|rename|move|book|call)\b",
+    re.I)
+_FIRST_PERSON = re.compile(r"^(i|i'm|im|i've|ive|i'd|my|we|we're|were|our|me)\b", re.I)
+_ASKS_TO_KEEP = re.compile(r"\b(remember|note (that|this|it|down)|keep (that|this|it)? ?in mind|"
+                           r"don.t forget|make a note|save (that|this))\b", re.I)
+
+
+def statements(said, *, acted=False):
+    """The sentences of what someone said that tell something: not a question,
+    not an order. "Dinner for four? My sister is allergic to peanuts." keeps
+    the second sentence only. `acted`: Narada did something or looked
+    something up in that turn, so the message was a request; then only what
+    the person said about themselves ("I ...", "my ...", "we ...") is kept.
+    Asking to be remembered ("remember that ...") always counts as telling."""
+    kept = []
+    for sentence in re.split(r"(?<=[.!?;])\s+|\n+", str(said or "")):
+        sentence = sentence.strip()
+        plain = _FILLER_START.sub("", sentence).strip().replace("’", "'")
+        if not plain:
+            continue
+        if _ASKS_TO_KEEP.search(plain):
+            kept.append(sentence)
+            continue
+        if plain.endswith("?") or _QUESTION_START.match(plain) or _REQUEST_START.match(plain):
+            continue
+        # "When my phone is detected, turn on the lamp": the order follows a
+        # clause. "I sleep at 10, so switch the lights off" tells first.
+        if not _FIRST_PERSON.match(plain) and any(
+                _REQUEST_START.match(_FILLER_START.sub("", c).strip())
+                for c in re.split(r",|\b(?:then|so)\b", plain)[1:]):
+            continue
+        if acted and not _FIRST_PERSON.match(plain):
+            continue
+        kept.append(sentence)
+    return " ".join(kept)
+
+
+def asks(said):
+    """The sentences that ask for something to be done (not questions, not
+    telling). Used only for a turn in which nothing was done: whether a
+    lasting wish hides in one ("I want the lamp on when I get home") is not
+    clear, so a fact traced to one is put to the person, not kept or lost."""
+    told = statements(said)
+    out = []
+    for sentence in re.split(r"(?<=[.!?;])\s+|\n+", str(said or "")):
+        sentence = sentence.strip()
+        plain = _FILLER_START.sub("", sentence).strip()
+        if plain and sentence not in told and not plain.endswith("?") and not _QUESTION_START.match(plain):
+            out.append(sentence)
+    return " ".join(out)
+
+
+# A fact about one moment, not a lasting one: a timer, a question, today.
+_ONE_OFF = re.compile(
+    r"\bfrom now\b|\bright now\b|\b(at|for) the moment\b|"
+    r"\bin (a|an|one|two|three|four|five|ten|fifteen|twenty|thirty|few|a few|couple of|\d+) "
+    r"(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b|"
+    r"\b(today|tonight|tomorrow|yesterday|this (morning|afternoon|evening|week|weekend))\b|"
+    r"\bwants? to (know|check|see|find out|learn|ask|look at|hear|be told)\b|"
+    r"\b(asked|asks|is asking|was asking|wanted to know)\b|\bhow (many|much|often)\b",
+    re.I)
+
+
+def one_off(fact_text):
+    """Why a fact is about one moment and not worth keeping, or "" when it is not."""
+    match = _ONE_OFF.search(fact_text or "")
+    return f'"{match.group(0)}" is about one moment, not something lasting' if match else ""

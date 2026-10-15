@@ -13,8 +13,10 @@ the parser is strict and bounded and silently discards anything it does not
 fully understand, and a candidate is kept only if its words trace to what the
 person themselves said (gate.traces_to). A distillation that produces nothing
 is a non-event; one that produces a bad fact is a wrong line in the record.
-Unlike a save made during the chat there is nobody at the screen to ask, so a
-fact that does not trace is dropped, not held.
+A fact that does not trace is dropped. One that traces only to a request
+nothing came of ("I want the lamp on when I get home", and no rule was made)
+is unclear, so it is held and the person asked, as the chat does (the
+owner's suggestion, 2026-10-16).
 """
 import json
 import logging
@@ -44,26 +46,56 @@ INSTRUCTION = (
     "- Never passwords, codes, keys or numbers of cards and accounts.\n"
     "- One plain sentence per fact, naming who it is about (use the given speaker name for "
     "'I'), never 'I' or 'you'.\n"
+    "- Lines marked (asking) are requests, commands or questions: nothing in them is a fact. "
+    "A rule or timer the person asked for is kept by the house itself, not here.\n"
     "- Skip anything already in the known list.\n"
     f"- At most {MAX_CANDIDATES} facts. If there is nothing lasting, return [].\n"
     'Reply with a JSON array only, each item {"text": "...", "category": one of '
     + json.dumps(list(CATEGORIES)) + "}. No prose, no code fence.")
 
 
+# Tools that only touch memory: a turn that called nothing else was a chat.
+_MEMORY_TOOLS = frozenset(("remember_fact", "forget_fact"))
+
+
+def _acted(entry):
+    """Whether Narada did something or looked something up in this turn: then
+    the person's message was a request, not something they were telling."""
+    for m in entry["messages"]:
+        for call in m.get("tool_calls") or ():
+            if (call.get("function") or {}).get("name") not in _MEMORY_TOOLS:
+                return True
+    return False
+
+
 def transcript(turns, speaker):
-    """(text for the extractor, everything the person said) from stored turns."""
-    lines, said = [], []
+    """(text for the extractor, what the person told, what they asked for
+    that was not done) from stored turns.
+
+    A fact is kept when it traces to what was told (gate.statements), and
+    put to the person when it traces only to a request nothing came of. A
+    request that was carried out is the house's record, not memory's.
+    """
+    lines, said, asked = [], [], []
     for entry in turns[-MAX_TURNS:]:
+        acted = _acted(entry)
         for m in entry["messages"]:
             text = " ".join((m.get("content") or "").split())
             if not text:
                 continue
             if m["role"] == "user":
-                said.append(text)
-                lines.append(f"{speaker}: {text[:MAX_TURN_CHARS]}")
+                told = gate.statements(text, acted=acted)
+                if told:
+                    said.append(told)
+                if not acted:
+                    wish = gate.asks(text)
+                    if wish:
+                        asked.append(wish)
+                mark = "" if told else " (asking)"
+                lines.append(f"{speaker}{mark}: {text[:MAX_TURN_CHARS]}")
             elif m["role"] == "assistant":
                 lines.append(f"Assistant: {text[:MAX_TURN_CHARS]}")
-    return "\n".join(lines), "\n".join(said)
+    return "\n".join(lines), "\n".join(said), "\n".join(asked)
 
 
 def parse_candidates(raw):
@@ -105,10 +137,11 @@ def parse_candidates(raw):
 
 
 def distill(turns, *, speaker, chat, known, names=()):
-    """Facts worth keeping from these turns: [(text, category)]. Never raises."""
-    text, said = transcript(turns, speaker)
-    if not said.strip():
-        return []
+    """Facts worth keeping from these turns: [(text, category, held)]; `held`
+    means the person is asked before it counts. Never raises."""
+    text, said, asked = transcript(turns, speaker)
+    if not (said.strip() or asked.strip()):
+        return []                                    # nothing was told, only asked
     try:
         message = chat.chat(
             [{"role": "system", "content": INSTRUCTION},
@@ -126,5 +159,13 @@ def distill(turns, *, speaker, chat, known, names=()):
         log.warning("distillation returned nothing at all; will retry")
         return None
     candidates = parse_candidates(raw)
-    return [(fact, category) for fact, category in candidates
-            if gate.traces_to(fact, said, names=[speaker, *names])]
+    names = [speaker, *names]
+    out = []
+    for fact, category in candidates:
+        if gate.one_off(fact):
+            continue
+        if gate.traces_to(fact, said, names=names):
+            out.append((fact, category, False))
+        elif asked and gate.traces_to(fact, asked, names=names):
+            out.append((fact, category, True))         # not clear: ask, as the chat does
+    return out

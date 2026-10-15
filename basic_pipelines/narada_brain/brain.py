@@ -138,10 +138,11 @@ class Brain:
             return []
         self.conversations.mark_distilled(turns)
         written = []
-        for text, category in found:
-            outcome = self.memory.remember(text, category=category, origin="distilled", by=speaker)
-            if outcome["status"] in ("saved", "updated"):
-                self.stats["facts_saved"] += 1
+        for text, category, held in found:
+            outcome = self.memory.remember(text, category=category, origin="distilled", by=speaker,
+                                           pending=held)
+            if outcome["status"] in ("saved", "updated", "pending"):
+                self.stats["facts_held" if outcome["status"] == "pending" else "facts_saved"] += 1
                 self._event(outcome["fact"], outcome["status"], outcome["replaced"])
                 written.append(outcome["fact"])
         if written:
@@ -164,7 +165,9 @@ class Brain:
         the person, even a fact that would have traced. Returns the store's outcome.
         """
         names = [user] + [f["text"] for f in self.memory.facts() if f["category"] == "person"]
-        theirs = gate.traces_to(text, said, names=names) and not untrusted
+        # Traced to what they told, not what they asked: a request restated as
+        # a fact ("Admin wants the lamp on at 7") is held for them to confirm.
+        theirs = gate.traces_to(text, gate.statements(said), names=names) and not untrusted
         outcome = self.memory.remember(
             text, category=category, by=user, replaces=replaces, pending=not theirs,
             origin="asked" if _ASKED.search(said or "") else "noticed")

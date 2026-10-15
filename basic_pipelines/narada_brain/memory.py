@@ -97,6 +97,46 @@ def _relation(new, old):
     return "duplicate"
 
 
+# Two versions of one rule ("Admin wants the lamp on for 10 minutes when they
+# are home" and, later, "... lamp and fan on for 10 minutes when their device
+# is detected home") overlap too little to be duplicates, so both stayed. A
+# rule is what to do, then when: the same devices on the same trigger is the
+# same rule, and the newer one replaces the older. A trigger with an opposite
+# word (come / leave) is a different rule.
+_TRIGGER = re.compile(r"\b(when|whenever|if|once|as soon as|every|each|after|before|until)\b", re.I)
+_TRIGGER_END = re.compile(r",|\b(and then|then|so that)\b", re.I)
+_RULE_FILLER = frozenset("""want wants wanted like likes liked prefer prefers preferred turn turns
+    turned switch switches switched set keep kept have get make put only both all""".split())
+_OPPOSITES = [frozenset(gate._stem(w) for w in p) for p in (("come", "leave"), ("arrive", "leave"), ("home", "away"),
+              ("enter", "exit"), ("morning", "night"), ("morning", "evening"), ("wake", "sleep"),
+              ("day", "night"), ("sunrise", "sunset"), ("open", "close"), ("start", "stop"))]
+SAME_RULE_ACTION_AT = 0.5
+SAME_RULE_TRIGGER_AT = 0.3
+
+
+def _rule_parts(text):
+    """(what to do, when) as stemmed word sets, or None when it is not a rule."""
+    match = _TRIGGER.search(text or "")
+    if not match:
+        return None
+    trigger = _TRIGGER_END.split(text[match.end():], maxsplit=1)[0]
+    action_words = _words(text[:match.start()])[1:]          # the first word is who it is about
+    stem = lambda words: {gate._stem(w) for w in words
+                          if w not in _STOP and w not in _RULE_FILLER and (len(w) > 2 or w.isdigit())}
+    return stem(action_words), stem(_words(trigger))
+
+
+def _same_rule(new, old):
+    a, b = _rule_parts(new), _rule_parts(old)
+    if not a or not b or not a[0] or not b[0] or not (a[1] & b[1]):
+        return False
+    if any(len(pair & a[1]) == 1 and len(pair & b[1]) == 1 and pair & a[1] != pair & b[1]
+           for pair in _OPPOSITES):
+        return False
+    return (_jaccard(a[0], b[0]) >= SAME_RULE_ACTION_AT
+            and _jaccard(a[1], b[1]) >= SAME_RULE_TRIGGER_AT)
+
+
 def guess_category(text):
     low = " " + " ".join(_words(text)) + " "
     rules = (
@@ -203,6 +243,11 @@ class MemoryStore:
         fact with the same key replaces the old one instead of sitting beside it.
         """
         clean, reason = gate.clean_fact(text)
+        if clean is not None and origin in ("distilled", "noticed"):
+            # What a person typed into the memory page or asked to be kept is
+            # theirs to word; what the model concluded must be lasting.
+            reason = gate.one_off(clean)
+            clean = None if reason else clean
         if clean is None:
             return {"status": "rejected", "fact": None, "replaced": None, "reason": reason}
         if key and origin == "observed" and key in self._suppressed:
@@ -226,6 +271,8 @@ class MemoryStore:
                     if existing.get("archived"):
                         continue
                     relation = _relation(clean, existing["text"])
+                    if relation is None and _same_rule(clean, existing["text"]):
+                        relation = "corrects"
                     if relation == "duplicate":
                         if existing.get("pending") and not pending:
                             existing.pop("pending", None)     # said again, plainly: confirmed
