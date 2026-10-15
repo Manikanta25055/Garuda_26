@@ -5310,3 +5310,38 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
   .fb-panel:not(.open) { visibility: hidden; transition: transform 0.22s, opacity 0.18s, visibility 0s 0.22s; }
   .fb-close { width: 36px; height: 36px; }
 }
+
+/* ── Phone sizing (2026-10-16) ─────────────────────────────
+   Controls that were drawn at desktop size on a phone: the welcome screen's
+   docs bubble (30 px, over the footer text), the toast's close mark (13 px
+   wide), the Logs tabs (the fourth cut off) and the Logs action bar (ragged
+   wrap, one oversized date field). Last in the file so it wins. */
+@media (max-width: 768px) {
+  .login-theme-toggle {
+    width: 40px; height: 40px;
+    top: calc(16px + env(safe-area-inset-top)); right: 16px;
+  }
+  .login-theme-toggle .gi { width: 20px; height: 20px; }
+  /* Beside the theme toggle, the same size, clear of the footer. */
+  .wv-docs-btn {
+    width: 40px; height: 40px;
+    top: calc(16px + env(safe-area-inset-top)); right: 64px; bottom: auto; left: auto;
+    color: var(--t2); border-width: 1px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .wv-docs-btn .gi { width: 20px; height: 20px; }
+
+  .toast-dismiss {
+    min-width: 36px; min-height: 36px; padding: 0; margin: -8px -10px -8px auto;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+
+  .log-tabs { overflow-x: visible; }
+  .log-tab {
+    flex: 1 1 auto; padding: 10px 4px; font-size: 12.5px; white-space: nowrap;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .log-tab .log-tab-badge { margin-left: 0; }
+  .logs-bottom-bar { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  .logs-bottom-bar .input { width: 100% !important; min-width: 0; grid-column: span 3; height: 40px; font-size: 16px; }
+  .logs-bottom-bar .btn { grid-column: span 2; min-height: 40px; padding: 6px 4px; white-space: nowrap; }
+}

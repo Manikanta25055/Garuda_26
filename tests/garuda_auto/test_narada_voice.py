@@ -150,8 +150,10 @@ def test_a_long_answer_is_said_as_its_opening_and_points_at_the_screen():
     v = voice(reply=lambda *a: {"reply": reply})
     v.issue_token("mani", "user", "home")
     chunks = _collect(v.speak("conv_1", [msg("user", "what happened?")]))
-    assert chunks == ["There were three things. ", "First, tamper alerts at 04.11 on 13 Oct. ",
-                      "Then 206 knife detections! ", "The rest is on your screen."]
+    # Said in words (speech_text): the voice read bare digits in Hindi.
+    assert chunks == ["There were three things. ",
+                      "First, tamper alerts at four eleven on the thirteenth of October. ",
+                      "Then two hundred and six knife detections! ", "The rest is on your screen."]
     assert v.turns_for("conv_1", "mani", "user", "home")[0]["response"] == reply
 
 

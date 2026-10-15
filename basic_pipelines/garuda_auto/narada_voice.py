@@ -23,6 +23,8 @@ import re
 import threading
 import time
 
+from .speech_text import for_speech
+
 
 log = logging.getLogger(__name__)
 
@@ -341,7 +343,7 @@ class NaradaVoice:
                         break                       # the spoken part is over; the rest is for the chat
                     spoke = True
                     last_out = now
-                    yield sentence
+                    yield for_speech(sentence)
                     continue
                 getter.cancel()
                 if task in done:
@@ -350,7 +352,7 @@ class NaradaVoice:
                         if sentence is None:
                             break
                         spoke = True
-                        yield sentence
+                        yield for_speech(sentence)
                     break
                 if not told and self._planning(conversation_id):
                     # The planner can take a while; said once (instead of a
@@ -373,7 +375,7 @@ class NaradaVoice:
                 said = task.result()
                 if said and not meta.get("streamed"):
                     for sentence in _sentences(said):
-                        yield sentence
+                        yield for_speech(sentence)
         finally:
             if getter is not None and not getter.done():
                 getter.cancel()

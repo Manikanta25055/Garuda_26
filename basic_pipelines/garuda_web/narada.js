@@ -68,7 +68,7 @@ const N = (() => {
   // mark would flicker) until the checked reply replaces it in the same place.
   let draftEl = null, draftText = '', draftRaf = 0;
   let waitingCards = [];              // cards the server holds for this person's Confirm
-  let waveRaf = 0, waveAt = 0, waveLevel = 0, waveHist = new Float32Array(64);   // the voice in the text field
+  let waveRaf = 0, waveAt = 0, waveLevel = 0, waveHist = new Float32Array(200);  // the voice in the text field (enough bars for the widest field)
 
   function voiceActive() { return voice !== 'off'; }
 
@@ -1049,7 +1049,9 @@ const N = (() => {
     for (let i = 0; i < n; i++) {
       const level = waveHist[waveHist.length - n + i];
       const half = Math.max(0.01, level * tall / 2);
-      const x = 3 + i * (bw + gap) + bw / 2;
+      // Anchored right: the newest bar sits at the field's right edge and
+      // the row fills the field, however wide the dock is.
+      const x = w - 3 - (n - 1 - i) * (bw + gap) - bw / 2;
       g.strokeStyle = `rgba(255,255,255,${(0.14 + 0.44 * (i / Math.max(1, n - 1))).toFixed(3)})`;
       g.beginPath();
       g.moveTo(x, mid - half);
