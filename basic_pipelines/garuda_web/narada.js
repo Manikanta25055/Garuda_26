@@ -182,10 +182,10 @@ const N = (() => {
   function updateLevels(t) {
     let targets = null, rings = null;
     if (conv && state === 'listening') {
-      try { targets = spectrumTargets(conv.getInputByteFrequencyData(), 1.5); } catch (_) {}
+      try { targets = spectrumTargets(voiceBins('input'), 1.5); } catch (_) {}
     } else if (conv && state === 'talking') {
       try {
-        const bins = conv.getOutputByteFrequencyData();
+        const bins = voiceBins('output');
         targets = spectrumTargets(bins, 1.3);
         rings = new Float32Array(RINGS);
         const usable = Math.floor(bins.length * 0.5);
@@ -903,6 +903,7 @@ const N = (() => {
     ++voiceEpoch;
     clearTimeout(voiceWatch);
     voice = 'off'; conv = null; voiceId = '';
+    meterStop();
     if (c) Promise.resolve().then(() => c.endSession()).catch(() => {});
     setPending(false);
     setState('error');
@@ -940,6 +941,7 @@ const N = (() => {
           voiceAwaiting = false;
           const wasOn = voice !== 'off';
           conv = null; voice = 'off'; voiceId = ''; micOpen = false;
+          meterStop();
           setPending(false);
           setState('idle');
           window.Feel?.voice(false);
@@ -992,6 +994,7 @@ const N = (() => {
     if (voiceAwaiting && voiceId) lateVoiceTurn(voiceId, voiceCursor, voiceEpoch);
     voiceAwaiting = false;
     voice = 'off'; conv = null; voiceId = ''; micOpen = false;
+    meterStop();
     if (c) callEnded();
     setPending(false);
     // Heard and felt on the tap itself; closing the session can take a
@@ -1002,7 +1005,96 @@ const N = (() => {
     if (c) { try { await c.endSession(); } catch (_) {} }
   }
 
+  // ── Voice levels that also move on an iPhone ─────────────
+  // The ElevenLabs client measures both voices on Web Audio contexts it makes
+  // after an await (when the call connects, and again on every unmute). iOS
+  // Safari only starts a context from inside a tap, so on a phone those read
+  // zeros: the level bar stayed a row of dots and the field never answered
+  // the voice. Here one context is made or resumed in the tap itself and
+  // reads the same two tracks the call already has (a second microphone
+  // capture can mute the first on iOS). Used only when the client's own
+  // reading is silent, so where that works (laptops) nothing changes.
+  const METER_BINS = 1024;                 // the client's bin count and 100 Hz - 8 kHz range,
+  const METER_LO_HZ = 100, METER_HI_HZ = 8000;   // so the field's gains still fit
+  let meterCtx = null;
+  const meters = { input: null, output: null };
+  function unlockMeter() {                  // only inside a tap
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!meterCtx || meterCtx.state === 'closed') meterCtx = new Ctx();
+      if (meterCtx.state !== 'running') meterCtx.resume().catch(() => {});
+    } catch (_) {}
+  }
+  function meterStop() {
+    for (const k of Object.keys(meters)) {
+      try { meters[k] && meters[k].source.disconnect(); } catch (_) {}
+      meters[k] = null;
+    }
+    if (meterCtx && meterCtx.state === 'running') meterCtx.suspend().catch(() => {});
+  }
+  function callTrack(which) {
+    let room = null;
+    try { room = conv && conv.connection && conv.connection.getRoom ? conv.connection.getRoom() : null; } catch (_) {}
+    if (!room) return null;
+    if (which === 'input') {
+      const pub = room.localParticipant && room.localParticipant.getTrackPublication
+        ? room.localParticipant.getTrackPublication('microphone') : null;
+      return (pub && pub.track && pub.track.mediaStreamTrack) || null;
+    }
+    for (const p of (room.remoteParticipants ? room.remoteParticipants.values() : [])) {
+      if (!String(p.identity || '').includes('agent')) continue;
+      for (const pub of (p.audioTrackPublications ? p.audioTrackPublications.values() : [])) {
+        if (pub.track && pub.track.mediaStreamTrack) return pub.track.mediaStreamTrack;
+      }
+    }
+    return null;
+  }
+  function meterBins(which) {
+    if (!meterCtx || meterCtx.state !== 'running') return null;
+    const track = callTrack(which);
+    if (!track || track.readyState !== 'live') return null;
+    let m = meters[which];
+    if (!m || m.track !== track) {         // the client swaps the microphone track on unmute
+      try { m && m.source.disconnect(); } catch (_) {}
+      const analyser = meterCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      const source = meterCtx.createMediaStreamSource(new MediaStream([track]));
+      source.connect(analyser);
+      m = meters[which] = { track, source, analyser, raw: new Uint8Array(analyser.frequencyBinCount),
+                            bins: new Uint8Array(METER_BINS) };
+    }
+    m.analyser.getByteFrequencyData(m.raw);
+    const n = m.raw.length, hz = meterCtx.sampleRate / 2 / n;
+    const lo = Math.floor(METER_LO_HZ / hz), hi = Math.min(Math.ceil(METER_HI_HZ / hz), n), span = hi - lo;
+    for (let d = 0; d < METER_BINS; d++) {
+      const at = d / METER_BINS * span, u = lo + Math.floor(at), h = Math.min(u + 1, hi - 1), f = at - Math.floor(at);
+      m.bins[d] = Math.round(m.raw[u] * (1 - f) + m.raw[h] * f);
+    }
+    return m.bins;
+  }
+  const silent = b => { if (!b || !b.length) return true; for (let i = 0; i < b.length; i += 8) if (b[i]) return false; return true; };
+  function voiceBins(which) {
+    let b = null;
+    try { b = which === 'input' ? conv.getInputByteFrequencyData() : conv.getOutputByteFrequencyData(); } catch (_) {}
+    if (!silent(b)) return b;
+    return meterBins(which) || b;
+  }
+  function inputVolume() {
+    const b = voiceBins('input');
+    if (!b || !b.length) return 0;
+    let sum = 0;
+    for (let i = 0; i < b.length; i++) sum += b[i];
+    return sum / b.length / 255;
+  }
+  // Any tap during a call keeps the meter running (iOS can suspend it when
+  // the page goes to the background and back).
+  ['touchend', 'click'].forEach(type => document.addEventListener(type, () => {
+    if (voice !== 'off') unlockMeter();
+  }, { capture: true, passive: true }));
+
   function toggleVoice() {
+    unlockMeter();                                         // inside the tap: see "Voice levels"
     if (swallowClick) { swallowClick = false; return; }   // that press was a hold: the call ended
     if (voice === 'off') startVoice();
     else if (voice === 'on' && !micOpen) openMic();       // ready to speak again
@@ -1027,7 +1119,7 @@ const N = (() => {
       return;
     }
     let v = 0;
-    try { v = conv.getInputVolume ? conv.getInputVolume() || 0 : 0; } catch (_) {}
+    try { v = inputVolume(); } catch (_) {}
     waveLevel = v > waveLevel ? waveLevel + (v - waveLevel) * 0.6 : waveLevel * 0.88;
     if (now - waveAt >= WAVE_STEP_MS) {
       waveAt = now;
