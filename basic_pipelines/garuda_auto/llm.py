@@ -26,7 +26,14 @@ DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # ~2-3 s; glm-5.3-flash also 8/8 but slower; gpt-oss-20b (the 2026-09 pick)
 # dropped one of the two actions every time. Kimi K3, GLM 5.3 and Gemma 4
 # timed out on this account.
-DEFAULT_MODELS = ("nvidia/nemotron-3-super-120b-a12b", "z-ai/glm-5.3-flash",
+# Re-measured 2026-10-17 on scripts/narada_eval.py (60 cases): nemotron-3.5-
+# super-vl (released 2026-10-15) first scored 58/60 against 60/60 because it
+# often skipped remember_fact for facts said in passing; with those turns read
+# back at once (narada_brain.brain._missed_fact) both scored 60/60 twice, and
+# the 3.5 list finished the suite in 266-522 s against 716-810 s (slowest tenth
+# of cases 9-27 s against 45-62 s). Its endpoint throws HTTP 500 in bursts,
+# so 3-super stays right behind it.
+DEFAULT_MODELS = ("nvidia/nemotron-3.5-super-vl-120b-a12b", "nvidia/nemotron-3-super-120b-a12b",
                   "openai/gpt-oss-20b")
 
 # Worth trying the next model for. A 400 or 401 is our fault or the key's and
@@ -42,6 +49,10 @@ CONNECT_TIMEOUT_S = 4
 # A model that timed out is skipped for a while instead of being waited on
 # again by the very next sentence.
 SLOW_PENALTY_S = 120
+# A server error comes in bursts (nemotron-3.5-super-vl, 2026-10-17: 25 HTTP
+# 500s in one 27-case run, none in the next), so the next model answers for a
+# short while instead of each sentence paying for a failed call first.
+ERROR_PENALTY_S = 30
 _HEDGE_POOL = ThreadPoolExecutor(max_workers=6, thread_name_prefix="nim-hedge")
 
 
@@ -177,6 +188,8 @@ class NimChat:
                 last = f"{model}: HTTP {status}"
                 if status in (404, 410):
                     self._dead_until[model] = self._clock() + 3600
+                elif status >= 500:
+                    self._dead_until[model] = self._clock() + ERROR_PENALTY_S
                 continue
             if status >= 400:
                 self.last_error = f"HTTP {status}"

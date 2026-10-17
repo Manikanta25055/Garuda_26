@@ -67,6 +67,36 @@ def test_a_missed_fact_is_kept_and_an_invented_one_is_not(tmp_path):
     assert "Speaker name: mani" in sent and "mani: Dinner for four?" in sent
 
 
+def test_a_fact_the_model_did_not_save_is_read_back_at_once(tmp_path):
+    chat = FakeChat(json.dumps([{"text": "mani is vegetarian", "category": "health"}]))
+    brain = Brain(str(tmp_path), chat, background=False, read_back=True)
+    brain.record("mani", turn("I'm vegetarian, by the way. Dinner ideas?", "Paneer tikka."))
+    assert [f["text"] for f in brain.memory.facts()] == ["Mani is vegetarian."]
+    assert len(chat.calls) == 1
+
+
+def test_any_first_person_turn_counts_as_about_the_person():
+    from basic_pipelines.narada_brain.brain import _missed_fact
+    assert _missed_fact(turn("I usually wake up at 6", "Noted."))
+    assert _missed_fact(turn("Our cat is called Bujji", "Nice."))
+    assert not _missed_fact(turn("what time is it", "Ten past six."))
+
+
+def test_no_read_back_when_saved_or_nothing_about_the_person(tmp_path):
+    chat = FakeChat("[]")
+    brain = Brain(str(tmp_path), chat, background=False, read_back=True)
+    brain.record("mani", turn("what time is it", "Ten past six."))
+    saved = turn("I'm vegetarian", "Noted.")
+    saved.insert(1, {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "1", "type": "function", "function": {"name": "remember_fact", "arguments": "{}"}}]})
+    brain.record("mani", saved)
+    forgot = turn("Forget my favourite colour", "Forgotten.")
+    forgot.insert(1, {"role": "assistant", "content": "", "tool_calls": [
+        {"id": "2", "type": "function", "function": {"name": "forget_fact", "arguments": "{}"}}]})
+    brain.record("mani", forgot)
+    assert chat.calls == []
+
+
 def test_turns_are_read_once(tmp_path):
     chat = FakeChat("[]")
     brain = Brain(str(tmp_path), chat, background=False)

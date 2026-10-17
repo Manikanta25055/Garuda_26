@@ -28,6 +28,9 @@ DISTILL_IDLE_S = 180
 # ... and so is a long one that never pauses, every this many unread turns.
 DISTILL_EVERY = 8
 # The person asked for this to be kept, as opposed to mentioning it in passing.
+# The person said something about themselves or their people: a fact may have
+# gone past that the model did not save.
+_ABOUT_SELF = re.compile(r"\b(i|i.m|i.ve|i.d|my|we|we.re|our)\b", re.I)
 _ASKED = re.compile(r"\b(remember|note (that|this|it|down)|keep (that|this|it)? ?in mind|don.t forget|"
                     r"make a note|save (that|this))\b", re.I)
 
@@ -35,9 +38,12 @@ _ASKED = re.compile(r"\b(remember|note (that|this|it|down)|keep (that|this|it)? 
 class Brain:
     memory_categories = CATEGORIES
 
-    def __init__(self, data_dir=None, chat=None, *, clock=time.time, background=True):
+    def __init__(self, data_dir=None, chat=None, *, clock=time.time, background=True,
+                 read_back=None):
         """`data_dir` None keeps the conversation in memory only. `chat` is the model
-        client used for summaries (the same one the agent talks through)."""
+        client used for summaries (the same one the agent talks through).
+        `read_back` reads a turn with a missed fact back for facts (default: only
+        when `background`; with background off it runs before record returns)."""
         self.chat = chat
         self._clock = clock
         path = os.path.join(data_dir, CONVERSATIONS_FILE) if data_dir else None
@@ -56,6 +62,7 @@ class Brain:
         # the voice service relays Narada's words and nothing else.
         self._events = deque(maxlen=50)
         self._background = background
+        self._read_back = background if read_back is None else read_back
         self._timers = {}
         self._timer_lock = threading.Lock()
         if background and chat is not None:
@@ -95,9 +102,20 @@ class Brain:
 
     def record(self, key, turn):
         self.conversations.record(key, turn)
-        if self._background and self.chat is not None:
-            due_now = len(self.conversations.undistilled(key)) >= DISTILL_EVERY
-            self._schedule_distill(key, delay=1 if due_now else DISTILL_IDLE_S)
+        if self.chat is None:
+            return
+        # Some models skip remember_fact when a fact comes up in passing
+        # ("I'm vegetarian, by the way. Dinner ideas?"): nemotron-3.5-super-vl
+        # saved 3 of 9 such facts on its own (2026-10-17). Waiting for the chat
+        # to go quiet is too late when the next question needs the fact, so
+        # such a turn is read back at once.
+        missed = self._read_back and _missed_fact(turn)
+        if not self._background:
+            if missed:
+                self._distill_quietly(key)
+            return
+        due_now = missed or len(self.conversations.undistilled(key)) >= DISTILL_EVERY
+        self._schedule_distill(key, delay=1 if due_now else DISTILL_IDLE_S)
 
     # ── reading a conversation back for what was missed ───────────────────────
 
@@ -259,3 +277,17 @@ class Brain:
 
     def status(self):
         return dict(self.stats)
+
+
+def _missed_fact(turn):
+    """The person spoke about themselves this turn and memory was not touched."""
+    said = " ".join(str(m.get("content") or "") for m in turn if m.get("role") == "user")
+    if not _ABOUT_SELF.search(said):
+        return False
+    for m in turn:
+        for call in m.get("tool_calls") or ():
+            # Saved, or asked to forget: reading the turn back could put the
+            # forgotten fact straight back.
+            if (call.get("function") or {}).get("name") in ("remember_fact", "forget_fact"):
+                return False
+    return True

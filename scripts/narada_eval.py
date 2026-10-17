@@ -139,7 +139,7 @@ class House:
 def make_agent(house, decision):
     """The one place that says how Narada is put together for the evaluation."""
     return HomeAgent(house.ctx, house.home, house.chat, decision,
-                     brain=Brain(house.data_dir, house.chat, background=False),
+                     brain=Brain(house.data_dir, house.chat, background=False, read_back=True),
                      modes_fn=lambda: dict(house.modes), set_mode_fn=house.set_mode,
                      security_fn=lambda: {"modes": dict(house.modes), "alert_active": False,
                                           "camera": "delivering frames", "owner_present": True})

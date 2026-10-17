@@ -158,6 +158,21 @@ def test_a_retired_model_falls_through_to_the_next():
     assert seen == ["old", "new", "new"]      # the dead model is not retried
 
 
+def test_a_server_error_rests_the_model_briefly():
+    seen, now = [], [0]
+
+    def post(url, headers=None, json=None, timeout=None):
+        seen.append(json["model"])
+        return Resp(500) if json["model"] == "a" else Resp(200, completion("hi"))
+    chat = NimChat("k", ["a", "b"], post=post, clock=lambda: now[0])
+    chat.chat([{"role": "user", "content": "x"}])
+    chat.chat([{"role": "user", "content": "x"}])
+    assert seen == ["a", "b", "b"]
+    now[0] = 31
+    chat.chat([{"role": "user", "content": "x"}])
+    assert seen[-2:] == ["a", "b"]           # tried again once the rest is over
+
+
 def test_a_rejected_key_is_not_retried_on_other_models():
     seen = []
 
