@@ -224,6 +224,34 @@ def test_the_agent_uses_tools_and_reports(house):
     assert home.log_entries()[-1]["source"] == "assistant"
 
 
+def test_a_reply_that_claims_an_action_never_made_gets_one_more_round(house):
+    ctx, home = house
+    chat = ScriptedChat([
+        completion("The lamp is now on."),                    # no tool was called
+        completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})]),
+        completion("The lamp is on."),
+    ])
+    a = agent(ctx, home, chat)
+    out = a.handle("don't touch the fan, just the lamp", user="mani")
+    assert out["reply"] == "The lamp is on."
+    assert [d["id"] for d in home.on_devices()] == ["lamp"]
+    notes = [m for m in chat.requests[-1]["messages"] if "From the house" in str(m.get("content"))]
+    assert len(notes) == 1 and notes[0]["role"] == "user" and "Lamp is off, not on" in notes[0]["content"]
+    assert a.stats["claims_corrected"] == 1
+    kept = " ".join(str(m.get("content")) for m in out.get("_turn") or [])
+    assert "From the house" not in kept and "The lamp is now on." not in kept
+
+
+def test_a_true_reply_and_a_second_misstatement_are_not_asked_again(house):
+    ctx, home = house
+    chat = ScriptedChat([completion("The lamp is off.")])
+    assert agent(ctx, home, chat).handle("is the lamp on?", user="mani")["reply"] == "The lamp is off."
+    assert len(chat.requests) == 1
+    chat = ScriptedChat([completion("The lamp is on."), completion("The lamp is on, really.")])
+    out = agent(ctx, home, chat).handle("is the lamp on?", user="mani")
+    assert len(chat.requests) == 2 and out["reply"] == "The lamp is on, really."
+
+
 def test_a_user_cannot_create_recurring_schedules_through_the_agent(house):
     ctx, home = house
     chat = ScriptedChat([

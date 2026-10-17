@@ -26,14 +26,12 @@ DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # ~2-3 s; glm-5.3-flash also 8/8 but slower; gpt-oss-20b (the 2026-09 pick)
 # dropped one of the two actions every time. Kimi K3, GLM 5.3 and Gemma 4
 # timed out on this account.
-# Re-measured 2026-10-17 on scripts/narada_eval.py (60 cases): nemotron-3.5-
-# super-vl (released 2026-10-15) first scored 58/60 against 60/60 because it
-# often skipped remember_fact for facts said in passing; with those turns read
-# back at once (narada_brain.brain._missed_fact) both scored 60/60 twice, and
-# the 3.5 list finished the suite in 266-522 s against 716-810 s (slowest tenth
-# of cases 9-27 s against 45-62 s). Its endpoint throws HTTP 500 in bursts,
-# so 3-super stays right behind it.
-DEFAULT_MODELS = ("nvidia/nemotron-3.5-super-vl-120b-a12b", "nvidia/nemotron-3-super-120b-a12b",
+# Re-measured 2026-10-17: nemotron-3.5-super-vl (released 2026-10-15) runs
+# scripts/narada_eval.py about twice as fast (308-495 s against 668-712 s) but
+# scored 57-58/60 against 59/60, 75/88 against 77/88 on device commands, and
+# before claims.py existed said it had switched devices it never touched. Its
+# endpoint also returns HTTP 500 in bursts. So 3-super leads and 3.5 follows.
+DEFAULT_MODELS = ("nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3.5-super-vl-120b-a12b",
                   "openai/gpt-oss-20b")
 
 # Worth trying the next model for. A 400 or 401 is our fault or the key's and

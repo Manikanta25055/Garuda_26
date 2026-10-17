@@ -25,7 +25,7 @@ import threading
 import time
 
 from ..narada_brain import Brain, guards, noticing, persona
-from . import actuation_log, capabilities
+from . import actuation_log, capabilities, claims
 from .capabilities import MODE_NAMES
 from .confirmations import Confirmations
 from .device_types import is_actuator
@@ -118,6 +118,10 @@ OFFLINE_BACKEND = "router"
 # is Drishti's; on Garuda's address the model is not even offered it.
 # (Which tools those are is each capability's `security` flag.)
 SECURITY_TOOLS = capabilities.names(security=True)
+# A turn that read the record answers about the past; its "Lamp on" is an
+# event, not a claim about now (see claims.py).
+REPORT_TOOLS = frozenset(("search_history", "recent_activity", "energy_usage",
+                          "list_schedules", "list_automations"))
 # What changes the house or the memory. Once a turn has read text that looks
 # like an instruction to the assistant (narada_brain.guards), none of these
 # run for the rest of it: the person asks again, with nothing steering the model.
@@ -482,6 +486,7 @@ class HomeAgent:
         messages.append({"role": "user", "content": text})
         actions, proposal, memory = self._turn.actions, None, []
         deadline = None
+        corrected = None        # where a misstating draft and its note sit in messages
         if planner:
             self._turn.in_planner = True
             deadline = time.monotonic() + PLANNER_BUDGET_S
@@ -520,6 +525,22 @@ class HomeAgent:
                 # short answer ends the spoken part here; a long one waits for
                 # its summary below.
                 speech.flush(final=not calls)
+            if not calls and corrected is None and not (speech and speech.spoken) \
+                    and scope != "security" \
+                    and not any(st["tool"] in REPORT_TOOLS for st in self._turn.steps):
+                # A reply that puts a device in a state it is not in (claims.py)
+                # gets one more round with the true states. A spoken reply has
+                # already been heard, so it is not taken back.
+                devices = [d for d in self.home.devices() if d["actuator"]]
+                wrong = claims.false_claims(message.get("content") or "", devices)
+                if wrong:
+                    log.warning("Narada reply misstated %s; asking again",
+                                ", ".join(f"{n} ({c}, is {a})" for n, c, a in wrong))
+                    self.stats["claims_corrected"] = self.stats.get("claims_corrected", 0) + 1
+                    corrected = len(messages)
+                    messages.append({"role": "assistant", "content": message.get("content") or ""})
+                    messages.append({"role": "user", "content": claims.correction(wrong, devices)})
+                    continue
             if not calls:
                 written = self.brain.check_reply((message.get("content") or "").strip() or "Done.")
                 spoken, display_reply = guards.split_spoken(written)
@@ -544,7 +565,9 @@ class HomeAgent:
                 return {**finish(reply), "display_reply": display_reply,
                         **({"summary": summary} if summary else {}),
                         "streamed": bool(speech and speech.spoken),
-                        "_turn": _for_memory(messages[first:])
+                        "_turn": _for_memory(
+                            messages[first:] if corrected is None
+                            else messages[first:corrected] + messages[corrected + 2:])
                         + [{"role": "assistant", "content": display_reply}]}
             if not planner and any(c.get("function", {}).get("name") == "hand_to_planner"
                                    or c.get("function", {}).get("name") not in offered
