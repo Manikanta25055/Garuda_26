@@ -387,8 +387,18 @@ class HomeAgent:
         if not out.get("_action"):
             return None             # refused or not done: the model hears the request instead
         reply = f"{out.get('result', 'Done')}."
+        # Remembered as the model's own turns are, with the call that did it: a
+        # history of commands answered in words alone taught the model to answer
+        # "turn it on" in words alone (2026-10-18: 0 of 15 follow-ups done after
+        # such a history, 15 of 15 with the calls kept).
         return {"reply": reply, "lane": "fast", "actions": [out.get("result", "")],
-                "_turn": [{"role": "user", "content": text}, {"role": "assistant", "content": reply}]}
+                "_turn": [{"role": "user", "content": text},
+                          {"role": "assistant", "content": "", "tool_calls": [
+                              {"id": "fast", "type": "function",
+                               "function": {"name": call[0], "arguments": json.dumps(call[1])}}]},
+                          {"role": "tool", "tool_call_id": "fast",
+                           "content": json.dumps({"ok": True, "result": out.get("result", "")})},
+                          {"role": "assistant", "content": reply}]}
 
     def _offline(self, text, route, user, role, why):
         """NIM did not answer. Do the one simple thing the routing model is sure of, or nothing."""
@@ -612,7 +622,7 @@ class HomeAgent:
                 # A reply that puts a device in a state it is not in (claims.py)
                 # gets one more round with the true states. A spoken reply has
                 # already been heard, so it is not taken back.
-                devices = [d for d in self.home.devices() if d["actuator"]]
+                devices = [d for d in self.home.devices() if d["actuator"]] + self._modes_as_devices()
                 wrong = (claims.false_claims(message.get("content") or "", devices)
                          or self._jev_claims(text, message.get("content") or "", devices))
                 if wrong:
@@ -717,6 +727,16 @@ class HomeAgent:
                        + (f" {waiting} card(s) are waiting for your tap." if waiting else ""))
                       if done or waiting
                       else "That took too long; try asking for one part of it at a time.")
+
+    def _modes_as_devices(self):
+        """The modes, for the claim check: "Privacy mode is on" is a claim too."""
+        try:
+            modes = self.modes_fn() or {}
+        except Exception:
+            return []
+        return [{"id": f"mode_{name}", "name": f"{name.replace('_', ' ')} mode", "room": "",
+                 "state": "on" if on else "off"}
+                for name, on in modes.items() if isinstance(on, bool)]
 
     def _look(self, at, text):
         """Ask for Jev's second look at text the pattern passed, now in messages[at]."""

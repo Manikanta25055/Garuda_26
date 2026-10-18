@@ -769,3 +769,25 @@ def test_a_fast_turn_is_remembered_like_any_other(house):
     a.handle("kill the breeze", user="mani", role="admin")
     said = [m["content"] for m in a.brain.history("mani")]
     assert "kill the breeze" in said and "Fan off." in said
+
+
+def test_a_fast_turn_is_remembered_with_the_call_that_did_it(house):
+    # Remembered as words alone, it taught the model to answer "turn it on" in words alone.
+    ctx, home = house
+    home.set("fan", "on")
+    a = fast_agent(ctx, home, ScriptedChat([]))
+    a.handle("kill the breeze", user="mani", role="admin")
+    past = a.brain.history("mani")
+    call = next(m for m in past if m.get("tool_calls"))["tool_calls"][0]["function"]
+    assert call["name"] == "set_device" and json.loads(call["arguments"]) == {"device": "fan", "action": "off"}
+    assert any(m["role"] == "tool" and "Fan off" in m["content"] for m in past)
+
+
+def test_a_mode_said_to_be_on_when_it_is_off_is_corrected(house):
+    ctx, home = house
+    modes = {"privacy": False, "dnd": False}
+    chat = ScriptedChat([completion("Privacy mode is on."), completion("Privacy mode is still off.")])
+    a = agent(ctx, home, chat, modes_fn=lambda: dict(modes))
+    out = a.handle("turn it on", user="mani", role="admin")
+    assert out["reply"] == "Privacy mode is still off." and a.stats["claims_corrected"] == 1
+    assert "privacy mode is off, not on" in chat.requests[-1]["messages"][-1]["content"]

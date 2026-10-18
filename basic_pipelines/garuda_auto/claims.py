@@ -98,7 +98,7 @@ def false_claims(reply, devices):
 # 0.57 for a wrong state, false ones mostly above 0.9).
 JEV_AT = 0.7
 # What switches a device: a turn with one of these done is one the pattern reads.
-SWITCHING_TOOLS = frozenset(("set_device", "all_off", "run_scene", "run_shortcut"))
+SWITCHING_TOOLS = frozenset(("set_device", "all_off", "run_scene", "run_shortcut", "set_security_mode"))
 DEVICE_INTENTS = ("device_control", "all_off", "scene")
 _LISTED = re.compile(r"^\s*(?:[-*•]|\d+[.)]|#{1,6}|\|)\s", re.M)
 
