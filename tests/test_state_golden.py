@@ -22,7 +22,7 @@ STATE_KEYS = [
 CONFIG_KEYS = [
     "custom_voice_commands", "custom_modes", "email_recipients", "email_cooldown",
     "email_sender", "detection_threshold", "known_devices", "watch_labels", "danger_labels",
-    "night_presence_window", "modes", "mode_schedule",
+    "night_presence_window", "location", "modes", "mode_schedule",
 ]
 
 
@@ -115,6 +115,7 @@ def test_saved_config_golden(app_client, monkeypatch):
         "watch_labels": ["Person"],
         "danger_labels": ["Knife", "Hammer"],
         "night_presence_window": {"start": "01:00", "end": "04:00", "enabled": False},
+        "location": {},
         "modes": {"dnd": True, "email_off": False, "idle": True, "night": False,
                   "emergency": True, "privacy": False},
         "mode_schedule": {"night": {"start": "22:00", "end": "06:00"}},

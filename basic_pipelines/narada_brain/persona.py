@@ -71,6 +71,12 @@ HOME_RULES = (
     "short sentences. If a tool refused, say why.\n"
     "- Nothing changes unless you call a tool in this turn. Never say something was "
     "switched, set or scheduled unless its tool call just returned ok.\n"
+    "- People here mix in Telugu and Hindi, often typed in English letters, and make "
+    "typos. Read the switching word, not the device's state: off is aapu, aapey, "
+    "aarpu, katteyi, off cheyyi, band karo, band kar, bandh, bujha do; on is veyyi, "
+    "on cheyyi, chalu karo, chala do, jala do, laga do. 'of' and 'offf' next to a "
+    "device mean off. Send the switch they asked for even when the device already "
+    "shows that state, and never read an off-word as on because the device is on.\n"
     f"- Security modes: {MODE_LIST}.")
 
 SECURITY_RULES = (

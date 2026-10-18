@@ -417,6 +417,15 @@ def test_without_nim_everything_off_keeps_to_a_room_it_knows_and_leaves_one_it_d
     assert out["lane"] == "local" and home.on_devices() == []
 
 
+def test_without_nim_a_device_in_a_place_the_house_does_not_have_is_left_alone(house):
+    """2026-10-18, NIM down: "turn on the garage light" switched on the study lamp."""
+    ctx, home = house
+    a = offline_agent(ctx, home, SureRouter())
+    assert a.handle("turn on the garage light")["lane"] == "unavailable" and home.on_devices() == []
+    assert a.handle("lamp on in the kitchen")["lane"] == "unavailable" and home.on_devices() == []
+    assert a.handle("turn on the study lamp")["lane"] == "local" and on_ids(home) == ["lamp"]
+
+
 def test_without_nim_the_security_product_is_never_switched_by_the_router(house):
     ctx, home = house
     out = offline_agent(ctx, home, SureRouter()).handle("lamp on", scope="security")
@@ -608,3 +617,13 @@ def test_a_long_spoken_answer_says_its_summary_not_its_first_lines(house):
     assert result["summary"] == result["reply"] == "Both the lamp and the fan are off."
     assert "| Lamp | Off |" in result["display_reply"]
     assert len(asked) == 2 and "<reply>" in asked[1]["messages"][1]["content"]
+
+
+def test_a_lone_of_after_a_switching_verb_is_read_as_off():
+    """2026-10-17: every model read "trun of the fan" as on when the fan was on."""
+    from basic_pipelines.garuda_auto.agent import mend_off
+    assert mend_off("trun of teh fan") == "trun off teh fan"
+    assert mend_off("Switch of the lamp") == "Switch off the lamp"
+    assert mend_off("turn offf fan") == "turn off fan"
+    for left_alone in ("turn off the fan", "one of the lights", "a turn of phrase", "turn on tv"):
+        assert mend_off(left_alone) == left_alone

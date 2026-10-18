@@ -176,6 +176,23 @@ def fit_result(out, limit):
     return text[:limit]
 
 
+# "trun of the fan": the models read a lone "of" after a switching verb as "on"
+# when the device is on (2026-10-17 test, every model). Only that spelling is
+# mended; "turn of phrase" has no device after it and "of" is rarely meant there.
+# Places a sentence may name (with the house's own rooms); see _offline_call.
+PLACE_WORDS = frozenset({
+    "garage", "kitchen", "bedroom", "hall", "study", "bathroom", "washroom", "toilet",
+    "balcony", "porch", "garden", "terrace", "office", "living room", "dining", "lounge",
+    "basement", "attic", "nursery", "corridor", "veranda", "pooja", "store room", "gate",
+    "yard", "patio", "upstairs", "downstairs", "outside", "outdoor"})
+_OFF_TYPO = re.compile(r"\b((?:turn|trun|tunr|tun|switch|swich|swtich|switc|put|shut)\s+)of+\b(?!\s+(?:phrase|events)\b)",
+                       re.I)
+
+
+def mend_off(text):
+    return _OFF_TYPO.sub(lambda m: m.group(1) + "off", text)
+
+
 class HomeAgent:
     def __init__(self, ctx, home, chat, decision, *, modes_fn=None, set_mode_fn=None,
                  security_fn=None, clock=time.time, brain=None, planner=None, artifacts=None,
@@ -222,7 +239,7 @@ class HomeAgent:
         a typed turn, is handed the answer's text as the model writes it, and
         None when a draft is dropped (a round that turned into tool calls, a
         model that broke off); the checked reply replaces the draft."""
-        text = (text or "").strip()[:MAX_INPUT_CHARS]
+        text = mend_off((text or "").strip()[:MAX_INPUT_CHARS])
         if not text:
             return {"reply": "Say something for me to do.", "lane": "agent", "actions": []}
         route_view = route = None
@@ -352,6 +369,16 @@ class HomeAgent:
             if route["device"]["value"] == "none" or route["action"]["value"] == "none" \
                     or not sure("device", "action"):
                 return None
+            # "Turn on the garage light" in a house with no garage: the routing
+            # model points at the one light there is (2026-10-18, NIM down). A
+            # sentence that names a place is acted on only when it is the
+            # chosen device's own room.
+            device = self.ctx.registry.get(route["device"]["value"]) or {}
+            own = (device.get("room") or "").lower()
+            words = set(re.findall(r"[a-z]+", text.lower()))
+            places = {r for r in self._rooms() | PLACE_WORDS if set(r.split()) <= words}
+            if places - {own} and not (own and own in places):
+                return None
             return "set_device", {"device": route["device"]["value"], "action": route["action"]["value"]}
         if intent == "scene":
             if route["scene"]["value"] == "none" or not sure("scene"):
@@ -360,13 +387,16 @@ class HomeAgent:
         # Everything off. The routing model does not say where, so a sentence that
         # names a place is only acted on when the place is one of the house's rooms.
         lowered = text.lower()
-        rooms = {(d.get("room") or "").lower() for d in self.ctx.registry.devices} - {""}
+        rooms = self._rooms()
         named = [r for r in rooms if r in lowered]
         if len(named) == 1:
             return "all_off", {"room": named[0]}
         if named or " in the " in lowered or " in my " in lowered:
             return None
         return "all_off", {}
+
+    def _rooms(self):
+        return {(d.get("room") or "").lower() for d in self.ctx.registry.devices} - {""}
 
     # ── agent lane ────────────────────────────────────────────────────────────
 
