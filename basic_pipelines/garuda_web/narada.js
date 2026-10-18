@@ -1868,7 +1868,7 @@ const N = (() => {
       ${row('Voice', esc(v.voice || '—'))}
       ${row('Characters this month', used)}
       ${r ? `<div class="nx-info-h">Last reply</div>
-        ${row('Answered by', esc(r.lane === 'agent' ? (r.model || 'NIM') + (r.planner ? ' · planner' : '') : r.lane === 'unavailable' ? 'NIM unavailable' : r.lane))}
+        ${row('Answered by', esc(r.lane === 'agent' ? (r.model || 'NIM') + (r.planner ? ' · planner' : '') : r.lane === 'unavailable' ? 'NIM unavailable' : r.lane === 'fast' ? 'Jev + router (fast lane)' : r.lane))}
         ${row('Round trip', r.seconds.toFixed(1) + ' s')}
         ${(r.actions || []).length ? `<div class="nx-info-acts">${r.actions.map(a => `<span>${esc(a)}</span>`).join('')}</div>` : ''}` : ''}`;
   }
