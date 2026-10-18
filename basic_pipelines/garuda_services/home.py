@@ -8,6 +8,11 @@ back under the same names.
 import datetime
 import time
 
+try:
+    from ..garuda_auto import sun as _sun
+except ImportError:      # loaded as a top-level package (Garuda_web run as a script)
+    from basic_pipelines.garuda_auto import sun as _sun
+
 core = None
 
 
@@ -133,6 +138,9 @@ def _shortcut_facts():
     facts["camera"] = "live" if (time.time() - core.STATE.camera.frame_ts) < 5.0 else "down"
     facts["internet"] = "online" if core.STATE.system.net_online else "offline"
     facts["recording"] = "on" if core.STATE.camera.clip_writer is not None else "off"
+    loc = core.STATE.config.location or {}
+    if _sun.valid_location(loc.get("lat"), loc.get("lon")):
+        facts.update(_sun.facts(loc["lat"], loc["lon"]))
     for phone in core.STATE.config.known_devices:
         slug = "".join(c if c.isalnum() else "_" for c in phone.get("name", "").lower()).strip("_")
         if slug:

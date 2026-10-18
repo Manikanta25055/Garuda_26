@@ -18,6 +18,9 @@ Triggers
     manual                      run from a button or by asking
     time   at HH:MM [days]      on the clock; days are 0 (Monday) to 6
     every  minutes N            on an interval
+    sun    sunrise|sunset [offset_minutes N] [days]
+                                at sunrise or sunset (N minutes before or after);
+                                needs the house's location (Settings)
     when   <condition> [for_minutes N]
                                 the moment the condition becomes true (and has
                                 stayed true for N minutes); not again until it
@@ -50,7 +53,7 @@ import secrets
 import threading
 import time
 
-from . import capabilities, jsonfile
+from . import capabilities, jsonfile, sun
 
 log = logging.getLogger(__name__)
 
@@ -219,6 +222,22 @@ def validate(program, *, role, fields, shortcut_ids=(), self_id=None):
         if isinstance(minutes, bool) or not isinstance(minutes, int) or not 1 <= minutes <= 1440:
             raise Invalid("an every trigger needs minutes: 1 to 1440")
         trigger = {"type": "every", "minutes": minutes}
+    elif kind == "sun":
+        event = trigger.get("event")
+        if event not in ("sunrise", "sunset"):
+            raise Invalid("a sun trigger needs event: sunrise or sunset")
+        if event not in fields:
+            raise Invalid("sunrise and sunset need the house's location: an admin sets it on the "
+                          "Settings page")
+        offset = trigger.get("offset_minutes", 0)
+        if isinstance(offset, bool) or not isinstance(offset, int) or not -240 <= offset <= 240:
+            raise Invalid("offset_minutes is -240 to 240 (before is negative)")
+        days = trigger.get("days", [0, 1, 2, 3, 4, 5, 6])
+        if not (isinstance(days, list) and days and all(
+                isinstance(d, int) and not isinstance(d, bool) and 0 <= d <= 6 for d in days)):
+            raise Invalid("days are numbers 0 (Monday) to 6 (Sunday)")
+        trigger = {"type": "sun", "event": event, "offset_minutes": offset,
+                   "days": sorted(set(days))}
     elif kind == "when":
         _check_condition(trigger.get("condition"), fields)
         held = trigger.get("for_minutes", 0)
@@ -226,7 +245,7 @@ def validate(program, *, role, fields, shortcut_ids=(), self_id=None):
             raise Invalid("for_minutes is 0 to 720")
         trigger = {"type": "when", "condition": trigger["condition"], "for_minutes": held}
     else:
-        raise Invalid("trigger type is one of manual, time, every, when")
+        raise Invalid("trigger type is one of manual, time, every, sun, when")
     if trigger["type"] != "manual" and role != "admin":
         raise Invalid("only an admin can make a shortcut that runs by itself; a manual one is "
                       "allowed")
@@ -304,6 +323,14 @@ def _say_trigger(trigger):
         return f"At {trigger['at']} {which}"
     if kind == "every":
         return f"Every {trigger['minutes']} min"
+    if kind == "sun":
+        off = trigger.get("offset_minutes", 0)
+        days = trigger.get("days", list(range(7)))
+        which = ("" if len(days) == 7 else " on weekdays" if days == [0, 1, 2, 3, 4]
+                 else " at weekends" if days == [5, 6] else " on " + ", ".join(_DAYS[d] for d in days))
+        when = (f"{abs(off)} min {'before' if off < 0 else 'after'} {trigger['event']}" if off
+                else trigger["event"])
+        return f"At {when}{which}"
     held = trigger.get("for_minutes")
     return f"When {_say_condition(trigger['condition'])}" + (f" for {held:g} min" if held else "")
 
@@ -578,6 +605,12 @@ class ShortcutEngine:
                 due = (new_minute and facts["time"] == trigger["at"]
                        and facts["weekday"] in trigger["days"]
                        # Restarted inside its minute, having already run in it.
+                       and not self._ran_this_minute(shortcut, now))
+            elif trigger["type"] == "sun":
+                at = facts.get(trigger["event"])
+                due = (new_minute and isinstance(at, str)
+                       and facts["time"] == sun.shift(at, trigger.get("offset_minutes", 0))
+                       and facts["weekday"] in trigger.get("days", range(7))
                        and not self._ran_this_minute(shortcut, now))
             elif trigger["type"] == "every":
                 last = self._last_auto.get(sid)

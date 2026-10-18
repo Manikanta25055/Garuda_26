@@ -11,6 +11,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 
+try:
+    from ..garuda_auto import sun as sun
+except ImportError:      # loaded as a top-level package (Garuda_web run as a script)
+    from basic_pipelines.garuda_auto import sun as sun
+
 
 class ConfigUpdateRequest(BaseModel):
     detection_threshold: Optional[float] = None
@@ -26,6 +31,10 @@ class ConfigUpdateRequest(BaseModel):
     night_presence_start: Optional[str] = None
     night_presence_end: Optional[str] = None
     night_presence_enabled: Optional[bool] = None
+    # Both together, or both null to forget the location.
+    location_lat: Optional[float] = None
+    location_lon: Optional[float] = None
+    location_clear: Optional[bool] = None
 
 class CustomCommandRequest(BaseModel):
     phrase: str
@@ -52,6 +61,9 @@ def build_config_router(core):
             "watch_labels": core.STATE.config.watch_labels,
             "mode_schedule": core.STATE.modes.schedule,
             "night_presence_window": core.STATE.config.night_presence_window,
+            "location": core.STATE.config.location,
+            "sun": (sun.times(core.STATE.config.location["lat"], core.STATE.config.location["lon"])
+                    if core.STATE.config.location else {}),
         }
 
     @router.post("/api/config")
@@ -129,6 +141,14 @@ def build_config_router(core):
                         core.STATE.config.night_presence_window["end"] = data.night_presence_end
                 if data.night_presence_enabled is not None:
                     core.STATE.config.night_presence_window["enabled"] = data.night_presence_enabled
+        if data.location_clear:
+            core.STATE.config.location = {}
+        elif data.location_lat is not None or data.location_lon is not None:
+            if not sun.valid_location(data.location_lat, data.location_lon):
+                raise HTTPException(400, "Location needs a latitude (-90 to 90) and a longitude "
+                                         "(-180 to 180).")
+            core.STATE.config.location = {"lat": round(data.location_lat, 4),
+                                          "lon": round(data.location_lon, 4)}
         await core._async_save_config()
         core.log_system_update("Config updated.")
         return {"ok": True}

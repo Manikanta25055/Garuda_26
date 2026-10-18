@@ -10,6 +10,11 @@ import datetime
 import json
 import os
 
+try:
+    from ..garuda_auto import sun as _sun
+except ImportError:      # loaded as a top-level package (Garuda_web run as a script)
+    from basic_pipelines.garuda_auto import sun as _sun
+
 core = None
 
 
@@ -81,6 +86,9 @@ def load_config():
             elif "danger_label" in cfg:
                 core.STATE.config.danger_labels = [cfg["danger_label"]]
             core.STATE.config.night_presence_window = cfg.get("night_presence_window", core.STATE.config.night_presence_window)
+            loc = cfg.get("location") or {}
+            if isinstance(loc, dict) and _sun.valid_location(loc.get("lat"), loc.get("lon")):
+                core.STATE.config.location = {"lat": loc["lat"], "lon": loc["lon"]}
             # Restore persisted mode states
             modes = cfg.get("modes", {})
             core.STATE.modes.dnd       = bool(modes.get("dnd",       core.STATE.modes.dnd))
@@ -227,6 +235,7 @@ def save_config():
             "watch_labels": core.STATE.config.watch_labels,
             "danger_labels": core.STATE.config.danger_labels,
             "night_presence_window": core.STATE.config.night_presence_window,
+            "location": core.STATE.config.location,
             "modes": {
                 "dnd":       core.STATE.modes.dnd,
                 "email_off": core.STATE.modes.email_off,

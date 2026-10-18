@@ -2138,9 +2138,23 @@ const G = (() => {
       const nps = $('np-start'), npe = $('np-end');
       if (nps) nps.value = npw.start || '01:30';
       if (npe) npe.value = npw.end   || '05:00';
+      const loc = cfg.location || {};
+      if ($('loc-lat')) $('loc-lat').value = loc.lat ?? '';
+      if ($('loc-lon')) $('loc-lon').value = loc.lon ?? '';
+      if ($('loc-sun')) $('loc-sun').textContent = cfg.sun && cfg.sun.sunrise
+        ? `Today: sunrise ${cfg.sun.sunrise}, sunset ${cfg.sun.sunset}` : '';
     } catch(e) {}
     loadDevices();
     loadMasterKeys();
+  }
+
+  function useHereForLocation() {
+    if (!navigator.geolocation) { showToast('This browser cannot share its location.', 'error'); return; }
+    navigator.geolocation.getCurrentPosition(pos => {
+      $('loc-lat').value = pos.coords.latitude.toFixed(4);
+      $('loc-lon').value = pos.coords.longitude.toFixed(4);
+      showToast('Location filled in. Save to keep it.', 'success');
+    }, () => showToast('Location was not shared.', 'error'), { timeout: 10000 });
   }
 
   function toggleNightPresence() {
@@ -2192,6 +2206,17 @@ const G = (() => {
       };
       const sched = _buildSchedule();
       if (Object.keys(sched).length > 0) payload.mode_schedule = sched;
+      const latRaw = (($('loc-lat') || {}).value || '').trim();
+      const lonRaw = (($('loc-lon') || {}).value || '').trim();
+      if (latRaw && lonRaw) {
+        payload.location_lat = parseFloat(latRaw);
+        payload.location_lon = parseFloat(lonRaw);
+      } else if (!latRaw && !lonRaw && $('loc-lat')) {
+        payload.location_clear = true;
+      } else {
+        showToast('Fill in both latitude and longitude, or neither.', 'error');
+        return;
+      }
       await api('POST', '/api/config', payload);
       showToast('Settings saved.', 'success');
     } catch(e) { showToast(e.detail || 'Failed to save settings.', 'error'); }
@@ -2901,7 +2926,7 @@ const G = (() => {
     toggleTheme, switchCamTab,
     toggleCamera, takeSnapshot, toggleClip, openDocs,
     loadEmailCfg, saveEmail, testEmail,
-    loadSysCfg, togglePrivacy, toggleNightPresence, saveSettings,
+    loadSysCfg, togglePrivacy, toggleNightPresence, useHereForLocation, saveSettings,
     filterLogs, exportLogs, downloadFullLog, loadOlderLogs, onLogDate: fetchAndRenderLogs,
     loadOlderActivity, stepActivityDay, toggleActivityKind,
     loadDevices, addDevice, deleteDevice, scanNetwork, _regFromScan, refreshPresence,

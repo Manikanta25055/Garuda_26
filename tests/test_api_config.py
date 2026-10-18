@@ -114,3 +114,23 @@ def test_update_secret_backed_config_fields(app_client, admin_headers):
         assert 'groq_configured' not in cfg
     finally:
         gw.STATE.config.email_sender_pass = saved_pass
+
+def test_house_location_is_kept_checked_and_feeds_sunrise_facts(app_client, admin_headers):
+    """The location for sunrise/sunset shortcuts: set, refused when out of range, cleared."""
+    before = dict(gw.STATE.config.location)
+    try:
+        r = app_client.post('/api/config', json={'location_lat': 17.38501, 'location_lon': 78.48667},
+                            headers=admin_headers)
+        assert r.status_code == 200
+        cfg = app_client.get('/api/config', headers=admin_headers).json()
+        assert cfg['location'] == {'lat': 17.385, 'lon': 78.4867}
+        assert set(cfg['sun']) == {'sunrise', 'sunset'}
+        assert {'sunrise', 'sunset', 'sun'} <= set(gw.SHORTCUTS.facts())
+        bad = app_client.post('/api/config', json={'location_lat': 95, 'location_lon': 0},
+                              headers=admin_headers)
+        assert bad.status_code == 400
+        app_client.post('/api/config', json={'location_clear': True}, headers=admin_headers)
+        assert app_client.get('/api/config', headers=admin_headers).json()['location'] == {}
+        assert 'sunrise' not in gw.SHORTCUTS.facts()
+    finally:
+        gw.STATE.config.location = before

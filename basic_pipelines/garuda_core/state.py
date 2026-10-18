@@ -64,6 +64,8 @@ class Config:
     # Yellow alarm when a person is seen in the dead hours.
     night_presence_window: dict = field(default_factory=lambda: {"start": "01:30", "end": "05:00", "enabled": True})
     custom_voice_commands: dict = field(default_factory=dict)
+    # Where the house is, for sunrise and sunset ({"lat", "lon"}; empty until set).
+    location: dict = field(default_factory=dict)
 
 
 @dataclass

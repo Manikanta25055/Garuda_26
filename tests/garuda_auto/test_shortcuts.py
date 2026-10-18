@@ -447,3 +447,36 @@ def test_cancelling_a_waiting_run_forgets_its_place(house):
     house.run(sid)
     assert house.engine.store.get(sid)["runs"][0]["outcome"] == "cancelled"
     assert house.engine.store.waits() == {}
+
+
+# ── sunrise and sunset ────────────────────────────────────────────────────────
+
+def test_a_sun_trigger_needs_the_location_and_says_itself_in_words():
+    trig = {"type": "sun", "event": "sunset", "offset_minutes": -30}
+    with pytest.raises(sc.Invalid, match="location"):
+        check(program(trigger=trig))
+    clean = sc.validate(program(trigger=trig), role="admin", fields=FIELDS | {"sunrise", "sunset"})
+    assert clean["trigger"]["days"] == list(range(7))
+    assert sc.describe(clean)["when"] == "At 30 min before sunset"
+    with pytest.raises(sc.Invalid, match="offset"):
+        sc.validate(program(trigger={**trig, "offset_minutes": 600}), role="admin",
+                    fields=FIELDS | {"sunset"})
+
+
+def test_a_sun_trigger_fires_once_at_its_shifted_minute(house):
+    house.facts.update(sunrise="06:09", sunset="22:30", sun="up")
+    house.add(program(trigger={"type": "sun", "event": "sunset", "offset_minutes": -30}))
+    for _ in range(90):          # 21:59:30 to 22:01
+        house.engine.tick()
+        house.now += 1
+    time.sleep(0.2)
+    assert len(house.done) == 1
+
+
+def test_sun_times_are_local_and_missing_in_a_polar_night():
+    from basic_pipelines.garuda_auto import sun
+    noon = time.mktime((2026, 6, 21, 12, 0, 0, 0, 0, -1))
+    t = sun.times(17.385, 78.4867, noon)
+    assert t["sunrise"] < "12:00" < t["sunset"]
+    assert sun.times(78.2, 15.6, time.mktime((2026, 12, 21, 12, 0, 0, 0, 0, -1))) == {}
+    assert sun.shift("23:50", 20) == "00:10" and sun.shift("00:10", -20) == "23:50"
