@@ -1,0 +1,34 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8408b190>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.3447618}
+{"kind": "login", "ok": false, "t": 1791109185.3450463}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f84091350>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.3543093}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f840937d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.3785412}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f84098d90>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.381127}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8409a2d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.3826458}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8409b8d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.3837428}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f840a50d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791109185.385256}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1791109199.857926}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1791109199.8580823}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1791109199.8581355}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "Garuda starting: commit a6b7cd4 (Drishti), API v1, log /home/manikanta/Projects/Garuda_26/basic_pipelines/system_logs/garuda.log", "t": 1791109199.8581765}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[CONFIG] warning: GARUDA_EVAL_TOKEN is set: the /api/eval endpoints are live and skip the rate limit for whoever holds the token.", "t": 1791109199.8582141}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[DRISHTI] rule loop started \u2014 3 rules, 2 devices", "t": 1791109199.8582537}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1791109199.85829}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "[PRESENCE] No match \u2014 0 active ARP entries", "t": 1791109199.8584304}
+{"kind": "sys_log", "ts": 1791109189.0, "msg": "Pipeline started.", "t": 1791109199.8584712}
+{"kind": "sys_log", "ts": 1791109219.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1791109219.865278}
+{"kind": "sys_log", "ts": 1791109281.0, "msg": "[PRESENCE] Match \u2014 6 active ARP entries", "t": 1791109289.8896894}
+{"kind": "sys_log", "ts": 1791109281.0, "msg": "[OWNER] Device (192.168.1.1) arrived \u2014 device detected on network.", "t": 1791109289.8899932}
+{"kind": "sys_log", "ts": 1791109398.0, "msg": "[NETWORK] Internet restored \u2014 3 queued events ready to sync", "t": 1791109405.2171378}
+{"kind": "sys_log", "ts": 1791109551.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1791109555.2808614}
+{"kind": "sys_log", "ts": 1791109559.0, "msg": "[PRESENCE] No match \u2014 0 active ARP entries", "t": 1791109565.283849}
+{"kind": "sys_log", "ts": 1791109623.0, "msg": "[PRESENCE] Match \u2014 6 active ARP entries", "t": 1791109625.3138044}
+{"kind": "sys_log", "ts": 1791109641.0, "msg": "[NETWORK] Internet restored \u2014 3 queued events ready to sync", "t": 1791109645.3202496}
+{"kind": "eval_inject", "label": "Knife", "ok": true, "rtt_ms": 16.0, "resp": {"ok": true, "t_request": 1791112870.702247, "t_alert": 1791112870.7056754, "latency_ms": 3.43, "label": "Knife", "confidence": 0.9}, "t": 1791112870.7079961}
+{"kind": "sys_log", "ts": 1791112870.0, "msg": "[EVAL_INJECT] Knife conf=0.90", "t": 1791112875.2709045}
+{"kind": "sys_log", "ts": 1791112870.0, "msg": "Alert triggered.", "t": 1791112875.2712402}
+{"kind": "sys_log", "ts": 1791113847.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1791113855.6853127}
+{"kind": "sys_log", "ts": 1791113851.0, "msg": "[TAMPER] Alert email sent.", "t": 1791113855.6855402}
+{"kind": "sys_log", "ts": 1791114614.0, "msg": "[TAMPER] Camera blindness detected \u2014 lens may be covered!", "t": 1791114615.5195296}
+{"kind": "eval_inject", "label": "scissors", "ok": true, "rtt_ms": 10.9, "resp": {"ok": true, "t_request": 1791116470.7112772, "t_alert": 1791116470.7169974, "latency_ms": 5.72, "label": "scissors", "confidence": 0.9}, "t": 1791116470.7191577}
+{"kind": "sys_log", "ts": 1791116470.0, "msg": "[EVAL_INJECT] scissors conf=0.90", "t": 1791116475.3696563}
+{"kind": "sys_log", "ts": 1791116470.0, "msg": "Alert triggered.", "t": 1791116475.3702786}

@@ -1,0 +1,31 @@
+{"kind": "http_error", "path": "/api/login", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/login (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f60b190>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.0532458}
+{"kind": "login", "ok": false, "t": 1791286146.0535207}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/heartbeat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f611090>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.0645971}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/state (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f612ed0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.0755336}
+{"kind": "http_error", "path": "/api/presence_refresh", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/presence_refresh (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f6189d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.07732}
+{"kind": "http_error", "path": "/api/snapshot", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/snapshot (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f61a2d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.0802834}
+{"kind": "http_error", "path": "/api/email/test", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/email/test (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f61b8d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.089024}
+{"kind": "http_error", "path": "/api/chat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Max retries exceeded with url: /api/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f9f6250d0>: Failed to establish a new connection: [Errno 111] Connection refused'))", "t": 1791286146.097361}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[CAMERA] No USB camera found \u2192 using Pi camera (rpi/libcamera)", "t": 1791286160.5747836}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[CAMERA] Input resolved to: rpi", "t": 1791286160.5749984}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[MODEL] Auto-selected best_v5.hef + best_labels.json", "t": 1791286160.5750747}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "Garuda starting: commit a6b7cd4 (Drishti), API v1, log /home/manikanta/Projects/Garuda_26/basic_pipelines/system_logs/garuda.log", "t": 1791286160.5752041}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[CONFIG] warning: GARUDA_EVAL_TOKEN is set: the /api/eval endpoints are live and skip the rate limit for whoever holds the token.", "t": 1791286160.5754085}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[DRISHTI] rule loop started \u2014 3 rules, 2 devices", "t": 1791286160.5756297}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[TAMPER] Dead-man switch disabled (set DEADMAN_ENABLED=1 to enable).", "t": 1791286160.575818}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "[PRESENCE] No match \u2014 0 active ARP entries", "t": 1791286160.5763948}
+{"kind": "sys_log", "ts": 1791286150.0, "msg": "Pipeline started.", "t": 1791286160.5766542}
+{"kind": "sys_log", "ts": 1791286180.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1791286190.5847218}
+{"kind": "sys_log", "ts": 1791286242.0, "msg": "[PRESENCE] Match \u2014 5 active ARP entries", "t": 1791286250.6058617}
+{"kind": "sys_log", "ts": 1791286242.0, "msg": "[OWNER] Device (192.168.1.1) arrived \u2014 device detected on network.", "t": 1791286250.6060238}
+{"kind": "sys_log", "ts": 1791286375.0, "msg": "[NETWORK] Internet restored \u2014 103 queued events ready to sync", "t": 1791286382.9492357}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Read timed out. (read timeout=8)", "t": 1791286556.5932882}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Read timed out. (read timeout=8)", "t": 1791286556.6002588}
+{"kind": "sys_log", "ts": 1791286565.0, "msg": "[NETWORK] Internet connection lost \u2014 events will be queued locally", "t": 1791286570.022856}
+{"kind": "sys_log", "ts": 1791286568.0, "msg": "[PRESENCE] No match \u2014 0 active ARP entries", "t": 1791286570.023065}
+{"kind": "http_error", "path": "/api/heartbeat", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Read timed out. (read timeout=8)", "t": 1791286604.6128953}
+{"kind": "http_error", "path": "/api/state", "err": "HTTPConnectionPool(host='127.0.0.1', port=8080): Read timed out. (read timeout=8)", "t": 1791286604.622206}
+{"kind": "sys_log", "ts": 1791286647.0, "msg": "[OWNER] Device (192.168.1.1) away \u2014 device not seen for 90s.", "t": 1791286656.0506537}
+{"kind": "sys_log", "ts": 1791286871.0, "msg": "[PRESENCE] Match \u2014 4 active ARP entries", "t": 1791286876.1402044}
+{"kind": "sys_log", "ts": 1791286871.0, "msg": "[OWNER] Device (192.168.1.1) arrived \u2014 device detected on network.", "t": 1791286876.140419}
+{"kind": "sys_log", "ts": 1791286875.0, "msg": "[NETWORK] Internet restored \u2014 105 queued events ready to sync", "t": 1791286886.1449723}
