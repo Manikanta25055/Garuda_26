@@ -186,19 +186,39 @@ def app_callback(pad, info, user_data):
         _is_rising_edge = not core.STATE.alerts.danger_active
         if _is_rising_edge:
             core.STATE.alerts.danger_active = True
+        # The frame and box of the detection, for the second look before the
+        # email (garuda_auto/vision_check.py). Copied only when it is needed.
+        _box = next(((b.xmin(), b.ymin(), b.xmax(), b.ymax()) for d in detections
+                     if d.get_label().lower() in _danger_set and d.get_confidence() >= threshold
+                     for b in [d.get_bbox()]), None)
+        _held_since = core.STATE.alerts.email_held_at
+        _look_again = bool(_held_since) and time.time() - _held_since >= core._svc_alerts.RECHECK_S
+        _frame_copy = frame.copy() if frame is not None and (_is_rising_edge or _look_again) else None
+
         # Batch all danger work into ONE daemon thread per frame (not 4-5 separate ones)
-        def _danger_work(lbl=_captured_label, conf=_captured_conf, rising=_is_rising_edge):
+        def _danger_work(lbl=_captured_label, conf=_captured_conf, rising=_is_rising_edge,
+                         seen=_frame_copy, box=_box):
             core.trigger_software_alert()
             if rising:
-                core.send_email_alert()
+                # The alarm on the screen is up already; the email waits for
+                # the second look (a few seconds at most, and never lost to it).
+                look = core.email_after_second_look(seen, box, lbl)
                 _danger_key = "__danger__"
                 _now = time.time()
                 if _now - core.STATE.camera.watch_last_logged.get(_danger_key, 0) >= 60:
                     core.STATE.camera.watch_last_logged[_danger_key] = _now
                     core.log_scissors_detection(lbl)
-                    core._append_detection_perm("DANGER", lbl, conf, "alert triggered")
+                    core._append_detection_perm("DANGER", lbl, conf,
+                                                "alert triggered; " + core._vision_say(look or {}))
         with core.STATE.alerts.lock:
             _already_alerting = core.STATE.alerts.active
+        if _look_again:
+            # The email was held as harmless, and the detector has kept seeing
+            # it: look again, and send it if the second look now disagrees.
+            core.STATE.alerts.email_held_at = time.time()
+            threading.Thread(target=core.email_after_second_look,
+                             args=(_frame_copy, _box, _captured_label), kwargs={"again": True},
+                             daemon=True).start()
         if _already_alerting and not _is_rising_edge:
             # The alert is up: keeping it up is two lock grabs, done here. A
             # new thread for each of the 60 frames a second a knife stays in
@@ -210,6 +230,7 @@ def app_callback(pad, info, user_data):
         # Only reset when NO danger labels are seen at all this frame.
         # Avoids false reset during the 2-frame ramp-up period.
         core.STATE.alerts.danger_active = False
+        core.STATE.alerts.email_held_at = 0.0
 
     # ── Drishti: one descriptor per observation ──────────────────────────────
     # observe() is pure arithmetic. Every piece of I/O a rule causes happens on

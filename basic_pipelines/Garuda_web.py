@@ -224,7 +224,8 @@ try:
         _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
     from .garuda_services import alerts as _svc_alerts
     from .garuda_services.alerts import (  # noqa: F401
-        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
+        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip,
+        second_look, email_after_second_look)
     from .garuda_services import persistence as _svc_persistence
     from .garuda_services.persistence import (  # noqa: F401
         load_users, save_users, load_config, _load_alert_history, _record_alert_activity, _remember_user_activity, _load_presence_log, _append_presence_log, load_master_keys, save_master_keys, _async_save_config, save_config)
@@ -299,7 +300,8 @@ except ImportError:
         _check_connectivity, _connectivity_monitor, _deadman_monitor, _schedule_monitor)
     from basic_pipelines.garuda_services import alerts as _svc_alerts
     from basic_pipelines.garuda_services.alerts import (  # noqa: F401
-        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip)
+        trigger_software_alert, send_email_alert, log_scissors_detection, _send_tamper_email, exfiltrate_clip,
+        second_look, email_after_second_look)
     from basic_pipelines.garuda_services import persistence as _svc_persistence
     from basic_pipelines.garuda_services.persistence import (  # noqa: F401
         load_users, save_users, load_config, _load_alert_history, _record_alert_activity, _remember_user_activity, _load_presence_log, _append_presence_log, load_master_keys, save_master_keys, _async_save_config, save_config)
@@ -808,6 +810,7 @@ try:
     from .garuda_auto.llm import NimChat, NimUnavailable, parse_models
     from .garuda_auto.home import HomeServices
     from .garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from .garuda_auto.vision_check import VisionCheck, say as _vision_say
     from .garuda_auto.router import RouterBackend
     from .garuda_auto.agent import HomeAgent
     from .garuda_auto.site_calls import SiteCaller
@@ -822,6 +825,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.llm import NimChat, NimUnavailable, parse_models
     from basic_pipelines.garuda_auto.home import HomeServices
     from basic_pipelines.garuda_auto.decision import DecisionEngine, LocalBackend, JevBackend
+    from basic_pipelines.garuda_auto.vision_check import VisionCheck, say as _vision_say
     from basic_pipelines.garuda_auto.router import RouterBackend
     from basic_pipelines.garuda_auto.agent import HomeAgent
     from basic_pipelines.garuda_auto.site_calls import SiteCaller
@@ -898,6 +902,11 @@ AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
 AGENT.confirmations = sys.modules[HomeAgent.__module__].Confirmations(
     path=os.path.join(DRISHTI_DATA_DIR, "confirmations.json"))
 AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
+# A weapon detection's frame, looked at again by Jev before the email goes out
+# (garuda_auto/vision_check.py). Only that frame leaves the Pi.
+VISION = VisionCheck(DECISION.jev, model=os.environ.get("JEV_VISION_MODEL", "jev-preview"),
+                     describe=sys.modules[VisionCheck.__module__].nim_describer(
+                         os.environ.get("NIM_API_KEY", "")))
 # Jev's second look at what the distiller wants to remember (narada_brain/distiller.py).
 if DECISION.jev is not None and DECISION.jev.configured:
     BRAIN.judge = DECISION.jev.lasting

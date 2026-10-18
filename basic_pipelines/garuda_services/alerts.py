@@ -53,7 +53,37 @@ def trigger_software_alert():
             pass
 
 
-def send_email_alert():
+RECHECK_S = 20      # a held email is looked at again if the detector still sees it after this
+
+
+def second_look(frame, bbox, label):
+    """Jev's reading of a weapon detection's frame; never raises, never blocks past its timeout."""
+    vision = getattr(core, "VISION", None)
+    if vision is None:
+        return {"verdict": "unchecked", "why": "not configured"}
+    try:
+        result = vision.check(frame, bbox, label)
+    except Exception as exc:                        # the check must never cost the alert
+        result = {"verdict": "unchecked", "why": type(exc).__name__}
+    core.STATE.alerts.second_look = {**result, "label": label, "at": time.time()}
+    return result
+
+
+def email_after_second_look(frame, bbox, label, again=False):
+    """On a weapon alert: the email, unless the second look says it was harmless."""
+    result = second_look(frame, bbox, label)
+    line = core._vision_say(result)
+    if result.get("verdict") == "harmless":
+        core.STATE.alerts.email_held_at = time.time()
+        core.log_system_update(f"[DANGER] {label}: email held. {line}")
+        return result
+    core.STATE.alerts.email_held_at = 0.0
+    send_email_alert(note=line + (" (an earlier look said harmless; the detector kept seeing it)"
+                                  if again else ""))
+    return result
+
+
+def send_email_alert(note=""):
     with core.STATE.modes.lock:
         email_off = core.STATE.modes.email_off
         idle = core.STATE.modes.idle
@@ -74,6 +104,8 @@ def send_email_alert():
     elif night:
         subject = "HIGH PRIORITY: " + subject
     body = f"Danger object detected at {now_str}.\nObject(s): {label_str}\nCheck your environment for safety.\n"
+    if note:
+        body += f"\n{note}\n"
     try:
         core._send_mail(subject, body)
         core.log_system_update("Email alert sent.")

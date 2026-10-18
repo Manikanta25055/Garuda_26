@@ -88,6 +88,10 @@ class Alerts:
     night_presence_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
     blind_frame_count: int = 0
     blind_alert_sent: bool = False
+    # The second look at a weapon detection (garuda_auto/vision_check.py): the
+    # last result, and since when its email is held because it looked harmless.
+    second_look: dict = field(default_factory=dict)
+    email_held_at: float = 0.0
 
 
 @dataclass

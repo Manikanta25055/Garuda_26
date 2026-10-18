@@ -1,0 +1,10 @@
+{
+ "about": "Second look at a weapon detection (basic_pipelines/garuda_auto/vision_check.py), measured from the Pi 5 on 2026-10-18. Jev jev-1.14.0 (jev-preview) with images; frame and close-up sent, four typed questions. The Hailo was down that day, so the frames are not from live YOLO hits: 15 frames from the three alert clips the service kept (all false alarms: laptop hinge, dark room, blurred close-up), and public Wikimedia Commons images labelled by eye (not kept in the repo).",
+ "thresholds": {"harmless_below": 0.15, "confirmed_at": 0.6},
+ "real_false_alarm_frames_15": {"confirmed": 0, "unclear_email_sent": 6, "harmless_email_held": 9, "p_weapon_range": [0.06, 0.18]},
+ "weapons_10": {"confirmed": 7, "unclear_email_sent": 3, "harmless_email_held": 0, "note": "the 3 unclear are old tintype photos and an illustration; real knives and scissors 0.90-0.99"},
+ "look_alikes_13": {"phones_cups_pens_remote_spoons": {"confirmed": 0, "unclear": 0, "harmless": 13}, "p_weapon_range": [0.02, 0.08]},
+ "latency_s": {"jev_alone": "0.45-1.2", "with_nvidia_scene_sentence": "1.4-1.8; capped at 4 s"},
+ "nvidia_scene_models": {"nemotron-3.5-super-vl-120b-a12b": "0.9-1.2 s, one sentence, describes only", "llama-3.2-11b-vision-instruct": "2.3-4.4 s, fallback", "cosmos-reason2-8b": "listed for the account but 404 (not callable)"},
+ "still_to_measure": "live YOLO hits once the Hailo is back (owner's reboot): how many real alerts per day get held"
+}
