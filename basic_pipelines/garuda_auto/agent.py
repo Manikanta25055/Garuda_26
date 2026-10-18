@@ -272,9 +272,10 @@ class HomeAgent:
             route_view = {k: {"value": v["value"], "confidence": v["confidence"]}
                           for k, v in route.items()}
             route_view["backend"] = next(iter(route.values()))["backend"] if route else "local"
-            if route.jev:
+            jev = getattr(route, "jev", None) or {}
+            if jev:
                 route_view["jev"] = {k: {"value": v.get("value"), "confidence": v.get("confidence")}
-                                     for k, v in route.jev.items() if k in route}
+                                     for k, v in jev.items() if k in route}
         fast = self._fast(text, route, user, role) if route is not None else None
         if fast is not None:
             result = fast
