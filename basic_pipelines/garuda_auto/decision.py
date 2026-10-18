@@ -20,8 +20,9 @@ the interface here is that shape, with three interchangeable backends:
                  access, so its wire format here follows the published
                  example.
 
-The engine asks the first of Jev, the router and the matcher that is there,
-and a backend that fails hands the sentence to the next.
+The router answers (the matcher when the router is missing or fails); Jev,
+when configured, answers the same questions in parallel as a second opinion
+(Route.jev), and agent.py acts at once only when the two agree.
 
 Egress: Jev receives the utterance and the device/scene names, never frames,
 readings or history -- the same boundary the rule compiler keeps.
@@ -166,30 +167,88 @@ class LocalBackend:
         return out
 
 
+# What each routing answer means, in words Jev reads (decision questions are
+# graded on these descriptions, not on the option names).
+INTENT_MEANING = {
+    "device_control": "Switch exactly one device on or off, now. A device meant but not named "
+                      "(\"it's too dark in here\") counts. Not when the person says not to touch it.",
+    "all_off": "Switch everything off now: the whole house, or everything in one room.",
+    "scene": "Run one of the saved scenes now.",
+    "timer": "Switch a device or run a scene later: at a clock time or after a delay.",
+    "state_query": "A question about how the house is right now (is something on, what is running).",
+    "automation_rule": "A standing rule: when, whenever or if something happens, do something.",
+    "mode_change": "Turn a security mode on or off: do not disturb, night, idle, emergency, "
+                   "privacy, email alerts.",
+    "explain": "Asks why something happened, or for the reason behind the house's behaviour.",
+    "build": "Asks to make something: a shortcut, routine, button, dashboard, page or a program "
+             "of several steps.",
+    "other": "Anything else: conversation, a general question, a request that says what NOT to do "
+             "or to leave something as it is, or more than one action in one sentence.",
+}
+
+
 class JevBackend:
-    """TypeSafe Jev over HTTP. Cloud-only; see the module docstring."""
+    """TypeSafe Jev over HTTP (docs.typesafe.ai/api). Cloud-only; see the module docstring.
+
+    Our questions are {"type": "choice", "options": [...], "criteria": "the
+    question"}; Jev's are {"type": "choice", "instructions": ..., "criteria":
+    {option: what it means}}. This class translates, and `extra` adds Jev's own
+    questions (noul, score) to the same call, so one round trip answers both.
+    """
     name = "jev"
 
-    def __init__(self, api_key="", base_url="https://api.typesafe.ai", timeout=3.0, post=None):
+    def __init__(self, api_key="", base_url="https://api.typesafe.ai", timeout=2.5, post=None,
+                 model="jev-latest"):
         self.api_key = api_key or ""
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.model = model or "jev-latest"
         self._post = post or requests.post
 
     @property
     def configured(self):
         return bool(self.api_key)
 
-    def decide(self, state, questions):
-        body = {"state": state if isinstance(state, str) else _state_text(state),
-                "questions": questions}
+    @staticmethod
+    def _meaning(name, option, state):
+        if name == "intent":
+            return INTENT_MEANING.get(option)
+        if option == "none":
+            return {"device": "No device, or more than one.", "scene": "No saved scene.",
+                    "action": "Neither on nor off."}.get(name)
+        if name == "device":
+            d = next((d for d in state.get("devices", ()) if d.get("id") == option), None)
+            if d:
+                return d.get("name", option) + (f", in the {d['room']}" if d.get("room") else "")
+        if name == "scene":
+            sc = next((x for x in state.get("scenes", ()) if x.get("id") == option), None)
+            if sc:
+                return f"The scene called {sc.get('name', option)}"
+        return None
+
+    def _question(self, name, q, state):
+        if q.get("type") != "choice":
+            return q                                    # already in Jev's shape
+        return {"type": "choice",
+                "instructions": f"{q.get('criteria', '')} The person said `utterance`.".strip(),
+                "criteria": {o: self._meaning(name, o, state) for o in q.get("options", [])}}
+
+    def ask(self, state, questions):
+        """One call: Jev's raw answers keyed like `questions` (already in Jev's shape)."""
         resp = self._post(f"{self.base_url}/v1/systemone",
                           headers={"Authorization": f"Bearer {self.api_key}",
                                    "Content-Type": "application/json"},
-                          json=body, timeout=self.timeout)
+                          json={"model": self.model, "state": state, "questions": questions},
+                          timeout=self.timeout)
         resp.raise_for_status()
         payload = resp.json()
-        answers = payload.get("answers", payload)
+        return payload.get("answers", payload)
+
+    def decide(self, state, questions, extra=None):
+        st = state if isinstance(state, dict) else {"utterance": str(state)}
+        asked = {n: self._question(n, q, st) for n, q in questions.items()}
+        asked.update(extra or {})
+        answers = self.ask({"utterance": st.get("utterance", "")}, asked)
         out = {}
         for name, q in questions.items():
             raw = answers.get(name)
@@ -203,8 +262,10 @@ class JevBackend:
                 probs = dict(zip(q.get("options", []), probs))
             out[name] = Answer(value=value, probs=probs,
                                confidence=float(raw.get("confidence", 0.0)), backend=self.name)
+        for name in extra or {}:
+            if isinstance(answers.get(name), dict):
+                out[name] = answers[name]
         return out
-
 
 def _state_text(state):
     parts = [f"Utterance: {state.get('utterance', '')}"]
@@ -216,7 +277,21 @@ def _state_text(state):
     return "\n".join(parts)
 
 
+class Route(dict):
+    """The routing answers, field -> Answer, from the router or the matcher.
+    `jev` holds Jev's answers to the same questions (and to any extra ones)
+    when Jev answered in time; {} otherwise."""
+    jev = {}
+
+
 class DecisionEngine:
+    """The router (or the matcher) answers; Jev, when configured, answers the
+    same questions at the same moment and its answers ride along as a second
+    opinion (Route.jev). Code decides what agreement means (agent.py's fast
+    lane): Jev routes worse than the router on its own (2026-10-18: 369 vs
+    636 of 717 written sentences) but when both are sure and agree, they were
+    wrong 0 times in 767."""
+
     def __init__(self, local, jev=None, threshold=0.85, clock=time.monotonic, router=None):
         self.local = local
         self.jev = jev
@@ -224,23 +299,37 @@ class DecisionEngine:
         self.threshold = threshold
         self._clock = clock
         self.stats = {"local": 0, "router": 0, "jev": 0, "jev_errors": 0, "router_errors": 0,
-                      "last_backend": "", "last_latency_ms": None, "last_error": ""}
+                      "last_backend": "", "last_latency_ms": None, "last_error": "",
+                      "jev_latency_ms": None}
+        self._pool = None
 
     def decide(self, state, questions):
+        """The router's answers, or the matcher's when the router is missing or fails."""
         started = self._clock()
-        for name, backend in (("jev", self.jev), ("router", self.router)):
-            if backend is None or not backend.configured:
-                continue
+        if self.router is not None and self.router.configured:
             try:
-                out = backend.decide(state, questions)
-                self._note(name, started)
+                out = self.router.decide(state, questions)
+                self._note("router", started)
                 return out
             except Exception as exc:
-                self.stats[f"{name}_errors"] += 1
+                self.stats["router_errors"] += 1
                 self.stats["last_error"] = f"{type(exc).__name__}: {exc}"[:160]
-                log.warning("%s failed, trying the next backend: %s", name, exc)
+                log.warning("router failed, trying the matcher: %s", exc)
         out = self.local.decide(state, questions)
         self._note("local", started)
+        return out
+
+    def _ask_jev(self, state, questions, extra):
+        started = self._clock()
+        try:
+            out = self.jev.decide(state, questions, extra=extra)
+        except Exception as exc:
+            self.stats["jev_errors"] += 1
+            self.stats["last_error"] = f"jev: {type(exc).__name__}: {exc}"[:160]
+            log.warning("jev failed: %s", exc)
+            return {}
+        self.stats["jev"] += 1
+        self.stats["jev_latency_ms"] = round((self._clock() - started) * 1000, 1)
         return out
 
     def _note(self, backend, started):
@@ -248,13 +337,28 @@ class DecisionEngine:
         self.stats["last_backend"] = backend
         self.stats["last_latency_ms"] = round((self._clock() - started) * 1000, 1)
 
-    def route(self, utterance, devices, scenes):
+    def route(self, utterance, devices, scenes, extra=None):
+        """`extra`: more questions for Jev, in its own shape, asked in the same call."""
         state = {"utterance": utterance, "devices": devices, "scenes": scenes}
-        return self.decide(state, routing_questions(devices, scenes))
+        questions = routing_questions(devices, scenes)
+        pending = None
+        if self.jev is not None and self.jev.configured:
+            if self._pool is None:
+                import concurrent.futures
+                self._pool = concurrent.futures.ThreadPoolExecutor(2, thread_name_prefix="jev")
+            pending = self._pool.submit(self._ask_jev, state, questions, extra)
+        route = Route(self.decide(state, questions))
+        if pending is not None:
+            try:
+                route.jev = pending.result(timeout=getattr(self.jev, "timeout", 2.5) + 0.5)
+            except Exception:
+                route.jev = {}
+        return route
 
     def status(self):
         return {"threshold": self.threshold,
                 "jev_configured": bool(self.jev and self.jev.configured),
+                "jev_model": getattr(self.jev, "model", ""),
                 "router_configured": bool(self.router and self.router.configured),
                 "router_error": getattr(self.router, "error", ""),
                 **self.stats}

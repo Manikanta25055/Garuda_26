@@ -107,40 +107,53 @@ def test_a_long_sentence_is_not_confident_enough_to_act_on(house):
     assert route["intent"].confidence < 0.85
 
 
-def test_jev_answers_when_configured(house):
+def jev_post(sent=None, **answers):
+    """A Jev that answers each question as told: name=(choice, confidence)."""
+    def post(url, headers=None, json=None, timeout=None):
+        if sent is not None:
+            sent.update(url=url, body=json)
+        return Resp(200, {"model": "jev-1.13.0", "answers": {
+            name: {"type": "choice", "choice": value, "confidence": conf}
+            for name, (value, conf) in answers.items()}})
+    return post
+
+
+AGREE_FAN_OFF = dict(intent=("device_control", 0.97), device=("fan", 0.99), action=("off", 0.95),
+                     scene=("none", 0.9))
+
+
+def test_jev_answers_alongside_the_matcher_in_its_own_question_shape(house):
     ctx, home = house
     sent = {}
-
-    def post(url, headers=None, json=None, timeout=None):
-        sent.update(url=url, body=json)
-        return Resp(200, {"answers": {
-            "intent": {"choice": "device_control", "probabilities": {"device_control": 0.97},
-                       "confidence": 0.97},
-            "device": {"choice": "fan", "confidence": 0.99},
-            "action": {"choice": "off", "confidence": 0.99},
-            "scene": {"choice": "none", "confidence": 0.9}}})
-    jev = JevBackend("jk", "https://jev.test", post=post)
+    jev = JevBackend("jk", "https://jev.test", post=jev_post(sent, **AGREE_FAN_OFF), model="jev-preview")
     route = engine(ctx, home, jev).route("kill the breeze", ctx.registry.devices, [])
-    assert sent["url"] == "https://jev.test/v1/systemone"
-    assert "kill the breeze" in sent["body"]["state"]
-    assert route["device"].value == "fan" and route["intent"]["backend"] == "jev"
+    body = sent["body"]
+    assert sent["url"] == "https://jev.test/v1/systemone" and body["model"] == "jev-preview"
+    assert body["state"] == {"utterance": "kill the breeze"}
+    device_q = body["questions"]["device"]
+    assert device_q["criteria"]["fan"] == "Fan, in the study" and "`utterance`" in device_q["instructions"]
+    assert "device_control" in body["questions"]["intent"]["criteria"]
+    # The matcher still answers the route; Jev's answers ride along beside it.
+    assert route["intent"]["backend"] == "local"
+    assert route.jev["device"].value == "fan" and route.jev["device"]["backend"] == "jev"
 
 
-def test_jev_failure_falls_back_to_local(house):
+def test_jev_failure_leaves_the_route_to_the_matcher(house):
     ctx, home = house
 
     def post(*a, **k):
         raise requests.ConnectionError("down")
     eng = engine(ctx, home, JevBackend("jk", post=post))
-    assert eng.route("lamp off", ctx.registry.devices, [])["intent"]["backend"] == "local"
+    route = eng.route("lamp off", ctx.registry.devices, [])
+    assert route["intent"]["backend"] == "local" and route.jev == {}
     assert eng.stats["jev_errors"] == 1
 
 
-def test_jev_answer_outside_the_options_is_rejected(house):
+def test_jev_answer_outside_the_options_is_dropped(house):
     ctx, home = house
-    post = lambda *a, **k: Resp(200, {"intent": {"choice": "launch_rockets", "confidence": 1}})
-    eng = engine(ctx, home, JevBackend("jk", post=post))
-    assert eng.route("lamp off", ctx.registry.devices, [])["intent"]["backend"] == "local"
+    post = lambda *a, **k: Resp(200, {"answers": {"intent": {"choice": "launch_rockets", "confidence": 1}}})  # noqa: E731
+    route = engine(ctx, home, JevBackend("jk", post=post)).route("lamp off", ctx.registry.devices, [])
+    assert route.jev == {} and route["intent"]["backend"] == "local"
 
 
 # ── NIM model fallback ───────────────────────────────────────────────────────
@@ -627,3 +640,56 @@ def test_a_lone_of_after_a_switching_verb_is_read_as_off():
     assert mend_off("turn offf fan") == "turn off fan"
     for left_alone in ("turn off the fan", "one of the lights", "a turn of phrase", "turn on tv"):
         assert mend_off(left_alone) == left_alone
+
+
+# ── the fast lane: the router and Jev agree, both sure ───────────────────────
+
+def fast_agent(ctx, home, chat, router=None, **jev_answers):
+    from basic_pipelines.garuda_auto.router import RouterBackend
+    eng = DecisionEngine(LocalBackend(lambda: ctx.registry.devices, lambda: home.scenes.scenes),
+                         JevBackend("jk", post=jev_post(**(jev_answers or AGREE_FAN_OFF))),
+                         router=RouterBackend(model=router or SureRouter(device="fan", action="off")))
+    return HomeAgent(ctx, home, chat, eng)
+
+
+def test_agreement_acts_at_once_without_the_model(house):
+    ctx, home = house
+    home.set("fan", "on")
+    chat = ScriptedChat([])                       # any model call would fail the test
+    out = fast_agent(ctx, home, chat).handle("kill the breeze", user="mani", role="admin")
+    assert out["lane"] == "fast" and out["actions"] == ["Fan off"] and out["reply"] == "Fan off."
+    assert chat.requests == [] and on_ids(home) == []
+    assert out["route"]["jev"]["device"]["value"] == "fan"
+
+
+@pytest.mark.parametrize("jev", [
+    dict(AGREE_FAN_OFF, device=("lamp", 0.99)),            # disagree on the device
+    dict(AGREE_FAN_OFF, action=("on", 0.99)),              # disagree on the action
+    dict(AGREE_FAN_OFF, action=("off", 0.5)),              # agree, but Jev is not sure
+    dict(AGREE_FAN_OFF, intent=("other", 0.9)),            # Jev hears something else
+])
+def test_without_agreement_the_model_decides(house, jev):
+    ctx, home = house
+    home.set("fan", "on")
+    chat = ScriptedChat([completion("Leaving it as it is.")])
+    out = fast_agent(ctx, home, chat, **jev).handle("kill the breeze", user="mani", role="admin")
+    assert out["lane"] == "agent" and len(chat.requests) == 1 and on_ids(home) == ["fan"]
+
+
+def test_the_fast_lane_keeps_the_offline_lanes_place_check(house):
+    ctx, home = house
+    chat = ScriptedChat([completion("There is no garage here.")])
+    a = fast_agent(ctx, home, chat, router=SureRouter(device="lamp", action="on"),
+                   intent=("device_control", 0.99), device=("lamp", 0.99), action=("on", 0.99),
+                   scene=("none", 0.9))
+    out = a.handle("turn on the garage light", user="mani", role="admin")
+    assert out["lane"] == "agent" and home.on_devices() == []
+
+
+def test_a_fast_turn_is_remembered_like_any_other(house):
+    ctx, home = house
+    home.set("fan", "on")
+    a = fast_agent(ctx, home, ScriptedChat([]))
+    a.handle("kill the breeze", user="mani", role="admin")
+    said = [m["content"] for m in a.brain.history("mani")]
+    assert "kill the breeze" in said and "Fan off." in said

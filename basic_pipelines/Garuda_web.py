@@ -862,8 +862,12 @@ HOME.on_change = lambda: push_urgent_ws()
 DECISION = DecisionEngine(
     LocalBackend(lambda: [d for d in DRISHTI_CTX.registry.devices if d.get("enabled", True)],
                  lambda: HOME.scenes.scenes),
+    # TypeSafe's Jev: a second opinion on every routing answer (the fast lane
+    # acts when it agrees with the router) and, on a weapon hit, a check of the
+    # frame (garuda_auto/vision_check.py).
     JevBackend(os.environ.get("JEV_API_KEY", ""),
-               os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai")),
+               os.environ.get("JEV_BASE_URL", "https://api.typesafe.ai"),
+               model=os.environ.get("JEV_MODEL", "jev-latest")),
     threshold=float(os.environ.get("DECISION_THRESHOLD", "0.85")),
     # The routing model trained for this house's kind of sentence (router.py).
     # Without its file or onnxruntime it is simply absent and the matcher answers.

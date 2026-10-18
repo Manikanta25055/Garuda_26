@@ -179,6 +179,12 @@ def fit_result(out, limit):
 # "trun of the fan": the models read a lone "of" after a switching verb as "on"
 # when the device is on (2026-10-17 test, every model). Only that spelling is
 # mended; "turn of phrase" has no device after it and "of" is rarely meant there.
+# The fast lane's floor for Jev's confidence on each field it acts on; the
+# router must also be at the engine's threshold. At (0.85, 0.7) the two acted
+# on 122 of 386 labelled commands and were wrong on none (2026-10-18, see
+# evaluation/narada_jev/).
+FAST_JEV = 0.7
+
 # Places a sentence may name (with the house's own rooms); see _offline_call.
 PLACE_WORDS = frozenset({
     "garage", "kitchen", "bedroom", "hall", "study", "bathroom", "washroom", "toilet",
@@ -266,7 +272,13 @@ class HomeAgent:
             route_view = {k: {"value": v["value"], "confidence": v["confidence"]}
                           for k, v in route.items()}
             route_view["backend"] = next(iter(route.values()))["backend"] if route else "local"
-        if self.chat is None or not self.chat.configured:
+            if route.jev:
+                route_view["jev"] = {k: {"value": v.get("value"), "confidence": v.get("confidence")}
+                                     for k, v in route.jev.items() if k in route}
+        fast = self._fast(text, route, user, role) if route is not None else None
+        if fast is not None:
+            result = fast
+        elif self.chat is None or not self.chat.configured:
             result = self._offline(text, route, user, role, "the NVIDIA NIM key is not configured")
         else:
             try:
@@ -308,7 +320,7 @@ class HomeAgent:
             # remembers saying: a follow-up ("why?", "how long?") refers to it.
             turn[-1] = {**turn[-1], "content": turn[-1]["content"]
                         + f"\n\n(A note shown beside this reply, from you: \"{shown}\")"}
-        if result["lane"] == "agent" and turn:
+        if result["lane"] in ("agent", "fast") and turn:
             self.brain.record(f"security:{user}" if scope == "security" else user, turn)
         return result
 
@@ -344,6 +356,31 @@ class HomeAgent:
         return {"reply": f"I can't act right now: the AI service is unavailable ({why}). "
                          "Nothing was changed.",
                 "lane": "unavailable", "actions": []}
+
+    def _fast(self, text, route, user, role):
+        """A simple command the router and Jev agree on, both sure: done now,
+        without waiting for NIM (owner's decision, 2026-10-18). None when it is
+        not that; the turn then goes to the model as before."""
+        jev = getattr(route, "jev", None) or {}
+        if not jev:
+            return None
+        call = self._offline_call(text, route)
+        if call is None:
+            return None
+        fields = {"set_device": ("intent", "device", "action"), "run_scene": ("intent", "scene"),
+                  "all_off": ("intent",)}.get(call[0])
+        if fields is None:
+            return None
+        for name in fields:
+            j = jev.get(name) or {}
+            if j.get("value") != route[name]["value"] or float(j.get("confidence") or 0) < FAST_JEV:
+                return None
+        out = self._run_tool(call[0], call[1], user, role)
+        if not out.get("_action"):
+            return None             # refused or not done: the model hears the request instead
+        reply = f"{out.get('result', 'Done')}."
+        return {"reply": reply, "lane": "fast", "actions": [out.get("result", "")],
+                "_turn": [{"role": "user", "content": text}, {"role": "assistant", "content": reply}]}
 
     def _offline(self, text, route, user, role, why):
         """NIM did not answer. Do the one simple thing the routing model is sure of, or nothing."""

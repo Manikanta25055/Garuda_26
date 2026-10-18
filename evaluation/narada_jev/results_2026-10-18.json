@@ -1,0 +1,12 @@
+{
+ "about": "Jev (TypeSafe System One) as a second opinion on Narada's routing, measured on the Pi 5 on 2026-10-18 with scripts/jev_eval.py. Sets: tests/eval/routing_cases.json (50, hand-written) and the odd (test) half of tests/eval/routing_written.json (717, NIM-written, known label noise on paraphrases).",
+ "jev_model": "jev-1.13.0 (jev-latest)",
+ "whole_decision_right": {"router": {"cases": "39/50", "written": "636/717"}, "jev": {"written": "369/717"}},
+ "router_sure_and_wrong_written": 8,
+ "jev_sure_and_wrong_written": 59,
+ "fast_lane_router_ge_0.85_jev_ge_0.7": {"cases": {"acted": 18, "actionable": 25, "wrong": 0}, "written": {"acted": 104, "actionable": 361, "wrong": 0}},
+ "fast_lane_router_ge_0.85_jev_ge_0.5": {"written": {"acted": 125, "wrong": 2}},
+ "jev_latency_ms_from_pi": "about 370-520 per call (4 choice questions, about 508 input tokens)",
+ "end_to_end_breadth_10_commands": {"right": "10/10", "fast_lane": "3/10 in 0.4-0.5 s", "nim_lane": "7/10 in 2.2-4.4 s", "negations": "all went to NIM"},
+ "reading": "Jev routes worse than the router trained for this, and is far more often 'other' on paraphrases. As an independent check it removes the router's confident mistakes: agreement with both sure was wrong 0 times in 767, so that is the fast lane's rule."
+}

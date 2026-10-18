@@ -107,7 +107,7 @@ def test_without_a_model_the_matcher_answers_and_nothing_is_counted_as_an_error(
     assert eng.status()["router_errors"] == 0 and eng.status()["router_configured"] is False
 
 
-def test_a_configured_jev_is_asked_first():
+def test_a_configured_jev_answers_beside_the_router_not_instead():
     def post(url, headers=None, json=None, timeout=None):
         class R:
             status_code = 200
@@ -122,7 +122,9 @@ def test_a_configured_jev_is_asked_first():
                                     "scene": {"choice": "none", "confidence": 0.8}}}
         return R()
     eng = engine(RouterBackend(model=Fake()), JevBackend("key", post=post))
-    assert eng.route("lamp on", DEVICES, SCENES)["intent"]["backend"] == "jev"
+    route = eng.route("lamp on", DEVICES, SCENES)
+    assert route["intent"]["backend"] == "router" and route.jev["intent"].value == "other"
+    assert eng.status()["jev"] == 1
 
 
 # ── the model that ships ─────────────────────────────────────────────────────

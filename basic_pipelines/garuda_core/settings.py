@@ -43,6 +43,7 @@ class Settings:
     email_recipients: tuple = ()
     # AI
     nim_key_set: bool = False
+    jev_key_set: bool = False
     nim_model: str = ""
     elevenlabs_key_set: bool = False
     elevenlabs_engine_set: bool = False
@@ -73,6 +74,7 @@ class Settings:
             email_password_set=bool(os.environ.get("EMAIL_SENDER_PASS", "").strip()),
             email_recipients=tuple(_list("EMAIL_RECIPIENTS")),
             nim_key_set=bool(os.environ.get("NIM_API_KEY", "").strip()),
+            jev_key_set=bool(os.environ.get("JEV_API_KEY", "").strip()),
             nim_model=os.environ.get("NIM_MODEL", "").strip(),
             elevenlabs_key_set=bool(os.environ.get("ELEVENLABS_API_KEY", "").strip()),
             elevenlabs_engine_set=bool(os.environ.get("ELEVENLABS_SPEECH_ENGINE_ID", "").strip()),
@@ -108,6 +110,9 @@ class Settings:
                                 "proxy reports HTTPS."))
         if not self.nim_key_set:
             out.append(("warning", "NIM_API_KEY is not set: Narada cannot act or answer."))
+        if not self.jev_key_set:
+            out.append(("info", "JEV_API_KEY is not set: no fast lane for simple commands and no "
+                                "second look at weapon detections."))
         if self.elevenlabs_key_set != self.elevenlabs_engine_set:
             out.append(("warning", "Narada voice is half configured: both ELEVENLABS_API_KEY and "
                                    "ELEVENLABS_SPEECH_ENGINE_ID are needed (scripts/setup_narada_voice.py)."))
