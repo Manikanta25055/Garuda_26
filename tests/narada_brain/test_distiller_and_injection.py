@@ -294,3 +294,38 @@ def test_a_spoken_reply_is_not_lengthened_by_the_note(house):
     home, agent = house(LAMP, HOSTILE)
     out = agent(ScriptedChat([completion("Hello!")])).handle("hi", user="mani", voice=True)
     assert out["reply"] == "Hello!" and out["injection"] is True
+
+
+# ── a second look: does the fact stay true? (Jev, when configured) ───────────
+
+def _two_facts_chat():
+    return FakeChat(json.dumps([{"text": "Mani leaves for college at 8:30 every weekday"},
+                                {"text": "Mani is reading on the sofa"},
+                                {"text": "Mani likes the lamp warm"}]))
+
+
+def _said():
+    return turn("Set a reminder idea for me, I leave for college at 8:30 every weekday. "
+                "I am reading on the sofa. I like the lamp warm.", "Noted.")
+
+
+def test_the_judge_drops_a_passing_remark_and_asks_about_an_unclear_one(tmp_path):
+    brain = Brain(str(tmp_path), _two_facts_chat(), background=False)
+    brain.judge = lambda facts: {f: (0.95 if "college" in f else 0.05 if "reading" in f else 0.4)
+                                 for f in facts}
+    brain.record("mani", _said())
+    written = brain.distill("mani")
+    kept = {f["text"]: f for f in written}
+    assert "Mani leaves for college at 8:30 every weekday." in kept      # the clause after the request
+    assert not any("reading" in t for t in kept)
+    held = [e for e in brain.events_since(0) if "lamp" in e.get("text", "")]
+    assert held and held[0]["status"] != "saved"
+
+
+def test_a_failing_judge_changes_nothing(tmp_path):
+    def judge(facts):
+        raise TimeoutError("jev down")
+    brain = Brain(str(tmp_path), _two_facts_chat(), background=False)
+    brain.judge = judge
+    brain.record("mani", _said())
+    assert len(brain.distill("mani")) == 3

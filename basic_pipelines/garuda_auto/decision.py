@@ -233,16 +233,39 @@ class JevBackend:
                 "instructions": f"{q.get('criteria', '')} The person said `utterance`.".strip(),
                 "criteria": {o: self._meaning(name, o, state) for o in q.get("options", [])}}
 
-    def ask(self, state, questions):
-        """One call: Jev's raw answers keyed like `questions` (already in Jev's shape)."""
-        resp = self._post(f"{self.base_url}/v1/systemone",
-                          headers={"Authorization": f"Bearer {self.api_key}",
-                                   "Content-Type": "application/json"},
-                          json={"model": self.model, "state": state, "questions": questions},
-                          timeout=self.timeout)
+    def ask(self, state, questions, *, assets=None, model=None, timeout=None):
+        """One call: Jev's raw answers keyed like `questions` (already in Jev's shape).
+        `assets` ({ref: {"type": "image", "format": "jpeg", "data_base64": ...}})
+        turns on images for the call (docs.typesafe.ai/images)."""
+        headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+        body = {"model": model or self.model, "state": state, "questions": questions}
+        if assets:
+            headers["TypeSafe-Danger-Zone-Images"] = "true"
+            body["assets"] = assets
+        resp = self._post(f"{self.base_url}/v1/systemone", headers=headers, json=body,
+                          timeout=timeout or self.timeout)
         resp.raise_for_status()
         payload = resp.json()
         return payload.get("answers", payload)
+
+    def lasting(self, facts):
+        """{fact: P(it stays true about the person or household after today)}, one call."""
+        if not facts:
+            return {}
+        questions = {f"f{i}": {
+            "type": "noul",
+            "instructions": f"Does `facts.f{i}` state something about a person or the household "
+                            "that stays true after today, so it is worth remembering for later "
+                            "conversations?",
+            "criteria": {"true": "A lasting fact: a routine, habit, preference, relationship, "
+                                 "allergy, schedule that repeats, or what something in the house is for.",
+                         "false": "Only about this moment or today: what they are doing now, a "
+                                  "one-off plan, a feeling right now, or a request."}}
+            for i, _ in enumerate(facts)}
+        answers = self.ask({"facts": {f"f{i}": fact for i, fact in enumerate(facts)}}, questions)
+        return {fact: float((answers.get(f"f{i}") or {}).get("noul"))
+                for i, fact in enumerate(facts)
+                if isinstance((answers.get(f"f{i}") or {}).get("noul"), (int, float))}
 
     def decide(self, state, questions, extra=None):
         st = state if isinstance(state, dict) else {"utterance": str(state)}

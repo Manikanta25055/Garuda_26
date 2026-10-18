@@ -136,9 +136,20 @@ def parse_candidates(raw):
     return out
 
 
-def distill(turns, *, speaker, chat, known, names=()):
+# With a judge (Jev's "does this stay true?", see brain.Brain.judge): below
+# DROP_BELOW a candidate is a passing remark and is not kept; below ASK_BELOW it
+# is put to the person instead of kept.
+DROP_BELOW = 0.25
+ASK_BELOW = 0.6
+
+
+def distill(turns, *, speaker, chat, known, names=(), judge=None):
     """Facts worth keeping from these turns: [(text, category, held)]; `held`
-    means the person is asked before it counts. Never raises."""
+    means the person is asked before it counts. Never raises.
+
+    `judge(facts) -> {fact: probability it stays true}` is a second look at
+    whether each candidate is lasting; when it fails or is absent, the
+    regex check (gate.one_off) is the only one, as before."""
     text, said, asked = transcript(turns, speaker)
     if not (said.strip() or asked.strip()):
         return []                                    # nothing was told, only asked
@@ -168,4 +179,18 @@ def distill(turns, *, speaker, chat, known, names=()):
             out.append((fact, category, False))
         elif asked and gate.traces_to(fact, asked, names=names):
             out.append((fact, category, True))         # not clear: ask, as the chat does
+    if judge is not None and out:
+        try:
+            lasting = judge([fact for fact, _, _ in out]) or {}
+        except Exception as exc:
+            log.warning("lasting-fact judge failed: %s: %s", type(exc).__name__, exc)
+            lasting = {}
+        kept = []
+        for fact, category, held in out:
+            p = lasting.get(fact)
+            if p is None:
+                kept.append((fact, category, held))
+            elif p >= DROP_BELOW:
+                kept.append((fact, category, held or p < ASK_BELOW))
+        out = kept
     return out

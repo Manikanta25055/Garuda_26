@@ -898,6 +898,9 @@ AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
 AGENT.confirmations = sys.modules[HomeAgent.__module__].Confirmations(
     path=os.path.join(DRISHTI_DATA_DIR, "confirmations.json"))
 AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
+# Jev's second look at what the distiller wants to remember (narada_brain/distiller.py).
+if DECISION.jev is not None and DECISION.jev.configured:
+    BRAIN.judge = DECISION.jev.lasting
 
 # Shortcuts: programs made of those capabilities, written by Narada on request
 # (garuda_auto/shortcuts.py). One runs as its maker, with the role they have now.

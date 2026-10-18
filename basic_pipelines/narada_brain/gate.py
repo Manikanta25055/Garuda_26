@@ -151,6 +151,13 @@ def statements(said, *, acted=False):
             kept.append(sentence)
             continue
         if plain.endswith("?") or _QUESTION_START.match(plain) or _REQUEST_START.match(plain):
+            # "Set a reminder for me, I leave for college at 8:30 every weekday":
+            # a request first, then the person telling something. The telling
+            # clause is kept on its own (2026-10-18: the whole sentence was lost).
+            told = [c.strip() for c in re.split(r",|\b(?:because|since|as)\b", plain)[1:]
+                    if _FIRST_PERSON.match(_FILLER_START.sub("", c).strip())
+                    and not c.strip().endswith("?")]
+            kept.extend(told)
             continue
         # "When my phone is detected, turn on the lamp": the order follows a
         # clause. "I sleep at 10, so switch the lights off" tells first.

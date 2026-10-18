@@ -46,6 +46,9 @@ class Brain:
         when `background`; with background off it runs before record returns)."""
         self.chat = chat
         self._clock = clock
+        # facts -> {fact: P(it stays true)}, a second look at what the
+        # distiller proposes (Jev; set by Garuda_web). None: regex only.
+        self.judge = None
         path = os.path.join(data_dir, CONVERSATIONS_FILE) if data_dir else None
         self.conversations = Conversations(path, summarise=self._summarise if chat else None,
                                            clock=clock, background=background)
@@ -151,7 +154,8 @@ class Brain:
         speaker = key.split(":", 1)[-1] or "the person"
         known = [f["text"] for f in self.memory.facts()]
         names = [f["text"] for f in self.memory.facts() if f["category"] == "person"]
-        found = distiller.distill(turns, speaker=speaker, chat=self.chat, known=known, names=names)
+        found = distiller.distill(turns, speaker=speaker, chat=self.chat, known=known, names=names,
+                                  judge=self.judge)
         if found is None:
             return []
         self.conversations.mark_distilled(turns)
