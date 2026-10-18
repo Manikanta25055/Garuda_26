@@ -138,12 +138,14 @@ class House:
 
 def make_agent(house, decision):
     """The one place that says how Narada is put together for the evaluation.
-    With JEV_API_KEY set, Jev judges what the distiller keeps, as in the service."""
+    With JEV_API_KEY set, Jev judges what the distiller keeps and looks again at
+    house data for instructions, as in the service."""
     brain = Brain(house.data_dir, house.chat, background=False, read_back=True)
     if os.environ.get("JEV_API_KEY"):
         from basic_pipelines.garuda_auto.decision import JevBackend
-        brain.judge = JevBackend(os.environ["JEV_API_KEY"], timeout=10,
-                                 model=os.environ.get("JEV_MODEL", "jev-latest")).lasting
+        jev = JevBackend(os.environ["JEV_API_KEY"], timeout=10,
+                         model=os.environ.get("JEV_MODEL", "jev-latest"))
+        brain.judge, brain.screen = jev.lasting, jev.steering
     return HomeAgent(house.ctx, house.home, house.chat, decision,
                      brain=brain,
                      modes_fn=lambda: dict(house.modes), set_mode_fn=house.set_mode,

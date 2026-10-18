@@ -6,6 +6,7 @@ reciting itself was recited ten times out of ten, and here the baseline run
 persona still asks the model not to; this is what makes it true.
 """
 import functools
+import json
 import re
 
 LEAK_REPLY = ("I keep my internal instructions to myself. I can tell you what I can do, "
@@ -54,6 +55,42 @@ def injected(text):
     """The first piece of `text` that reads as an instruction to the assistant, or ''."""
     hit = _INJECTION.search(text or "")
     return hit.group(0) if hit else ""
+
+
+# A second look, by Jev when it is configured (Brain.screen): the pattern
+# knows English phrasings of an override and little else. Measured
+# 2026-10-18: of 37 instructions (the 7 above, 30 written for the purpose:
+# paraphrases, Telugu, Hindi, French, role-play) the pattern finds 7, pattern
+# or Jev 32 to 33; of 44 ordinary but awkward house texts ("New instructions
+# from the electrician: ...") the pattern flags 2 and Jev adds none; of the
+# live house's own 42 multi-word strings Jev flags none (highest 0.15).
+# Jev's answer for one string moves by up to 0.15 with the strings asked
+# beside it and from call to call, so near 0.7 it is a coin: Telugu in Latin
+# letters scored 0.4-0.75. Strings, not whole results: a whole state brief
+# scored up to 0.60 clean, its own header being an instruction to the model.
+STEER_AT = 0.7
+# A string shorter than this many words cannot carry an instruction worth the asking.
+_PIECE_WORDS = 3
+_LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
+
+
+def pieces(text):
+    """The strings in `text` worth a second look: each JSON string in it of at
+    least three words ("occupancy == empty" is two), or the whole text when it
+    holds no JSON strings."""
+    literals = _LITERAL.findall(text or "")
+    strings = [text or ""] if not literals else []
+    for lit in literals:
+        try:
+            strings.append(json.loads(f'"{lit}"'))
+        except ValueError:
+            pass
+    found = []
+    for s in (s.strip() for s in strings):
+        words = sum(any(ch.isalpha() for ch in w) for w in s.split())
+        if words >= _PIECE_WORDS and s not in found:
+            found.append(s)
+    return found
 
 
 def wrap(text):

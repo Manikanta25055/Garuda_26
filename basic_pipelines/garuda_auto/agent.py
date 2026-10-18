@@ -128,6 +128,12 @@ REPORT_TOOLS = frozenset(("search_history", "recent_activity", "energy_usage",
 # (Every capability whose tier is not "read"; remember_fact is not among them
 # because such a turn holds the fact as pending instead of refusing it.)
 CHANGING_TOOLS = capabilities.names(changing=True)
+# Jev's second look at house data the model reads (Brain.look_again) runs while
+# the model reads it; its answer is waited for until this long after it was
+# asked, then the pattern's word stands. Jev took 0.45-0.7 s from the Pi.
+LOOK_BUDGET_S = 1.5
+# Jev's reading of a reply the claim pattern cannot vouch for (claims.worth_reading).
+CLAIMS_JEV_TIMEOUT_S = 1.5
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -276,6 +282,7 @@ class HomeAgent:
             if jev:
                 route_view["jev"] = {k: {"value": v.get("value"), "confidence": v.get("confidence")}
                                      for k, v in jev.items() if k in route}
+        self._turn.route = route
         fast = self._fast(text, route, user, role) if route is not None else None
         if fast is not None:
             result = fast
@@ -531,6 +538,10 @@ class HomeAgent:
         self._turn.injection_text = self.brain.scan(brief)
         self._turn.injected = bool(self._turn.injection_text)
         system += guards.wrap(brief) if self._turn.injected else brief
+        # (message index, text, Look): Jev's second looks still under way.
+        self._turn.looks = []
+        if not self._turn.injected:
+            self._look(0, brief)
         if planner:
             system += self._planner_rules()
         elif self._planner_ready():
@@ -587,6 +598,8 @@ class HomeAgent:
                                     extra=NO_THINKING, hedge_after=HEDGE_AFTER_S,
                                     on_text=speech.feed if speech else draft.feed if draft else None,
                                     keep_partial=draft is None)
+            if self._turn.looks and self._settle_looks(messages):
+                continue            # it read an instruction the pattern missed: again, marked as data
             calls = message.get("tool_calls") or []
             if speech:
                 # The last sentence, or a "let me check" before tools. A final
@@ -600,7 +613,8 @@ class HomeAgent:
                 # gets one more round with the true states. A spoken reply has
                 # already been heard, so it is not taken back.
                 devices = [d for d in self.home.devices() if d["actuator"]]
-                wrong = claims.false_claims(message.get("content") or "", devices)
+                wrong = (claims.false_claims(message.get("content") or "", devices)
+                         or self._jev_claims(text, message.get("content") or "", devices))
                 if wrong:
                     log.warning("Narada reply misstated %s; asking again",
                                 ", ".join(f"{n} ({c}, is {a})" for n, c, a in wrong))
@@ -695,12 +709,62 @@ class HomeAgent:
                     content = guards.wrap(content)
                 messages.append({"role": "tool", "tool_call_id": call.get("id", ""),
                                  "content": content})
+                if not found:
+                    self._look(len(messages) - 1, content)
         done = [x for x in actions if x]
         waiting = len(self._turn.confirms)
         return finish(("I did what I could: " + "; ".join(done) + "."
                        + (f" {waiting} card(s) are waiting for your tap." if waiting else ""))
                       if done or waiting
                       else "That took too long; try asking for one part of it at a time.")
+
+    def _look(self, at, text):
+        """Ask for Jev's second look at text the pattern passed, now in messages[at]."""
+        look = self.brain.look_again(text)
+        if look is not None:
+            self._turn.looks.append((at, text, look))
+
+    def _settle_looks(self, messages):
+        """Take in the second looks that have come back (Brain.look_again). One
+        that found an instruction the pattern missed does what the pattern
+        would have: the text is marked as data, nothing that changes the house
+        runs for the rest of the turn, and the person is told. The model's
+        answer to the unmarked text is dropped and the round asked again
+        (True). A look still out after LOOK_BUDGET_S counts when it comes back."""
+        again, pending = False, []
+        for at, text, look in self._turn.looks:
+            found = look.found(LOOK_BUDGET_S)
+            if not found:
+                if not look.done:
+                    pending.append((at, text, look))
+                continue
+            if not self._turn.injected:
+                self._turn.injection_text = found
+            self._turn.injected = True
+            messages[at]["content"] = messages[at]["content"].replace(text, guards.wrap(text), 1)
+            again = True
+        self._turn.looks = pending
+        return again
+
+    def _jev_claims(self, said, reply, devices):
+        """claims.false_claims' answer from Jev, for a reply the pattern cannot
+        vouch for (claims.worth_reading); [] when Jev is absent or fails."""
+        jev = getattr(self.decision, "jev", None)
+        route = getattr(self._turn, "route", None) or {}
+        intent = (route.get("intent") or {}).get("value")
+        if jev is None or not jev.configured \
+                or not claims.worth_reading(reply, self._turn.steps, intent):
+            return []
+        known = [d for d in devices if d.get("state") in ("on", "off")]
+        try:
+            stated = jev.stated(said, reply, known, timeout=CLAIMS_JEV_TIMEOUT_S)
+        except Exception as exc:
+            log.warning("Jev could not read the reply for claims: %s", exc)
+            return []
+        wrong = claims.from_jev(stated, known)
+        if wrong:
+            self.stats["claims_jev"] = self.stats.get("claims_jev", 0) + 1
+        return wrong
 
     # ── tools ─────────────────────────────────────────────────────────────────
 

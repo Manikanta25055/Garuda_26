@@ -11,6 +11,17 @@ Deliberately narrow. Only plain English statements of a present state are
 read; offers ("want me to turn it on?"), questions, plans ("will turn off at
 7") and anything not in English are left alone, so a miss here is a claim
 not caught, never a true reply flagged.
+
+Where the pattern cannot vouch for a reply, Jev reads it (worth_reading,
+from_jev): a device turn in which nothing was switched ("Done." with no
+call, "the fan has been shut down" after a failed switch), or a reply in
+another script. Measured 2026-10-18 on 145 replies (55 real ones from the
+breadth set, 40 of them replayed against a house whose switch failed, 25
+harder ones, the unit cases in tests/garuda_auto/test_claims.py), with the
+router's intents: the pattern caught 48 of 59 false claims and flagged 1 true
+reply; with Jev 57 of 59 and the same 1. Jev was asked about 16 of the 145,
+1 of the 55 real ones: only those turns pay its 0.45 s. Jev reading every
+reply would flag history lists ("2. Lamp on"), so lists stay the pattern's.
 """
 import re
 
@@ -81,6 +92,39 @@ def false_claims(reply, devices):
                 if claimed and device["state"] != claimed:
                     found[device["id"]] = (device["name"], claimed, device["state"])
     return list(found.values())
+
+
+# Jev's reading counts at this probability (2026-10-18: true replies at most
+# 0.57 for a wrong state, false ones mostly above 0.9).
+JEV_AT = 0.7
+# What switches a device: a turn with one of these done is one the pattern reads.
+SWITCHING_TOOLS = frozenset(("set_device", "all_off", "run_scene", "run_shortcut"))
+DEVICE_INTENTS = ("device_control", "all_off", "scene")
+_LISTED = re.compile(r"^\s*(?:[-*•]|\d+[.)]|#{1,6}|\|)\s", re.M)
+
+
+def worth_reading(reply, steps, intent=None):
+    """Whether Jev should read `reply` too: a device turn (by its route or its
+    steps) where nothing was switched, or whose reply is not in Latin letters.
+    A list is left to the pattern: its lines are as likely past events."""
+    if not (reply or "").strip() or _LISTED.search(reply):
+        return False
+    tools = [s for s in steps or () if s.get("tool") in SWITCHING_TOOLS]
+    if not tools and intent not in DEVICE_INTENTS:
+        return False
+    switched = any(s.get("ok") and not s.get("waiting") for s in tools)
+    return not switched or any(ch.isalpha() and not ch.isascii() for ch in reply)
+
+
+def from_jev(stated, devices, at=JEV_AT):
+    """false_claims' answer from Jev's reading ({device id: (state, P)}, from
+    JevBackend.stated): a device it is sure the reply puts in the other state."""
+    found = []
+    for d in devices:
+        said, p = stated.get(d["id"], (None, 0.0))
+        if said in ("on", "off") and d.get("state") in ("on", "off") and said != d["state"] and p >= at:
+            found.append((d["name"], said, d["state"]))
+    return found
 
 
 def correction(wrong, devices):

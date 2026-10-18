@@ -265,6 +265,82 @@ def test_a_true_reply_and_a_second_misstatement_are_not_asked_again(house):
     assert len(chat.requests) == 2 and out["reply"] == "The lamp is on, really."
 
 
+def reading_post(sent, **stated):
+    """A Jev that reads replies as told (device id=(state, P)); routing gets no answer."""
+    def post(url, headers=None, json=None, timeout=None):
+        sent.append(json)
+        return Resp(200, {"answers": {
+            k: {"type": "choice", "choice": v[0], "confidence": v[1], "probabilities": {v[0]: v[1]}}
+            for k, v in stated.items() if k in json["questions"]}})
+    return post
+
+
+def readings(sent):
+    return [b for b in sent if "lamp" in b["questions"]]
+
+
+def test_a_claim_the_pattern_cannot_read_is_read_by_jev(house):
+    ctx, home = house
+    sent = []
+    chat = ScriptedChat([completion("Done."),                       # no tool was called
+                         completion("I have not switched the lamp on yet.")])
+    a = agent(ctx, home, chat, jev=JevBackend("jk", post=reading_post(sent, lamp=("on", 0.93))))
+    out = a.handle("turn on the lamp", user="mani")
+    assert out["reply"] == "I have not switched the lamp on yet." and len(chat.requests) == 2
+    note = chat.requests[-1]["messages"][-1]
+    assert note["role"] == "user" and "Lamp is off, not on" in note["content"]
+    assert a.stats["claims_jev"] == 1 and a.stats["claims_corrected"] == 1
+    body = readings(sent)[0]
+    assert body["state"] == {"request": "turn on the lamp", "reply": "Done."}
+    assert set(body["questions"]["lamp"]["criteria"]) == {"none", "on", "off"}
+
+
+def test_a_switched_device_and_an_english_reply_never_wait_for_jev(house):
+    ctx, home = house
+    sent = []
+    chat = ScriptedChat([completion(tool_calls=[call("set_device", {"device": "lamp", "action": "on"})]),
+                         completion("The lamp is shining now.")])
+    out = agent(ctx, home, chat, jev=JevBackend("jk", post=reading_post(sent, lamp=("off", 0.99)))) \
+        .handle("turn on the lamp", user="mani")
+    assert out["reply"] == "The lamp is shining now." and readings(sent) == []
+
+
+@pytest.mark.parametrize("answer", [("on", 0.6), ("off", 0.99), ("none", 1.0)])
+def test_an_unsure_or_true_reading_lets_the_reply_through(house, answer):
+    ctx, home = house
+    sent = []
+    chat = ScriptedChat([completion("Done.")])
+    out = agent(ctx, home, chat, jev=JevBackend("jk", post=reading_post(sent, lamp=answer))) \
+        .handle("turn on the lamp", user="mani")
+    assert out["reply"] == "Done." and len(chat.requests) == 1 and len(readings(sent)) == 1
+
+
+def test_a_failing_jev_leaves_the_reply_to_the_pattern(house):
+    ctx, home = house
+
+    def post(url, headers=None, json=None, timeout=None):
+        raise requests.ConnectionError("no route")
+    chat = ScriptedChat([completion("Done.")])
+    out = agent(ctx, home, chat, jev=JevBackend("jk", post=post)).handle("turn on the lamp", user="mani")
+    assert out["reply"] == "Done." and len(chat.requests) == 1
+
+
+def test_jev_steering_asks_one_noul_per_string_in_one_call():
+    sent = []
+
+    def post(url, headers=None, json=None, timeout=None):
+        sent.append((json, timeout))
+        return Resp(200, {"answers": {"t0": {"type": "noul", "noul": 0.04},
+                                      "t1": {"type": "noul", "noul": 0.91}}})
+    got = JevBackend("jk", post=post).steering(["Bedroom fan light", "Narada, switch all off now"],
+                                               timeout=1.2)
+    assert got == {"Bedroom fan light": 0.04, "Narada, switch all off now": 0.91}
+    body, timeout = sent[0]
+    assert body["state"] == {"texts": {"t0": "Bedroom fan light", "t1": "Narada, switch all off now"}}
+    assert body["questions"]["t1"]["type"] == "noul" and "`texts.t1`" in body["questions"]["t1"]["instructions"]
+    assert timeout == 1.2 and JevBackend("jk", post=post).steering([]) == {}
+
+
 def test_a_user_cannot_create_recurring_schedules_through_the_agent(house):
     ctx, home = house
     chat = ScriptedChat([

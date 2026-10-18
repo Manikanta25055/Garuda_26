@@ -1,7 +1,7 @@
 """Replies checked against the house (garuda_auto.claims)."""
 import pytest
 
-from basic_pipelines.garuda_auto.claims import correction, false_claims
+from basic_pipelines.garuda_auto.claims import correction, false_claims, from_jev, worth_reading
 
 HOUSE = [{"id": "lamp", "name": "Lamp", "state": "off"},
          {"id": "fan", "name": "Fan", "state": "on"},
@@ -52,3 +52,36 @@ def test_a_device_in_an_unknown_state_is_not_judged():
 def test_the_correction_gives_the_true_state():
     note = correction([("Lamp", "on", "off")], HOUSE)
     assert "Lamp is off, not on" in note and "Fan on" in note and "tools" in note
+
+
+# ── where the pattern cannot vouch: Jev's reading (from_jev, worth_reading) ──
+
+def test_jev_reading_counts_only_when_sure_and_contradicted():
+    stated = {"lamp": ("on", 0.93), "fan": ("off", 0.57), "tv": ("off", 0.99)}
+    assert from_jev(stated, HOUSE) == [("Lamp", "on", "off")]
+
+
+def test_jev_reading_leaves_unknown_and_unread_devices_alone():
+    house = HOUSE + [{"id": "heater", "name": "Heater", "state": "unknown"}]
+    assert from_jev({"heater": ("on", 0.99), "lamp": ("none", 1.0)}, house) == []
+    assert from_jev({}, HOUSE) == []
+
+
+SWITCHED = [{"tool": "set_device", "ok": True, "waiting": False}]
+FAILED = [{"tool": "set_device", "ok": False, "waiting": False}]
+
+
+@pytest.mark.parametrize("reply, steps, intent, read", [
+    ("Done.", [], "device_control", True),                 # a command, nothing switched
+    ("I turned the lamp on.", FAILED, "device_control", True),   # the switch failed
+    ("All set, the fan has been shut down.", [], "all_off", True),
+    ("Lamp is on.", SWITCHED, "device_control", False),    # switched, English: the pattern's
+    ("లైట్ ఆన్ చేశాను.", SWITCHED, "device_control", True),    # another script
+    ("Here is a story about dragons.", [], "other", False),     # not a device turn
+    ("Yes, the fan is on.", [], "state_query", False),
+    ("1. Lamp on\n2. Fan off", [], "device_control", False),    # a list: past events as likely
+    ("", [], "device_control", False),
+    ("Done.", [], None, False),                             # no route, no device step
+])
+def test_what_jev_is_asked_to_read(reply, steps, intent, read):
+    assert worth_reading(reply, steps, intent) is read

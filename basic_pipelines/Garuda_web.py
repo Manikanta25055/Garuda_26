@@ -907,9 +907,13 @@ AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
 VISION = VisionCheck(DECISION.jev, model=os.environ.get("JEV_VISION_MODEL", "jev-preview"),
                      describe=sys.modules[VisionCheck.__module__].nim_describer(
                          os.environ.get("NIM_API_KEY", "")))
-# Jev's second look at what the distiller wants to remember (narada_brain/distiller.py).
+# Jev's second look at what the distiller wants to remember (narada_brain/distiller.py),
+# and at house data the model reads, for instructions the pattern misses
+# (narada_brain/guards.py). Narada's replies get Jev's reading where the claim
+# pattern cannot vouch for them (garuda_auto/claims.py), through DECISION.jev.
 if DECISION.jev is not None and DECISION.jev.configured:
     BRAIN.judge = DECISION.jev.lasting
+    BRAIN.screen = DECISION.jev.steering
 
 # Shortcuts: programs made of those capabilities, written by Narada on request
 # (garuda_auto/shortcuts.py). One runs as its maker, with the role they have now.

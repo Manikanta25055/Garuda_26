@@ -3,11 +3,13 @@
     system = brain.system_prompt(user, role, scope=..., key=...)   who Narada is, plus the summary
     past   = brain.history(key)                                     turns to replay
     reply  = brain.check_reply(reply)                               guards, last thing before the person
+    look   = brain.look_again(text)                                 Jev's second look at house data
     brain.record(key, turn)                                         after a turn that reached the model
 """
+import concurrent.futures
 import logging
 import os
-from collections import deque
+from collections import OrderedDict, deque
 import time
 
 import re
@@ -31,8 +33,38 @@ DISTILL_EVERY = 8
 # The person said something about themselves or their people: a fact may have
 # gone past that the model did not save.
 _ABOUT_SELF = re.compile(r"\b(i|i.m|i.ve|i.d|my|we|we.re|our)\b", re.I)
+# Jev's second look at house data (look_again): at most this many strings to a
+# call (8 took 0.6 s from the Pi), and the verdicts on this many kept, since a
+# house's names and rules come back every turn and need asking once.
+LOOK_BATCH = 8
+LOOK_KEEP = 2048
 _ASKED = re.compile(r"\b(remember|note (that|this|it|down)|keep (that|this|it)? ?in mind|don.t forget|"
                     r"make a note|save (that|this))\b", re.I)
+
+
+class Look:
+    """One second look under way (Brain.look_again)."""
+
+    def __init__(self, futures):
+        self._futures, self._found = futures, ""
+        self._started = time.monotonic()
+
+    @property
+    def done(self):
+        return all(f.done() for f in self._futures)
+
+    def found(self, budget):
+        """The string that steers the assistant, or '': waited for until `budget`
+        seconds after the look began, then whatever has come back."""
+        if self._found:
+            return self._found
+        concurrent.futures.wait(self._futures,
+                                timeout=max(0.0, self._started + budget - time.monotonic()))
+        for f in self._futures:
+            if f.done() and f.result():
+                self._found = f.result()
+                break
+        return self._found
 
 
 class Brain:
@@ -49,6 +81,13 @@ class Brain:
         # facts -> {fact: P(it stays true)}, a second look at what the
         # distiller proposes (Jev; set by Garuda_web). None: regex only.
         self.judge = None
+        # strings -> {string: P(it steers the assistant)}, a second look at the
+        # house data the agent reads (guards.pieces; Jev, set by Garuda_web).
+        # None: the pattern only.
+        self.screen = None
+        self._looked = OrderedDict()
+        self._look_lock = threading.Lock()
+        self._look_pool = None
         path = os.path.join(data_dir, CONVERSATIONS_FILE) if data_dir else None
         self.conversations = Conversations(path, summarise=self._summarise if chat else None,
                                            clock=clock, background=background)
@@ -89,11 +128,55 @@ class Brain:
     # ── what comes out of one ─────────────────────────────────────────────────
 
     def scan(self, text):
-        """Whether data read this turn carries an instruction (see guards.injected)."""
-        hit = guards.injected(text)
+        """Whether data read this turn carries an instruction (see guards.injected),
+        or a string a second look already found to (look_again)."""
+        hit = guards.injected(text) or self._known_steering(text)
         if hit:
             self.stats["injections"] = self.stats.get("injections", 0) + 1
             log.warning("instruction-like text in house data: %r", hit[:80])
+        return hit
+
+    def _known_steering(self, text):
+        if not self._looked:
+            return ""
+        with self._look_lock:
+            return next((s for s in guards.pieces(text)
+                         if self._looked.get(s, 0.0) >= guards.STEER_AT), "")
+
+    def look_again(self, text):
+        """Jev's second look at data scan() passed: a Look whose found() is the
+        first string in it that steers the assistant, or ''. None when there is
+        nothing to ask (no screen, or every string in it already judged). It
+        runs in the background, while the model reads the text."""
+        if self.screen is None:
+            return None
+        with self._look_lock:
+            new = [s for s in guards.pieces(text) if s not in self._looked]
+        if not new:
+            return None
+        if self._look_pool is None:
+            self._look_pool = concurrent.futures.ThreadPoolExecutor(4, thread_name_prefix="look")
+        return Look([self._look_pool.submit(self._screen, new[i:i + LOOK_BATCH])
+                     for i in range(0, len(new), LOOK_BATCH)])
+
+    def _screen(self, strings):
+        try:
+            seen = self.screen(strings)
+        except Exception as exc:
+            self.stats["look_errors"] = self.stats.get("look_errors", 0) + 1
+            log.warning("second look at house data failed: %s", exc)
+            return ""
+        self.stats["looks"] = self.stats.get("looks", 0) + 1
+        with self._look_lock:
+            for s in strings:
+                if s in seen:
+                    self._looked[s] = seen[s]
+            while len(self._looked) > LOOK_KEEP:
+                self._looked.popitem(last=False)
+        hit = next((s for s in strings if seen.get(s, 0.0) >= guards.STEER_AT), "")
+        if hit:
+            self.stats["injections"] = self.stats.get("injections", 0) + 1
+            log.warning("instruction-like text in house data (second look): %r", hit[:80])
         return hit
 
     def check_reply(self, reply, *, voice=False):
