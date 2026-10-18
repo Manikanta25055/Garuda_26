@@ -1,0 +1,4047 @@
+{
+ "constrained_decoding": true,
+ "model": "nvidia/nemotron-3-super-120b-a12b",
+ "trials": [
+  [
+   {
+    "id": "c01",
+    "utterance": "turn the fan off when the room has been empty for five minutes",
+    "cloud_round_trip_s": 2.7191685500001768,
+    "tokens": 920,
+    "request_bytes": 3232,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 0,
+    "rule": {
+     "source_utterance": "turn the fan off when the room has been empty for five minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 300
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c02",
+    "utterance": "turn the lamp on when someone sits at the desk",
+    "cloud_round_trip_s": 2.768252638001286,
+    "tokens": 930,
+    "request_bytes": 3282,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 1,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone sits at the desk",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       },
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "seated"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c03",
+    "utterance": "turn the fan on when someone is in the room and it is warmer than thirty degrees",
+    "cloud_round_trip_s": 2.46693802599475,
+    "tokens": 955,
+    "request_bytes": 3368,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 2,
+    "rule": {
+     "source_utterance": "turn the fan on when someone is in the room and it is warmer than thirty degrees",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "occupied"
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c04",
+    "utterance": "turn the lamp on when it gets dark and someone is in the room",
+    "cloud_round_trip_s": 6.907343892002245,
+    "tokens": 1030,
+    "request_bytes": 3435,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 3,
+    "rule": null,
+    "reason": "cannot express 'gets dark' without a specific ambient_luma threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c05",
+    "utterance": "switch the lamp off after nine in the evening",
+    "cloud_round_trip_s": 4.661529224998958,
+    "tokens": 1122,
+    "request_bytes": 3419,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 3,
+    "rule": {
+     "source_utterance": "switch the lamp off after nine in the evening",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 22
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 6,
+     "disagreements": 1
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c06",
+    "utterance": "turn the fan off when the temperature drops below twenty five degrees",
+    "cloud_round_trip_s": 3.181153755998821,
+    "tokens": 971,
+    "request_bytes": 3494,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 4,
+    "rule": {
+     "source_utterance": "turn the fan off when the temperature drops below twenty five degrees",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": "<",
+        "value": 25
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c07",
+    "utterance": "turn the lamp on when someone walks in through the door",
+    "cloud_round_trip_s": 2.8628346549958223,
+    "tokens": 992,
+    "request_bytes": 3555,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 5,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone walks in through the door",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 3
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c08",
+    "utterance": "turn everything off when the room has been empty for ten minutes",
+    "cloud_round_trip_s": 2.4783756650067517,
+    "tokens": 973,
+    "request_bytes": 3625,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 6,
+    "rule": {
+     "source_utterance": "turn everything off when the room has been empty for ten minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 600
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      },
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c09",
+    "utterance": "turn the fan on when the humidity goes above seventy percent",
+    "cloud_round_trip_s": 2.2440634110025712,
+    "tokens": 1004,
+    "request_bytes": 3691,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 7,
+    "rule": {
+     "source_utterance": "turn the fan on when the humidity goes above seventy percent",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": ">",
+        "value": 70
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c10",
+    "utterance": "turn the lamp off when the room is bright enough on its own",
+    "cloud_round_trip_s": 2.6800820589996874,
+    "tokens": 958,
+    "request_bytes": 3756,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 8,
+    "rule": null,
+    "reason": "missing brightness threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c11",
+    "utterance": "turn the fan on if there are more than two people in the room",
+    "cloud_round_trip_s": 3.394717937000678,
+    "tokens": 1028,
+    "request_bytes": 3758,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 8,
+    "rule": {
+     "source_utterance": "turn the fan on if there are more than two people in the room",
+     "when": {
+      "all": [
+       {
+        "field": "person_count",
+        "op": ">",
+        "value": 2
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 81,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c12",
+    "utterance": "turn the lamp off at midnight if it is still on",
+    "cloud_round_trip_s": 2.2042783979995875,
+    "tokens": 1005,
+    "request_bytes": 3811,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 9,
+    "rule": {
+     "source_utterance": "turn the lamp off at midnight if it is still on",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": "==",
+        "value": 0
+       },
+       {
+        "field": "lamp_state",
+        "op": "==",
+        "value": "on"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 8,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c13",
+    "utterance": "turn the fan off at six in the morning",
+    "cloud_round_trip_s": 2.3171849659993313,
+    "tokens": 994,
+    "request_bytes": 3855,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 10,
+    "rule": {
+     "source_utterance": "turn the fan off at six in the morning",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": "==",
+        "value": 6
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c14",
+    "utterance": "turn the lamp on when i am standing near the door after dark",
+    "cloud_round_trip_s": 4.312151819001883,
+    "tokens": 1408,
+    "request_bytes": 3921,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 11,
+    "rule": {
+     "source_utterance": "turn the lamp on when i am standing near the door after dark",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "standing"
+       },
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 18
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 833,
+     "disagreements": 25
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c15",
+    "utterance": "keep the fan running while someone is seated at the desk",
+    "cloud_round_trip_s": 3.295640550997632,
+    "tokens": 1188,
+    "request_bytes": 3983,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 12,
+    "rule": {
+     "source_utterance": "keep the fan running while someone is seated at the desk",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "seated"
+       },
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c16",
+    "utterance": "turn the fan off when the room gets cool and nobody is around",
+    "cloud_round_trip_s": 3.489244589996815,
+    "tokens": 1221,
+    "request_bytes": 4050,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 13,
+    "rule": null,
+    "reason": "missing temperature threshold for 'cool'",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c17",
+    "utterance": "turn the lamp on when someone is in the middle of the room and the light is low",
+    "cloud_round_trip_s": 5.9876375009989715,
+    "tokens": 1657,
+    "request_bytes": 4068,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 13,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone is in the middle of the room and the light is low",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "center"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 50
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c18",
+    "utterance": "turn the fan on when it is muggy, above sixty percent humidity and warmer than twenty eight",
+    "cloud_round_trip_s": 2.493303716997616,
+    "tokens": 1067,
+    "request_bytes": 4165,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 14,
+    "rule": {
+     "source_utterance": "turn the fan on when it is muggy, above sixty percent humidity and warmer than twenty eight",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": ">",
+        "value": 60
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 28
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 49,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c19",
+    "utterance": "turn the lamp off when the room empties for two minutes",
+    "cloud_round_trip_s": 2.8173109229974216,
+    "tokens": 1219,
+    "request_bytes": 4226,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 15,
+    "rule": {
+     "source_utterance": "turn the lamp off when the room empties for two minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 120
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c20",
+    "utterance": "turn the fan on in the afternoon when someone is here",
+    "cloud_round_trip_s": 4.775939846003894,
+    "tokens": 1337,
+    "request_bytes": 4285,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 16,
+    "rule": {
+     "source_utterance": "turn the fan on in the afternoon when someone is here",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 12
+       },
+       {
+        "field": "hour",
+        "op": "<=",
+        "value": 17
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "occupied"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 204,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the temperature drops below twenty five degrees"
+   },
+   {
+    "id": "c21",
+    "utterance": "switch the lamp off if the fan is off and nobody is in the room",
+    "cloud_round_trip_s": 2.376871576998383,
+    "tokens": 1212,
+    "request_bytes": 4354,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 17,
+    "rule": {
+     "source_utterance": "switch the lamp off if the fan is off and nobody is in the room",
+     "when": {
+      "all": [
+       {
+        "field": "fan_state",
+        "op": "==",
+        "value": "off"
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 34,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c22",
+    "utterance": "turn the fan off when the lamp is off after eleven at night",
+    "cloud_round_trip_s": 4.745223758000066,
+    "tokens": 1546,
+    "request_bytes": 4419,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 18,
+    "rule": {
+     "source_utterance": "turn the fan off when the lamp is off after eleven at night",
+     "when": {
+      "all": [
+       {
+        "field": "lamp_state",
+        "op": "==",
+        "value": "off"
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 23
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 8,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c23",
+    "utterance": "turn the lamp on whenever more than one person is in the room",
+    "cloud_round_trip_s": 3.3272308279993013,
+    "tokens": 1203,
+    "request_bytes": 4486,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 19,
+    "rule": {
+     "source_utterance": "turn the lamp on whenever more than one person is in the room",
+     "when": {
+      "all": [
+       {
+        "field": "person_count",
+        "op": ">",
+        "value": 1
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 65,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c24",
+    "utterance": "turn the fan on when it is above thirty two degrees no matter what",
+    "cloud_round_trip_s": 2.8398395659969538,
+    "tokens": 1162,
+    "request_bytes": 4558,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 20,
+    "rule": {
+     "source_utterance": "turn the fan on when it is above thirty two degrees no matter what",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 32
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c25",
+    "utterance": "turn the lamp off when it is bright during the daytime",
+    "cloud_round_trip_s": 4.166672217994346,
+    "tokens": 1498,
+    "request_bytes": 4618,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 21,
+    "rule": {
+     "source_utterance": "turn the lamp off when it is bright during the daytime",
+     "when": {
+      "all": [
+       {
+        "field": "ambient_luma",
+        "op": ">",
+        "value": 200
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 6
+       },
+       {
+        "field": "hour",
+        "op": "<=",
+        "value": 18
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 84,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c26",
+    "utterance": "turn the fan off when the humidity drops below forty percent",
+    "cloud_round_trip_s": 3.1728797140021925,
+    "tokens": 1173,
+    "request_bytes": 4684,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 22,
+    "rule": {
+     "source_utterance": "turn the fan off when the humidity drops below forty percent",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": "<",
+        "value": 40
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c27",
+    "utterance": "turn the lamp on when someone has been standing in the room for thirty seconds",
+    "cloud_round_trip_s": 3.7395796760029043,
+    "tokens": 1427,
+    "request_bytes": 4768,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 23,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone has been standing in the room for thirty seconds",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "standing"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c28",
+    "utterance": "turn the fan on when someone comes to the desk and it is warm",
+    "cloud_round_trip_s": 3.006965966997086,
+    "tokens": 1378,
+    "request_bytes": 4835,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 24,
+    "rule": {
+     "source_utterance": "turn the fan on when someone comes to the desk and it is warm",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 25
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c29",
+    "utterance": "turn everything on when someone walks in and it is dark",
+    "cloud_round_trip_s": 5.263668136001797,
+    "tokens": 1612,
+    "request_bytes": 4896,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 25,
+    "rule": {
+     "source_utterance": "turn everything on when someone walks in and it is dark",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "walking"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      },
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c30",
+    "utterance": "turn the fan off when the room has been empty for an hour",
+    "cloud_round_trip_s": 2.820364803999837,
+    "tokens": 1272,
+    "request_bytes": 4959,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 26,
+    "rule": {
+     "source_utterance": "turn the fan off when the room has been empty for an hour",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 3600
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when the humidity goes above seventy percent"
+   }
+  ],
+  [
+   {
+    "id": "c01",
+    "utterance": "turn the fan off when the room has been empty for five minutes",
+    "cloud_round_trip_s": 2.8122517640003935,
+    "tokens": 916,
+    "request_bytes": 3232,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 0,
+    "rule": {
+     "source_utterance": "turn the fan off when the room has been empty for five minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 300
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c02",
+    "utterance": "turn the lamp on when someone sits at the desk",
+    "cloud_round_trip_s": 2.354521305001981,
+    "tokens": 935,
+    "request_bytes": 3282,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 1,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone sits at the desk",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       },
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "seated"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c03",
+    "utterance": "turn the fan on when someone is in the room and it is warmer than thirty degrees",
+    "cloud_round_trip_s": 3.2413434730042354,
+    "tokens": 973,
+    "request_bytes": 3368,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 2,
+    "rule": {
+     "source_utterance": "turn the fan on when someone is in the room and it is warmer than thirty degrees",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "occupied"
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c04",
+    "utterance": "turn the lamp on when it gets dark and someone is in the room",
+    "cloud_round_trip_s": 6.47499410599994,
+    "tokens": 1273,
+    "request_bytes": 3435,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 3,
+    "rule": null,
+    "reason": "unspecified darkness threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c05",
+    "utterance": "switch the lamp off after nine in the evening",
+    "cloud_round_trip_s": 2.6641515150040505,
+    "tokens": 986,
+    "request_bytes": 3419,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 3,
+    "rule": {
+     "source_utterance": "switch the lamp off after nine in the evening",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 21
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 6,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c06",
+    "utterance": "turn the fan off when the temperature drops below twenty five degrees",
+    "cloud_round_trip_s": 2.2535822239951813,
+    "tokens": 976,
+    "request_bytes": 3494,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 4,
+    "rule": {
+     "source_utterance": "turn the fan off when the temperature drops below twenty five degrees",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": "<",
+        "value": 25
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c07",
+    "utterance": "turn the lamp on when someone walks in through the door",
+    "cloud_round_trip_s": 4.239147519998369,
+    "tokens": 1026,
+    "request_bytes": 3555,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 5,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone walks in through the door",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       },
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "walking"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c08",
+    "utterance": "turn everything off when the room has been empty for ten minutes",
+    "cloud_round_trip_s": 2.543272786999296,
+    "tokens": 959,
+    "request_bytes": 3625,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 6,
+    "rule": {
+     "source_utterance": "turn everything off when the room has been empty for ten minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 600
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      },
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c09",
+    "utterance": "turn the fan on when the humidity goes above seventy percent",
+    "cloud_round_trip_s": 5.783659086999251,
+    "tokens": 977,
+    "request_bytes": 3691,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 7,
+    "rule": {
+     "source_utterance": "turn the fan on when the humidity goes above seventy percent",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": ">",
+        "value": 70
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c10",
+    "utterance": "turn the lamp off when the room is bright enough on its own",
+    "cloud_round_trip_s": 6.666305578000902,
+    "tokens": 1400,
+    "request_bytes": 3756,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 8,
+    "rule": null,
+    "reason": "missing brightness threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c11",
+    "utterance": "turn the fan on if there are more than two people in the room",
+    "cloud_round_trip_s": 4.943144808996294,
+    "tokens": 963,
+    "request_bytes": 3758,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 8,
+    "rule": {
+     "source_utterance": "turn the fan on if there are more than two people in the room",
+     "when": {
+      "all": [
+       {
+        "field": "person_count",
+        "op": ">",
+        "value": 2
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 81,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c12",
+    "utterance": "turn the lamp off at midnight if it is still on",
+    "cloud_round_trip_s": 3.147277864998614,
+    "tokens": 1092,
+    "request_bytes": 3811,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 9,
+    "rule": {
+     "source_utterance": "turn the lamp off at midnight if it is still on",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": "==",
+        "value": 0
+       },
+       {
+        "field": "lamp_state",
+        "op": "==",
+        "value": "on"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 8,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c13",
+    "utterance": "turn the fan off at six in the morning",
+    "cloud_round_trip_s": 1.8497763330015005,
+    "tokens": 939,
+    "request_bytes": 3855,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 10,
+    "rule": {
+     "source_utterance": "turn the fan off at six in the morning",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": "==",
+        "value": 6
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c14",
+    "utterance": "turn the lamp on when i am standing near the door after dark",
+    "cloud_round_trip_s": 3.3102162459981628,
+    "tokens": 1311,
+    "request_bytes": 3921,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 11,
+    "rule": {
+     "source_utterance": "turn the lamp on when i am standing near the door after dark",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "standing"
+       },
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       },
+       {
+        "field": "security",
+        "op": "==",
+        "value": "night_presence"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 357,
+     "disagreements": 10
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c15",
+    "utterance": "keep the fan running while someone is seated at the desk",
+    "cloud_round_trip_s": 2.8562974000014947,
+    "tokens": 1089,
+    "request_bytes": 3983,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 12,
+    "rule": {
+     "source_utterance": "keep the fan running while someone is seated at the desk",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "seated"
+       },
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c16",
+    "utterance": "turn the fan off when the room gets cool and nobody is around",
+    "cloud_round_trip_s": 3.6577871600020444,
+    "tokens": 1139,
+    "request_bytes": 4050,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 13,
+    "rule": null,
+    "reason": "missing temperature threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c17",
+    "utterance": "turn the lamp on when someone is in the middle of the room and the light is low",
+    "cloud_round_trip_s": 9.986556149000535,
+    "tokens": 1460,
+    "request_bytes": 4068,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 13,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone is in the middle of the room and the light is low",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "center"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 50
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c18",
+    "utterance": "turn the fan on when it is muggy, above sixty percent humidity and warmer than twenty eight",
+    "cloud_round_trip_s": 5.878790705995925,
+    "tokens": 1170,
+    "request_bytes": 4165,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 14,
+    "rule": {
+     "source_utterance": "turn the fan on when it is muggy, above sixty percent humidity and warmer than twenty eight",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": ">",
+        "value": 60
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 28
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 49,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c19",
+    "utterance": "turn the lamp off when the room empties for two minutes",
+    "cloud_round_trip_s": 3.3372364550014026,
+    "tokens": 1149,
+    "request_bytes": 4226,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 15,
+    "rule": {
+     "source_utterance": "turn the lamp off when the room empties for two minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 120
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c20",
+    "utterance": "turn the fan on in the afternoon when someone is here",
+    "cloud_round_trip_s": 3.739076504003606,
+    "tokens": 1256,
+    "request_bytes": 4285,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 16,
+    "rule": {
+     "source_utterance": "turn the fan on in the afternoon when someone is here",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 12
+       },
+       {
+        "field": "hour",
+        "op": "<",
+        "value": 18
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "occupied"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 204,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the temperature drops below twenty five degrees"
+   },
+   {
+    "id": "c21",
+    "utterance": "switch the lamp off if the fan is off and nobody is in the room",
+    "cloud_round_trip_s": 2.150257754001359,
+    "tokens": 1139,
+    "request_bytes": 4354,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 17,
+    "rule": {
+     "source_utterance": "switch the lamp off if the fan is off and nobody is in the room",
+     "when": {
+      "all": [
+       {
+        "field": "fan_state",
+        "op": "==",
+        "value": "off"
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 34,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c22",
+    "utterance": "turn the fan off when the lamp is off after eleven at night",
+    "cloud_round_trip_s": 6.129423578997375,
+    "tokens": 1662,
+    "request_bytes": 4419,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 18,
+    "rule": {
+     "source_utterance": "turn the fan off when the lamp is off after eleven at night",
+     "when": {
+      "all": [
+       {
+        "field": "lamp_state",
+        "op": "==",
+        "value": "off"
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 23
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 8,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c23",
+    "utterance": "turn the lamp on whenever more than one person is in the room",
+    "cloud_round_trip_s": 2.5524362760043005,
+    "tokens": 1213,
+    "request_bytes": 4486,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 19,
+    "rule": {
+     "source_utterance": "turn the lamp on whenever more than one person is in the room",
+     "when": {
+      "all": [
+       {
+        "field": "person_count",
+        "op": ">",
+        "value": 1
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 65,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c24",
+    "utterance": "turn the fan on when it is above thirty two degrees no matter what",
+    "cloud_round_trip_s": 2.329378762995475,
+    "tokens": 1215,
+    "request_bytes": 4558,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 20,
+    "rule": {
+     "source_utterance": "turn the fan on when it is above thirty two degrees no matter what",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 32
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c25",
+    "utterance": "turn the lamp off when it is bright during the daytime",
+    "cloud_round_trip_s": 4.430342119005218,
+    "tokens": 1460,
+    "request_bytes": 4618,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 21,
+    "rule": {
+     "source_utterance": "turn the lamp off when it is bright during the daytime",
+     "when": {
+      "all": [
+       {
+        "field": "ambient_luma",
+        "op": ">",
+        "value": 200
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 6
+       },
+       {
+        "field": "hour",
+        "op": "<",
+        "value": 18
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 84,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c26",
+    "utterance": "turn the fan off when the humidity drops below forty percent",
+    "cloud_round_trip_s": 7.3623389810018125,
+    "tokens": 1166,
+    "request_bytes": 4684,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 22,
+    "rule": {
+     "source_utterance": "turn the fan off when the humidity drops below forty percent",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": "<",
+        "value": 40
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c27",
+    "utterance": "turn the lamp on when someone has been standing in the room for thirty seconds",
+    "cloud_round_trip_s": 3.99050379399705,
+    "tokens": 1481,
+    "request_bytes": 4768,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 23,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone has been standing in the room for thirty seconds",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "standing"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c28",
+    "utterance": "turn the fan on when someone comes to the desk and it is warm",
+    "cloud_round_trip_s": 6.092297074996168,
+    "tokens": 1606,
+    "request_bytes": 4835,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 24,
+    "rule": {
+     "source_utterance": "turn the fan on when someone comes to the desk and it is warm",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 25
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c29",
+    "utterance": "turn everything on when someone walks in and it is dark",
+    "cloud_round_trip_s": 4.884105052995437,
+    "tokens": 1665,
+    "request_bytes": 4896,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 25,
+    "rule": {
+     "source_utterance": "turn everything on when someone walks in and it is dark",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       },
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "walking"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      },
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 9
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c30",
+    "utterance": "turn the fan off when the room has been empty for an hour",
+    "cloud_round_trip_s": 3.7450998830026947,
+    "tokens": 1479,
+    "request_bytes": 4959,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 26,
+    "rule": {
+     "source_utterance": "turn the fan off when the room has been empty for an hour",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 3600
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when the humidity goes above seventy percent"
+   }
+  ],
+  [
+   {
+    "id": "c01",
+    "utterance": "turn the fan off when the room has been empty for five minutes",
+    "cloud_round_trip_s": 3.217658597000991,
+    "tokens": 1017,
+    "request_bytes": 3232,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 0,
+    "rule": {
+     "source_utterance": "turn the fan off when the room has been empty for five minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 300
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c02",
+    "utterance": "turn the lamp on when someone sits at the desk",
+    "cloud_round_trip_s": 2.561889720003819,
+    "tokens": 910,
+    "request_bytes": 3282,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 1,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone sits at the desk",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       },
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "seated"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c03",
+    "utterance": "turn the fan on when someone is in the room and it is warmer than thirty degrees",
+    "cloud_round_trip_s": 3.034611668997968,
+    "tokens": 1031,
+    "request_bytes": 3368,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 2,
+    "rule": {
+     "source_utterance": "turn the fan on when someone is in the room and it is warmer than thirty degrees",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "occupied"
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c04",
+    "utterance": "turn the lamp on when it gets dark and someone is in the room",
+    "cloud_round_trip_s": 2.8172748399956618,
+    "tokens": 997,
+    "request_bytes": 3435,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 3,
+    "rule": null,
+    "reason": "cannot determine darkness threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c05",
+    "utterance": "switch the lamp off after nine in the evening",
+    "cloud_round_trip_s": 4.655530695003108,
+    "tokens": 997,
+    "request_bytes": 3419,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 3,
+    "rule": {
+     "source_utterance": "switch the lamp off after nine in the evening",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 21
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 6,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c06",
+    "utterance": "turn the fan off when the temperature drops below twenty five degrees",
+    "cloud_round_trip_s": 2.3820690200009267,
+    "tokens": 873,
+    "request_bytes": 3494,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 4,
+    "rule": {
+     "source_utterance": "turn the fan off when the temperature drops below twenty five degrees",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": "<",
+        "value": 25
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": null
+   },
+   {
+    "id": "c07",
+    "utterance": "turn the lamp on when someone walks in through the door",
+    "cloud_round_trip_s": 2.5880172709948965,
+    "tokens": 985,
+    "request_bytes": 3555,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 5,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone walks in through the door",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 3
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c08",
+    "utterance": "turn everything off when the room has been empty for ten minutes",
+    "cloud_round_trip_s": 7.062363124001422,
+    "tokens": 1032,
+    "request_bytes": 3625,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 6,
+    "rule": {
+     "source_utterance": "turn everything off when the room has been empty for ten minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 600
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      },
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c09",
+    "utterance": "turn the fan on when the humidity goes above seventy percent",
+    "cloud_round_trip_s": 3.0093791259932914,
+    "tokens": 1007,
+    "request_bytes": 3691,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 7,
+    "rule": {
+     "source_utterance": "turn the fan on when the humidity goes above seventy percent",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": ">",
+        "value": 70
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c10",
+    "utterance": "turn the lamp off when the room is bright enough on its own",
+    "cloud_round_trip_s": 2.6095159519973095,
+    "tokens": 919,
+    "request_bytes": 3756,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 8,
+    "rule": null,
+    "reason": "missing brightness threshold",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c11",
+    "utterance": "turn the fan on if there are more than two people in the room",
+    "cloud_round_trip_s": 2.1954535620025126,
+    "tokens": 1015,
+    "request_bytes": 3758,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 8,
+    "rule": {
+     "source_utterance": "turn the fan on if there are more than two people in the room",
+     "when": {
+      "all": [
+       {
+        "field": "person_count",
+        "op": ">",
+        "value": 2
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 81,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c12",
+    "utterance": "turn the lamp off at midnight if it is still on",
+    "cloud_round_trip_s": 2.0802857849994325,
+    "tokens": 992,
+    "request_bytes": 3811,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 9,
+    "rule": {
+     "source_utterance": "turn the lamp off at midnight if it is still on",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": "==",
+        "value": 0
+       },
+       {
+        "field": "lamp_state",
+        "op": "==",
+        "value": "on"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 8,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c13",
+    "utterance": "turn the fan off at six in the morning",
+    "cloud_round_trip_s": 2.87214908599708,
+    "tokens": 1028,
+    "request_bytes": 3855,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 10,
+    "rule": {
+     "source_utterance": "turn the fan off at six in the morning",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": "==",
+        "value": 6
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c14",
+    "utterance": "turn the lamp on when i am standing near the door after dark",
+    "cloud_round_trip_s": 4.904762682999717,
+    "tokens": 1357,
+    "request_bytes": 3921,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 11,
+    "rule": {
+     "source_utterance": "turn the lamp on when i am standing near the door after dark",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "standing"
+       },
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "door"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c15",
+    "utterance": "keep the fan running while someone is seated at the desk",
+    "cloud_round_trip_s": 2.716975734998414,
+    "tokens": 1125,
+    "request_bytes": 3983,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 12,
+    "rule": {
+     "source_utterance": "keep the fan running while someone is seated at the desk",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "desk"
+       },
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "seated"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 17,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c16",
+    "utterance": "turn the fan off when the room gets cool and nobody is around",
+    "cloud_round_trip_s": 2.3360096589967725,
+    "tokens": 1067,
+    "request_bytes": 4050,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 13,
+    "rule": {
+     "source_utterance": "turn the fan off when the room gets cool and nobody is around",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": "<",
+        "value": 25
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when the humidity goes above seventy percent"
+   },
+   {
+    "id": "c17",
+    "utterance": "turn the lamp on when someone is in the middle of the room and the light is low",
+    "cloud_round_trip_s": 7.770265252001991,
+    "tokens": 1492,
+    "request_bytes": 4135,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 14,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone is in the middle of the room and the light is low",
+     "when": {
+      "all": [
+       {
+        "field": "zone",
+        "op": "==",
+        "value": "center"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 50
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c18",
+    "utterance": "turn the fan on when it is muggy, above sixty percent humidity and warmer than twenty eight",
+    "cloud_round_trip_s": 3.358126205006556,
+    "tokens": 1171,
+    "request_bytes": 4232,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 15,
+    "rule": {
+     "source_utterance": "turn the fan on when it is muggy, above sixty percent humidity and warmer than twenty eight",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": ">",
+        "value": 60
+       },
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 28
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 49,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c19",
+    "utterance": "turn the lamp off when the room empties for two minutes",
+    "cloud_round_trip_s": 2.727510026001255,
+    "tokens": 1209,
+    "request_bytes": 4293,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 16,
+    "rule": {
+     "source_utterance": "turn the lamp off when the room empties for two minutes",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 120
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c20",
+    "utterance": "turn the fan on in the afternoon when someone is here",
+    "cloud_round_trip_s": 46.766257219002,
+    "tokens": 1485,
+    "request_bytes": 4352,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 17,
+    "rule": {
+     "source_utterance": "turn the fan on in the afternoon when someone is here",
+     "when": {
+      "all": [
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 12
+       },
+       {
+        "field": "hour",
+        "op": "<",
+        "value": 18
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "occupied"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 204,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the temperature drops below twenty five degrees"
+   },
+   {
+    "id": "c21",
+    "utterance": "switch the lamp off if the fan is off and nobody is in the room",
+    "cloud_round_trip_s": 2.5748661359975813,
+    "tokens": 1181,
+    "request_bytes": 4421,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 18,
+    "rule": {
+     "source_utterance": "switch the lamp off if the fan is off and nobody is in the room",
+     "when": {
+      "all": [
+       {
+        "field": "fan_state",
+        "op": "==",
+        "value": "off"
+       },
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 34,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c22",
+    "utterance": "turn the fan off when the lamp is off after eleven at night",
+    "cloud_round_trip_s": 5.814117943002202,
+    "tokens": 1840,
+    "request_bytes": 4486,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 19,
+    "rule": {
+     "source_utterance": "turn the fan off when the lamp is off after eleven at night",
+     "when": {
+      "all": [
+       {
+        "field": "lamp_state",
+        "op": "==",
+        "value": "off"
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 23
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 8,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c23",
+    "utterance": "turn the lamp on whenever more than one person is in the room",
+    "cloud_round_trip_s": 3.2268595159985125,
+    "tokens": 1186,
+    "request_bytes": 4553,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 20,
+    "rule": {
+     "source_utterance": "turn the lamp on whenever more than one person is in the room",
+     "when": {
+      "all": [
+       {
+        "field": "person_count",
+        "op": ">",
+        "value": 1
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 65,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c24",
+    "utterance": "turn the fan on when it is above thirty two degrees no matter what",
+    "cloud_round_trip_s": 2.422538123006234,
+    "tokens": 1192,
+    "request_bytes": 4625,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 21,
+    "rule": {
+     "source_utterance": "turn the fan on when it is above thirty two degrees no matter what",
+     "when": {
+      "all": [
+       {
+        "field": "temperature_c",
+        "op": ">",
+        "value": 32
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c25",
+    "utterance": "turn the lamp off when it is bright during the daytime",
+    "cloud_round_trip_s": 4.452001010002277,
+    "tokens": 1387,
+    "request_bytes": 4685,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 22,
+    "rule": {
+     "source_utterance": "turn the lamp off when it is bright during the daytime",
+     "when": {
+      "all": [
+       {
+        "field": "ambient_luma",
+        "op": ">",
+        "value": 150
+       },
+       {
+        "field": "hour",
+        "op": ">=",
+        "value": 6
+       },
+       {
+        "field": "hour",
+        "op": "<=",
+        "value": 18
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "threshold",
+    "score_detail": {
+     "states": 84,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the lamp on when someone sits at the desk"
+   },
+   {
+    "id": "c26",
+    "utterance": "turn the fan off when the humidity drops below forty percent",
+    "cloud_round_trip_s": 2.1045583129962324,
+    "tokens": 1230,
+    "request_bytes": 4751,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 23,
+    "rule": {
+     "source_utterance": "turn the fan off when the humidity drops below forty percent",
+     "when": {
+      "all": [
+       {
+        "field": "humidity_pct",
+        "op": "<",
+        "value": 40
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 7,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when someone is in the room and it is warmer than thirty degrees"
+   },
+   {
+    "id": "c27",
+    "utterance": "turn the lamp on when someone has been standing in the room for thirty seconds",
+    "cloud_round_trip_s": 3.6174921179990633,
+    "tokens": 1429,
+    "request_bytes": 4835,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 24,
+    "rule": {
+     "source_utterance": "turn the lamp on when someone has been standing in the room for thirty seconds",
+     "when": {
+      "all": [
+       {
+        "field": "posture",
+        "op": "==",
+        "value": "standing"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "switch the lamp off after nine in the evening"
+   },
+   {
+    "id": "c28",
+    "utterance": "turn the fan on when someone comes to the desk and it is warm",
+    "cloud_round_trip_s": 3.239282002999971,
+    "tokens": 1351,
+    "request_bytes": 4902,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 25,
+    "rule": null,
+    "reason": "missing temperature threshold for 'warm'",
+    "outcome": "model_declined"
+   },
+   {
+    "id": "c29",
+    "utterance": "turn everything on when someone walks in and it is dark",
+    "cloud_round_trip_s": 12.090652074002719,
+    "tokens": 1468,
+    "request_bytes": 4896,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 25,
+    "rule": {
+     "source_utterance": "turn everything on when someone walks in and it is dark",
+     "when": {
+      "all": [
+       {
+        "field": "owner_event",
+        "op": "==",
+        "value": "arrived"
+       },
+       {
+        "field": "ambient_luma",
+        "op": "<",
+        "value": 30
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "lamp",
+       "action": "on"
+      },
+      {
+       "device": "fan",
+       "action": "on"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "valid_but_wrong",
+    "agreement": "wrong",
+    "score_detail": {
+     "states": 357,
+     "disagreements": 63
+    },
+    "conflict_with": "turn the fan off when the room has been empty for five minutes"
+   },
+   {
+    "id": "c30",
+    "utterance": "turn the fan off when the room has been empty for an hour",
+    "cloud_round_trip_s": 4.159925250001834,
+    "tokens": 1422,
+    "request_bytes": 4959,
+    "payload_keys": [
+     "already_known",
+     "instruction",
+     "schema"
+    ],
+    "payload_keys_ok": true,
+    "already_known_sent": 26,
+    "rule": {
+     "source_utterance": "turn the fan off when the room has been empty for an hour",
+     "when": {
+      "all": [
+       {
+        "field": "occupancy",
+        "op": "==",
+        "value": "empty"
+       },
+       {
+        "field": "occupancy_duration_s",
+        "op": ">=",
+        "value": 3600
+       }
+      ]
+     },
+     "then": [
+      {
+       "device": "fan",
+       "action": "off"
+      }
+     ],
+     "cooldown_s": 0
+    },
+    "reason": "",
+    "outcome": "correct",
+    "agreement": "exact",
+    "score_detail": {
+     "states": 119,
+     "disagreements": 0
+    },
+    "conflict_with": "turn the fan on when the humidity goes above seventy percent"
+   }
+  ]
+ ],
+ "summary": [
+  {
+   "outcomes": {
+    "correct": 24,
+    "model_declined": 3,
+    "valid_but_wrong": 3
+   },
+   "exact": 19,
+   "threshold_normalised": 5,
+   "conflicts_raised": 23,
+   "tokens_total": 35462,
+   "cloud_round_trip_s": {
+    "n": 30,
+    "min": 2.2042783979995875,
+    "p50": 3.006965966997086,
+    "p95": 5.9876375009989715,
+    "p99": 6.907343892002245,
+    "max": 6.907343892002245,
+    "mean": 3.450548278966259
+   },
+   "payload_keys_all_ok": true,
+   "request_bytes": {
+    "n": 30,
+    "min": 3232,
+    "p50": 3983,
+    "p95": 4896,
+    "p99": 4959,
+    "max": 4959,
+    "mean": 4051.866666666667
+   }
+  },
+  {
+   "outcomes": {
+    "correct": 25,
+    "model_declined": 3,
+    "valid_but_wrong": 2
+   },
+   "exact": 21,
+   "threshold_normalised": 4,
+   "conflicts_raised": 23,
+   "tokens_total": 36075,
+   "cloud_round_trip_s": {
+    "n": 30,
+    "min": 1.8497763330015005,
+    "p50": 3.6577871600020444,
+    "p95": 7.3623389810018125,
+    "p99": 9.986556149000535,
+    "max": 9.986556149000535,
+    "mean": 4.180185742100003
+   },
+   "payload_keys_all_ok": true,
+   "request_bytes": {
+    "n": 30,
+    "min": 3232,
+    "p50": 3983,
+    "p95": 4896,
+    "p99": 4959,
+    "max": 4959,
+    "mean": 4051.866666666667
+   }
+  },
+  {
+   "outcomes": {
+    "correct": 25,
+    "model_declined": 3,
+    "valid_but_wrong": 2
+   },
+   "exact": 20,
+   "threshold_normalised": 5,
+   "conflicts_raised": 23,
+   "tokens_total": 35395,
+   "cloud_round_trip_s": {
+    "n": 30,
+    "min": 2.0802857849994325,
+    "p50": 3.0093791259932914,
+    "p95": 12.090652074002719,
+    "p99": 46.766257219002,
+    "max": 46.766257219002,
+    "mean": 5.1789465904000584
+   },
+   "payload_keys_all_ok": true,
+   "request_bytes": {
+    "n": 30,
+    "min": 3232,
+    "p50": 3983,
+    "p95": 4902,
+    "p99": 4959,
+    "max": 4959,
+    "mean": 4078.6666666666665
+   }
+  }
+ ],
+ "schema_sent": {
+  "fields": {
+   "occupancy": {
+    "type": "enum",
+    "values": [
+     "empty",
+     "occupied"
+    ]
+   },
+   "person_count": {
+    "type": "number",
+    "min": 0,
+    "max": 16
+   },
+   "occupancy_duration_s": {
+    "type": "number",
+    "min": 0,
+    "max": 86400
+   },
+   "zone": {
+    "type": "enum",
+    "values": [
+     "none",
+     "desk",
+     "door",
+     "center"
+    ]
+   },
+   "posture": {
+    "type": "enum",
+    "values": [
+     "none",
+     "standing",
+     "seated",
+     "walking"
+    ]
+   },
+   "ambient_luma": {
+    "type": "number",
+    "min": 0,
+    "max": 255
+   },
+   "temperature_c": {
+    "type": "number",
+    "min": -10,
+    "max": 60
+   },
+   "humidity_pct": {
+    "type": "number",
+    "min": 0,
+    "max": 100
+   },
+   "hour": {
+    "type": "number",
+    "min": 0,
+    "max": 23
+   },
+   "owner_presence": {
+    "type": "enum",
+    "values": [
+     "home",
+     "away"
+    ]
+   },
+   "owner_event": {
+    "type": "enum",
+    "values": [
+     "none",
+     "arrived",
+     "left"
+    ]
+   },
+   "security": {
+    "type": "enum",
+    "values": [
+     "clear",
+     "danger",
+     "night_presence"
+    ]
+   },
+   "lamp_state": {
+    "type": "enum",
+    "values": [
+     "on",
+     "off"
+    ]
+   },
+   "fan_state": {
+    "type": "enum",
+    "values": [
+     "on",
+     "off"
+    ]
+   }
+  },
+  "devices": {
+   "lamp": [
+    "off",
+    "on"
+   ],
+   "fan": [
+    "off",
+    "on"
+   ]
+  },
+  "operators": [
+   "!=",
+   "<",
+   "<=",
+   "==",
+   ">",
+   ">="
+  ]
+ },
+ "meta": {
+  "written_at": "2026-10-06T09:30:20+0530",
+  "host": "ai",
+  "machine": "aarch64",
+  "python": "3.11.2"
+ }
+}
