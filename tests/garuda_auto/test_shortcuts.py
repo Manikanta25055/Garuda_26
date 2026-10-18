@@ -347,3 +347,103 @@ def test_stopping_a_shortcut_stops_the_one_it_is_running(house):
             break
         time.sleep(0.02)
     assert house.done == [] and house.engine.store.get(inner)["runs"][0]["outcome"] == "cancelled"
+
+
+# ── a restart in the middle of a run ──────────────────────────────────────────
+
+def _stop_after(house, seconds):
+    """The service stops `seconds` into the run: the next sleep past that says so."""
+    stop_at = house.now + seconds
+
+    def sleep(s):
+        if house.now + s >= stop_at:
+            house.now = stop_at
+            house.engine._stop.set()
+            return True
+        house.now += s
+        return False
+    house.engine._sleep = sleep
+
+
+def _restarted(house, tmp_path):
+    house.engine = sc.ShortcutEngine(
+        sc.ShortcutStore(house.engine.store._path, clock=lambda: house.now),
+        do_fn=house.do, facts_fn=lambda: house.facts, role_of=house.roles.get,
+        notify_fn=lambda text, email: house.notices.append((text, email)),
+        clock=lambda: house.now, sleep=house.sleep)
+    return house.engine
+
+
+LAMP_TIMER = [{"do": "set_device", "args": {"device": "lamp", "action": "on"}},
+              {"wait": 5400},
+              {"do": "set_device", "args": {"device": "lamp", "action": "off"}}]
+
+
+def test_a_restart_during_a_wait_carries_on_with_the_rest_of_it(house, tmp_path):
+    sid = house.add(program(steps=LAMP_TIMER))
+    started = house.now
+    _stop_after(house, 600)
+    assert house.run(sid)[0]
+    assert [d[1]["action"] for d in house.done] == ["on"]
+    assert house.engine.store.get(sid)["runs"] == []          # not over, not recorded
+    house.now += 120                                          # the restart takes two minutes
+    engine = _restarted(house, tmp_path)
+    engine._resume_waits(wait=True)
+    assert [d[1]["action"] for d in house.done] == ["on", "off"]
+    assert house.now - started == 5400                        # the wait kept its end
+    run = engine.store.get(sid)["runs"][0]
+    assert run["outcome"] == "done" and run["started"] == started
+    assert engine.store.waits() == {}
+
+
+def test_a_wait_inside_an_if_a_repeat_and_another_shortcut_is_found_again(house, tmp_path):
+    inner = house.add(program(name="Inner", steps=LAMP_TIMER))
+    outer_clean = house.engine.check({"name": "Outer", "steps": [
+        {"repeat": 2, "steps": [{"if": {"field": "occupancy", "op": "==", "value": "occupied"},
+                                 "then": [{"run": inner}]}]},
+        {"notify": "all done"}]}, "admin")
+    outer = house.engine.store.add(outer_clean, created_by="admin")["id"]
+    _stop_after(house, 5400 + 60)                             # in the second round's wait
+    house.run(outer)
+    assert [d[1]["action"] for d in house.done] == ["on", "off", "on"]
+    assert list(house.engine.store.waits()) == [outer]
+    house.facts["occupancy"] = "empty"                        # the if is not asked again
+    engine = _restarted(house, tmp_path)
+    engine._resume_waits(wait=True)
+    assert [d[1]["action"] for d in house.done] == ["on", "off", "on", "off"]
+    assert house.notices == [("all done", False)]
+    assert engine.store.get(outer)["runs"][0]["outcome"] == "done"
+
+
+@pytest.mark.parametrize("change, why", [
+    ("edit", "changed"), ("off", "switched off"), ("late", "down for too long")])
+def test_a_wait_is_not_picked_up_when_things_moved_on(house, tmp_path, change, why):
+    sid = house.add(program(steps=LAMP_TIMER))
+    _stop_after(house, 600)
+    house.run(sid)
+    store = house.engine.store
+    if change == "edit":
+        store.replace(sid, {"steps": LAMP_TIMER[:1]})
+    elif change == "off":
+        store.toggle(sid)
+    else:
+        house.now += 5400 + sc.MAX_LATE_S
+    engine = _restarted(house, tmp_path)
+    engine._resume_waits(wait=True)
+    assert [d[1]["action"] for d in house.done] == ["on"]
+    run = engine.store.get(sid)["runs"][0]
+    assert run["outcome"].startswith("not picked up") and why in run["outcome"]
+    assert engine.store.waits() == {}
+
+
+def test_cancelling_a_waiting_run_forgets_its_place(house):
+    sid = house.add(program(steps=LAMP_TIMER))
+
+    def sleep(s):
+        house.engine.cancel(sid)
+        house.now += s
+        return False
+    house.engine._sleep = sleep
+    house.run(sid)
+    assert house.engine.store.get(sid)["runs"][0]["outcome"] == "cancelled"
+    assert house.engine.store.waits() == {}

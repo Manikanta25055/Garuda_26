@@ -890,6 +890,9 @@ AGENT = HomeAgent(DRISHTI_CTX, HOME, NIM_CHAT, DECISION, modes_fn=_home_modes,
 # What a button can do, Narada can do the same way: by the site's own endpoint,
 # as the person who asked (garuda_auto/capabilities.py lists which).
 AGENT.site = SiteCaller(fastapi_app, lambda: STATE.system.event_loop)
+# Cards waiting for a Confirm tap outlive a restart (garuda_auto/confirmations.py).
+AGENT.confirmations = sys.modules[HomeAgent.__module__].Confirmations(
+    path=os.path.join(DRISHTI_DATA_DIR, "confirmations.json"))
 AGENT_CAPABILITIES = sys.modules[HomeAgent.__module__].capabilities.BY_NAME
 
 # Shortcuts: programs made of those capabilities, written by Narada on request

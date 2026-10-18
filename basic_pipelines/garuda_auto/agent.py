@@ -747,10 +747,8 @@ class HomeAgent:
             args = {**args, "program": checked["program"]}
             rendered = {"name": checked["program"]["name"], **checked["rendered"],
                         "cautions": checked.get("cautions") or []}
-        card = self.confirmations.add(capability, args, user, key=getattr(self._turn, "key", user))
-        if rendered:
-            card["shortcut"] = rendered
-            card["lines"] = [l for l in card["lines"] if l["name"] != "program"]
+        card = self.confirmations.add(capability, args, user, key=getattr(self._turn, "key", user),
+                                      shortcut=rendered)
         if not hasattr(self._turn, "confirms"):
             self._turn.confirms = []
         self._turn.confirms.append(card)

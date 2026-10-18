@@ -34,7 +34,15 @@ moment; run by hand it runs as whoever pressed the button, but never with
 more than its maker's role: an admin running a user's shortcut runs it as a
 user, so a step checked only at run time cannot borrow the admin's rights. Capabilities that
 need a person's tap (the confirm tier) cannot be steps.
+
+A run that is waiting (lamp on, wait 90 minutes, lamp off) is written down
+with where it is in its steps. If the service restarts during the wait, the
+run picks up from there when it is back: the rest of the wait, then the next
+step. It is dropped instead, with a note in its runs, if the shortcut was
+changed, switched off or deleted meanwhile, or the wait ended over
+MAX_LATE_S ago (switching a lamp off hours late is not what anyone asked).
 """
+import hashlib
 import json
 import logging
 import re
@@ -54,6 +62,7 @@ MAX_REPEAT = 50
 MAX_RUNNING = 4
 MAX_RUNS_KEPT = 30
 MIN_COOLDOWN_S = 5
+MAX_LATE_S = 30 * 60
 OPS = {"==": lambda a, b: a == b, "!=": lambda a, b: a != b,
        "<": lambda a, b: a < b, "<=": lambda a, b: a <= b,
        ">": lambda a, b: a > b, ">=": lambda a, b: a >= b}
@@ -371,12 +380,39 @@ def describe(program, names=None):
 
 # ── keeping ───────────────────────────────────────────────────────────────────
 
+def steps_hash(shortcut):
+    return hashlib.sha256(json.dumps(shortcut.get("steps"), sort_keys=True).encode()).hexdigest()[:16]
+
+
 class ShortcutStore:
-    def __init__(self, path, clock=time.time):
+    def __init__(self, path, clock=time.time, waits_path=None):
         self._path = path
         self._clock = clock
         self._lock = threading.RLock()
         self.items = jsonfile.load(path, []) if path else []
+        if waits_path is None and path:
+            waits_path = path[:-5] + "_waits.json" if path.endswith(".json") else path + ".waits"
+        self._waits_path = waits_path
+        self._waits = jsonfile.load(waits_path, {}) if waits_path else {}
+
+    # Runs in the middle of a wait: shortcut id -> where they are (see the module note).
+    def set_wait(self, shortcut_id, record):
+        with self._lock:
+            self._waits[shortcut_id] = record
+            self._save_waits()
+
+    def clear_wait(self, shortcut_id):
+        with self._lock:
+            if self._waits.pop(shortcut_id, None) is not None:
+                self._save_waits()
+
+    def waits(self):
+        with self._lock:
+            return {k: dict(v) for k, v in self._waits.items()}
+
+    def _save_waits(self):
+        if self._waits_path:
+            jsonfile.save(self._waits_path, self._waits)
 
     def _save(self):
         if self._path:
@@ -455,6 +491,10 @@ class ShortcutStore:
 
 class _Stop(Exception):
     pass
+
+
+class _Paused(Exception):
+    """The service is stopping during a wait; the run's place is saved."""
 
 
 def fill(text, facts):
@@ -583,8 +623,12 @@ class ShortcutEngine:
 
     # ── one run ───────────────────────────────────────────────────────────────
 
-    def run(self, shortcut_id, *, by, role=None, cause="manual", wait=False, depth=0):
-        """Start a shortcut. Returns (ok, reason, run id)."""
+    def run(self, shortcut_id, *, by, role=None, cause="manual", wait=False, depth=0,
+            root=None, resume=None):
+        """Start a shortcut. Returns (ok, reason, run id).
+
+        `root` is the outermost run's progress when this one is a step of it;
+        `resume` is a saved place to carry on from (see _resume_waits)."""
         shortcut = self.store.get(shortcut_id)
         if shortcut is None:
             return False, "no such shortcut", None
@@ -602,6 +646,11 @@ class ShortcutEngine:
             progress = {"id": secrets.token_hex(4), "shortcut": shortcut_id,
                         "name": shortcut["name"], "by": by, "cause": cause,
                         "started": self._clock(), "steps": [], "now": "starting", "cancel": False}
+            if resume:
+                progress.update(id=resume.get("run") or progress["id"],
+                                started=resume.get("started") or progress["started"],
+                                steps=list(resume.get("done") or []), resume=resume)
+            progress["root"] = root or progress
             self._running[shortcut_id] = progress
         if wait:
             self._carry_out(shortcut, progress, by, role, depth)
@@ -623,13 +672,20 @@ class ShortcutEngine:
 
     def running(self):
         with self._lock:
-            return [{k: v for k, v in p.items() if k not in ("cancel", "child")} | {"steps": list(p["steps"])}
+            return [{k: v for k, v in p.items() if k not in ("cancel", "child", "root", "resume")}
+                    | {"steps": list(p["steps"])}
                     for p in self._running.values()]
 
     def _carry_out(self, shortcut, progress, by, role, depth):
         outcome = "done"
         try:
-            self._steps(shortcut["steps"], progress, by, role, depth)
+            self._steps(shortcut["steps"], progress, by, role, depth, (), progress.get("resume"))
+        except _Paused:
+            # The service is stopping in the middle of a wait: the run is
+            # written down and carries on after the restart.
+            with self._lock:
+                self._running.pop(shortcut["id"], None)
+            return
         except _Stop as stop:
             outcome = str(stop) or "stopped"
         except Exception as exc:
@@ -637,6 +693,8 @@ class ShortcutEngine:
             outcome = f"failed: {type(exc).__name__}: {exc}"
         with self._lock:
             self._running.pop(shortcut["id"], None)
+        if progress["root"] is progress:
+            self.store.clear_wait(shortcut["id"])
         run = {"id": progress["id"], "started": progress["started"],
                "ended": self._clock(), "by": by, "cause": progress["cause"],
                "outcome": outcome, "steps": progress["steps"][-MAX_STEPS:]}
@@ -651,9 +709,21 @@ class ShortcutEngine:
         progress["now"] = text
         self.on_change()
 
-    def _steps(self, steps, progress, by, role, depth):
-        for step in steps:
+    def _steps(self, steps, progress, by, role, depth, at=(), resume=None):
+        """Carry out `steps`. `at` is where they sit in the outermost run (step
+        indexes, the branch an if took, the round of a repeat); `resume`, when
+        set, is a saved place under `at` to start from instead of the top."""
+        cursor = list(resume["cursor"]) if resume and resume.get("cursor") is not None else None
+        first = cursor[0] if cursor else 0
+        if cursor and not (isinstance(first, int) and 0 <= first < len(steps)):
+            raise _Stop("failed: could not pick up after the restart")
+        for i in range(first, len(steps)):
+            step, here = steps[i], at + (i,)
+            inner = cursor[1:] if cursor is not None and i == first else None
             if progress["cancel"] or self._stop.is_set():
+                if self._stop.is_set() and not progress["cancel"]:
+                    self._save_place(progress, here, None)   # this step, from its start
+                    raise _Paused()
                 raise _Stop("cancelled")
             if "do" in step:
                 out = self.do_fn(step["do"], dict(step.get("args") or {}), by, role)
@@ -664,21 +734,43 @@ class ShortcutEngine:
                 if failed and not step.get("optional"):
                     raise _Stop(f"failed: {step['do']}: {detail or 'refused'}")
             elif "wait" in step:
-                self._note(progress, f"wait {step['wait']:g}s")
-                end = self._clock() + step["wait"]
+                if inner is not None and resume.get("until") is not None:
+                    end = resume["until"]
+                    resume["cursor"] = None
+                else:
+                    self._note(progress, f"wait {step['wait']:g}s")
+                    end = self._clock() + step["wait"]
+                self._save_place(progress, here, end)
                 while self._clock() < end:
                     if progress["cancel"]:
                         raise _Stop("cancelled")
                     if self._sleep(min(1.0, max(0.0, end - self._clock()))):
-                        raise _Stop("cancelled")
+                        if progress["cancel"]:
+                            raise _Stop("cancelled")
+                        raise _Paused()
+                self.store.clear_wait(progress["root"]["shortcut"])
             elif "if" in step:
-                branch = "then" if holds(step["if"], self.facts()) else "else"
-                self._note(progress, f"if: {branch}")
+                if inner:
+                    branch = inner[0]
+                    if branch not in ("then", "else"):
+                        raise _Stop("failed: could not pick up after the restart")
+                    sub = {"cursor": inner[1:], "until": resume["until"]}
+                else:
+                    branch = "then" if holds(step["if"], self.facts()) else "else"
+                    self._note(progress, f"if: {branch}")
+                    sub = None
                 if step.get(branch):
-                    self._steps(step[branch], progress, by, role, depth)
+                    self._steps(step[branch], progress, by, role, depth, here + (branch,), sub)
+                if sub is not None:
+                    resume["cursor"] = None
             elif "repeat" in step:
-                for _ in range(step["repeat"]):
-                    self._steps(step["steps"], progress, by, role, depth)
+                first_round = inner[0] if inner else 0
+                for k in range(first_round, step["repeat"]):
+                    sub = ({"cursor": inner[1:], "until": resume["until"]}
+                           if inner and k == first_round else None)
+                    self._steps(step["steps"], progress, by, role, depth, here + (k,), sub)
+                if inner:
+                    resume["cursor"] = None
             elif "notify" in step:
                 text = fill(step["notify"], self.facts())
                 self.notify_fn(text, bool(step.get("email")))
@@ -687,14 +779,87 @@ class ShortcutEngine:
                 if depth >= MAX_DEPTH:
                     raise _Stop("failed: shortcuts are nested too deeply")
                 progress["child"] = step["run"]
+                sub = {"cursor": inner, "until": resume["until"]} if inner else None
+                child = self._child_at(progress, here)
                 ok, reason, _ = self.run(step["run"], by=by, role=role, cause="shortcut",
-                                         wait=True, depth=depth + 1)
+                                         wait=True, depth=depth + 1, root=progress["root"],
+                                         resume=sub)
+                child.pop("at", None)
                 progress["child"] = None
+                if inner:
+                    resume["cursor"] = None
+                if self._stop.is_set() and not progress["cancel"] and ok \
+                        and progress["root"]["shortcut"] in self.store.waits():
+                    raise _Paused()     # the child was paused in its wait
                 self._note(progress, f"run {step['run']}", ok, reason)
                 if not ok:
                     raise _Stop(f"failed: run {step['run']}: {reason}")
             elif "stop" in step:
                 raise _Stop("stopped")
+
+    @staticmethod
+    def _child_at(progress, here):
+        """Remember the place of a `run` step, so a wait inside the shortcut it
+        runs is saved as a place in the outermost run."""
+        progress["at"] = here
+        return progress
+
+    def _save_place(self, progress, here, until):
+        """Write down where the outermost run is: this place, under the places
+        of the `run` steps that led here."""
+        root = progress["root"]
+        # Walk up from this run to the outermost one through their `at` places.
+        with self._lock:
+            lineage = [p for p in self._running.values() if p.get("root") is root]
+        cursor = list(here)
+        current = progress
+        while current is not root:
+            parent = next((q for q in lineage if q.get("child") == current["shortcut"]
+                           and q.get("at") is not None), None)
+            if parent is None:
+                return
+            cursor = list(parent["at"]) + cursor
+            current = parent
+        shortcut = self.store.get(root["shortcut"])
+        if shortcut is None:
+            return
+        self.store.set_wait(root["shortcut"], {
+            "run": root["id"], "started": root["started"], "by": root["by"],
+            "cause": root["cause"], "cursor": cursor, "until": until,
+            "steps": steps_hash(shortcut), "done": root["steps"][-MAX_STEPS:],
+            "saved": self._clock()})
+
+    def _resume_waits(self, wait=False):
+        """After a restart: carry on the runs that were in the middle of a wait."""
+        now = self._clock()
+        for sid, record in self.store.waits().items():
+            shortcut = self.store.get(sid)
+            why = None
+            if shortcut is None:
+                self.store.clear_wait(sid)
+                continue
+            if not shortcut.get("enabled", True):
+                why = "it was switched off"
+            elif record.get("steps") != steps_hash(shortcut):
+                why = "it was changed"
+            elif now - float(record.get("until") or record.get("saved") or 0) > MAX_LATE_S:
+                why = "the service was down for too long"
+            elif self.role_of(record.get("by", "")) is None:
+                why = f"{record.get('by') or 'its maker'} can no longer sign in"
+            if why is None:
+                ok, reason, _ = self.run(sid, by=record["by"], cause=record.get("cause", "manual"),
+                                         wait=wait,
+                                         resume={**record, "cursor": list(record["cursor"])})
+                if ok:
+                    log.info("shortcut %s picked up after restart", sid)
+                    continue
+                why = reason
+            self.store.clear_wait(sid)
+            self.store.record_run(sid, {
+                "id": record.get("run"), "started": record.get("started"), "ended": now,
+                "by": record.get("by", ""), "cause": record.get("cause", "manual"),
+                "outcome": f"not picked up after a restart: {why}",
+                "steps": list(record.get("done") or [])})
 
     # ── the loop ──────────────────────────────────────────────────────────────
 
@@ -702,6 +867,11 @@ class ShortcutEngine:
         if self._thread is not None:
             return
         self._stop.clear()
+        try:
+            self._resume_waits()
+        except Exception as exc:
+            self.last_error = f"resume: {type(exc).__name__}: {exc}"
+            log.exception("shortcut resume")
 
         def loop():
             while not self._stop.wait(interval):
