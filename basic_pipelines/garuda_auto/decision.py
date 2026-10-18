@@ -416,8 +416,10 @@ class DecisionEngine:
         self.stats["last_backend"] = backend
         self.stats["last_latency_ms"] = round((self._clock() - started) * 1000, 1)
 
-    def route(self, utterance, devices, scenes, extra=None):
-        """`extra`: more questions for Jev, in its own shape, asked in the same call."""
+    def route(self, utterance, devices, scenes, extra=None, wait_for_jev=None):
+        """`extra`: more questions for Jev, in its own shape, asked in the same call.
+        `wait_for_jev(route)`: whether the router's answers leave anything for
+        Jev's to decide; when not, the turn goes on without them (route.jev {})."""
         state = {"utterance": utterance, "devices": devices, "scenes": scenes}
         questions = routing_questions(devices, scenes)
         pending = None
@@ -427,6 +429,9 @@ class DecisionEngine:
                 self._pool = concurrent.futures.ThreadPoolExecutor(2, thread_name_prefix="jev")
             pending = self._pool.submit(self._ask_jev, state, questions, extra)
         route = Route(self.decide(state, questions))
+        if pending is not None and wait_for_jev is not None and not wait_for_jev(route):
+            self.stats["jev_skipped"] = self.stats.get("jev_skipped", 0) + 1
+            pending = None
         if pending is not None:
             try:
                 route.jev = pending.result(timeout=getattr(self.jev, "timeout", 2.5) + 0.5)

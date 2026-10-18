@@ -69,7 +69,7 @@ def test_the_routing_models_word_sends_a_request_straight_to_the_planner(house):
     assert not a._wants_planner({"intent": {**sure, "confidence": 0.5}}, make)
     assert not a._wants_planner({"intent": {**sure, "backend": "local"}}, make)
     assert not a._wants_planner({"intent": {**sure, "value": "device_control"}}, make)
-    a.decision.route = lambda *args: {"intent": sure}
+    a.decision.route = lambda *args, **kw: {"intent": sure}
     assert a.handle(make, user="mani", role="admin")["planner"]
 
 

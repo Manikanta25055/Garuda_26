@@ -26,6 +26,7 @@ import time
 
 from ..narada_brain import Brain, guards, noticing, persona
 from . import actuation_log, capabilities, claims
+from .decision import _CONDITIONAL, _MODE, _QUESTION, _TIMER, _WHY
 from .capabilities import MODE_NAMES
 from .confirmations import Confirmations
 from .device_types import is_actuator
@@ -134,6 +135,11 @@ CHANGING_TOOLS = capabilities.names(changing=True)
 LOOK_BUDGET_S = 1.5
 # Jev's reading of a reply the claim pattern cannot vouch for (claims.worth_reading).
 CLAIMS_JEV_TIMEOUT_S = 1.5
+# The modes that silence alerts go on only when the person's words ask for that
+# (Jev's reading, _asked_to_silence). Before it, "I need some quiet" turned on
+# do not disturb 2 times in 2 (2026-10-19).
+SILENCING_MODES = ("dnd", "idle", "email_off")
+ALERT_GATE_AT = 0.6
 _DAY_SETS = {"daily": [0, 1, 2, 3, 4, 5, 6], "weekdays": [0, 1, 2, 3, 4],
              "weekends": [5, 6]}
 
@@ -190,6 +196,38 @@ def fit_result(out, limit):
 # on 122 of 386 labelled commands and were wrong on none (2026-10-18, see
 # evaluation/narada_jev/).
 FAST_JEV = 0.7
+# The instant lane beyond one device (2026-10-19). In the same Jev call as the
+# routing questions: per device, on / off / leave it, and whether the sentence
+# is a switch-now request at all. Acted on only when every answer is at least
+# this sure; anything else goes to the model as before. Measured 2026-10-19 on
+# English commands: done at once 27 -> 40 of 46, and 13 -> 23 of 30 on a set
+# written afterwards; wrong 0, and 0 of 54 pronoun commands acted on.
+INSTANT_MULTI = True
+MULTI_JEV = 0.9
+# "Is the fan on?" answered from the house itself when the router and Jev both
+# hear a plain question about now and agree on the device. 0 -> 11 of 12 and
+# 0 -> 8 of 9 (held out) answered at once, none wrong.
+INSTANT_STATE = True
+_NOT_NOW = re.compile(r"\b(how long|when|did|was|were|last|today|yesterday|since|ago|history|times?|timer|"
+                      r"schedul\w*|automat\w*|rules?|usually|often|energy|power usage|minutes?|hours?|"
+                      r"why|ever|been)\b", re.I)
+# The instant lane never acts on a sentence that names devices only by a
+# pronoun: Jev reads one sentence, not the conversation, and on 2026-10-19 read
+# "turn it on" (after a question about the fan) as every device on. A device
+# is switched only when the sentence names it, every device only when it says so.
+_PRONOUN = re.compile(r"\b(it|its|that|them|they|their|this|those|these|one|ones|same)\b", re.I)
+_EVERY = re.compile(r"\b(everything|every|all|both|whole)\b", re.I)
+_TYPE_WORDS = {"light": {"light", "lights", "lamp", "lamps", "bulb"}, "fan": {"fan", "fans"},
+               "tv": {"tv", "television", "telly"}}
+# The template answers on or off, so the question must be about on or off
+# ("is the fan broken?" was answered "Fan is on.").
+_ON_OFF = re.compile(r"\b(on|off|running|switched|state|status)\b", re.I)
+# A turn the router already shows needs nothing from Jev (a chat, a history
+# question, a rule to make) goes on without waiting for Jev's routing answer:
+# 78 of 104 real and scripted requests save its 0.5 s.
+SKIP_JEV_WAIT = True
+_DEVICE_TALK = re.compile(r"\b(turn|switch|power|start|stop|kill|shut|put|on|off|everything|all|light|lights|"
+                          r"lamp|fan|tv|television|ac)\b", re.I)
 
 # Places a sentence may name (with the house's own rooms); see _offline_call.
 PLACE_WORDS = frozenset({
@@ -274,7 +312,10 @@ class HomeAgent:
             devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
                        for d in self.ctx.registry.devices if d.get("enabled", True)]
             scenes = [{"id": s["id"], "name": s["name"]} for s in self.home.scenes.scenes]
-            route = self.decision.route(text, devices, scenes)
+            route = self.decision.route(
+                text, devices, scenes,
+                extra=self._plan_questions() if INSTANT_MULTI else None,
+                wait_for_jev=(lambda r: self._needs_jev(text, r)) if SKIP_JEV_WAIT else None)
             route_view = {k: {"value": v["value"], "confidence": v["confidence"]}
                           for k, v in route.items()}
             route_view["backend"] = next(iter(route.values()))["backend"] if route else "local"
@@ -372,6 +413,155 @@ class HomeAgent:
         jev = getattr(route, "jev", None) or {}
         if not jev:
             return None
+        return (self._fast_single(text, route, jev, user, role)
+                or (self._fast_multi(text, route, jev, user, role) if INSTANT_MULTI else None)
+                or (self._fast_state(text, route, jev) if INSTANT_STATE else None))
+
+    def _actuators(self):
+        return [d for d in self.ctx.registry.devices if d.get("enabled", True) and is_actuator(d["type"])]
+
+    def _plan_questions(self):
+        """Jev's questions for the instant lane, asked with the routing ones."""
+        questions = {"now": {
+            "type": "noul",
+            "instructions": "Is `utterance` a request to switch one or more devices on or off right now? "
+                            "Not a question, not for later, not on a timer, schedule or condition, not "
+                            "about modes, scenes, brightness, speed or volume, and not naming the device "
+                            "only as it, that or them.",
+            "criteria": {"true": "Yes: switch these devices now.",
+                         "false": "No: a question, a plan for later, a condition, a setting, or unclear."}}}
+        for d in self._actuators():
+            name = d["name"] + (f" in the {d['room']}" if d.get("room") else "")
+            questions[f"do_{d['id']}"] = {
+                "type": "choice",
+                "instructions": f"From `utterance`, what should be done to the {name} right now?",
+                "criteria": {"leave": "Nothing: it is not meant, or it should stay as it is, or the "
+                                      "sentence is a question, for later, or on a condition.",
+                             "on": f"Switch the {d['name']} on now.",
+                             "off": f"Switch the {d['name']} off now."}}
+        return questions
+
+    def _needs_jev(self, text, route):
+        """Whether Jev's routing answer could change this turn: only for what the
+        instant lane might take."""
+        intent = route["intent"]["value"] if "intent" in route else "other"
+        if intent in ("timer", "automation_rule", "mode_change", "explain", "build"):
+            return False
+        return intent != "other" or bool(_DEVICE_TALK.search(text))
+
+    def _places_known(self, text, rooms=None):
+        words = set(re.findall(r"[a-z]+", text.lower()))
+        named = {r for r in self._rooms() | PLACE_WORDS if set(r.split()) <= words}
+        return not (named - (rooms if rooms is not None else self._rooms()))
+
+    def _fast_multi(self, text, route, jev, user, role):
+        """Several devices, or one the single path would not take, switched at
+        once: Jev sure of every device and that this is a switch-now request,
+        nothing in the sentence that says later, if, or which mode."""
+        now = jev.get("now") or {}
+        if float(now.get("noul") or 0) < MULTI_JEV:
+            return None
+        if route["intent"]["value"] not in ("device_control", "all_off", "other"):
+            return None
+        if _CONDITIONAL.search(text) or _TIMER.search(text) or _QUESTION.search(text) \
+                or _MODE.search(text) or _NOT_NOW.search(text) or _PRONOUN.search(text) \
+                or not self._places_known(text):
+            return None
+        words = set(re.findall(r"[a-z]+", text.lower()))
+        # Decided by outcome, not by Jev's word: "keep the fan on" splits Jev
+        # between leave and on, which for a fan already on are the same thing.
+        states = {d["id"]: d.get("state") for d in self.home.devices()}
+        plan, already = [], []
+        for d in self._actuators():
+            a = jev.get(f"do_{d['id']}") or {}
+            probs = a.get("probabilities")
+            now_state = states.get(d["id"])
+            if not isinstance(probs, dict) or now_state not in ("on", "off"):
+                return None
+            other = "off" if now_state == "on" else "on"
+            stay = float(probs.get("leave") or 0) + float(probs.get(now_state) or 0)
+            switch = float(probs.get(other) or 0)
+            if max(stay, switch) < MULTI_JEV:
+                return None
+            if switch > stay:
+                if not self._named(d, words) and not _EVERY.search(text):
+                    return None
+                plan.append({"device": d["id"], "action": other})
+            elif float(probs.get(now_state) or 0) > float(probs.get("leave") or 0):
+                already.append(f"{d['name']} is already {now_state}.")
+        if not plan and not already:
+            return None
+        if not plan:
+            reply = " ".join(already)
+            return {"reply": reply, "lane": "fast", "actions": [],
+                    "_turn": [{"role": "user", "content": text}, {"role": "assistant", "content": reply}]}
+        calls, results = [], []
+        for i, args in enumerate(plan):
+            out = self._run_tool("set_device", args, user, role)
+            calls.append({"id": f"fast{i}", "type": "function",
+                          "function": {"name": "set_device", "arguments": json.dumps(args)}})
+            results.append(out)
+        done = [r.get("result", "") for r in results if r.get("_action")]
+        if not done:
+            return None             # nothing switched: the model hears the request instead
+        reply = " ".join([f"{(r.get('result') if r.get('_action') else r.get('error')) or 'Not done'}."
+                          for r in results] + already)
+        turn = [{"role": "user", "content": text},
+                {"role": "assistant", "content": "", "tool_calls": calls}]
+        turn += [{"role": "tool", "tool_call_id": c["id"],
+                  "content": json.dumps({"ok": bool(r.get("_action")),
+                                         **({"result": r.get("result", "")} if r.get("_action")
+                                            else {"error": r.get("error", "")})})}
+                 for c, r in zip(calls, results)]
+        turn.append({"role": "assistant", "content": reply})
+        return {"reply": reply, "lane": "fast", "actions": done, "_turn": turn}
+
+    @staticmethod
+    def _named(device, words):
+        """Whether a sentence's words name this device: its name, id, room or kind."""
+        own = set(re.findall(r"[a-z]+", " ".join((device.get("name", ""), device.get("id", "").replace("_", " "),
+                                                   device.get("room") or "")).lower()))
+        kinds = set().union(*(v for k, v in _TYPE_WORDS.items()
+                              if k in own or k == (device.get("type") or "")))
+        return bool(words & (own | kinds))
+
+    def _fast_state(self, text, route, jev):
+        """A plain "is the fan on?" or "what's on?", answered from the house."""
+        sure = route["intent"]["confidence"] >= self.decision.threshold
+        if route["intent"]["value"] != "state_query" or not sure:
+            return None
+        j = jev.get("intent") or {}
+        if j.get("value") != "state_query" or float(j.get("confidence") or 0) < FAST_JEV:
+            return None
+        if not _QUESTION.search(text) or not _ON_OFF.search(text) or _WHY.search(text) \
+                or _NOT_NOW.search(text) or _MODE.search(text) or _PRONOUN.search(text) \
+                or not self._places_known(text):
+            return None
+        dev = route["device"]["value"]
+        if (jev.get("device") or {}).get("value") != dev:
+            return None
+        devices = [d for d in self.home.devices() if d["actuator"]]
+        if dev != "none":
+            if route["device"]["confidence"] < self.decision.threshold:
+                return None
+            d = next((x for x in devices if x["id"] == dev), None)
+            if not d or d.get("state") not in ("on", "off"):
+                return None
+            reply = f"{d['name']} is {d['state']}."
+        else:
+            if any(d.get("state") not in ("on", "off") for d in devices):
+                return None
+            on = [d["name"] for d in devices if d["state"] == "on"]
+            off = [d["name"] for d in devices if d["state"] == "off"]
+            join = lambda xs: ", ".join(xs[:-1]) + " and " + xs[-1] if len(xs) > 1 else xs[0]  # noqa: E731
+            if not on:
+                reply = "Nothing is on."
+            else:
+                reply = f"{join(on)} {'is' if len(on) == 1 else 'are'} on" + (f"; {join(off)} off." if off else ".")
+        return {"reply": reply, "lane": "fast", "actions": [],
+                "_turn": [{"role": "user", "content": text}, {"role": "assistant", "content": reply}]}
+
+    def _fast_single(self, text, route, jev, user, role):
         call = self._offline_call(text, route)
         if call is None:
             return None
@@ -1049,8 +1239,39 @@ class HomeAgent:
         mode = args.get("mode")
         if mode not in MODE_NAMES or not isinstance(args.get("on"), bool):
             return {"error": "unknown mode"}
+        if args["on"] and mode in SILENCING_MODES and not self._asked_to_silence(mode):
+            return {"error": f"not done: {mode} silences the security alerts, and the person did not "
+                             "clearly ask for that. Ask them whether they want it on, in so many words."}
         message = self.set_mode_fn(mode, args["on"], user)
         return {"ok": True, "result": message, "_action": True}
+
+    def _asked_to_silence(self, mode):
+        """Jev's reading of the person's words before a mode that silences alerts
+        goes on. No words (a shortcut running) or no Jev: as before."""
+        said = getattr(self._turn, "said", "") or ""
+        jev = getattr(self.decision, "jev", None)
+        if not said or jev is None or not jev.configured:
+            return True
+        what = {"dnd": "do not disturb turned on (it silences alerts)",
+                "idle": "idle mode turned on (it stops security alerts)",
+                "email_off": "email alerts turned off"}.get(mode, mode)
+        try:
+            answers = jev.ask({"request": said, "mode": what}, {"asked": {
+                "type": "noul",
+                "instructions": "Does `request` clearly ask, in so many words, for `mode`?",
+                "criteria": {"true": "Yes: it names this mode, or plainly asks for alerts or notifications "
+                                     "to be silenced or stopped.",
+                             "false": "No: it only says how the person feels or what they are doing "
+                                      "(sleeping, going out, busy, wanting quiet) without asking for this."}}},
+                timeout=CLAIMS_JEV_TIMEOUT_S)
+            p = float((answers.get("asked") or {}).get("noul"))
+        except Exception as exc:
+            log.warning("Jev could not read the request before %s: %s", mode, exc)
+            return True
+        if p < ALERT_GATE_AT:
+            self.stats["silence_held"] = self.stats.get("silence_held", 0) + 1
+            log.warning("held %s: the request did not clearly ask for it (Jev %.2f)", mode, p)
+        return p >= ALERT_GATE_AT
 
     def _tool_recent_activity(self, args, user, role):
         limit = max(1, min(int(args.get("limit") or 10), 30))

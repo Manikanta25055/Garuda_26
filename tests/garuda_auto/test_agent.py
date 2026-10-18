@@ -791,3 +791,145 @@ def test_a_mode_said_to_be_on_when_it_is_off_is_corrected(house):
     out = a.handle("turn it on", user="mani", role="admin")
     assert out["reply"] == "Privacy mode is still off." and a.stats["claims_corrected"] == 1
     assert "privacy mode is off, not on" in chat.requests[-1]["messages"][-1]["content"]
+
+
+# ── the instant lane beyond one device; state answers; the alert gate ────────
+
+def plan_post(sent=None, now=0.97, routing=None, asked=None, **plan):
+    """A Jev that answers the routing questions (name=(choice, conf)), the
+    instant lane's (now=P, device id=(choice, P)) and the alert gate's (asked=P)."""
+    routing = routing or dict(intent=("other", 0.9), device=("none", 0.9), action=("none", 0.9),
+                              scene=("none", 0.9))
+
+    def post(url, headers=None, json=None, timeout=None):
+        if sent is not None:
+            sent.append(json)
+        qs, answers = json["questions"], {}
+        for name, (value, conf) in routing.items():
+            if name in qs:
+                answers[name] = {"type": "choice", "choice": value, "confidence": conf}
+        if "now" in qs:
+            answers["now"] = {"type": "noul", "noul": now}
+        if "asked" in qs and asked is not None:
+            answers["asked"] = {"type": "noul", "noul": asked}
+        for dev, (choice, p, *probs) in plan.items():
+            if f"do_{dev}" in qs:
+                rest = (1 - p) / 2
+                answers[f"do_{dev}"] = {"type": "choice", "choice": choice, "confidence": p,
+                                        "probabilities": probs[0] if probs else
+                                        {c: (p if c == choice else rest) for c in ("leave", "on", "off")}}
+        return Resp(200, {"answers": answers})
+    return post
+
+
+def plan_agent(ctx, home, chat, router=None, **jev):
+    from basic_pipelines.garuda_auto.router import RouterBackend
+    eng = DecisionEngine(LocalBackend(lambda: ctx.registry.devices, lambda: home.scenes.scenes),
+                         JevBackend("jk", post=plan_post(**jev)),
+                         router=RouterBackend(model=router or SureRouter(intent="other", device="none",
+                                                                         action="none")))
+    return HomeAgent(ctx, home, chat, eng)
+
+
+def test_two_devices_named_and_sure_are_switched_at_once(house):
+    ctx, home = house
+    chat = ScriptedChat([])
+    out = plan_agent(ctx, home, chat, lamp=("on", 0.97), fan=("on", 0.95)) \
+        .handle("turn on the lamp and the fan", user="mani", role="admin")
+    assert out["lane"] == "fast" and sorted(on_ids(home)) == ["fan", "lamp"] and chat.requests == []
+    assert out["reply"] == "Lamp on. Fan on."
+
+
+def test_keep_one_on_means_leave_it_when_it_already_is(house):
+    ctx, home = house
+    home.set("fan", "on")
+    home.set("lamp", "on")
+    time.sleep(1.1)
+    # Jev split between leave and on for the fan: for a fan already on, the same outcome.
+    out = plan_agent(ctx, home, ScriptedChat([]), lamp=("off", 0.98),
+                     fan=("leave", 0.51, {"leave": 0.51, "on": 0.47, "off": 0.02})) \
+        .handle("turn the lamp off but keep the fan on", user="mani", role="admin")
+    assert out["lane"] == "fast" and on_ids(home) == ["fan"]
+
+
+@pytest.mark.parametrize("say, plan", [
+    ("turn it on", dict(lamp=("on", 0.99), fan=("on", 0.99))),          # a pronoun: the model reads the conversation
+    ("switch on", dict(lamp=("on", 0.99), fan=("on", 0.99))),           # names nothing
+    ("turn on the lamp and fan in 10 minutes", dict(lamp=("on", 0.99), fan=("on", 0.99))),
+    ("turn on the lamp and the fan", dict(lamp=("on", 0.8), fan=("on", 0.99))),   # not sure of one
+    ("lamp on and fan on", dict(lamp=("on", 0.99), fan=("leave", 0.4))),
+])
+def test_the_model_takes_what_the_instant_lane_should_not(house, say, plan):
+    ctx, home = house
+    chat = ScriptedChat([completion("Asked the model.")])
+    out = plan_agent(ctx, home, chat, **plan).handle(say, user="mani", role="admin")
+    assert out["lane"] == "agent" and on_ids(home) == [] and len(chat.requests) == 1
+
+
+def test_an_unnamed_device_only_when_the_sentence_says_every(house):
+    ctx, home = house
+    chat = ScriptedChat([completion("Asked the model.")])
+    out = plan_agent(ctx, home, chat, now=0.99, lamp=("on", 0.99), fan=("on", 0.99)) \
+        .handle("turn on the lamp please", user="mani", role="admin")
+    assert out["lane"] == "agent" and on_ids(home) == []
+    out = plan_agent(ctx, home, ScriptedChat([]), now=0.99, lamp=("on", 0.99), fan=("on", 0.99)) \
+        .handle("turn everything on", user="mani", role="admin")
+    assert out["lane"] == "fast" and sorted(on_ids(home)) == ["fan", "lamp"]
+
+
+def test_a_plain_state_question_is_answered_from_the_house(house):
+    ctx, home = house
+    home.set("fan", "on")
+    sure_q = dict(intent=("state_query", 0.95), device=("fan", 0.95), action=("none", 0.9), scene=("none", 0.9))
+    chat = ScriptedChat([])
+    a = plan_agent(ctx, home, chat, router=SureRouter(intent="state_query", device="fan", action="none"),
+                   routing=sure_q)
+    out = a.handle("is the fan on?", user="mani", role="admin")
+    assert out["lane"] == "fast" and out["reply"] == "Fan is on." and chat.requests == []
+
+
+@pytest.mark.parametrize("say", ["is the fan broken?", "how long has the fan been on?", "is it on?",
+                                 "why is the fan on?"])
+def test_a_state_question_the_template_cannot_answer_goes_to_the_model(house, say):
+    ctx, home = house
+    sure_q = dict(intent=("state_query", 0.95), device=("fan", 0.95), action=("none", 0.9), scene=("none", 0.9))
+    chat = ScriptedChat([completion("Asked the model.")])
+    out = plan_agent(ctx, home, chat, router=SureRouter(intent="state_query", device="fan", action="none"),
+                     routing=sure_q).handle(say, user="mani", role="admin")
+    assert out["lane"] == "agent" and len(chat.requests) == 1
+
+
+def test_a_turn_that_needs_nothing_from_jev_does_not_wait_for_it(house):
+    ctx, home = house
+
+    def slow(url, headers=None, json=None, timeout=None):
+        time.sleep(1.0)
+        return Resp(200, {"answers": {}})
+    from basic_pipelines.garuda_auto.router import RouterBackend
+    eng = DecisionEngine(LocalBackend(lambda: ctx.registry.devices, lambda: home.scenes.scenes),
+                         JevBackend("jk", post=slow),
+                         router=RouterBackend(model=SureRouter(intent="explain", device="none", action="none")))
+    started = time.monotonic()
+    out = HomeAgent(ctx, home, ScriptedChat([completion("Because of the rule.")]), eng) \
+        .handle("why did that happen?", user="mani", role="admin")
+    assert out["reply"] == "Because of the rule." and time.monotonic() - started < 0.8
+    assert eng.stats["jev_skipped"] == 1
+
+
+@pytest.mark.parametrize("asked, held", [(0.2, True), (0.9, False), (None, False)])
+def test_a_mode_that_silences_alerts_needs_the_words(house, asked, held):
+    ctx, home = house
+    modes = {"dnd": False}
+
+    def set_mode(mode, on, actor):
+        modes[mode] = on
+        return f"{mode} {'on' if on else 'off'}"
+    chat = ScriptedChat([completion(tool_calls=[call("set_security_mode", {"mode": "dnd", "on": True})]),
+                         completion("Done.")])
+    eng = DecisionEngine(LocalBackend(lambda: ctx.registry.devices, lambda: home.scenes.scenes),
+                         JevBackend("jk", post=plan_post(asked=asked)) if asked is not None else None)
+    a = HomeAgent(ctx, home, chat, eng, modes_fn=lambda: dict(modes), set_mode_fn=set_mode)
+    a.handle("I need some quiet", user="mani", role="admin")
+    assert modes["dnd"] is (not held)
+    if held:
+        assert "did not clearly ask" in chat.requests[-1]["messages"][-1]["content"]

@@ -1,0 +1,1114 @@
+{
+ "date": "2026-10-19",
+ "house": "Lamp (study), Fan (bedroom), TV (hall)",
+ "language": "English",
+ "results": {
+  "followups_after_fast_lane_history": {
+   "before_fix": "0/15",
+   "after_fix": "15/15"
+  },
+  "instant_commands_original_46": {
+   "before": 27,
+   "after": 40,
+   "wrong": 0
+  },
+  "instant_commands_heldout_30": {
+   "before": 13,
+   "after": 23,
+   "wrong": 0
+  },
+  "instant_state_answers_original_12": {
+   "before": 0,
+   "after": 11,
+   "wrong": 0
+  },
+  "instant_state_answers_heldout_9": {
+   "before": 0,
+   "after": 8,
+   "wrong": 0
+  },
+  "pronoun_commands_acted_on_54": 0,
+  "jev_wait_skipped_real_and_scripted_requests": "78/104 (0.5 s each)",
+  "real_model_sessions_40_turns": {
+   "before": {
+    "commands_right": "30/30",
+    "untrue": 0,
+    "median_turn_s": 2.0,
+    "instant_turns": 12
+   },
+   "after": {
+    "commands_right": "30/30",
+    "untrue": 0,
+    "median_turn_s": 1.11,
+    "instant_turns": 20
+   }
+  },
+  "alert_gate_56": {
+   "before": {
+    "unclear_silenced": "2/40",
+    "clear_done": "15/16"
+   },
+   "after": {
+    "unclear_silenced": "0/40",
+    "clear_done": "15/16"
+   }
+  },
+  "found_and_fixed_during_testing": "multi-device lane turned on all devices for 'turn it on' (Jev reads one sentence); pronoun, naming guards added; 'is the fan broken?' answered 'Fan is on.'; on/off word required"
+ },
+ "not_built": {
+  "ask_instead_of_guess": "nothing ambiguous in this house to measure; NIM already asks",
+  "learning_loop": "needs days of real corrections",
+  "history_rerank": "no history search in the test house"
+ },
+ "cases": {
+  "commands": [
+   [
+    "turn on the lamp",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "lamp on",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "switch off the fan",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "fan off please",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "can you turn the tv on",
+    {
+     "tv": "on"
+    }
+   ],
+   [
+    "please switch the TV off",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "kill the fan",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "shut the lamp off",
+    {
+     "lamp": "off"
+    }
+   ],
+   [
+    "power on the tv",
+    {
+     "tv": "on"
+    }
+   ],
+   [
+    "turn the study lamp on",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "bedroom fan on",
+    {
+     "fan": "on"
+    }
+   ],
+   [
+    "turn off the hall tv",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "switch on the lamp now",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "lamp off thanks",
+    {
+     "lamp": "off"
+    }
+   ],
+   [
+    "could you turn off the lamp",
+    {
+     "lamp": "off"
+    }
+   ],
+   [
+    "start the fan",
+    {
+     "fan": "on"
+    }
+   ],
+   [
+    "stop the fan",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "put the tv on",
+    {
+     "tv": "on"
+    }
+   ],
+   [
+    "trun on teh lamp",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "swich off the fan",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "can you turn the fan on?",
+    {
+     "fan": "on"
+    }
+   ],
+   [
+    "I said lamp off",
+    {
+     "lamp": "off"
+    }
+   ],
+   [
+    "turn the light on",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "switch the television off",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "turn on the lamp and the fan",
+    {
+     "lamp": "on",
+     "fan": "on"
+    }
+   ],
+   [
+    "lamp and tv off",
+    {
+     "lamp": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "turn off the fan and the tv",
+    {
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "switch on the tv, lamp too",
+    {
+     "tv": "on",
+     "lamp": "on"
+    }
+   ],
+   [
+    "turn the lamp off but keep the fan on",
+    {
+     "lamp": "off"
+    }
+   ],
+   [
+    "turn off the fan but leave the lamp on",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "don't turn on the fan, just the lamp",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "not the tv, switch on the fan",
+    {
+     "fan": "on"
+    }
+   ],
+   [
+    "turn everything off",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "switch everything on",
+    {
+     "lamp": "on",
+     "fan": "on",
+     "tv": "on"
+    }
+   ],
+   [
+    "turn off everything except the fan",
+    {
+     "lamp": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "everything on except the tv",
+    {
+     "lamp": "on",
+     "fan": "on"
+    }
+   ],
+   [
+    "all off",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "lamp on, fan off",
+    {
+     "lamp": "on",
+     "fan": "off"
+    }
+   ],
+   [
+    "fan on and tv off",
+    {
+     "fan": "on",
+     "tv": "off"
+    }
+   ],
+   [
+    "turn the tv off and the lamp on",
+    {
+     "tv": "off",
+     "lamp": "on"
+    }
+   ],
+   [
+    "switch off the lamp and fan but not the tv",
+    {
+     "lamp": "off",
+     "fan": "off"
+    }
+   ],
+   [
+    "turn on both the lamp and the fan",
+    {
+     "lamp": "on",
+     "fan": "on"
+    }
+   ],
+   [
+    "turn off the lamp, the fan and the tv",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "i'm leaving, turn everything off",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "keep the tv on and turn the fan off",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "turn on the fan, leave the rest alone",
+    {
+     "fan": "on"
+    }
+   ],
+   [
+    "is the fan on?",
+    null
+   ],
+   [
+    "what's on right now?",
+    null
+   ],
+   [
+    "turn on the lamp in 10 minutes",
+    null
+   ],
+   [
+    "turn off the fan at 10 pm",
+    null
+   ],
+   [
+    "every night at 11 turn off the tv",
+    null
+   ],
+   [
+    "when I leave turn everything off",
+    null
+   ],
+   [
+    "if the room is empty turn off the lamp",
+    null
+   ],
+   [
+    "turn it on",
+    null
+   ],
+   [
+    "turn that off",
+    null
+   ],
+   [
+    "switch them off",
+    null
+   ],
+   [
+    "it's dark in here",
+    null
+   ],
+   [
+    "it's hot in the bedroom",
+    null
+   ],
+   [
+    "I'm going to sleep",
+    null
+   ],
+   [
+    "turn on dnd",
+    null
+   ],
+   [
+    "enable privacy mode",
+    null
+   ],
+   [
+    "turn off email alerts",
+    null
+   ],
+   [
+    "run movie night",
+    null
+   ],
+   [
+    "make a shortcut that turns the lamp on at sunset",
+    null
+   ],
+   [
+    "why did the lamp turn on?",
+    null
+   ],
+   [
+    "how long was the fan on today?",
+    null
+   ],
+   [
+    "should I turn the fan off?",
+    null
+   ],
+   [
+    "don't turn off the fan",
+    null
+   ],
+   [
+    "don't touch the lamp",
+    null
+   ],
+   [
+    "never turn on the tv after midnight",
+    null
+   ],
+   [
+    "turn on the kitchen light",
+    null
+   ],
+   [
+    "turn on the heater",
+    null
+   ],
+   [
+    "turn on the ac",
+    null
+   ],
+   [
+    "toggle the lamp",
+    null
+   ],
+   [
+    "dim the lamp",
+    null
+   ],
+   [
+    "set the fan to speed 3",
+    null
+   ],
+   [
+    "turn the volume up",
+    null
+   ],
+   [
+    "remind me to turn off the lamp",
+    null
+   ],
+   [
+    "did I turn off the fan?",
+    null
+   ],
+   [
+    "turn on the lamp for 5 minutes",
+    null
+   ],
+   [
+    "turn off the fan in an hour",
+    null
+   ],
+   [
+    "turn the lamp on and then off",
+    null
+   ],
+   [
+    "flash the lamp",
+    null
+   ],
+   [
+    "turn on the lamp if it's after sunset",
+    null
+   ],
+   [
+    "keep the fan on",
+    null
+   ],
+   [
+    "leave the lamp on",
+    null
+   ],
+   [
+    "no, the fan",
+    null
+   ],
+   [
+    "undo that",
+    null
+   ],
+   [
+    "turn off the lamp and remind me tomorrow",
+    null
+   ],
+   [
+    "what does the tv do?",
+    null
+   ],
+   [
+    "tell me a joke",
+    null
+   ],
+   [
+    "turn on the lamp when someone enters the study",
+    null
+   ],
+   [
+    "can you check if the tv is off?",
+    null
+   ],
+   [
+    "the lamp keeps turning on by itself",
+    null
+   ]
+  ],
+  "state": [
+   [
+    "is the fan on?",
+    "fan"
+   ],
+   [
+    "is the lamp off?",
+    "lamp"
+   ],
+   [
+    "is the tv on right now?",
+    "tv"
+   ],
+   [
+    "what's on right now?",
+    "all"
+   ],
+   [
+    "which devices are on?",
+    "all"
+   ],
+   [
+    "is anything on?",
+    "all"
+   ],
+   [
+    "is the study lamp on?",
+    "lamp"
+   ],
+   [
+    "can you check if the tv is off?",
+    "tv"
+   ],
+   [
+    "what is the state of fan right now?",
+    "fan"
+   ],
+   [
+    "is the bedroom fan running?",
+    "fan"
+   ],
+   [
+    "is the television off?",
+    "tv"
+   ],
+   [
+    "are any devices on?",
+    "all"
+   ],
+   [
+    "how long has the fan been on?",
+    null
+   ],
+   [
+    "when did the lamp turn on?",
+    null
+   ],
+   [
+    "is the fan on a timer?",
+    null
+   ],
+   [
+    "why is the tv on?",
+    null
+   ],
+   [
+    "is dnd on?",
+    null
+   ],
+   [
+    "was the lamp on last night?",
+    null
+   ],
+   [
+    "is the kitchen light on?",
+    null
+   ],
+   [
+    "how much energy does the fan use?",
+    null
+   ],
+   [
+    "is the fan scheduled to turn off?",
+    null
+   ],
+   [
+    "did I leave the tv on yesterday?",
+    null
+   ],
+   [
+    "is privacy mode on?",
+    null
+   ],
+   [
+    "what time did the fan start?",
+    null
+   ]
+  ],
+  "heldout_commands": [
+   [
+    "please turn the fan off",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "lamp, on",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "switch the tv on for me",
+    {
+     "tv": "on"
+    }
+   ],
+   [
+    "could you switch off the television",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "fan please, on",
+    {
+     "fan": "on"
+    }
+   ],
+   [
+    "turn the study lamp off now",
+    {
+     "lamp": "off"
+    }
+   ],
+   [
+    "power off the tv in the hall",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "tv and fan on",
+    {
+     "tv": "on",
+     "fan": "on"
+    }
+   ],
+   [
+    "switch off both the tv and the lamp",
+    {
+     "tv": "off",
+     "lamp": "off"
+    }
+   ],
+   [
+    "put the lamp and the tv on",
+    {
+     "lamp": "on",
+     "tv": "on"
+    }
+   ],
+   [
+    "fan and lamp off please",
+    {
+     "fan": "off",
+     "lamp": "off"
+    }
+   ],
+   [
+    "turn on everything",
+    {
+     "lamp": "on",
+     "fan": "on",
+     "tv": "on"
+    }
+   ],
+   [
+    "shut everything down",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "all devices off",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "turn off all the devices",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "lamp off and fan on",
+    {
+     "lamp": "off",
+     "fan": "on"
+    }
+   ],
+   [
+    "tv on, lamp off",
+    {
+     "tv": "on",
+     "lamp": "off"
+    }
+   ],
+   [
+    "switch the fan on and the tv off",
+    {
+     "fan": "on",
+     "tv": "off"
+    }
+   ],
+   [
+    "only the lamp on please",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "turn off the tv, not the fan",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "just the fan off, nothing else",
+    {
+     "fan": "off"
+    }
+   ],
+   [
+    "everything off but the lamp",
+    {
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "turn everything on apart from the fan",
+    {
+     "lamp": "on",
+     "tv": "on"
+    }
+   ],
+   [
+    "leave the tv alone and switch the lamp on",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "turn the lamp on, the fan can stay as it is",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "switch off the lamp and the tv, keep the fan running",
+    {
+     "lamp": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "i'm going out, switch everything off",
+    {
+     "lamp": "off",
+     "fan": "off",
+     "tv": "off"
+    }
+   ],
+   [
+    "turn on the tv and fan, thanks",
+    {
+     "tv": "on",
+     "fan": "on"
+    }
+   ],
+   [
+    "lights on",
+    {
+     "lamp": "on"
+    }
+   ],
+   [
+    "kill the tv",
+    {
+     "tv": "off"
+    }
+   ],
+   [
+    "is the tv on?",
+    null
+   ],
+   [
+    "what's switched on?",
+    null
+   ],
+   [
+    "turn on the fan in half an hour",
+    null
+   ],
+   [
+    "switch off the lamp at 9",
+    null
+   ],
+   [
+    "turn the tv off after 20 minutes",
+    null
+   ],
+   [
+    "every morning turn on the lamp",
+    null
+   ],
+   [
+    "if it gets hot turn on the fan",
+    null
+   ],
+   [
+    "when the tv is on turn off the lamp",
+    null
+   ],
+   [
+    "turn it off please",
+    null
+   ],
+   [
+    "switch that one on",
+    null
+   ],
+   [
+    "it's stuffy in here",
+    null
+   ],
+   [
+    "I can't see anything",
+    null
+   ],
+   [
+    "turn on idle mode",
+    null
+   ],
+   [
+    "enable do not disturb",
+    null
+   ],
+   [
+    "start the movie scene",
+    null
+   ],
+   [
+    "create a rule for the fan",
+    null
+   ],
+   [
+    "why is the fan on?",
+    null
+   ],
+   [
+    "how many hours was the tv on?",
+    null
+   ],
+   [
+    "do you think I should turn off the lamp?",
+    null
+   ],
+   [
+    "please don't switch off the tv",
+    null
+   ],
+   [
+    "never turn the fan on at night",
+    null
+   ],
+   [
+    "turn on the garage light",
+    null
+   ],
+   [
+    "switch on the geyser",
+    null
+   ],
+   [
+    "turn on the air conditioner",
+    null
+   ],
+   [
+    "make the lamp brighter",
+    null
+   ],
+   [
+    "set the tv volume to 10",
+    null
+   ],
+   [
+    "fan speed high",
+    null
+   ],
+   [
+    "remind me to switch off the tv at 11",
+    null
+   ],
+   [
+    "did the lamp turn off?",
+    null
+   ],
+   [
+    "turn the fan on for 10 minutes",
+    null
+   ],
+   [
+    "turn the tv on and off again",
+    null
+   ],
+   [
+    "blink the lamp three times",
+    null
+   ],
+   [
+    "turn on the lamp if nobody is home",
+    null
+   ],
+   [
+    "keep the lamp on",
+    null
+   ],
+   [
+    "no, I meant the tv",
+    null
+   ],
+   [
+    "cancel that",
+    null
+   ],
+   [
+    "what can you do?",
+    null
+   ],
+   [
+    "good morning",
+    null
+   ],
+   [
+    "turn on the lamp when I arrive",
+    null
+   ],
+   [
+    "is the fan broken?",
+    null
+   ]
+  ],
+  "heldout_state": [
+   [
+    "is the tv on?",
+    "tv"
+   ],
+   [
+    "is the lamp switched off?",
+    "lamp"
+   ],
+   [
+    "what's switched on?",
+    "all"
+   ],
+   [
+    "is the fan running right now?",
+    "fan"
+   ],
+   [
+    "anything on at the moment?",
+    "all"
+   ],
+   [
+    "is the hall tv off?",
+    "tv"
+   ],
+   [
+    "how long was the lamp on?",
+    null
+   ],
+   [
+    "when was the fan turned on?",
+    null
+   ],
+   [
+    "is the tv on a schedule?",
+    null
+   ],
+   [
+    "is the garage light on?",
+    null
+   ],
+   [
+    "is night mode on?",
+    null
+   ],
+   [
+    "why is the lamp off?",
+    null
+   ],
+   [
+    "is the tv working?",
+    null
+   ],
+   [
+    "is the lamp hot?",
+    null
+   ],
+   [
+    "is the fan noisy?",
+    null
+   ],
+   [
+    "is the fan connected?",
+    null
+   ],
+   [
+    "is the lamp on or off?",
+    "lamp"
+   ],
+   [
+    "are the fan and tv on?",
+    "all"
+   ],
+   [
+    "what is the status of the tv?",
+    "tv"
+   ]
+  ],
+  "pronoun": [
+   "turn it on",
+   "turn it off",
+   "switch it on",
+   "switch them off",
+   "put it on",
+   "turn that on",
+   "turn those off",
+   "on please",
+   "switch on",
+   "turn on",
+   "turn them all on",
+   "turn this off",
+   "switch that one off",
+   "make it on",
+   "is it on?",
+   "is that off?",
+   "are they on?"
+  ]
+ }
+}
