@@ -100,3 +100,19 @@ def test_env_writer_refuses_every_line_break(tmp_path, sep):
     assert not env.exists()
     envfile.set_vars(env, {"NIM_API_KEY": "nvapi-ok"})
     assert env.read_text() == "NIM_API_KEY=nvapi-ok\n"
+
+
+# ── artifact pages run as their owner, not as the admin viewing them ─────────
+
+def test_a_users_page_viewed_by_an_admin_runs_as_the_user(app_client, monkeypatch, admin_headers):
+    from basic_pipelines.garuda_auto.artifacts import ArtifactStore
+    store = ArtifactStore()
+    monkeypatch.setattr(gw, "ARTIFACTS", store)
+    monkeypatch.setattr(gw.AGENT, "artifacts", store)
+    entry, _ = store.add("Mine", "<p>x</p>", by="user")
+    seen = []
+    monkeypatch.setattr(gw.AGENT, "_run_tool", lambda name, args, u, role: seen.append((u, role)) or {})
+    r = app_client.post(f"/api/narada/artifacts/{entry['id']}/call",
+                        json={"capability": "get_house_state"}, headers=admin_headers)
+    # This branch is stricter still: only the owner may drive their page.
+    assert (r.status_code == 200 and seen == [("user", "user")]) or (r.status_code == 403 and seen == [])
