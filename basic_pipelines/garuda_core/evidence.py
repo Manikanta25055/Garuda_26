@@ -39,8 +39,13 @@ def encrypt_file(src_path: str, key, log) -> str | None:
 
 
 def sftp_upload(local_path: str, remote_filename: str, *, host, port, user, key_path,
-                password, remote_dir, log) -> bool:
-    """SFTP-upload local_path to the configured SSH server. Returns True on success."""
+                password, remote_dir, log, known_hosts="") -> bool:
+    """SFTP-upload local_path to the configured SSH server. Returns True on success.
+
+    The server's host key must already be known: from the system's
+    ~/.ssh/known_hosts or from the `known_hosts` file. An unknown key is
+    refused, so a look-alike server cannot collect the evidence.
+    """
     if not host or not user:
         return False
     try:
@@ -50,7 +55,10 @@ def sftp_upload(local_path: str, remote_filename: str, *, host, port, user, key_
         return False
     try:
         ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.load_system_host_keys()
+        if known_hosts and os.path.exists(known_hosts):
+            ssh.load_host_keys(known_hosts)
+        ssh.set_missing_host_key_policy(paramiko.RejectPolicy())
         kwargs: dict = {"hostname": host, "port": port,
                         "username": user, "timeout": 30}
         if key_path and os.path.exists(key_path):

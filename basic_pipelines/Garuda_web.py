@@ -127,6 +127,8 @@ _COOKIE_SECURE = os.environ.get("SECURE_COOKIES", "0").lower() in ("1", "true", 
 #   EXFIL_KEY_PATH    — path to SSH private key (preferred over password)
 #   EXFIL_PASSWORD    — SSH password (fallback if no key)
 #   EXFIL_REMOTE_PATH — remote directory (default ~/garuda_evidence/)
+#   EXFIL_KNOWN_HOSTS — known_hosts file holding the server's key (the
+#                       system ~/.ssh/known_hosts is read too; unknown keys are refused)
 #   EXFIL_AES_KEY     — 32-byte key as 64-char hex string (generate with:
 #                        python3 -c "import os,binascii; print(binascii.hexlify(os.urandom(32)).decode())")
 _EXFIL_HOST     = os.environ.get("EXFIL_HOST", "")
@@ -135,6 +137,7 @@ _EXFIL_USER     = os.environ.get("EXFIL_USER", "")
 _EXFIL_KEY_PATH = os.environ.get("EXFIL_KEY_PATH", "")
 _EXFIL_PASSWORD = os.environ.get("EXFIL_PASSWORD", "")
 _EXFIL_REMOTE   = os.environ.get("EXFIL_REMOTE_PATH", "garuda_evidence/")
+_EXFIL_KNOWN_HOSTS = os.environ.get("EXFIL_KNOWN_HOSTS", "")
 _exfil_raw_key  = os.environ.get("EXFIL_AES_KEY", "")
 _EXFIL_AES_KEY: bytes | None = bytes.fromhex(_exfil_raw_key) if len(_exfil_raw_key) == 64 else None
 
@@ -590,7 +593,7 @@ def _ssh_upload(local_path: str, remote_filename: str) -> bool:
     return _evidence.sftp_upload(
         local_path, remote_filename, host=_EXFIL_HOST, port=_EXFIL_PORT, user=_EXFIL_USER,
         key_path=_EXFIL_KEY_PATH, password=_EXFIL_PASSWORD, remote_dir=_EXFIL_REMOTE,
-        log=log_system_update)
+        log=log_system_update, known_hosts=_EXFIL_KNOWN_HOSTS)
 
 ##############################################################################
 # CAMERA PIPELINE SETTINGS (the pipeline is in garuda_services/pipeline.py)
