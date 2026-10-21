@@ -138,3 +138,14 @@ def test_password_reset_ends_drishti_sessions(app_client):
     token = gw._drishti_auth.create_session('user', 'user')
     gw._invalidate_user_sessions('user')
     assert gw._drishti_auth.get_session(token) is None
+
+
+# ── forgot password: the answer does not say whether the name exists ────────
+
+def test_forgot_password_answers_alike_when_the_mail_fails(app_client, monkeypatch):
+    monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(False, "smtp down")))
+    real = app_client.post('/api/forgot/send-otp', json={'username': 'user'})
+    ghost = app_client.post('/api/forgot/send-otp', json={'username': 'ghost_xyz'})
+    assert real.json() == ghost.json() == {"ok": True}
+    assert 'user' not in gw.STATE.auth.forgot_otp_store      # the unsent code is dropped
+    assert any("could not be sent" in line for line in gw.system_updates_log)

@@ -8,7 +8,7 @@ import datetime
 import hmac
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 # Wrong admin codes allowed per hour, across every code sent. Each code has its
@@ -259,7 +259,8 @@ def build_auth_router(core):
         return body
 
     @router.post("/api/forgot/send-otp")
-    async def forgot_send_otp(data: SendForgotOTPRequest, request: Request):
+    async def forgot_send_otp(data: SendForgotOTPRequest, request: Request,
+                              background: BackgroundTasks):
         if not core._check_rate_limit(request):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()
@@ -271,10 +272,16 @@ def build_auth_router(core):
         core.STATE.auth.user_forgot_otp = otp   # test-facing alias
         # Send to the user's own email if stored, else fall back to admin recipient
         dest = core.STATE.auth.users[u].get("email") or (core.STATE.config.email_recipients[0] if core.STATE.config.email_recipients else core.STATE.config.email_sender)
-        ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, otp)
-        if not ok:
-            core.STATE.auth.forgot_otp_store.pop(u, None)
-            return {"ok": False, "error": err}
+
+        # Sent after answering: waiting for the mail server, or saying it
+        # failed, told anyone which names have an account.
+        async def _send():
+            ok, err = await asyncio.to_thread(core.send_otp_via_email, dest, otp)
+            if not ok:
+                if core.STATE.auth.forgot_otp_store.get(u, {}).get("otp") == otp:
+                    core.STATE.auth.forgot_otp_store.pop(u, None)
+                core.log_system_update(f"Password reset code for {u} could not be sent: {err}")
+        background.add_task(_send)
         return {"ok": True}
 
     @router.post("/api/forgot/reset")
