@@ -846,7 +846,7 @@ HOME_ENV_PATH = str(Path(__file__).resolve().parent.parent / ".env")
 # four minutes to begin answering a five-word prompt (2026-10-03), which a job
 # of several model calls cannot use. These two answer in seconds.
 PLANNER_DEFAULT_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
-PLANNER_DEFAULT_FALLBACKS = "nvidia/nemotron-3-super-120b-a12b"
+PLANNER_DEFAULT_FALLBACKS = "nvidia/nemotron-3.5-super-vl-120b-a12b"  # 3-super left NIM 2026-10-21
 
 NIM_CHAT = NimChat(
     os.environ.get("NIM_API_KEY", ""),

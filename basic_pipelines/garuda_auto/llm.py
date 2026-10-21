@@ -30,9 +30,10 @@ DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # scripts/narada_eval.py about twice as fast (308-495 s against 668-712 s) but
 # scored 57-58/60 against 59/60, 75/88 against 77/88 on device commands, and
 # before claims.py existed said it had switched devices it never touched. Its
-# endpoint also returns HTTP 500 in bursts. So 3-super leads and 3.5 follows.
-DEFAULT_MODELS = ("nvidia/nemotron-3-super-120b-a12b", "nvidia/nemotron-3.5-super-vl-120b-a12b",
-                  "openai/gpt-oss-20b")
+# endpoint also returns HTTP 500 in bursts. So 3-super led and 3.5 followed.
+# 2026-10-21: NIM took 3-super away (HTTP 404, "Function not found"), so 3.5
+# leads and gpt-oss-20b is the one fallback.
+DEFAULT_MODELS = ("nvidia/nemotron-3.5-super-vl-120b-a12b", "openai/gpt-oss-20b")
 
 # Worth trying the next model for. A 400 or 401 is our fault or the key's and
 # would fail the same way on every model.

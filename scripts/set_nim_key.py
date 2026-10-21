@@ -2,7 +2,7 @@
 """Install an NVIDIA NIM API key (and optionally a model) into .env.
 
     python3 scripts/set_nim_key.py                      # key from nvidia_nim_api.txt
-    python3 scripts/set_nim_key.py path/to/key.txt --model nvidia/nemotron-3-super-120b-a12b
+    python3 scripts/set_nim_key.py path/to/key.txt --model nvidia/nemotron-3.5-super-vl-120b-a12b
 
 The key is checked against the live endpoint before anything is written, so a
 typo cannot replace a working key with a broken one. The key is never printed.
@@ -22,8 +22,8 @@ from garuda_auto.envfile import set_vars  # noqa: E402
 ENV_PATH = ROOT / ".env"
 BASE_URL = "https://integrate.api.nvidia.com/v1"
 KEY_RE = re.compile(r"nvapi-[A-Za-z0-9_-]{20,}")
-DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b"
-DEFAULT_FALLBACKS = "nvidia/nemotron-3.5-super-vl-120b-a12b,openai/gpt-oss-20b"
+DEFAULT_MODEL = "nvidia/nemotron-3.5-super-vl-120b-a12b"
+DEFAULT_FALLBACKS = "openai/gpt-oss-20b"
 
 
 def read_key(path):
