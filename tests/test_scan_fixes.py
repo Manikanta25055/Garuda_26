@@ -87,3 +87,16 @@ def test_presence_events_are_hidden_from_non_admins(app_client, user_headers, ad
     assert 'aa:bb' not in r.text
     r = app_client.get('/api/events/since', headers=admin_headers)
     assert 'aa:bb:cc:dd:ee:ff' in r.text
+
+
+# ── .env writer: no character that splitlines() breaks on ────────────────────
+
+@pytest.mark.parametrize("sep", ["\r", "\n", "\x0b", "\x0c", "\x1c", "\x85", " ", " "])
+def test_env_writer_refuses_every_line_break(tmp_path, sep):
+    from basic_pipelines.garuda_auto import envfile
+    env = tmp_path / ".env"
+    with pytest.raises(ValueError):
+        envfile.set_vars(env, {"NIM_API_KEY": f"k{sep}GARUDA_EVAL_OTP_BYPASS=1"})
+    assert not env.exists()
+    envfile.set_vars(env, {"NIM_API_KEY": "nvapi-ok"})
+    assert env.read_text() == "NIM_API_KEY=nvapi-ok\n"

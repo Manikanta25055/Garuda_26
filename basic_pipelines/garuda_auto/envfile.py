@@ -11,9 +11,13 @@ from pathlib import Path
 
 def set_vars(env_path, updates):
     # A value with a line break would write extra NAME=value lines -- an
-    # admin-entered "key" could switch GARUDA_EVAL_OTP_BYPASS back on.
+    # admin-entered "key" could switch GARUDA_EVAL_OTP_BYPASS back on. The file
+    # is read back with splitlines(), which also breaks on \v, \f, \x1c-\x1e,
+    # \x85 and U+2028/2029, so anything it would split on is refused.
     for name, value in updates.items():
-        if not name.isidentifier() or any(c in str(value) for c in "\r\n\x00"):
+        value = str(value)
+        if (not name.isidentifier() or "\x00" in value
+                or len(f"x{value}x".splitlines()) != 1):
             raise ValueError(f"refusing to write {name}: invalid characters")
     env_path = Path(env_path)
     lines = env_path.read_text().splitlines() if env_path.exists() else []
