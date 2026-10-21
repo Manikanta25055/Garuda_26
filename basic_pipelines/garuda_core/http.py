@@ -146,6 +146,8 @@ def install(app, *, api_version="1", client_ip=None, quiet_paths=("/api/health",
         finally:
             path = request.url.path
             if path.startswith("/api/") and path not in quiet_paths:
+                if not path.isprintable():
+                    path = repr(path)   # a decoded %0a must not start a forged log line
                 ms = (time.perf_counter() - started) * 1000
                 ip = client_ip(request) if client_ip else (request.client.host if request.client else "-")
                 level = logging.WARNING if status >= 500 else logging.INFO

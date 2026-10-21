@@ -149,3 +149,21 @@ def test_forgot_password_answers_alike_when_the_mail_fails(app_client, monkeypat
     assert real.json() == ghost.json() == {"ok": True}
     assert 'user' not in gw.STATE.auth.forgot_otp_store      # the unsent code is dropped
     assert any("could not be sent" in line for line in gw.system_updates_log)
+
+
+# ── logs: one entry is one line ──────────────────────────────────────────────
+
+def test_a_feedback_name_cannot_forge_a_log_line(app_client):
+    r = app_client.post('/api/feedback', json={
+        'message': 'hi', 'name': 'Bob\n[2026-01-01 00:00:00] Login: admin x', 'rating': 3})
+    assert r.status_code == 200
+    line = next(l for l in gw.system_updates_log if 'Feedback received' in l)
+    assert len(line.splitlines()) == 1 and 'Login: admin' in line
+
+
+def test_the_access_log_escapes_a_decoded_line_break(app_client, caplog):
+    import logging
+    with caplog.at_level(logging.INFO):
+        app_client.get('/api/nope%0a2026-01-01%20forged')
+    lines = [r.getMessage() for r in caplog.records if 'forged' in r.getMessage()]
+    assert lines and all('\n' not in l for l in lines)

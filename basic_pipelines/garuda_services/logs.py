@@ -109,7 +109,15 @@ def _append_detection_perm(event_type: str, label: str, confidence: float, info:
     core.queue_event(event_type.upper(), label, confidence, info)
 
 
+def _one_line(message):
+    """An entry is one line: the files are read back a line per entry, and a
+    name with a line break in it (the open feedback form) could add an entry
+    that looks like any other, a forged "Login: admin" say."""
+    return " ".join(str(message).splitlines())
+
+
 def log_system_update(message):
+    message = _one_line(message)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     core.system_updates_log.append(entry)
@@ -122,6 +130,7 @@ def log_system_update(message):
 
 
 def append_voice_log(message, user_name=None):
+    message = _one_line(message)
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {message}"
     core.voice_assistant_log.append(entry)
