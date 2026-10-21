@@ -109,3 +109,12 @@ def test_mute_refuses_what_narada_never_says(app_client, user_headers):
 def test_mute_needs_a_session(app_client):
     # Its own test: the shared client keeps the cookie once a test has signed in.
     assert app_client.post('/api/narada/observations/mute', json={'key': 'alerts-silenced'}).status_code == 401
+
+
+def test_the_clear_button_forgets_the_conversation_on_the_server(app_client, user_headers):
+    gw.BRAIN.conversations.record("user", [{"role": "user", "content": "what happened?"},
+                                           {"role": "assistant", "content": "Two alerts."}])
+    r = app_client.post('/api/narada/conversation/clear', headers=user_headers)
+    assert r.status_code == 200 and gw.BRAIN.history("user") == []
+    app_client._client.cookies.clear()      # signed-in by cookie too; drop it
+    assert app_client.post('/api/narada/conversation/clear').status_code in (401, 403)

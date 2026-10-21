@@ -83,6 +83,9 @@ class Conversations:
         self._background = background
         self._lock = threading.RLock()
         self._folding = set()
+        # Bumped by forget(): a turn that was still being answered when the
+        # person cleared the chat must not write the old conversation back.
+        self._generation = {}
         data = jsonfile.load(path, {}) if path else {}
         self._data = data if isinstance(data.get("conversations", {}), dict) else {}
         self._data.setdefault("conversations", {})
@@ -113,8 +116,16 @@ class Conversations:
 
     # ── writing ───────────────────────────────────────────────────────────────
 
-    def record(self, key, turn):
+    def generation(self, key):
         with self._lock:
+            return self._generation.get(key, 0)
+
+    def record(self, key, turn, generation=None):
+        """Keep one turn. False (and nothing kept) when the conversation was
+        cleared after the turn began: `generation` is what it was then."""
+        with self._lock:
+            if generation is not None and generation != self._generation.get(key, 0):
+                return False
             entry = self._entry(key)
             entry["turns"].append({"at": self._clock(), "messages": _trim(turn)})
             if len(entry["turns"]) > HARD_CAP:
@@ -129,9 +140,12 @@ class Conversations:
                                  name="narada-summary").start()
             else:
                 self._fold(key)
+        return True
 
     def forget(self, key):
+        """The turns and their summary: the next question starts afresh."""
         with self._lock:
+            self._generation[key] = self._generation.get(key, 0) + 1
             if self._data["conversations"].pop(key, None) is not None:
                 self._save()
 

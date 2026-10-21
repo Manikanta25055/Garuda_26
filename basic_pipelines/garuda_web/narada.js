@@ -810,6 +810,9 @@ const N = (() => {
 
   function clearSession() {
     closeFullArtifact();
+    // The server keeps the conversation the model reads back; without this the
+    // screen was empty and the next answer still said "as I told you".
+    G._apiFn('POST', '/api/narada/conversation/clear').catch(() => {});
     session = []; save();
     setPending(false);
     const log = $('nx-log');

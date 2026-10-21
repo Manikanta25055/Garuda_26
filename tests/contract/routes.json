@@ -571,6 +571,12 @@
  },
  {
   "kind": "http",
+  "method": "POST",
+  "path": "/api/narada/conversation/clear",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
   "method": "GET",
   "path": "/api/narada/info",
   "guard": "require_session"

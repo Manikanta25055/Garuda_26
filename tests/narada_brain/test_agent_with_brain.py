@@ -82,6 +82,33 @@ def test_forget_ends_the_conversation(house):
     assert "first thing" not in [m["content"] for m in chat.requests[1]["messages"]]
 
 
+def test_a_turn_answered_after_clear_is_not_written_back(house):
+    ctx, home, data_dir = house
+    chat = ScriptedChat([completion("one"), completion("two")])
+    a = make(ctx, home, chat, data_dir)
+    real = chat._post
+
+    def clear_mid_answer(*args, **kw):
+        if len(chat.requests) == 0:
+            a.forget("mani")             # Clear pressed while the first answer was coming
+        return real(*args, **kw)
+    chat._post = clear_mid_answer
+    a.handle("what happened in the last 48 hours?", user="mani")
+    a.handle("what happened in the last 48 hours?", user="mani")
+    assert "one" not in [m["content"] for m in chat.requests[1]["messages"]]
+
+
+def test_forget_clears_the_summary_and_the_security_conversation(house):
+    ctx, home, data_dir = house
+    a = make(ctx, home, ScriptedChat([]), data_dir)
+    for key in ("mani", "security:mani"):
+        a.brain.conversations.record(key, [{"role": "user", "content": "x"}])
+        a.brain.conversations._data["conversations"][key]["summary"] = "they asked about logs"
+    a.forget("mani")
+    for key in ("mani", "security:mani"):
+        assert a.brain.history(key) == [] and a.brain.conversations.summary_block(key) == ""
+
+
 def test_a_recited_prompt_never_reaches_the_person_or_the_history(house):
     ctx, home, data_dir = house
     recital = persona.system_prompt("mani", "admin", now=0)

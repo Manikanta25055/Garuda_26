@@ -186,8 +186,9 @@ class Brain:
             log.warning("Narada reply recited its instructions; replaced")
         return guards.fit_spoken(reply) if voice else reply
 
-    def record(self, key, turn):
-        self.conversations.record(key, turn)
+    def record(self, key, turn, generation=None):
+        if not self.conversations.record(key, turn, generation=generation):
+            return                      # cleared while it was being answered
         if self.chat is None:
             return
         # Some models skip remember_fact when a fact comes up in passing
@@ -256,6 +257,10 @@ class Brain:
 
     def forget(self, key):
         self.conversations.forget(key)
+        with self._timer_lock:
+            timer = self._timers.pop(key, None)
+        if timer is not None:
+            timer.cancel()
 
     # ── memory ────────────────────────────────────────────────────────────────
 

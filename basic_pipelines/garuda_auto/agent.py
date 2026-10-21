@@ -308,6 +308,7 @@ class HomeAgent:
         self._turn.no_planner = False
         self._live.pop(user, None)
         self._turn.key = f"security:{user}" if scope == "security" else user
+        generation = self.brain.conversations.generation(self._turn.key)
         if scope != "security":
             devices = [{"id": d["id"], "name": d["name"], "room": d.get("room", "")}
                        for d in self.ctx.registry.devices if d.get("enabled", True)]
@@ -370,7 +371,8 @@ class HomeAgent:
             turn[-1] = {**turn[-1], "content": turn[-1]["content"]
                         + f"\n\n(A note shown beside this reply, from you: \"{shown}\")"}
         if result["lane"] in ("agent", "fast") and turn:
-            self.brain.record(f"security:{user}" if scope == "security" else user, turn)
+            self.brain.record(f"security:{user}" if scope == "security" else user, turn,
+                              generation=generation)
         return result
 
     def _after_failure(self, text, route, user, role, scope, voice, why):
@@ -1321,8 +1323,10 @@ class HomeAgent:
         return {"forgotten": True, "text": fact["text"], "_memory": event}
 
     def forget(self, user):
-        """End a conversation: the next thing this person says starts a new one."""
+        """End a conversation: the next thing this person says starts a new one.
+        Both of them: the home one and the security one (Garuda's site)."""
         self.brain.forget(user)
+        self.brain.forget(f"security:{user}")
 
     def status(self):
         return {"nim": self.chat.status() if self.chat else {"configured": False},

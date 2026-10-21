@@ -233,6 +233,13 @@ def build_narada_router(core):
                 "archived": sorted(memory.archived(), key=lambda f: f["archived"]["at"], reverse=True),
                 "categories": list(core.BRAIN.memory_categories)}
 
+    @router.post("/api/narada/conversation/clear")
+    async def narada_conversation_clear(session=Depends(core.require_session)):
+        """The chat's Clear button: what was said is forgotten on the server too,
+        so the next question is not answered with "I already told you"."""
+        await anyio.to_thread.run_sync(lambda: core.AGENT.forget(session["username"]))
+        return {"ok": True}
+
     @router.get("/api/narada/memory")
     async def narada_memory(since: float | None = None, session=Depends(core.require_session)):
         """Everything Narada knows; with ?since=<time> only what memory did after it
