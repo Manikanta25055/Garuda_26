@@ -578,6 +578,12 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/narada/conversation/last",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/narada/info",
   "guard": "require_session"
  },

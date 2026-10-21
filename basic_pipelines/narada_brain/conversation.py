@@ -95,6 +95,19 @@ class Conversations:
     def _entry(self, key):
         return self._data["conversations"].setdefault(key, {"summary": "", "turns": []})
 
+    def last_exchange(self, key):
+        """The newest turn as {"said", "reply", "at"}, or None: for a browser
+        whose stream was cut (a phone switching apps) to fetch the answer."""
+        with self._lock:
+            turns = self._data["conversations"].get(key, {}).get("turns", ())
+            if not turns:
+                return None
+            turn = turns[-1]
+        said = next((m.get("content", "") for m in turn["messages"] if m.get("role") == "user"), "")
+        reply = next((m.get("content", "") for m in reversed(turn["messages"])
+                      if m.get("role") == "assistant" and m.get("content")), "")
+        return {"said": said, "reply": reply, "at": turn.get("at", 0)}
+
     def summary(self, key):
         with self._lock:
             return self._data["conversations"].get(key, {}).get("summary", "")

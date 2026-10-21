@@ -755,22 +755,25 @@ const N = (() => {
     }
     draftText += piece;
     if (draftRaf) return;                 // one paint per frame, however fast the words come
-    draftRaf = requestAnimationFrame(() => {
-      draftRaf = 0;
-      if (!draftText.trim()) return;
-      if (!draftEl) {
-        setPending(false);
-        draftEl = bubble('narada', '');
-        if (!draftEl) return;
-        draftEl.classList.add('draft');
-      }
-      draftEl.textContent = mdPlain(draftText);
-      if (!conv) {                        // in a call the voice itself says when it talks
-        synthTalkUntil = performance.now() + 900;
-        setState('talking');
-      }
-      scrollLog();
-    });
+    // A hidden tab runs no frames; the draft is painted the moment the page shows.
+    draftRaf = requestAnimationFrame(paintDraft);
+  }
+
+  function paintDraft() {
+    draftRaf = 0;
+    if (!draftText.trim()) return;
+    if (!draftEl) {
+      setPending(false);
+      draftEl = bubble('narada', '');
+      if (!draftEl) return;
+      draftEl.classList.add('draft');
+    }
+    draftEl.textContent = mdPlain(draftText);
+    if (!conv) {                          // in a call the voice itself says when it talks
+      synthTalkUntil = performance.now() + 900;
+      setState('talking');
+    }
+    scrollLog();
   }
 
   function dropDraft() {
@@ -787,17 +790,35 @@ const N = (() => {
     return el;
   }
 
+  // Is the conversation in front of the person? A hidden tab runs no
+  // animation frames, so anything drawn frame by frame waits until they return.
+  const onScreen = () => !document.hidden && !!$('page-narada') && $('page-narada').classList.contains('active');
+  let typing = null;                       // the reply being typed out: {el, text}
+
+  function finishTyping() {
+    if (!typing) return;
+    const { el, text } = typing;
+    typing = null;
+    setReply(el, text); scrollLog();
+  }
+
   function typeInto(el, text) {
     // Typed out as plain words, then set in its formatting: half a bold mark
-    // or a list still being typed would flicker.
+    // or a list still being typed would flicker. Not typed at all when the
+    // page is not in front: it used to be typed slowly after coming back.
+    finishTyping();
+    typing = { el, text };
+    if (!onScreen()) { finishTyping(); return; }
     const plain = mdPlain(text), step = Math.max(3, Math.ceil(plain.length / 240));
     let i = 0;
     synthTalkUntil = performance.now() + Math.min(6000, 400 + plain.length * 22);
     setState('talking');
+    const mine = typing;
     (function tick() {
+      if (typing !== mine) return;        // finished early (tab hidden, page left, next reply)
       i = Math.min(i + step, plain.length);
       if (i < plain.length) { el.textContent = plain.slice(0, i); scrollLog(); requestAnimationFrame(tick); }
-      else { setReply(el, text); scrollLog(); }
+      else finishTyping();
     })();
   }
 
@@ -810,6 +831,7 @@ const N = (() => {
 
   function clearSession() {
     closeFullArtifact();
+    typing = null;
     // The server keeps the conversation the model reads back; without this the
     // screen was empty and the next answer still said "as I told you".
     G._apiFn('POST', '/api/narada/conversation/clear').catch(() => {});
@@ -1269,6 +1291,7 @@ const N = (() => {
   async function ask(text) {
     if (!G._apiStream || !window.ReadableStream) return G._apiFn('POST', '/api/chat', { message: text });
     let meta = null, reply = '', got = false, complete = false;
+    const sentAt = Date.now() / 1000;
     const onEvent = ev => {
       got = true;
       if (ev.type === 'progress') workEvent(ev.event);
@@ -1278,6 +1301,7 @@ const N = (() => {
       else if (ev.type === 'token') reply += ev.text;
       else if (ev.type === 'done') complete = true;
     };
+    let cut = null;
     try {
       await G._apiStream('/api/chat/stream', { message: text }, onEvent);
     } catch (e) {
@@ -1285,13 +1309,33 @@ const N = (() => {
       if (e && e.status === 401 && !got) {
         await G._apiFn('GET', '/api/session');          // renews the sign-in, or signs out
         await G._apiStream('/api/chat/stream', { message: text }, onEvent);
-      } else throw e;
+      } else if (e && e.status) throw e;                 // the server said no
+      else cut = e;                                      // the connection went
     }
     if (!meta || !complete) {
       dropDraft();
-      throw { detail: 'The reply was interrupted. Check the current state before retrying an action.' };
+      // The server goes on with the answer when the browser's connection goes
+      // (a phone switching apps cuts it). Fetched, not asked again: a request
+      // may already have acted.
+      const late = await answerAfterCut(sentAt);
+      if (late) return { response: late, lane: 'agent', actions: [] };
+      throw { detail: 'The reply was interrupted. Check the current state before retrying an action.', cause: cut };
     }
     return { ...meta, response: reply };
+  }
+
+  // The answer to a question whose stream was cut, once the server has it.
+  async function answerAfterCut(sentAt) {
+    const until = Date.now() + 90000;
+    while (Date.now() < until) {
+      try {
+        const res = await G._apiFn('GET', '/api/narada/conversation/last');
+        const skew = (res.now || Date.now() / 1000) - Date.now() / 1000;
+        if (res.last && res.last.reply && res.last.at >= sentAt + skew - 2) return res.last.reply;
+      } catch (_) {}
+      await new Promise(r => setTimeout(r, 2000));
+    }
+    return '';
   }
 
   // ── Working: the planner's steps, as they happen ───────────
@@ -1965,7 +2009,13 @@ const N = (() => {
     });
     window.addEventListener('message', onArtifactMessage);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stop(); else if (window.G && $('page-narada').classList.contains('active')) start();
+      if (document.hidden) { stop(); finishTyping(); }
+      else {
+        if (window.G && $('page-narada').classList.contains('active')) start();
+        // Whatever arrived while away is shown at once, not caught up on frame by frame.
+        if (draftRaf) { cancelAnimationFrame(draftRaf); draftRaf = 0; paintDraft(); }
+        scrollLog();
+      }
     });
     _syncChrome();
   }
@@ -1978,7 +2028,7 @@ const N = (() => {
       pollMemory(); pendingCards();
       setTimeout(prefetchVoice, 600);       // after the page has drawn
     }
-    else stop();                               // a live conversation keeps going in the island
+    else { stop(); finishTyping(); }           // a live conversation keeps going in the island
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

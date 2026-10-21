@@ -118,3 +118,14 @@ def test_the_clear_button_forgets_the_conversation_on_the_server(app_client, use
     assert r.status_code == 200 and gw.BRAIN.history("user") == []
     app_client._client.cookies.clear()      # signed-in by cookie too; drop it
     assert app_client.post('/api/narada/conversation/clear').status_code in (401, 403)
+
+
+def test_a_cut_stream_can_fetch_the_answer_the_server_finished(app_client, user_headers):
+    gw.BRAIN.conversations.record("user", [
+        {"role": "user", "content": "what happened in the last 48 hours?"},
+        {"role": "assistant", "content": "", "tool_calls": [{"id": "1"}]},
+        {"role": "tool", "content": "{}"},
+        {"role": "assistant", "content": "Two alerts, both cleared."}])
+    last = app_client.get('/api/narada/conversation/last', headers=user_headers).json()["last"]
+    assert last["said"] == "what happened in the last 48 hours?"
+    assert last["reply"] == "Two alerts, both cleared." and last["at"] > 0

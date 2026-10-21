@@ -233,6 +233,14 @@ def build_narada_router(core):
                 "archived": sorted(memory.archived(), key=lambda f: f["archived"]["at"], reverse=True),
                 "categories": list(core.BRAIN.memory_categories)}
 
+    @router.get("/api/narada/conversation/last")
+    async def narada_conversation_last(request: Request, session=Depends(core.require_session)):
+        """The last question and answer, for a chat whose stream was cut off
+        (a phone that switched apps) while the answer was still being made."""
+        scope = core._product_for_host(request.headers.get("host"))
+        key = f"security:{session['username']}" if scope == "security" else session["username"]
+        return {"last": core.BRAIN.conversations.last_exchange(key), "now": time.time()}
+
     @router.post("/api/narada/conversation/clear")
     async def narada_conversation_clear(session=Depends(core.require_session)):
         """The chat's Clear button: what was said is forgotten on the server too,
