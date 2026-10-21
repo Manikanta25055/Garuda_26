@@ -116,3 +116,19 @@ def test_a_users_page_viewed_by_an_admin_runs_as_the_user(app_client, monkeypatc
                         json={"capability": "get_house_state"}, headers=admin_headers)
     # This branch is stricter still: only the owner may drive their page.
     assert (r.status_code == 200 and seen == [("user", "user")]) or (r.status_code == 403 and seen == [])
+
+
+# ── Drishti sign-in: no admin without the code, no hint of which names exist ─
+
+def test_drishti_admin_password_alone_gives_user_rights(app_client):
+    assert gw._drishti_authenticate('admin', 'root') == 'user'
+    assert gw._drishti_authenticate('user', 'user') == 'user'
+    assert gw._drishti_authenticate('admin', 'wrong') is None
+
+
+def test_drishti_unknown_name_does_the_same_hashing(app_client, monkeypatch):
+    seen = []
+    real = gw._verify_password
+    monkeypatch.setattr(gw, '_verify_password', lambda p, h: seen.append(h) or real(p, h))
+    assert gw._drishti_authenticate('ghost_xyz', 'pw') is None
+    assert seen == [gw._DUMMY_PASSWORD_HASH]
