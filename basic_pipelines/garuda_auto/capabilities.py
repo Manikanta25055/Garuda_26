@@ -467,6 +467,7 @@ PLUMBING = frozenset({
     "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
     "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/progress",
+    "POST /api/narada/conversation/clear", "GET /api/narada/conversation/last",
     "POST /api/narada/actions/{action_id}/confirm", "POST /api/narada/actions/{action_id}/cancel",
     "GET /api/narada/actions",          # the page drawing back cards it lost
     # Artifacts are made by show_artifact; these show, keep and serve them.
