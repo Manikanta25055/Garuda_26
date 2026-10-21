@@ -95,6 +95,7 @@ def build_auth_router(core):
         core._clear_login_failure(ip)
         access_token = core.create_session(u)
         refresh_token = core.create_refresh_token(u)
+        core.STATE.auth.sessions[access_token]["refresh"] = refresh_token
         core._set_session_cookies(request, response, access_token, refresh_token,
                              persistent=bool(data.remember_me))
         core.log_system_update(f"Login: {u}")
@@ -126,10 +127,12 @@ def build_auth_router(core):
     @router.post("/api/logout")
     async def logout(request: Request, response: Response):
         token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-        if token:
-            core.STATE.auth.sessions.pop(token, None)
-        # Also revoke the refresh token so stolen refresh tokens can't mint new sessions
-        for refresh in (request.cookies.get("garuda_refresh"), request.headers.get("X-Garuda-Refresh")):
+        sess = core.STATE.auth.sessions.pop(token, None) if token else None
+        # Also revoke the refresh token so stolen refresh tokens can't mint new
+        # sessions. Its cookie is scoped to /api/refresh and never reaches this
+        # route, so the one this session was issued with is remembered on it.
+        for refresh in (request.cookies.get("garuda_refresh"), request.headers.get("X-Garuda-Refresh"),
+                        (sess or {}).get("refresh")):
             if refresh:
                 core._revoke_refresh(refresh)
         response.delete_cookie("garuda_session")
@@ -153,6 +156,7 @@ def build_auth_router(core):
             core._revoke_refresh(refresh)
             raise HTTPException(401, "User no longer exists.")
         access_token = core.create_session(u)
+        core.STATE.auth.sessions[access_token]["refresh"] = refresh
         core._set_session_cookies(request, response, access_token)
         return {
             "token": access_token,
@@ -241,6 +245,7 @@ def build_auth_router(core):
         core._clear_login_failure(ip)
         access_token = core.create_session(u)
         refresh_token = core.create_refresh_token(u)
+        core.STATE.auth.sessions[access_token]["refresh"] = refresh_token
         core._set_session_cookies(request, response, access_token, refresh_token)
         core.log_system_update(f"Admin login: {u}")
         body = {

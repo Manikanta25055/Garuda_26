@@ -38,3 +38,25 @@ def test_sftp_refuses_unknown_host_keys(monkeypatch, tmp_path):
     client.load_host_keys.assert_called_once_with(str(known))
     client.set_missing_host_key_policy.assert_called_once_with(fake.RejectPolicy())
     fake.AutoAddPolicy.assert_not_called()
+
+
+# ── logout: the refresh token goes too, even when its cookie is not sent ─────
+
+def test_logout_revokes_the_sessions_refresh_token(app_client):
+    r = app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
+    token = r.json()['token']
+    refresh = gw.STATE.auth.sessions[token]['refresh']
+    assert refresh in gw.STATE.auth.refresh_tokens
+    app_client._client.cookies.clear()   # the /api/refresh-scoped cookie never reaches /api/logout
+    assert app_client.post('/api/logout', headers={'X-Garuda-Token': token}).status_code == 200
+    assert refresh not in gw.STATE.auth.refresh_tokens
+    r = app_client.post('/api/refresh', headers={'X-Garuda-Refresh': refresh})
+    assert r.status_code == 401
+
+
+def test_refreshed_session_remembers_its_refresh_token(app_client):
+    app_client.post('/api/login', json={'username': 'user', 'password': 'user'})
+    refresh = next(iter(gw.STATE.auth.refresh_tokens))
+    app_client._client.cookies.clear()
+    r = app_client.post('/api/refresh', headers={'X-Garuda-Refresh': refresh})
+    assert gw.STATE.auth.sessions[r.json()['token']]['refresh'] == refresh
