@@ -4253,6 +4253,8 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
 }
 html:has(#page-narada.active), body:has(#page-narada.active) { overflow: hidden; }
 body:has(#page-narada.active) { position: fixed; inset: 0; width: 100%; }
+/* Narada's page is the dot field on a plain ground: no grid behind it. */
+body:has(#page-narada.active)::before { background-image: none; }
 .nx-status {
   position: absolute; left: 50%; bottom: calc(100% + 12px); transform: translateX(-50%);
   white-space: nowrap; pointer-events: none;
