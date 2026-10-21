@@ -211,7 +211,8 @@ def _state_for_role(payload: dict, role: str) -> dict:
         return payload
     slim = {k: v for k, v in payload.items() if k not in core._ADMIN_ONLY_STATE}
     slim["system_log"] = [line for line in payload.get("system_log", [])
-                          if not any(tag in line for tag in core._ADMIN_ONLY_LOG_TAGS)]
+                          if not any(tag in line for tag in core._ADMIN_ONLY_LOG_TAGS)
+                          and not core._ADMIN_ONLY_LOG_RE.search(line)]
     return slim
 
 

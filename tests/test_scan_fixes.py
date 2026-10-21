@@ -167,3 +167,18 @@ def test_the_access_log_escapes_a_decoded_line_break(app_client, caplog):
         app_client.get('/api/nope%0a2026-01-01%20forged')
     lines = [r.getMessage() for r in caplog.records if 'forged' in r.getMessage()]
     assert lines and all('\n' not in l for l in lines)
+
+
+# ── state push: a user's system log has no MACs or e-mail addresses ─────────
+
+@pytest.mark.parametrize("line", [
+    "[2026-10-21 10:00:00] Known device added: Phone (aa:bb:cc:dd:ee:ff)",
+    "[2026-10-21 10:00:00] Known device removed: AA-BB-CC-DD-EE-FF",
+    "[2026-10-21 10:00:00] OTP email sent to owner@example.com",
+    "[2026-10-21 10:00:00] something about owner@example.com",
+])
+def test_user_state_drops_admin_only_log_lines(app_client, line):
+    keep = "[2026-10-21 10:00:01] Lamp on"
+    slim = gw._state_for_role({"system_log": [line, keep]}, "user")
+    assert slim["system_log"] == [keep]
+    assert gw._state_for_role({"system_log": [line, keep]}, "admin")["system_log"] == [line, keep]

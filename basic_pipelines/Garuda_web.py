@@ -1016,7 +1016,10 @@ _WS_CONNECT_LIMIT = 60   # socket opens per client address per rate window
 # What a non-admin does not need pushed to their browser every two seconds.
 _ADMIN_ONLY_STATE = ("known_devices", "cpu_cores", "voice_log", "voice_responses")
 _ADMIN_ONLY_LOG_TAGS = ("[SECURITY]", "Login", "login", "Master key", "master key",
-                        "Password", "User added", "User deleted", "User updated")
+                        "Password", "User added", "User deleted", "User updated",
+                        "Known device", "OTP email sent")
+# Whatever the wording: a phone's MAC address or an e-mail address is the admin's.
+_ADMIN_ONLY_LOG_RE = re.compile(r"\b[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}\b|[^\s@()<>]+@[^\s@()<>]+\.\w+")
 
 fastapi_app.include_router(build_sockets_router(sys.modules[__name__]))
 
