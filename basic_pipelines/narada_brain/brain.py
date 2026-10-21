@@ -115,9 +115,17 @@ class Brain:
 
     # ── what goes into a turn ─────────────────────────────────────────────────
 
-    def system_prompt(self, user, role, *, scope="home", key=None, query=""):
+    def system_prompt(self, user, role, *, scope="home", key=None, query="", flags=None):
+        """`flags`, when given, gets "injection": the instruction-like text found
+        in the household memory, which any signed-in person can add to."""
         system = persona.system_prompt(user, role, scope=scope, now=self._clock())
-        system += self.memory.context_block(query)
+        block = self.memory.context_block(query)
+        hit = self.scan(block)
+        if hit:
+            block = guards.wrap(block)
+        if flags is not None:
+            flags["injection"] = hit
+        system += block
         if key:
             system += self.conversations.summary_block(key)
         return system
