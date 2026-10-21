@@ -40,6 +40,20 @@ def test_sftp_refuses_unknown_host_keys(monkeypatch, tmp_path):
     fake.AutoAddPolicy.assert_not_called()
 
 
+# ── password reset: guesses without a username still use up each code ───────
+
+def test_usernameless_reset_guesses_count_against_pending_codes(app_client, monkeypatch):
+    monkeypatch.setattr(gw, 'send_otp_via_email', MagicMock(return_value=(True, None)))
+    assert app_client.post('/api/forgot/send-otp', json={'username': 'user'}).status_code == 200
+    real = gw.STATE.auth.forgot_otp_store['user']['otp']
+    wrong = '000000' if real != '000000' else '111111'
+    for _ in range(3):
+        r = app_client.post('/api/forgot/reset', json={'otp': wrong, 'new_password': 'NewPass123!'})
+        assert r.status_code in (401, 422)   # 422: this branch requires the username outright
+    r = app_client.post('/api/forgot/reset', json={'otp': real, 'new_password': 'NewPass123!'})
+    assert r.status_code in (401, 422)
+
+
 # ── logout: the refresh token goes too, even when its cookie is not sent ─────
 
 def test_logout_revokes_the_sessions_refresh_token(app_client):
