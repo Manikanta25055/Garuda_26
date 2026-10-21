@@ -132,3 +132,9 @@ def test_drishti_unknown_name_does_the_same_hashing(app_client, monkeypatch):
     monkeypatch.setattr(gw, '_verify_password', lambda p, h: seen.append(h) or real(p, h))
     assert gw._drishti_authenticate('ghost_xyz', 'pw') is None
     assert seen == [gw._DUMMY_PASSWORD_HASH]
+
+
+def test_password_reset_ends_drishti_sessions(app_client):
+    token = gw._drishti_auth.create_session('user', 'user')
+    gw._invalidate_user_sessions('user')
+    assert gw._drishti_auth.get_session(token) is None
