@@ -25,10 +25,13 @@ except Exception:
 
 
 class MqttBank:
-    def __init__(self, broker_host, broker_port=1883, client_factory=None,
-                 username=None, password=None):
+    def __init__(self, broker_host, broker_port=None, client_factory=None,
+                 username=None, password=None, tls=False):
+        """`tls` checks the broker's certificate against the system CAs and
+        moves the default port to 8883; left out, the connection is plain."""
         self.broker_host = broker_host
-        self.broker_port = broker_port
+        self.broker_port = int(broker_port or (8883 if tls else 1883))
+        broker_port = self.broker_port
         self._topics = {}
         self._state = {}
         self._seen = set()
@@ -47,6 +50,8 @@ class MqttBank:
                 if username:
                     # The broker does not take anonymous clients.
                     self._client.username_pw_set(username, password or None)
+                if tls:
+                    self._client.tls_set()      # system CAs, certificate and host name checked
                 # Non-blocking, with paho's own retry loop: a broker that is
                 # down at start-up is picked up when it comes back instead of
                 # leaving MQTT devices dead until the service is restarted.

@@ -92,3 +92,22 @@ def test_a_disabled_device_is_refused(tmp_path):
     router = DeviceRouter(registry, RelayBank({"lamp_desk": 17}), mqtt)
     ok, reason = router.set("lamp_desk", "on")
     assert ok is False and "lamp_desk" in reason
+
+
+def test_mqtt_is_plain_and_anonymous_unless_configured(monkeypatch):
+    from unittest.mock import MagicMock
+    from basic_pipelines.garuda_auto import transports
+    clients = []
+    fake = type("paho", (), {"Client": staticmethod(lambda *a: clients.append(MagicMock()) or clients[-1])})
+    monkeypatch.setattr(transports, "paho", fake)
+    monkeypatch.setattr(transports, "MQTT_AVAILABLE", True)
+    plain = MqttBank("broker")
+    assert plain.broker_port == 1883
+    clients[0].username_pw_set.assert_not_called()
+    clients[0].tls_set.assert_not_called()
+    clients[0].connect_async.assert_called_once_with("broker", 1883, keepalive=60)
+    secure = MqttBank("broker", username="garuda", password="pw", tls=True)
+    assert secure.broker_port == 8883
+    clients[1].username_pw_set.assert_called_once_with("garuda", "pw")
+    clients[1].tls_set.assert_called_once_with()
+    clients[1].connect_async.assert_called_once_with("broker", 8883, keepalive=60)

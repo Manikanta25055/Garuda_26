@@ -786,6 +786,8 @@ DRISHTI_CTX = _build_drishti_context(
     mqtt_host=os.environ.get("DRISHTI_MQTT_HOST", "localhost"),
     mqtt_user=os.environ.get("DRISHTI_MQTT_USER", ""),
     mqtt_password=os.environ.get("DRISHTI_MQTT_PASS", ""),
+    # Optional: a broker that speaks TLS (port 8883). Unset, it stays plain.
+    mqtt_tls=os.environ.get("DRISHTI_MQTT_TLS", "0").lower() in ("1", "true", "yes"),
     nim_key=os.environ.get("NIM_API_KEY", ""),
     nim_model=os.environ.get("NIM_MODEL", ""),
     matcher_backend=os.environ.get("DRISHTI_MATCHER", "fuzzy"),

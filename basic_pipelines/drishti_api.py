@@ -82,7 +82,7 @@ class DrishtiContext:
 
 def build_context(*, data_dir, relay_channels, channel_to_pin,
                   mqtt_host="localhost", mqtt_user="", mqtt_password="", nim_key="", nim_model="",
-                  matcher_backend="fuzzy"):
+                  matcher_backend="fuzzy", mqtt_tls=False):
     registry = DeviceRegistry(os.path.join(data_dir, "devices.json"), relay_channels)
     schema = build_schema(registry)
     store = RuleStore(os.path.join(data_dir, "rules.json"), schema)
@@ -91,7 +91,7 @@ def build_context(*, data_dir, relay_channels, channel_to_pin,
         d["id"]: channel_to_pin[d["transport"]["channel"]]
         for d in registry.actuators() if d["transport"]["kind"] == "relay"
     })
-    mqtt_bank = MqttBank(mqtt_host, username=mqtt_user, password=mqtt_password)
+    mqtt_bank = MqttBank(mqtt_host, username=mqtt_user, password=mqtt_password, tls=mqtt_tls)
     mqtt_bank.bind(registry)
     return DrishtiContext(
         registry=registry, schema=schema, store=store, pending=pending,
