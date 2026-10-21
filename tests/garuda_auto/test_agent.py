@@ -186,6 +186,53 @@ def test_a_server_error_rests_the_model_briefly():
     assert seen[-2:] == ["a", "b"]           # tried again once the rest is over
 
 
+def test_a_dropped_connection_is_retried_on_the_same_model():
+    seen = []
+
+    def post(url, headers=None, json=None, timeout=None):
+        seen.append(json["model"])
+        if len(seen) == 1:
+            raise requests.ConnectionError("connection reset by peer")
+        return Resp(200, completion("hi"))
+    chat = NimChat("k", ["primary", "fallback"], post=post)
+    assert chat.chat([{"role": "user", "content": "x"}])["content"] == "hi"
+    assert seen == ["primary", "primary"] and chat.last_model == "primary"
+
+
+def test_a_resting_model_is_still_asked_before_giving_up():
+    seen, now = [], [0]
+
+    def post(url, headers=None, json=None, timeout=None):
+        seen.append(json["model"])
+        if json["model"] == "b" or len(seen) == 1:
+            raise requests.Timeout("slow")
+        return Resp(200, completion("hi"))
+    chat = NimChat("k", ["a", "b"], post=post, clock=lambda: now[0])
+    with pytest.raises(NimUnavailable):
+        chat.chat([{"role": "user", "content": "x"}])    # a and b both time out
+    # Both rest now; the next question still reaches them instead of failing.
+    assert chat.chat([{"role": "user", "content": "x"}])["content"] == "hi"
+    assert seen == ["a", "b", "a"]
+
+
+def test_when_everything_fails_the_error_says_where():
+    def offline(url, headers=None, json=None, timeout=None):
+        raise requests.ConnectionError("no route to host")
+    with pytest.raises(NimUnavailable, match="could not reach NVIDIA"):
+        NimChat("k", ["a", "b"], post=offline).chat([])
+
+    def slow(url, headers=None, json=None, timeout=None):
+        raise requests.ReadTimeout("slow")
+    with pytest.raises(NimUnavailable, match="did not answer in time"):
+        NimChat("k", ["a", "b"], post=slow).chat([])
+
+
+def test_the_default_fallback_is_not_gpt_oss():
+    from basic_pipelines.garuda_auto.llm import DEFAULT_MODELS
+    assert DEFAULT_MODELS[0].startswith("nvidia/nemotron-3.5")
+    assert "openai/gpt-oss-20b" not in DEFAULT_MODELS
+
+
 def test_a_rejected_key_is_not_retried_on_other_models():
     seen = []
 

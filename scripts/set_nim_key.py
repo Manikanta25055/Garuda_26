@@ -23,7 +23,7 @@ ENV_PATH = ROOT / ".env"
 BASE_URL = "https://integrate.api.nvidia.com/v1"
 KEY_RE = re.compile(r"nvapi-[A-Za-z0-9_-]{20,}")
 DEFAULT_MODEL = "nvidia/nemotron-3.5-super-vl-120b-a12b"
-DEFAULT_FALLBACKS = "openai/gpt-oss-20b"
+DEFAULT_FALLBACKS = "nvidia/nemotron-3-ultra-550b-a55b"   # gpt-oss-20b timed out on every call, 2026-10-21
 
 
 def read_key(path):

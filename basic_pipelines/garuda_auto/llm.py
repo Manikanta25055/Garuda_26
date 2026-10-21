@@ -33,7 +33,11 @@ DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 # endpoint also returns HTTP 500 in bursts. So 3-super led and 3.5 followed.
 # 2026-10-21: NIM took 3-super away (HTTP 404, "Function not found"), so 3.5
 # leads and gpt-oss-20b is the one fallback.
-DEFAULT_MODELS = ("nvidia/nemotron-3.5-super-vl-120b-a12b", "openai/gpt-oss-20b")
+# Later on 2026-10-21 gpt-oss-20b timed out (30 s) on every call, with the old
+# key and a new one, while nemotron-3-ultra answered the same two-action
+# command 6/6 in 1-3 s. Every "AI service is unavailable" that day was 3.5
+# hiccuping once and the turn then waiting out gpt-oss. Ultra is the fallback.
+DEFAULT_MODELS = ("nvidia/nemotron-3.5-super-vl-120b-a12b", "nvidia/nemotron-3-ultra-550b-a55b")
 
 # Worth trying the next model for. A 400 or 401 is our fault or the key's and
 # would fail the same way on every model.
@@ -52,6 +56,11 @@ SLOW_PENALTY_S = 120
 # 500s in one 27-case run, none in the next), so the next model answers for a
 # short while instead of each sentence paying for a failed call first.
 ERROR_PENALTY_S = 30
+# A broken connection (reset, TLS error) is the line, not the model: NIM drops
+# idle keep-alive connections, and the first sentence after a quiet spell
+# failed on the dead one. Asked again at once on a new connection.
+_LINE_ERRORS = (requests.exceptions.ConnectionError, requests.exceptions.SSLError,
+                requests.exceptions.ChunkedEncodingError)
 _HEDGE_POOL = ThreadPoolExecutor(max_workers=6, thread_name_prefix="nim-hedge")
 
 
@@ -79,6 +88,7 @@ class NimChat:
         # One session keeps the TLS connection to NIM open between sentences;
         # a fresh handshake from here costs about 0.2 s every call.
         self._session = requests.Session()
+        self._own_post = post is None
         self._post = post or self._session.post
         self._clock = clock
         self._no_extra = set()             # models that rejected the extra fields
@@ -104,9 +114,22 @@ class NimChat:
             self._dead_until.clear()
 
     def _candidates(self):
+        """Every model, resting ones last: a model put aside after one failure
+        is still asked before the turn gives up."""
         now = self._clock()
         alive = [m for m in self.models if self._dead_until.get(m, 0) <= now]
-        return alive or list(self.models)
+        return alive + [m for m in self.models if m not in alive]
+
+    def _new_line(self):
+        """Drop the pooled connections and start a fresh session."""
+        if not self._own_post:
+            return
+        old, self._session = self._session, requests.Session()
+        self._post = self._session.post
+        try:
+            old.close()
+        except Exception:
+            pass
 
     def _send(self, body, timeout):
         kw = {"stream": True} if body.get("stream") else {}
@@ -159,8 +182,18 @@ class NimChat:
         """
         if not self.api_key:
             raise NimUnavailable("no NVIDIA NIM API key is configured")
-        last = "no model answered"
-        for model in self._candidates():
+        last, tried = "no model answered", []
+        limit = timeout or self.timeout
+        # All the attempts of one call together, so a fallback cannot turn one
+        # sentence into minutes of waiting.
+        give_up = self._clock() + 2 * limit + 5
+        queue = [(m, True) for m in self._candidates()]
+        while queue:
+            model, may_retry = queue.pop(0)
+            left = give_up - self._clock()
+            if left < 2:
+                break
+            budget = min(limit, left)
             body = {"model": model, "messages": messages,
                     "max_tokens": max_tokens, "temperature": temperature}
             if on_text:
@@ -172,15 +205,20 @@ class NimChat:
             started = self._clock()
             try:
                 resp = self._send_hedged({**body, **extra} if with_extra else body,
-                                         timeout or self.timeout, hedge_after)
+                                         budget, hedge_after)
                 if with_extra and getattr(resp, "status_code", 200) in (400, 422):
                     self._no_extra.add(model)
-                    resp = self._send_hedged(body, timeout or self.timeout, hedge_after)
+                    resp = self._send_hedged(body, budget, hedge_after)
             except requests.exceptions.RequestException as exc:
                 last = f"{model}: {type(exc).__name__}"
+                tried.append(exc)
                 log.warning("NIM %s failed: %s", model, type(exc).__name__)
                 if isinstance(exc, requests.exceptions.Timeout):
                     self._dead_until[model] = self._clock() + SLOW_PENALTY_S
+                elif isinstance(exc, _LINE_ERRORS):
+                    self._new_line()
+                    if may_retry:
+                        queue.insert(0, (model, False))
                 continue
             status = getattr(resp, "status_code", 200)
             if status in _SKIP_STATUS:
@@ -203,9 +241,12 @@ class NimChat:
                 message = payload["choices"][0]["message"]
             except requests.exceptions.RequestException as exc:
                 last = f"{model}: {type(exc).__name__} while streaming"
+                tried.append(exc)
                 log.warning("NIM %s stream broke: %s", model, type(exc).__name__)
                 if on_text and not keep_partial:
                     on_text(None)
+                if isinstance(exc, _LINE_ERRORS):
+                    self._new_line()            # broke mid-answer: the next model, on a new line
                 continue
             except (ValueError, KeyError, IndexError, TypeError):
                 last = f"{model}: malformed response"
@@ -220,7 +261,8 @@ class NimChat:
             message["_finish_reason"] = payload["choices"][0].get("finish_reason")
             return message
         self.last_error = last
-        raise NimUnavailable(f"the model service is unavailable ({last})")
+        log.warning("NIM: no model answered (%s)", _diagnosis(tried) or last)
+        raise NimUnavailable(f"the model service is unavailable ({_diagnosis(tried) or last})")
 
     def status(self):
         return {
@@ -232,6 +274,18 @@ class NimChat:
             "calls": self.calls,
             "tokens_used": self.tokens_used,
         }
+
+
+def _diagnosis(errors):
+    """Where the trouble is, in a few words, when every attempt failed."""
+    if not errors:
+        return ""
+    if all(isinstance(e, _LINE_ERRORS) and not isinstance(e, requests.exceptions.Timeout)
+           for e in errors):
+        return "the Pi could not reach NVIDIA: check the internet connection"
+    if all(isinstance(e, requests.exceptions.Timeout) for e in errors):
+        return "NVIDIA's models did not answer in time"
+    return "NVIDIA's models failed: " + ", ".join(sorted({type(e).__name__ for e in errors}))
 
 
 def _close_quietly(future):
