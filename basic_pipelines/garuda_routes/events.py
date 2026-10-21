@@ -6,6 +6,14 @@ that names belonging to Garuda_web are read from `core`.
 from fastapi import APIRouter, Depends
 
 
+def _for_role(events, session):
+    """Presence events carry registered phone MACs and arrival times, which
+    only an admin sees elsewhere (known_devices, the presence log)."""
+    if session.get("role") == "admin":
+        return events
+    return [e for e in events if e.get("event_type") != "PRESENCE"]
+
+
 def build_events_router(core):
     router = APIRouter()
 
@@ -13,7 +21,7 @@ def build_events_router(core):
     async def events_since(since: str = "", limit: int = 500, session=Depends(core.require_session)):
         """Return events after the given ISO timestamp, oldest-first."""
         limit = max(1, min(limit, 500))   # SQLite reads LIMIT -1 as "no limit"
-        events = core.get_events_since(since[:40], limit)
+        events = _for_role(core.get_events_since(since[:40], limit), session)
         return {"events": events, "count": len(events)}
 
     @router.get("/api/events/pending")
@@ -23,6 +31,7 @@ def build_events_router(core):
         if unsynced:
             max_id = max(e["id"] for e in unsynced)
             core.mark_events_synced(max_id)
+        unsynced = _for_role(unsynced, session)
         return {"events": unsynced, "count": len(unsynced)}
 
     @router.get("/api/events/stats")

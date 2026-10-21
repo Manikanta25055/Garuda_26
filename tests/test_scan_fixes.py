@@ -74,3 +74,16 @@ def test_refreshed_session_remembers_its_refresh_token(app_client):
     app_client._client.cookies.clear()
     r = app_client.post('/api/refresh', headers={'X-Garuda-Refresh': refresh})
     assert gw.STATE.auth.sessions[r.json()['token']]['refresh'] == refresh
+
+
+# ── event queue: presence (phone MACs) is for admins only ────────────────────
+
+def test_presence_events_are_hidden_from_non_admins(app_client, user_headers, admin_headers):
+    gw.queue_event("PRESENCE", "Phone", 0.0, "arrived (mac=aa:bb:cc:dd:ee:ff)")
+    gw.queue_event("WATCH", "person", 0.5, "")
+    r = app_client.get('/api/events/since', headers=user_headers)
+    assert [e['event_type'] for e in r.json()['events']] == ['WATCH']
+    r = app_client.get('/api/events/pending', headers=user_headers)
+    assert 'aa:bb' not in r.text
+    r = app_client.get('/api/events/since', headers=admin_headers)
+    assert 'aa:bb:cc:dd:ee:ff' in r.text
