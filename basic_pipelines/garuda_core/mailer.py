@@ -7,6 +7,7 @@ cooldowns) stay with the caller; a failure is raised, not swallowed, so each
 caller keeps its own log line and its own way of carrying on.
 """
 import smtplib
+import ssl
 from email.mime.text import MIMEText
 
 SMTP_HOST = "smtp.gmail.com"
@@ -24,6 +25,9 @@ def send(subject, body, *, sender, password, to, host=SMTP_HOST, port=SMTP_PORT,
     msg['To'] = ", ".join(recipients)
     # Looked up on the module at call time: the test suite replaces
     # smtplib.SMTP_SSL so that nothing is ever really sent.
-    with smtplib.SMTP_SSL(host, port, timeout=timeout) as server:
+    # A default context checks the server's certificate and host name;
+    # without one, smtplib accepts any certificate.
+    with smtplib.SMTP_SSL(host, port, timeout=timeout,
+                          context=ssl.create_default_context()) as server:
         server.login(sender, password)
         server.send_message(msg)
