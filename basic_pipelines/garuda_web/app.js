@@ -610,6 +610,10 @@ const G = (() => {
   }
 
   async function _doLogoutInner() {
+    // The conversation (and the keys to its artifact pages) is kept for the
+    // tab, and on the server; the next person to sign in here must not get it
+    // back. Cleared first, while the sign-in still lets it reach the server.
+    if (window.N && N.clearSession) N.clearSession();
     try { await api('POST', '/api/logout', {}); } catch(_) {}
     // The refresh cookie is sent only under /api/refresh, so /api/logout never
     // sees it; this ends it on the server as well as in the browser.
