@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=90"/>
+  <link rel="stylesheet" href="/static/style.css?v=92"/>
 </head>
 <body>
 <div id="app">
@@ -1135,140 +1135,226 @@
 
 <!-- ══════════════ DOCS MODAL ══════════════ -->
 <div id="m-docs" class="modal-overlay hidden">
-  <div class="modal docs-modal">
+  <div class="modal docs-modal" role="dialog" aria-labelledby="docs-title">
     <div class="docs-topbar">
-      <div>
-        <h2>Documentation</h2>
-        <div class="docs-subtitle">Garuda system overview and reference</div>
+      <div class="docs-title-wrap">
+        <span class="docs-title-icon" aria-hidden="true"><span class="gi gi-documentation"></span></span>
+        <div>
+          <h2 id="docs-title">Documentation</h2>
+          <div class="docs-subtitle">How Garuda works, page by page</div>
+        </div>
       </div>
       <button class="docs-close-btn" aria-label="Close documentation" data-click="UI.addClass" data-args='["m-docs", "hidden"]'>
         <span class="gi gi-close" aria-hidden="true"></span>
       </button>
     </div>
     <div class="docs-body">
-      <div class="docs-tabs">
-        <button class="docs-tab active" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-overview"]'>Overview</button>
-        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-dashboard"]'>Dashboard</button>
-        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-detection"]'>Detection</button>
-        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-narada"]'>Narada</button>
-        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-admin"]'>Admin</button>
-        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-access"]'>Access</button>
-        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-stack"]'>Stack</button>
-      </div>
+      <nav class="docs-tabs" aria-label="Documentation sections">
+        <button class="docs-tab active" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-overview"]'><span class="gi gi-book" aria-hidden="true"></span>Overview</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-dashboard"]'><span class="gi gi-home" aria-hidden="true"></span>Dashboard</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-detection"]'><span class="gi gi-shield" aria-hidden="true"></span>Detection</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-captures"]'><span class="gi gi-media" aria-hidden="true"></span>Captures</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-home"]'><span class="gi gi-automate" aria-hidden="true"></span>Home &amp; Automations</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-narada"]'><span class="gi gi-narada" aria-hidden="true"></span>Narada</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-admin"]'><span class="gi gi-settings" aria-hidden="true"></span>Admin</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-access"]'><span class="gi gi-lock" aria-hidden="true"></span>Access</button>
+        <button class="docs-tab" data-click="G.switchDocsTab" data-args='[{"$": "this"}, "docs-stack"]'><span class="gi gi-layers" aria-hidden="true"></span>Stack</button>
+      </nav>
 
       <div id="docs-overview" class="docs-section active">
         <h3>Garuda Security System</h3>
-        <p>Garuda is a full-stack AI security console built for Raspberry Pi 5 and Hailo-8L. It combines live detection, mode control, owner presence, admin operations, Narada AI assistance, logs, and feedback in one interface.</p>
-        <h4>Main Surfaces</h4>
+        <p class="docs-lede">Garuda is a home security and home automation console that runs entirely on a Raspberry Pi 5 with a Hailo-8L. Detection, recordings and the house rules stay on the Pi; only Narada's language model, its voice, alert e-mails and the optional remote-access tunnel use the internet.</p>
+        <h4>Main surfaces</h4>
         <div class="docs-flow">
-          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Sign in</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">2</span> Dashboard</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Narada / Chat</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">4</span> Admin tools</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span>Sign in</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span>Dashboard</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span>Narada</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">4</span>Devices &amp; Automations</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">5</span>Admin tools</div>
         </div>
         <h4>What the app includes</h4>
-        <p>Live camera and floor plan views, Dynamic Island system states, alert history heatmap, activity timeline, recent detections, voice quick commands, LLM chat, email alerts, known-device presence detection, logs export, custom Narada phrases, master-key access, and a server-side feedback inbox for admin.</p>
+        <ul class="docs-list">
+          <li>Live camera with room sound, a live FPS readout and a floor plan view.</li>
+          <li>Real-time detection and alerts, with e-mail and the Dynamic Island.</li>
+          <li>Captures: pictures, sound and video saved on their own when an alert starts, or on request.</li>
+          <li>Narada, a voice and text assistant that runs the house through its tools.</li>
+          <li>Devices, scenes, rules, shortcuts, schedules and an away mode.</li>
+          <li>Insights on energy and device activity, logs, feedback and admin settings.</li>
+        </ul>
       </div>
 
       <div id="docs-dashboard" class="docs-section">
         <h3>Dashboard</h3>
-        <h4>Live monitoring</h4>
-        <p>The dashboard is the main operational view. It shows the current security state, live uptime, last alert time, threshold, pipeline status, and owner-home status.</p>
-        <h4>Center stage</h4>
-        <p>The camera card supports <code>Live</code> and <code>Floor Plan</code> tabs. Below it, the <strong>Alert Activity</strong> heatmap visualizes detections over recent weeks.</p>
+        <p class="docs-lede">The main operational view: the security state, uptime, last alert, threshold, pipeline status and whether the owner is home.</p>
+        <h4>Camera card</h4>
+        <p>The card has <code>Live</code> and <code>Floor Plan</code> tabs. Next to the live dot, a label shows the frames per second the detector is processing right now, measured over the last two seconds, so it drops to zero when the camera stops.</p>
+        <p>The speaker button plays live sound from the USB microphone beside the video, with about 60 ms of delay. Your choice is remembered. Sound runs only while someone listens, so Narada keeps the microphone the rest of the time.</p>
+        <p>The video stream sends a new frame only when the browser has shown the last one, so a slow connection skips frames instead of falling behind.</p>
         <h4>Side panels</h4>
-        <p>The left column exposes <strong>System Modes</strong> and <strong>Hub Health</strong> for CPU, RAM, temperature, FPS, and disk. The right column shows the date-filtered <strong>Activity</strong> timeline and <strong>Recent Detections</strong>.</p>
+        <p><strong>System Modes</strong> and <strong>Hub Health</strong> (CPU, RAM, temperature, FPS and disk) sit on the left. The date-filtered <strong>Activity</strong> timeline and <strong>Recent Detections</strong> sit on the right, with the <strong>Alert Activity</strong> heatmap below the camera.</p>
         <h4>Dynamic Island</h4>
-        <p>The top Dynamic Island reflects key real-time states such as alerts, all clear, Narada activity, and chat thinking, so the app status remains visible across pages.</p>
+        <p>The pill at the top shows live states such as alerts, all clear, recording, Narada activity and offline, so the system status stays visible on every page. Tap it to open it.</p>
       </div>
 
       <div id="docs-detection" class="docs-section">
         <h3>Detection and Alerting</h3>
-        <h4>Pipeline</h4>
-        <p>YOLOv6n runs on the Hailo-8L and processes camera frames in real time. Detected classes above the configured confidence threshold are evaluated against alert rules and watch rules.</p>
-        <h4>Alert Logic</h4>
+        <p class="docs-lede">YOLOv6n runs on the Hailo-8L and reads every camera frame in real time. Objects above the confidence threshold are checked against the alert and watch rules.</p>
+        <h4>Alert logic</h4>
         <div class="docs-flow">
-          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Object detected</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">2</span> Matches danger label?</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Trigger alert</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">4</span> Send email</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span>Object detected</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span>Matches danger label?</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span>Alert starts</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">4</span>E-mail and captures</div>
         </div>
         <h4>Detection controls</h4>
-        <p><strong>Danger Label</strong> defines the object that triggers an alert. <strong>Watch Labels</strong> are logged silently without escalating. <strong>Detection Threshold</strong> controls model sensitivity from 0.05 to 0.95.</p>
-        <h4>Operational modes</h4>
-        <p><code>Privacy Blur</code> obscures faces, <code>Night Mode</code> increases alert readiness, <code>DND</code> suppresses disturbances, <code>Idle</code> changes system behavior for standby, <code>Email Alerts Off</code> disables email delivery, and <code>Emergency</code> overrides quieter modes.</p>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term">Danger Label</span><span class="docs-def">The object that starts an alert.</span></div>
+          <div class="docs-row"><span class="docs-term">Watch Labels</span><span class="docs-def">Objects that are logged quietly, without an alert.</span></div>
+          <div class="docs-row"><span class="docs-term">Detection Threshold</span><span class="docs-def">Model sensitivity, from 0.05 to 0.95.</span></div>
+        </div>
+        <h4>Modes</h4>
+        <p><code>Privacy Blur</code> hides faces, <code>Night Mode</code> raises alert readiness, <code>DND</code> keeps things quiet, <code>Idle</code> puts the system on standby, <code>Email Alerts Off</code> stops alert e-mails and <code>Emergency</code> overrides the quieter modes. A mode that silences alerts is only set when you clearly ask for it.</p>
+      </div>
+
+      <div id="docs-captures" class="docs-section">
+        <h3>Captures</h3>
+        <p class="docs-lede">Garuda can keep pictures, sound and video from the camera, so you have evidence of what happened when an alert started.</p>
+        <h4>What gets saved</h4>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term">Snapshot</span><span class="docs-def">A still picture (JPEG) of the camera.</span></div>
+          <div class="docs-row"><span class="docs-term">Sound</span><span class="docs-def">1 to 30 seconds from the room microphone (WAV).</span></div>
+          <div class="docs-row"><span class="docs-term">Video</span><span class="docs-def">1 to 60 seconds of camera video (WebM) with the room sound mixed in. It is encoded while it records, so it is ready as soon as it ends.</span></div>
+        </div>
+        <h4>Three ways to capture</h4>
+        <ul class="docs-list">
+          <li><strong>Ask Narada</strong> by voice or text: "save a picture", "record 20 seconds of video", "email me the last captures".</li>
+          <li><strong>Alert shortcuts</strong>: a shortcut can start on an alert (any, danger, night presence or camera covered) and run capture steps, for example a picture, the next 10 seconds of sound and a video of the same moment.</li>
+          <li><strong>The API</strong>, for your own scripts (below).</li>
+        </ul>
+        <h4>Where to find them</h4>
+        <p>Open <strong>Automations</strong> and scroll to <strong>Captures</strong>. Each run is one card with players for its picture, sound and video. From there you can keep a capture, delete it or e-mail it to the alert recipients.</p>
+        <h4>Storage and disk guard</h4>
+        <p>Captures live on the Pi. When there are more than 500 of them or they pass 2 GB, the oldest go first. A capture marked keep is never removed this way.</p>
+        <div class="docs-note"><span class="gi gi-info" aria-hidden="true"></span><span>Garuda always keeps 500 MB of the disk free. When space runs short it removes the oldest unkept captures, and if that is not enough it refuses the new capture instead of filling the disk. On start it also clears files the capture list does not know about.</span></div>
+        <p class="docs-p">Limits can be changed in <code>.env</code> with <code>GARUDA_CAPTURES_MAX</code>, <code>GARUDA_CAPTURES_MAX_MB</code> and <code>GARUDA_CAPTURES_MIN_FREE_MB</code>.</p>
+        <h4>API</h4>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/snapshot</span><span class="docs-def">Save a picture now.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/audio</span><span class="docs-def">Record sound for 1 to 30 s. Pass <code>wait=false</code> to record in the background.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/video</span><span class="docs-def">Record video for 1 to 60 s, also with <code>wait=false</code>.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">GET /api/captures</span><span class="docs-def">List captures with a link to each file.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">GET /api/captures/{id}/file</span><span class="docs-def">Download one capture.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/{id}/keep</span><span class="docs-def">Protect a capture from clean-up.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">DELETE /api/captures/{id}</span><span class="docs-def">Delete a capture.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/email</span><span class="docs-def">E-mail captures to the alert recipients.</span></div>
+        </div>
+      </div>
+
+      <div id="docs-home" class="docs-section">
+        <h3>Home and Automations</h3>
+        <p class="docs-lede">Garuda also runs the house: lights, fans, plugs and sensors, with rules that react to what the camera and the house see.</p>
+        <h4>Devices</h4>
+        <p>The <strong>Devices</strong> page lists scenes and devices by room. Type what you want in plain words, such as "fan off in 30 minutes" or "when I leave, turn everything off". Admins add devices with a name, room, MQTT topic and optional wattage.</p>
+        <h4>Automations</h4>
+        <div class="docs-rows">
+          <div class="docs-row"><span class="docs-term">Waiting for confirmation</span><span class="docs-def">Changes Garuda wants you to approve first.</span></div>
+          <div class="docs-row"><span class="docs-term">Suggested</span><span class="docs-def">Rules proposed from your daily routine.</span></div>
+          <div class="docs-row"><span class="docs-term">Rules</span><span class="docs-def">If this happens, do that.</span></div>
+          <div class="docs-row"><span class="docs-term">Shortcuts</span><span class="docs-def">Named lists of steps, including capture steps and alert triggers.</span></div>
+          <div class="docs-row"><span class="docs-term">Captures</span><span class="docs-def">Saved pictures, sound and video, one card per run.</span></div>
+          <div class="docs-row"><span class="docs-term">Schedules &amp; timers</span><span class="docs-def">Things that run at a set time or after a delay.</span></div>
+          <div class="docs-row"><span class="docs-term">Away &amp; vacation</span><span class="docs-def">Behaviour while nobody is home.</span></div>
+        </div>
+        <h4>Insights</h4>
+        <p>Today's summary, energy use over the last 7 days and device activity.</p>
+        <h4>MQTT broker</h4>
+        <p>Devices talk to the broker over MQTT. Set <code>DRISHTI_MQTT_USER</code> and <code>DRISHTI_MQTT_PASS</code> to log in, and <code>DRISHTI_MQTT_TLS=1</code> to encrypt the connection on port 8883 with the broker's certificate checked.</p>
       </div>
 
       <div id="docs-narada" class="docs-section">
         <h3>Narada Assistant</h3>
-        <h4>One page, voice or text</h4>
-        <p>Tap the microphone to talk: ElevenLabs listens, turns speech into text and speaks Narada's reply in the browser, hands-free until about 30 seconds of silence or a second tap. Or type into the bar below the glyph. The glyph shows what Narada is doing: breathing when idle, following your voice while listening, orbiting while thinking, and blooming with its own voice while speaking.</p>
+        <p class="docs-lede">Narada is Garuda's assistant. Talk or type, and it reads the house and acts through its tools.</p>
+        <h4>Voice or text, one page</h4>
+        <p>Tap the microphone to talk. ElevenLabs listens, turns speech into text and speaks Narada's reply, hands-free until about 30 seconds of silence or a second tap. A long answer is spoken as its short version. Or type into the bar below the glyph. The glyph shows what Narada is doing: breathing when idle, following your voice while listening, orbiting while thinking and blooming while speaking.</p>
         <h4>One brain</h4>
-        <p>Every request, spoken or typed, goes to NVIDIA NIM (Nemotron 3 Super, with GLM 5.3 Flash as backup), which reads the house and acts through its tools. Nothing changes without the model: if NIM is down, Narada says so and does nothing. Keys live in <code>.env</code> on the Pi (<code>NIM_API_KEY</code>, <code>ELEVENLABS_API_KEY</code>); the browser only ever receives a one-conversation voice token.</p>
+        <p>Every request goes to NVIDIA NIM (Nemotron 3.5 Super VL, with Nemotron 3 Ultra as backup). Nothing changes without the model: if NIM is down, Narada says so and does nothing. Simple commands for several devices, and questions like "is the fan on?", take a faster lane and answer in about a second.</p>
+        <h4>What Narada can do</h4>
+        <ul class="docs-list">
+          <li>Switch devices and scenes, set modes, and build rules, shortcuts and schedules.</li>
+          <li>Save and manage captures: picture, sound, video, list, keep, delete and e-mail.</li>
+          <li>Listen to the room (how loud it is) and play room sound in the chat.</li>
+        </ul>
+        <h4>Safety checks</h4>
+        <p>Before a reply reaches you, Narada checks that what it says it did matches the real state of the house. Text read from house data is screened for hidden instructions; a suspicious string is treated as data only and you are told.</p>
+        <h4>Keys</h4>
+        <p>Keys live in <code>.env</code> on the Pi (<code>NIM_API_KEY</code>, <code>ELEVENLABS_API_KEY</code>). The browser only receives a one-conversation voice token.</p>
         <h4>Custom commands</h4>
-        <p>Admins can teach Narada additional phrases and canned responses from the <strong>Custom Commands</strong> page. These become reusable voice/chat shortcuts inside the app.</p>
+        <p>Admins can teach Narada extra phrases and replies on the <strong>Custom Commands</strong> page.</p>
       </div>
 
       <div id="docs-admin" class="docs-section">
         <h3>Admin Controls</h3>
-        <h4>Email Settings</h4>
-        <p>Configure the sender Gmail account, app password, recipients, and alert cooldown. A built-in <code>Send Test Email</code> action validates delivery from the UI.</p>
-        <h4>System Settings</h4>
-        <p>The admin settings page includes security-health checks, detection threshold, danger label, privacy toggle, known-device management, NVIDIA NIM key and model, watch labels, and master-key administration.</p>
-        <h4>Known Devices</h4>
-        <p>Owner presence is tracked using known MAC addresses. The app includes network scanning helpers and mobile-device guidance for private/random MAC settings.</p>
+        <p class="docs-lede">Admins configure alerts, detection, presence and access, and read the logs.</p>
+        <h4>Email settings</h4>
+        <p>Set the sender Gmail account, app password, recipients and alert cooldown. <code>Send Test Email</code> checks delivery from the app. Alert recipients also receive e-mailed captures.</p>
+        <h4>System settings</h4>
+        <p>Security health checks, detection threshold, danger label, privacy, known devices, the NVIDIA NIM key and model, watch labels and master keys.</p>
+        <h4>Known devices</h4>
+        <p>Owner presence comes from known phone MAC addresses. The app can scan the network and explains private or random MAC settings on phones.</p>
         <h4>Logs and exports</h4>
-        <p>The logs page separates <strong>System</strong>, <strong>Detection</strong>, <strong>Presence</strong>, and <strong>Voice</strong> logs. Admins can filter the current session, export the session log, or download the full combined log archive.</p>
+        <p>Logs are split into <strong>System</strong>, <strong>Detection</strong>, <strong>Presence</strong> and <strong>Voice</strong>. Admins can filter the current session, export it, or download the full archive.</p>
         <h4>Feedback</h4>
-        <p>The feedback widget stores submissions on the server only. Normal users can submit feedback, while admins can review the inbox from the app. Feedback is persisted on disk with backup recovery.</p>
+        <p>Feedback is stored on the server only. Anyone signed in can send it; admins read the inbox in the app.</p>
       </div>
 
       <div id="docs-access" class="docs-section">
         <h3>Access and Security</h3>
-        <h4>Login flows</h4>
+        <h4>Sign-in</h4>
         <div class="docs-flow">
-          <div class="docs-flow-step"><span class="docs-flow-num">1</span> Credentials</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">2</span> OTP via email</div>
-          <span class="docs-flow-arrow">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">3</span> Session token</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">1</span>Credentials</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span>Code by e-mail</div>
+          <span class="docs-flow-arrow" aria-hidden="true">→</span>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span>Session</div>
         </div>
-        <p><strong>Users</strong> sign in with username and password. <strong>Admins</strong> authenticate with credentials plus OTP. <strong>Master Keys</strong> can grant instant admin access and are also used to unlock the logs area.</p>
-        <h4>Session Management</h4>
-        <p>Sessions expire after 1 hour (admin) or 5 days (user with "Remember me"). Tokens are stored as HTTP-only cookies for same-origin requests and in localStorage for cross-origin access.</p>
-        <h4>Additional safeguards</h4>
-        <p>The app enforces per-IP rate limits on sensitive routes, keeps admin-only endpoints protected, and separates public data from privileged settings and logs.</p>
+        <p><strong>Users</strong> sign in with a username and password. <strong>Admins</strong> also enter a one-time code sent by e-mail. <strong>Master keys</strong> give instant admin access and unlock the logs.</p>
+        <h4>Sessions</h4>
+        <p>Sessions last 1 hour for admins and 5 days for users with "Remember me". Signing out ends the session on the server too.</p>
+        <h4>Safeguards</h4>
+        <ul class="docs-list">
+          <li>Rate limits on sensitive routes, and the same answer for known and unknown names.</li>
+          <li>Admin-only endpoints for settings, logs and devices.</li>
+          <li>Phone MAC addresses and e-mail addresses are hidden from non-admins.</li>
+        </ul>
       </div>
 
       <div id="docs-stack" class="docs-section">
         <h3>Technology Stack</h3>
         <div class="docs-stack-grid">
-          <div class="docs-stack-item"><strong>Hailo-8L</strong><span>13 TOPS neural processor for real-time AI inference</span></div>
-          <div class="docs-stack-item"><strong>Raspberry Pi 5</strong><span>Quad-core Arm Cortex-A76 @ 2.4GHz host</span></div>
-          <div class="docs-stack-item"><strong>YOLOv6n</strong><span>Lightweight object detection model optimized for edge</span></div>
-          <div class="docs-stack-item"><strong>GStreamer</strong><span>Media pipeline for camera capture and processing</span></div>
-          <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python web framework with WebSocket support</span></div>
-          <div class="docs-stack-item"><strong>WebSockets + SSE</strong><span>Real-time state and streamed chat updates in the UI</span></div>
-          <div class="docs-stack-item"><strong>NVIDIA NIM</strong><span>Narada's model for every command (Nemotron 3 Super)</span></div>
-          <div class="docs-stack-item"><strong>ElevenLabs</strong><span>Narada's voice: speech-to-text, turn-taking and speech</span></div>
-          <div class="docs-stack-item"><strong>Local JSON persistence</strong><span>Server-side storage for users, config, logs, alert history, and feedback</span></div>
-          <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Secure remote access without port forwarding</span></div>
+          <div class="docs-stack-item"><strong>Raspberry Pi 5</strong><span>Quad-core Arm Cortex-A76 host, everything runs here</span></div>
+          <div class="docs-stack-item"><strong>Hailo-8L</strong><span>13 TOPS neural processor for real-time detection</span></div>
+          <div class="docs-stack-item"><strong>YOLOv6n</strong><span>Lightweight object detection model for the edge</span></div>
+          <div class="docs-stack-item"><strong>GStreamer</strong><span>Camera capture and processing pipeline</span></div>
+          <div class="docs-stack-item"><strong>FastAPI</strong><span>Async Python server with WebSockets and SSE</span></div>
+          <div class="docs-stack-item"><strong>PipeWire</strong><span>Shares the USB microphone between Narada and room sound</span></div>
+          <div class="docs-stack-item"><strong>ffmpeg</strong><span>Encodes capture video while it records</span></div>
+          <div class="docs-stack-item"><strong>MQTT</strong><span>Talks to home devices, with optional TLS</span></div>
+          <div class="docs-stack-item"><strong>NVIDIA NIM</strong><span>Narada's language model</span></div>
+          <div class="docs-stack-item"><strong>ElevenLabs</strong><span>Narada's voice: listening, turn-taking and speech</span></div>
+          <div class="docs-stack-item"><strong>Local JSON storage</strong><span>Users, settings, logs, alert history, captures and feedback on the Pi</span></div>
+          <div class="docs-stack-item"><strong>Cloudflare Tunnel</strong><span>Remote access without port forwarding</span></div>
         </div>
-        <h4>Frontend capabilities</h4>
-        <p>The web UI includes theme switching, a responsive dashboard, mobile-adapted bottom navigation, interactive logs, an AI chat shell, and live status surfaces coordinated with the backend state.</p>
+        <h4>Frontend</h4>
+        <p>Light and dark themes, a responsive dashboard, bottom navigation on phones, installable as an app, interactive logs and live status shared with the server.</p>
       </div>
     </div>
-
-    <div class="docs-footer">
-      <button class="btn btn-ghost docs-footer-close" data-click="UI.addClass" data-args='["m-docs", "hidden"]'>Close</button>
-    </div>
-
   </div>
 </div>
 
