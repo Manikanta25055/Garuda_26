@@ -1319,19 +1319,28 @@ const N = (() => {
       // may already have acted.
       const late = await answerAfterCut(sentAt);
       if (late) return { response: late, lane: 'agent', actions: [] };
-      throw { detail: 'The reply was interrupted. Check the current state before retrying an action.', cause: cut };
+      // A lost connection keeps its own message ("Connection lost", from submit).
+      if (cut) throw cut;
+      throw { detail: 'The reply was interrupted. Check the current state before retrying an action.' };
     }
     return { ...meta, response: reply };
   }
 
   // The answer to a question whose stream was cut, once the server has it.
+  // Waited for only while the server is still working on a turn: one that
+  // never reached it, or ended without a reply, says so in a few seconds
+  // instead of leaving "thinking" up for the whole 90.
   async function answerAfterCut(sentAt) {
     const until = Date.now() + 90000;
+    let idle = 0;
     while (Date.now() < until) {
       try {
         const res = await G._apiFn('GET', '/api/narada/conversation/last');
         const skew = (res.now || Date.now() / 1000) - Date.now() / 1000;
         if (res.last && res.last.reply && res.last.at >= sentAt + skew - 2) return res.last.reply;
+        // Twice: a question still on its way in is not being worked on yet.
+        if (res.working === false && ++idle >= 2) return '';
+        if (res.working) idle = 0;
       } catch (_) {}
       await new Promise(r => setTimeout(r, 2000));
     }
