@@ -238,3 +238,42 @@ def test_what_a_stopped_recording_left_is_cleared_on_start(tmp_path):
     (tmp_path / "kept.jpg").write_bytes(b"x")
     cap.CaptureStore(str(tmp_path))
     assert sorted(p.name for p in tmp_path.iterdir()) == ["kept.jpg"]
+
+
+def test_a_short_disk_clears_the_oldest_then_refuses(tmp_path):
+    free = [10_000]
+    store = cap.CaptureStore(str(tmp_path), min_free=1000, free_fn=lambda d: free[0])
+    old = store.begin("snapshot", by="a")
+    store.finish(old["id"], b"x" * 600)
+    kept = store.begin("snapshot", by="a")
+    store.set_keep(kept["id"], True)
+    store.finish(kept["id"], b"x" * 600)
+    free[0] = 500                  # something else filled the disk
+    store._free_fn = lambda d: free[0] + (600 if store.get(old["id"]) is None else 0)
+    assert store.begin("snapshot", by="a")["status"] == "recording"
+    assert store.get(old["id"]) is None and store.get(kept["id"])
+    free[0] = 100
+    with pytest.raises(cap.LowDisk):
+        store.begin("snapshot", by="a")
+    assert store.get(kept["id"])
+
+
+def test_a_full_disk_answers_507(app_client, user_headers, monkeypatch, camera):
+    monkeypatch.setattr(gw.CAPTURES, "_free_fn", lambda d: 0)
+    out = app_client.post("/api/captures/snapshot", json={}, headers=user_headers)
+    assert out.status_code == 507 and "disk" in out.json()["detail"]
+
+
+def test_an_unlisted_file_goes_on_start_and_a_broken_index_is_kept(tmp_path):
+    tmp_path = tmp_path / "caps"
+    store = cap.CaptureStore(str(tmp_path))
+    entry = store.begin("snapshot", by="a")
+    store.finish(entry["id"], b"x")
+    (tmp_path / "orphan.jpg").write_bytes(b"x")
+    (tmp_path / "notes.txt").write_bytes(b"x")
+    cap.CaptureStore(str(tmp_path))
+    assert {p.name for p in tmp_path.iterdir()} == {"index.json", "notes.txt", entry["file"]}
+    (tmp_path / "index.json").write_text("{broken")
+    again = cap.CaptureStore(str(tmp_path))
+    assert again.list() == [] and (tmp_path / entry["file"]).exists()
+    assert any(p.name.startswith("index.json.bad-") for p in tmp_path.iterdir())
