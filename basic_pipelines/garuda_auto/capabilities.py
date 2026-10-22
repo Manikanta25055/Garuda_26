@@ -134,7 +134,10 @@ _CAPTURE_PARAMS = {
                                                "its captures stay together"}}
 _WAIT = {"type": "boolean", "description": "true (default): the step ends when it is saved; "
                                           "false: record in the background"}
-_CAPTURE_WAIT_S = 75
+# Longer than a capture route waits for its recording (captures.FINISH_WAIT_S,
+# 90 s), so the route always answers first, saved or "still recording", and a
+# step is never abandoned while its recording is still going.
+_CAPTURE_WAIT_S = 105
 
 CAPABILITIES += (
     # schedules, automations, suggestions
