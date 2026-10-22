@@ -38,6 +38,54 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/captures",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/captures/audio",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/captures/email",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/captures/snapshot",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/captures/video",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "DELETE",
+  "path": "/api/captures/{capture_id}",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/captures/{capture_id}/file",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/captures/{capture_id}/keep",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/cascade_metrics",
   "guard": "require_session"
  },

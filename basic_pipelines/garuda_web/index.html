@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=89"/>
+  <link rel="stylesheet" href="/static/style.css?v=90"/>
 </head>
 <body>
 <div id="app">
@@ -603,6 +603,22 @@
           <div class="ha-section-title">Shortcuts</div>
           <div class="ha-hint">Ask Narada for one — “at 10 pm, if the TV is still on, switch it off and tell me”. It writes the steps from everything the house can do; they are saved only after you confirm the card.</div>
           <div id="ha-shortcuts" class="ha-list"></div>
+
+          <div class="ha-section-hdr">
+            <div class="ha-section-title">Captures</div>
+            <span id="ha-cap-usage" class="ha-sub"></span>
+          </div>
+          <div class="ha-hint">Pictures, sound and video kept on the Pi. A shortcut can save them when an alert starts — ask Narada: “when an alert starts, save a picture and the next 10 seconds of sound, and email them to me”.</div>
+          <div class="ha-cap-tools">
+            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["snapshot"]'>Save picture</button>
+            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["audio"]'>Record 10 s sound</button>
+            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["video"]'>Record 10 s video</button>
+            <select class="input input-sm" aria-label="Show" data-change="H.filterCaptures" data-args='[{"$": "value"}]'>
+              <option value="">Everything</option><option value="snapshot">Pictures</option>
+              <option value="audio">Sound</option><option value="video">Video</option>
+            </select>
+          </div>
+          <div id="ha-captures" class="ha-list"></div>
 
           <div class="ha-section-hdr">
             <div class="ha-section-title">Schedules &amp; timers</div>
@@ -1336,6 +1352,6 @@
 <script src="/static/narada.js?v=30"></script>
 <script src="/static/island.js?v=4"></script>
 <script src="/static/app.js?v=84"></script>
-<script src="/static/home.js?v=15"></script>
+<script src="/static/home.js?v=16"></script>
 </body>
 </html>

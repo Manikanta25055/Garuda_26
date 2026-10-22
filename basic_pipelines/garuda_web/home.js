@@ -542,6 +542,7 @@ const H = (() => {
       </div>`).join('') : '<div class="ha-empty">Nothing scheduled.</div>';
 
     loadShortcuts();
+    loadCaptures();
 
     // Schedule form
     const devs = pick.devices.filter(d => d.actuator);
@@ -602,11 +603,82 @@ const H = (() => {
     } catch (e) { G.showToast(errText(e), 'error'); }
     loadShortcuts();
     setTimeout(loadShortcuts, 1500);          // a short run has finished by then
+    setTimeout(loadCaptures, 1500);
   }
   const runShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/run`, 'Shortcut started');
   const cancelShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/cancel`);
   const toggleShortcut = id => shortcutCall('POST', `${encodeURIComponent(id)}/toggle`);
   const deleteShortcut = async (id, name) => (await sureDelete('shortcut', name)) && shortcutCall('DELETE', encodeURIComponent(id), 'Shortcut deleted');
+
+  // Captures: pictures, sound and video kept on the Pi, by a shortcut step,
+  // Narada or the buttons here. One run of a shortcut is one card.
+  let _capKind = '', _capTimer = null;
+  const KIND_WORD = { snapshot: 'Picture', audio: 'Sound', video: 'Video' };
+  async function loadCaptures() {
+    const box = $('ha-captures');
+    if (!box) return;
+    clearTimeout(_capTimer);
+    let data;
+    const q = _capKind ? `?kind=${_capKind}&limit=60` : '?limit=60';
+    try { data = await api('GET', '/api/captures' + q); } catch (e) { box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
+    const me = (G.getSession() || {}).username;
+    const base = G._base ? G._base() : '', auth = G._authQuery ? G._authQuery() : '';
+    const src = c => `${base}${c.url}${auth ? '?' + auth : ''}`;
+    const groups = [], byGroup = {};
+    data.captures.forEach(c => {
+      const key = c.group || c.id;
+      if (!byGroup[key]) { byGroup[key] = []; groups.push(byGroup[key]); }
+      byGroup[key].push(c);
+    });
+    const media = c => {
+      if (c.status === 'recording') return `<div class="ha-sub">Recording ${KIND_WORD[c.kind].toLowerCase()}${c.seconds ? ` · ${c.seconds} s` : ''}…</div>`;
+      if (c.status !== 'saved') return `<div class="ha-sub warn">${esc(KIND_WORD[c.kind])} failed: ${esc(c.error)}</div>`;
+      if (c.kind === 'snapshot') return `<a href="${esc(src(c))}" target="_blank" rel="noopener"><img class="ha-cap-img" loading="lazy" alt="Saved picture" src="${esc(src(c))}"/></a>`;
+      if (c.kind === 'audio') return `<audio class="ha-cap-audio" controls preload="none" src="${esc(src(c))}"></audio>`;
+      return `<video class="ha-cap-video" controls preload="metadata" playsinline src="${esc(src(c))}"></video>`;
+    };
+    const item = c => {
+      const mine = isAdmin() || c.by === me;
+      return `<div class="ha-cap-item">
+        ${media(c)}
+        <div class="ha-cap-bar"><span class="ha-sub">${esc(KIND_WORD[c.kind])}${c.seconds ? ` · ${c.seconds} s` : ''}</span>
+          ${c.status === 'saved' ? `<a class="btn btn-ghost btn-sm" href="${esc(src(c) + (auth ? '&' : '?') + 'download=true')}">Save</a>` : ''}
+          ${mine && c.status !== 'recording' ? `<button class="btn btn-ghost btn-sm" title="${c.keep ? 'Kept: never cleared to make room' : 'Keep: never clear it to make room'}" ${handler('click', 'H.keepCapture', c.id, !c.keep)}>${c.keep ? '★ Kept' : '☆ Keep'}</button>
+          <button class="ha-x" aria-label="Delete capture" ${handler('click', 'H.deleteCapture', c.id)}>&times;</button>` : ''}
+        </div></div>`;
+    };
+    box.innerHTML = groups.length ? groups.map(g => {
+      const first = g[g.length - 1], label = g.find(c => c.label)?.label, alert = g.find(c => c.alert)?.alert;
+      return `<div class="ha-row ha-cap-group"><div class="ha-row-main">
+        <div><b>${esc(label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(first.at))} · ${esc(first.by)}</span></div>
+        ${alert ? `<div class="ha-sub warn">During an alert: ${esc(alert)}</div>` : ''}
+        <div class="ha-cap-items">${g.slice().reverse().map(item).join('')}</div>
+      </div></div>`;
+    }).join('') : '<div class="ha-empty">Nothing saved yet. Ask Narada: “when an alert starts, save a picture and the next 10 seconds of sound”.</div>';
+    const u = data.usage || {}, meta = $('ha-cap-usage');
+    const size = b => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
+    if (meta) meta.textContent = u.count ? `${u.count} saved · ${size(u.bytes)} of ${size(u.max_bytes)}` : '';
+    // A recording is listed at once; look again until it is saved.
+    if (data.captures.some(c => c.status === 'recording')) _capTimer = setTimeout(loadCaptures, 2000);
+  }
+  function filterCaptures(kind) { _capKind = kind || ''; loadCaptures(); }
+  async function captureNow(kind) {
+    const body = kind === 'snapshot' ? {} : { seconds: 10, wait: false };
+    try {
+      const r = await api('POST', `/api/captures/${kind}`, body);
+      G.showToast(r.result || 'Saved', 'success');
+    } catch (e) { G.showToast(errText(e), 'error'); }
+    loadCaptures();
+  }
+  async function keepCapture(id, keep) {
+    try { await api('POST', `/api/captures/${encodeURIComponent(id)}/keep`, { keep }); } catch (e) { G.showToast(errText(e), 'error'); }
+    loadCaptures();
+  }
+  async function deleteCapture(id) {
+    if (!(await sureDelete('capture', '', 'The file is removed from the Pi and cannot be brought back.'))) return;
+    try { await api('DELETE', `/api/captures/${encodeURIComponent(id)}`); } catch (e) { G.showToast(errText(e), 'error'); }
+    loadCaptures();
+  }
 
   let _days = [0, 1, 2, 3, 4, 5, 6];
   function renderDays() {
@@ -792,6 +864,7 @@ const H = (() => {
     toggleDay, onSchedMode, addSchedule, toggleSetting, saveAway,
     loadDigest, saveTariff, loadAI, saveAI, testAI,
     runShortcut, cancelShortcut, toggleShortcut, deleteShortcut,
+    loadCaptures, filterCaptures, captureNow, keepCapture, deleteCapture,
     // After a card is confirmed in the conversation, whatever page is open reloads.
     refresh: () => onNav(_page),
   };

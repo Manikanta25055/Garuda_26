@@ -25,6 +25,10 @@ Triggers
                                 the moment the condition becomes true (and has
                                 stayed true for N minutes); not again until it
                                 has been false in between
+    alert  [kind any|danger|night_presence|camera_covered]
+                                the moment an alert of that kind starts (any:
+                                whichever starts first); a `when` over the
+                                alert facts, named so it is easy to ask for
 
 Conditions are over facts: the room as the camera sees it, device states,
 modes, presence, alerts, and the clock ("time" as HH:MM, "weekday", "hour").
@@ -37,6 +41,11 @@ moment; run by hand it runs as whoever pressed the button, but never with
 more than its maker's role: an admin running a user's shortcut runs it as a
 user, so a step checked only at run time cannot borrow the admin's rights. Capabilities that
 need a person's tap (the confirm tier) cannot be steps.
+
+Captures (capture_snapshot, capture_audio, capture_video, email_captures) made
+by one run share a group, the run's id, which the engine fills in: "when an
+alert starts, save a picture and the next 10 seconds of sound, then email
+them" is three steps and no ids.
 
 A run that is waiting (lamp on, wait 90 minutes, lamp off) is written down
 with where it is in its steps. If the service restarts during the wait, the
@@ -78,6 +87,24 @@ NOT_STEPS = frozenset({"create_shortcut", "update_shortcut", "delete_shortcut", 
                        "hand_to_planner", "show_artifact", "take_snapshot",
                        "play_room_sound"})
 STEP_KINDS = ("do", "wait", "if", "repeat", "notify", "run", "stop")
+# Show-in-the-chat tools have a step that keeps the thing instead.
+CHAT_ONLY = {"take_snapshot": "capture_snapshot", "play_room_sound": "capture_audio"}
+# The alert trigger's kinds, as conditions over the facts.
+ALERT_KINDS = {
+    "danger": {"field": "alert", "op": "==", "value": "active"},
+    "night_presence": {"field": "night_presence_alert", "op": "==", "value": "on"},
+    "camera_covered": {"field": "camera_covered", "op": "==", "value": "yes"},
+}
+ALERT_KINDS["any"] = {"any": list(ALERT_KINDS.values())}
+ALERT_WORDS = {"any": "an alert", "danger": "a danger alert",
+               "night_presence": "a night presence alert", "camera_covered": "the camera is covered"}
+
+
+def trigger_condition(trigger):
+    """What a when or alert trigger waits for."""
+    if trigger["type"] == "alert":
+        return ALERT_KINDS[trigger.get("kind", "any")]
+    return trigger["condition"]
 
 
 def clock_facts(now):
@@ -146,6 +173,9 @@ def _check_steps(steps, role, known, depth, count):
             if capability.tier == "confirm":
                 raise Invalid(f"{capability.name} needs a person's tap each time, so it cannot "
                               "be a step")
+            if capability.name in CHAT_ONLY:
+                raise Invalid(f"{capability.name} only shows it in a chat and keeps nothing, so it "
+                              f"cannot be a step; use {CHAT_ONLY[capability.name]} to save it")
             if capability.name in NOT_STEPS:
                 raise Invalid(f"{capability.name} cannot be a step")
             if capability.role == "admin" and role != "admin":
@@ -245,8 +275,17 @@ def validate(program, *, role, fields, shortcut_ids=(), self_id=None):
         if isinstance(held, bool) or not isinstance(held, (int, float)) or not 0 <= held <= 720:
             raise Invalid("for_minutes is 0 to 720")
         trigger = {"type": "when", "condition": trigger["condition"], "for_minutes": held}
+    elif kind == "alert":
+        which = trigger.get("kind", "any")
+        if which not in ALERT_KINDS:
+            raise Invalid(f"an alert trigger's kind is one of {', '.join(ALERT_KINDS)}")
+        missing = {c["field"] for c in _walk_conditions(ALERT_KINDS[which])} - fields
+        if missing:
+            raise Invalid(f"this house does not report {sorted(missing)}, so it cannot wait for "
+                          f"{ALERT_WORDS[which]}")
+        trigger = {"type": "alert", "kind": which}
     else:
-        raise Invalid("trigger type is one of manual, time, every, sun, when")
+        raise Invalid("trigger type is one of manual, time, every, sun, when, alert")
     if trigger["type"] != "manual" and role != "admin":
         raise Invalid("only an admin can make a shortcut that runs by itself; a manual one is "
                       "allowed")
@@ -263,6 +302,18 @@ def validate(program, *, role, fields, shortcut_ids=(), self_id=None):
     if program.get("conditions") is not None:
         clean["conditions"] = program["conditions"]
     return clean
+
+
+def _walk_conditions(cond):
+    for key in ("all", "any"):
+        if key in cond:
+            for inner in cond[key]:
+                yield from _walk_conditions(inner)
+            return
+    if "not" in cond:
+        yield from _walk_conditions(cond["not"])
+    elif "field" in cond:
+        yield cond
 
 
 # ── evaluating ────────────────────────────────────────────────────────────────
@@ -332,6 +383,9 @@ def _say_trigger(trigger):
         when = (f"{abs(off)} min {'before' if off < 0 else 'after'} {trigger['event']}" if off
                 else trigger["event"])
         return f"At {when}{which}"
+    if kind == "alert":
+        which = trigger.get("kind", "any")
+        return f"When {ALERT_WORDS[which]}" + (" starts" if which != "camera_covered" else "")
     held = trigger.get("for_minutes")
     return f"When {_say_condition(trigger['condition'])}" + (f" for {held:g} min" if held else "")
 
@@ -384,7 +438,8 @@ def cautions(program):
     trigger = program.get("trigger") or {}
     if trigger.get("type") == "every" and trigger.get("minutes", 60) < 5:
         out.append(f"Runs every {trigger['minutes']} min, day and night.")
-    if any(s.get("notify") and s.get("email") for s in steps) and trigger.get("type") in ("every", "when"):
+    if any((s.get("notify") and s.get("email")) or s.get("do") == "email_captures" for s in steps) \
+            and trigger.get("type") in ("every", "when", "alert"):
         out.append("Sends email each time it runs.")
     return out
 
@@ -619,19 +674,20 @@ class ShortcutEngine:
                     self._last_auto[sid] = now      # counted from start-up, not run at once
                 else:
                     due = now - last >= trigger["minutes"] * 60
-            elif trigger["type"] == "when":
+            elif trigger["type"] in ("when", "alert"):
+                condition = trigger_condition(trigger)
                 first_look = (sid, json.dumps(trigger, sort_keys=True)) not in self._seen_when
                 self._seen_when.add((sid, json.dumps(trigger, sort_keys=True)))
-                if first_look and shortcut.get("last_run") and holds(trigger["condition"], facts):
+                if first_look and shortcut.get("last_run") and holds(condition, facts):
                     # The service has just started and the condition already
                     # holds for a shortcut that has run before: that stretch is
                     # not new. Without this every restart ran it again ("when I
                     # am away, turn everything off", each time the Pi restarted).
                     self._true_since[sid] = now
                     self._fired[sid] = True
-                if holds(trigger["condition"], facts):
+                if holds(condition, facts):
                     since = self._true_since.setdefault(sid, now)
-                    if not self._fired.get(sid) and now - since >= trigger["for_minutes"] * 60:
+                    if not self._fired.get(sid) and now - since >= trigger.get("for_minutes", 0) * 60:
                         due = self._fired[sid] = True
                 else:
                     self._true_since.pop(sid, None)
@@ -639,7 +695,7 @@ class ShortcutEngine:
             if not due:
                 continue
             last = self._last_auto.get(sid)
-            if trigger["type"] == "when" and last is not None \
+            if trigger["type"] in ("when", "alert") and last is not None \
                     and now - last < shortcut.get("cooldown_s", 60):
                 continue
             if trigger["type"] == "every":
@@ -760,7 +816,7 @@ class ShortcutEngine:
                     raise _Paused()
                 raise _Stop("cancelled")
             if "do" in step:
-                out = self.do_fn(step["do"], dict(step.get("args") or {}), by, role)
+                out = self.do_fn(step["do"], self._step_args(step, progress), by, role)
                 failed = isinstance(out, dict) and ("error" in out or out.get("ok") is False)
                 detail = (out.get("error") or out.get("reason") or out.get("result") or ""
                           if isinstance(out, dict) else "")
@@ -830,6 +886,20 @@ class ShortcutEngine:
                     raise _Stop(f"failed: run {step['run']}: {reason}")
             elif "stop" in step:
                 raise _Stop("stopped")
+
+    @staticmethod
+    def _step_args(step, progress):
+        """The step's arguments, with a capture's group and label filled in
+        from the run (see the module note), unless the step gave its own."""
+        args = dict(step.get("args") or {})
+        capability = capabilities.BY_NAME.get(step["do"])
+        if capability is not None and capability.name in capabilities.CAPTURES:
+            root = progress["root"]
+            if "group" in capability.params and not args.get("ids"):
+                args.setdefault("group", root["id"])
+            if "label" in capability.params:
+                args.setdefault("label", root["name"])
+        return args
 
     @staticmethod
     def _child_at(progress, here):

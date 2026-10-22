@@ -46,6 +46,7 @@ class Capability:
     call: str = ""              # the one route that carries it out (site_calls.py);
                                 # without it the agent has a handler of its own
     fixed: dict = field(default_factory=dict)   # sent with every call, whatever the model says
+    wait_s: float = 0           # how long its route may take; 0 is the site caller's default
 
     def tool(self):
         """The function description sent to the model."""
@@ -117,15 +118,23 @@ CAPABILITIES = (
 )
 
 def _site(name, summary, call, params=None, required=(), *, role="user", tier="read",
-          security=False, typed=(), lane="planner", fixed=None):
+          security=False, typed=(), lane="planner", fixed=None, wait_s=0):
     """A capability carried out by the site's own endpoint; the planner's to use."""
     return Capability(name, summary, params or {}, tuple(required), role=role, tier=tier,
                       lane=lane, security=security, routes=(call,), typed=tuple(typed),
-                      call=call, fixed=dict(fixed or {}))
+                      call=call, fixed=dict(fixed or {}), wait_s=wait_s)
 
 
 _ID = lambda what: {"type": "string", "description": f"id of the {what}"}  # noqa: E731
 _N = {"type": "integer"}
+_CAPTURE_PARAMS = {
+    "label": {"type": "string", "description": "a few words saved with it; in a shortcut, "
+                                               "its name unless given"},
+    "group": {"type": "string", "description": "leave empty: a shortcut's run fills it in, so "
+                                               "its captures stay together"}}
+_WAIT = {"type": "boolean", "description": "true (default): the step ends when it is saved; "
+                                          "false: record in the background"}
+_CAPTURE_WAIT_S = 75
 
 CAPABILITIES += (
     # schedules, automations, suggestions
@@ -226,6 +235,49 @@ CAPABILITIES += (
     _site("start_clip", "Start recording a video clip from the camera.", "POST /api/clip/start",
           tier="change", security=True),
     _site("stop_clip", "Stop the clip that is recording and save it.", "POST /api/clip/stop",
+          tier="change", security=True),
+    # Captures: what the camera and microphone record, kept on the Pi
+    # (garuda_core/captures.py). These are what a shortcut uses to save
+    # evidence; take_snapshot and play_room_sound only show it in the chat.
+    _site("capture_snapshot",
+          "Save a still picture of what the camera sees now, kept on the Pi and listed under "
+          "Captures. Works as a shortcut step (e.g. when an alert starts).",
+          "POST /api/captures/snapshot", _CAPTURE_PARAMS, tier="change", security=True),
+    _site("capture_audio",
+          "Save the next few seconds of the room's sound from the camera's microphone (WAV, "
+          "kept on the Pi). With wait=false it records in the background and the next step "
+          "starts at once, so a picture or video can be taken over the same seconds.",
+          "POST /api/captures/audio",
+          {"seconds": {"type": "number", "description": "how long, 1-30 (default 10)"},
+           **_CAPTURE_PARAMS, "wait": _WAIT}, tier="change", security=True, wait_s=_CAPTURE_WAIT_S),
+    _site("capture_video",
+          "Save the next few seconds of video from the camera (WebM, kept on the Pi), with the "
+          "room's sound unless sound=false. With wait=false it records in the background and "
+          "the next step starts at once.",
+          "POST /api/captures/video",
+          {"seconds": {"type": "number", "description": "how long, 1-60 (default 10)"},
+           "sound": {"type": "boolean", "description": "record the sound too (default true)"},
+           **_CAPTURE_PARAMS, "wait": _WAIT}, tier="change", security=True, wait_s=_CAPTURE_WAIT_S),
+    _site("list_captures",
+          "Saved captures (pictures, sound and video), newest first, with when, why (the alert "
+          "at the time), which shortcut made them and their group.",
+          "GET /api/captures",
+          {"kind": {"type": "string", "enum": ["snapshot", "audio", "video"]},
+           "group": {"type": "string", "description": "only the captures of one run"},
+           "label": {"type": "string", "description": "words in the label, e.g. a shortcut's name"},
+           "since": {"type": "string", "description": "ISO time"}, "limit": _N},
+          security=True),
+    _site("email_captures",
+          "Email saved captures, attached, to the alert recipients. In a shortcut, give neither "
+          "ids nor group to send everything this run captured; it waits for recordings to end.",
+          "POST /api/captures/email",
+          {"ids": {"type": "array", "items": _S, "description": "capture ids"},
+           "group": {"type": "string", "description": "every capture of this group"},
+           "note": {"type": "string", "description": "a line for the email; {field} not filled"}},
+          tier="change", security=True, wait_s=_CAPTURE_WAIT_S + 30),
+    _site("keep_capture", "Keep a capture from being cleared out to make room, or let it go.",
+          "POST /api/captures/{capture_id}/keep",
+          {"capture_id": _ID("capture"), "keep": {"type": "boolean"}}, ["capture_id"],
           tier="change", security=True),
     # memory
     _site("list_memory", "Everything in memory: facts, ones waiting to be confirmed, removed ones.",
@@ -350,6 +402,9 @@ CAPABILITIES += (
                                         '{"kind": "mqtt", "topic": "..."}'},
            "watts": {"type": "number"}},
           ["id", "name", "type", "room", "transport"], role="admin", tier="confirm"),
+    _site("delete_capture", "Delete a saved capture (picture, sound or video).",
+          "DELETE /api/captures/{capture_id}", {"capture_id": _ID("capture")}, ["capture_id"],
+          tier="confirm", security=True),
     _site("delete_device", "Remove a device from the house; automations using it stop.",
           "DELETE /api/home/devices/{device_id}", {"device_id": _ID("device")}, ["device_id"],
           role="admin", tier="confirm"),
@@ -404,6 +459,8 @@ CAPABILITIES += (
 )
 
 BY_NAME = {c.name: c for c in CAPABILITIES}
+# Steps whose group and label a shortcut's run fills in (shortcuts.py).
+CAPTURES = frozenset({"capture_snapshot", "capture_audio", "capture_video", "email_captures"})
 
 
 # Kept from the planner's tool list. It is already there; a shortcut does all a
@@ -488,6 +545,7 @@ PLUMBING = frozenset({
     "DELETE /api/narada/artifacts/{artifact_id}", "GET /api/narada/info",
     "POST /api/narada/voice/token", "POST /api/narada/summary",
     "GET /api/narada/voice/turns",     # original display results for the bound conversation
+    "GET /api/captures/{capture_id}/file",   # the saved file itself, for a player on the page
     "POST /api/narada/voice/error",     # the browser reporting a voice error to the log
 })
 

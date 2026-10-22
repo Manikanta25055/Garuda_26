@@ -219,6 +219,7 @@ try:
     from .garuda_routes.events import build_events_router
     from .garuda_routes.shortcuts import build_shortcuts_router
     from .garuda_routes.artifacts import build_artifacts_router
+    from .garuda_routes.captures import build_captures_router
     from .garuda_services import presence as _svc_presence
     from .garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
@@ -296,6 +297,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.events import build_events_router
     from basic_pipelines.garuda_routes.shortcuts import build_shortcuts_router
     from basic_pipelines.garuda_routes.artifacts import build_artifacts_router
+    from basic_pipelines.garuda_routes.captures import build_captures_router
     from basic_pipelines.garuda_services import presence as _svc_presence
     from basic_pipelines.garuda_services.presence import (  # noqa: F401
         _get_local_subnet, _probe_subnet_for_arp, _device_mac, _mac_online, _present_device, _check_device_presence, _presence_poller, _do_presence_check)
@@ -554,12 +556,13 @@ def mark_events_synced(up_to_id: int):
 # EMAIL
 ##############################################################################
 
-def _send_mail(subject, body, to=None):
+def _send_mail(subject, body, to=None, attachments=()):
     """One email from the configured sender; to the alert recipients unless
     `to` names someone else. Raises on failure (see garuda_core.mailer)."""
     cfg = STATE.config
     _mailer.send(subject, body, sender=cfg.email_sender, password=cfg.email_sender_pass,
-                 to=cfg.email_recipients if to is None else to)
+                 to=cfg.email_recipients if to is None else to,
+                 **({"attachments": attachments} if attachments else {}))
 
 ##############################################################################
 # WEBRTC VIDEO TRACK
@@ -824,6 +827,7 @@ try:
     from .garuda_auto.site_calls import SiteCaller
     from .garuda_auto import shortcuts as _shortcuts_mod
     from .garuda_auto.artifacts import ArtifactStore
+    from .garuda_core import captures as _captures_mod
     from .narada_brain import Brain
     from .garuda_auto.digest import Digest
     from .garuda_auto.narada_voice import NaradaVoice
@@ -839,6 +843,7 @@ except ImportError:
     from basic_pipelines.garuda_auto.site_calls import SiteCaller
     from basic_pipelines.garuda_auto import shortcuts as _shortcuts_mod
     from basic_pipelines.garuda_auto.artifacts import ArtifactStore
+    from basic_pipelines.garuda_core import captures as _captures_mod
     from basic_pipelines.narada_brain import Brain
     from basic_pipelines.garuda_auto.digest import Digest
     from basic_pipelines.garuda_auto.narada_voice import NaradaVoice
@@ -966,6 +971,11 @@ fastapi_app.include_router(build_pages_router(sys.modules[__name__]))
 fastapi_app.include_router(build_shortcuts_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_artifacts_router(sys.modules[__name__]))
+
+# Stills, sound and video saved from the camera, by a person, Narada or a
+# shortcut step (garuda_core/captures.py).
+CAPTURES = _captures_mod.CaptureStore(os.path.join(DRISHTI_DATA_DIR, "captures"))
+fastapi_app.include_router(build_captures_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 

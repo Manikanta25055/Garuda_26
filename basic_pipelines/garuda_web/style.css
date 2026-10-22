@@ -2533,7 +2533,7 @@ input[type=range]::-webkit-slider-thumb {
 /* Docs stack grid */
 .docs-stack-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 12px;
   margin: 12px 0;
 }
@@ -3988,6 +3988,17 @@ body:not(.ha-is-admin) .ha-admin-only { display: none !important; }
   background: var(--surface); border: 1px solid var(--border);
 }
 .ha-row.off { opacity: 0.55; }
+/* Captures: one card per shortcut run, its pictures, sound and video side by side */
+.ha-cap-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.ha-cap-tools select.input { width: auto; max-width: 160px; flex: 0 0 auto; margin-left: auto; }
+.ha-cap-group .ha-row-main { width: 100%; }
+.ha-cap-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 6px; }
+.ha-cap-item { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ha-cap-img, .ha-cap-video { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: var(--border); display: block; }
+.ha-cap-audio { width: 100%; }
+.ha-cap-bar { display: flex; align-items: center; gap: 6px; }
+.ha-cap-bar .ha-sub { white-space: nowrap; }
+.ha-cap-bar .ha-sub { margin-right: auto; }
 .ha-row-main { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; color: var(--t1); min-width: 0; }
 .ha-row-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .ha-proposal {
