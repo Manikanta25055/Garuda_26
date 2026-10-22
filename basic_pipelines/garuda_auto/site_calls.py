@@ -65,14 +65,15 @@ class SiteCaller:
                 return route
         return None
 
-    def call(self, method, path, args, session):
+    def call(self, method, path, args, session, timeout=None):
         """Run `METHOD path` for `session` from a worker thread.
-        Returns the handler's data, or {"error": why}."""
+        Returns the handler's data, or {"error": why}. `timeout` is for a
+        route that takes longer by design (a recording), in seconds."""
         coro, refusal = self._prepare(method, path, args, session, None)
         if refusal:
             return refusal
         try:
-            return self._finish(self._run(coro))
+            return self._finish(self._run(coro, timeout))
         except HTTPException as exc:
             return {"error": str(exc.detail), "status": exc.status_code}
         except TimeoutError:
@@ -146,7 +147,7 @@ class SiteCaller:
                 raise _Refused(f"{'.'.join(map(str, first['loc']))}: {first['msg']}")
         return kwargs
 
-    def _run(self, coro):
+    def _run(self, coro, timeout=None):
         if not inspect.isawaitable(coro):
             return coro
         loop = self.loop_fn()
@@ -156,7 +157,7 @@ class SiteCaller:
                 raise RuntimeError("a site call must come from a worker thread")
             future = asyncio.run_coroutine_threadsafe(coro, loop)
             try:
-                return future.result(self.timeout)
+                return future.result(timeout or self.timeout)
             except TimeoutError:
                 future.cancel()
                 raise

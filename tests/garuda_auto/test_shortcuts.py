@@ -480,3 +480,79 @@ def test_sun_times_are_local_and_missing_in_a_polar_night():
     assert t["sunrise"] < "12:00" < t["sunset"]
     assert sun.times(78.2, 15.6, time.mktime((2026, 12, 21, 12, 0, 0, 0, 0, -1))) == {}
     assert sun.shift("23:50", 20) == "00:10" and sun.shift("00:10", -20) == "23:50"
+
+
+# ── alerts and captures ──────────────────────────────────────────────────────
+
+ALERT_FIELDS = FIELDS | {"alert", "night_presence_alert", "camera_covered"}
+
+
+def test_an_alert_trigger_is_checked_and_said_in_words():
+    clean = sc.validate(program(trigger={"type": "alert"}), role="admin", fields=ALERT_FIELDS)
+    assert clean["trigger"] == {"type": "alert", "kind": "any"}
+    assert sc.describe(clean)["when"] == "When an alert starts"
+    danger = sc.validate(program(trigger={"type": "alert", "kind": "danger"}), role="admin",
+                         fields=ALERT_FIELDS)
+    assert sc.describe(danger)["when"] == "When a danger alert starts"
+    with pytest.raises(sc.Invalid, match="kind is one of"):
+        sc.validate(program(trigger={"type": "alert", "kind": "fire"}), role="admin",
+                    fields=ALERT_FIELDS)
+    with pytest.raises(sc.Invalid, match="does not report"):
+        check(program(trigger={"type": "alert"}))
+    with pytest.raises(sc.Invalid, match="only an admin"):
+        sc.validate(program(trigger={"type": "alert"}), role="user", fields=ALERT_FIELDS)
+
+
+def test_showing_in_the_chat_is_not_a_step_and_says_what_is():
+    with pytest.raises(sc.Invalid, match="use capture_snapshot"):
+        check(program(steps=[{"do": "take_snapshot"}]))
+    with pytest.raises(sc.Invalid, match="use capture_audio"):
+        check(program(steps=[{"do": "play_room_sound", "args": {"seconds": 10}}]))
+
+
+def test_capture_steps_are_steps():
+    clean = check(program(steps=[{"do": "capture_snapshot"},
+                                 {"do": "capture_audio", "args": {"seconds": 10}},
+                                 {"do": "capture_video", "args": {"seconds": 10, "wait": False}},
+                                 {"do": "email_captures"}]), role="user")
+    assert sc.describe(clean)["steps"][1] == "Capture audio: seconds 10"
+    assert sc.cautions({**clean, "trigger": {"type": "alert"}}) == ["Sends email each time it runs."]
+
+
+def test_on_an_alert_a_picture_and_ten_seconds_of_sound_are_saved_together(house):
+    house.facts.update(alert="clear", night_presence_alert="off", camera_covered="no")
+    sid = house.add({"name": "Alert evidence", "trigger": {"type": "alert"},
+                     "steps": [{"do": "capture_snapshot"},
+                               {"do": "capture_audio", "args": {"seconds": 10}},
+                               {"do": "email_captures", "args": {"note": "look"}}]})
+    for _ in range(3):
+        house.engine.tick()
+        house.now += 1
+    time.sleep(0.15)
+    assert house.done == []
+    house.facts["alert"] = "active"
+    house.engine.tick()
+    time.sleep(0.2)
+    assert [d[0] for d in house.done] == ["capture_snapshot", "capture_audio", "email_captures"]
+    run_id = house.engine.store.get(sid)["runs"][0]["id"]
+    assert all(d[1]["group"] == run_id for d in house.done)
+    assert [d[1].get("label") for d in house.done] == ["Alert evidence", "Alert evidence", None]
+    assert house.done[1][1]["seconds"] == 10 and house.done[2][1]["note"] == "look"
+    house.now += 120
+    house.engine.tick()                     # the same alert: not again
+    time.sleep(0.15)
+    assert len(house.done) == 3
+    house.facts["alert"] = "clear"
+    house.engine.tick()
+    house.facts["night_presence_alert"] = "on"     # any kind of alert
+    house.engine.tick()
+    time.sleep(0.2)
+    assert len(house.done) == 6
+    assert house.done[3][1]["group"] != run_id
+
+
+def test_a_step_may_name_its_own_captures(house):
+    sid = house.add(program(steps=[{"do": "email_captures", "args": {"ids": ["abc"]}},
+                                   {"do": "capture_snapshot", "args": {"label": "door"}}]))
+    house.run(sid)
+    assert "group" not in house.done[0][1] and house.done[1][1]["label"] == "door"

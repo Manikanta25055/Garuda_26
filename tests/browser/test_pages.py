@@ -934,3 +934,35 @@ def test_the_voice_log_scrolls_reads_clean_and_keeps_up_while_open(admin_page):
         p.page.wait_for_timeout(100)
     assert "on the timer" in p.page.locator('#a-vlog').text_content()
     p.assert_clean()
+
+
+def test_captures_of_one_alert_show_together_and_play(admin_page, tmp_path, monkeypatch):
+    """A shortcut's picture, sound and video of one alert: one card, each one plays."""
+    import cv2
+    import numpy as np
+    from basic_pipelines.garuda_core import audio_feed, captures
+    store = captures.CaptureStore(str(tmp_path / "captures"))
+    monkeypatch.setattr(gw, "CAPTURES", store)
+    frame = np.zeros((120, 160, 3), np.uint8)
+    frame[:, :80] = (40, 120, 220)
+    jpeg = cv2.imencode(".jpg", frame)[1].tobytes()
+    for kind, data in (("snapshot", jpeg),
+                       ("audio", audio_feed.wav_bytes(b"\x00\x01" * 16000)), ("video", None)):
+        entry = store.begin(kind, by="admin", label="Alert evidence", group="run1",
+                            alert="knife (0.91)", seconds=None if kind == "snapshot" else 2)
+        if kind == "video":
+            assert captures.encode_video([jpeg] * 20, 10, store.path_of(entry))
+        store.finish(entry["id"], data)
+    p = admin_page
+    p.go("auto")
+    p.page.wait_for_selector(".ha-cap-group img", timeout=5000)
+    p.page.wait_for_function("document.querySelector('.ha-cap-img').naturalWidth > 0", timeout=5000)
+    p.page.wait_for_function("document.querySelector('.ha-cap-video').readyState >= 1", timeout=8000)
+    assert p.js("document.querySelectorAll('.ha-cap-group').length") == 1
+    assert p.js("document.querySelectorAll('.ha-cap-group audio').length") == 1
+    assert "knife" in p.js("document.querySelector('.ha-cap-group').textContent")
+    kept = next(c for c in store.list() if c["kind"] == "snapshot")
+    p.js("document.querySelector('.ha-cap-item [data-click=\"H.keepCapture\"]').click()")
+    p.page.wait_for_timeout(600)
+    assert store.get(kept["id"])["keep"] is True
+    p.assert_clean()

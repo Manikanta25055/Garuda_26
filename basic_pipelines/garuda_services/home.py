@@ -136,6 +136,7 @@ def _shortcut_facts():
     facts["alert"] = "active" if core.STATE.alerts.active else "clear"
     facts["alert_reason"] = core.STATE.alerts.danger_trigger_info or "none"
     facts["night_presence_alert"] = "on" if core.STATE.alerts.night_presence_active else "off"
+    facts["camera_covered"] = "yes" if core.STATE.alerts.blind_alert_sent else "no"
     facts["camera"] = "live" if (time.time() - core.STATE.camera.frame_ts) < 5.0 else "down"
     facts["internet"] = "online" if core.STATE.system.net_online else "offline"
     facts["recording"] = "on" if core.STATE.camera.clip_writer is not None else "off"
