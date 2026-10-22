@@ -14,6 +14,9 @@ picture and the sound of one alert are shown, and emailed, together.
                       label, group, alert, keep, error}]
     <id>.jpg|.wav|.webm
 
+With ffmpeg a video is encoded while it is recorded (stream_video) and is
+saved the moment it ends; without it the frames are kept and encoded after.
+
 A recording is listed at once with status "recording" and becomes "saved" or
 "failed". One still recording when the service stopped is marked failed on
 start. The oldest captures go first once there are more than MAX_ITEMS of them
@@ -58,6 +61,7 @@ class CaptureStore:
         self.max_items = max_items
         self.max_bytes = max_bytes
         self.items = _load_index(self._index_path)
+        _clear_leftovers(self.dir)
         stale = [c for c in self.items if c.get("status") == "recording"]
         for entry in stale:
             entry.update(status="failed", error="the service stopped while it was recording")
@@ -226,6 +230,21 @@ def _unlink(path):
             pass
 
 
+def _clear_leftovers(directory):
+    """What a recording cut short by a stop leaves: its work folder and any
+    half-written file. Nothing is recording yet when the store starts."""
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        return
+    for name in names:
+        path = os.path.join(directory, name)
+        if name.startswith("capture-") and os.path.isdir(path):
+            shutil.rmtree(path, ignore_errors=True)
+        elif name.endswith(".part"):
+            _unlink(path)
+
+
 # ── video ─────────────────────────────────────────────────────────────────────
 
 def record_frames(frame_fn, seconds, *, clock=time.monotonic, sleep=time.sleep,
@@ -258,7 +277,8 @@ def record_frames(frame_fn, seconds, *, clock=time.monotonic, sleep=time.sleep,
 
 def encode_video(jpegs, fps, out_path):
     """JPEG frames to a WebM (VP8) at out_path; True when it worked. Plays in
-    every browser, unlike OpenCV's MPEG-4 Part 2."""
+    every browser, unlike OpenCV's MPEG-4 Part 2. Only used without ffmpeg
+    (stream_video): it takes about 1.5 s of a core per second of video."""
     import cv2
     import numpy as np
     first = None
@@ -289,6 +309,78 @@ def encode_video(jpegs, fps, out_path):
 
 def ffmpeg():
     return shutil.which("ffmpeg")
+
+
+def stream_command(tool, size, out_path, fps=VIDEO_FPS_CAP):
+    """ffmpeg reading JPEGs on stdin at a steady `fps` and writing a WebM (VP8).
+
+    VP8's realtime mode at its fastest setting costs about a quarter of one
+    core at 720p and 15 fps, a seventh of what OpenCV's VP8 needs, so a
+    recording keeps up with the camera and is saved the moment it ends. It runs
+    niced, below the detection pipeline."""
+    w, h = (max(2, v - v % 2) for v in size)
+    cmd = [tool, "-nostdin", "-loglevel", "error", "-y",
+           "-f", "image2pipe", "-framerate", f"{fps:g}", "-c:v", "mjpeg", "-i", "-",
+           "-vf", f"scale={w}:{h},format=yuv420p", "-an",
+           "-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "16", "-b:v", "1500k",
+           "-lag-in-frames", "0", "-threads", "1", "-f", "webm", out_path]
+    nice = shutil.which("nice")
+    return [nice, "-n", "10", *cmd] if nice else cmd
+
+
+def stream_video(frame_fn, seconds, out_path, *, tool=None, fps=VIDEO_FPS_CAP,
+                 clock=time.monotonic, sleep=time.sleep, cancel=None):
+    """Record the camera's next `seconds` straight into a WebM at out_path,
+    encoding as it goes. Returns how many distinct frames went in (0: none came,
+    or ffmpeg failed). frame_fn() -> (seq, jpeg bytes) of the newest frame, or None.
+
+    Frames go in at a steady `fps`, the newest one repeated when the camera has
+    not sent a new one, so the video lasts exactly as long as the recording."""
+    import cv2
+    import numpy as np
+    tool = tool or ffmpeg()
+    if not tool:
+        return 0
+    total = max(1, int(round(seconds * fps)))
+    proc, written, distinct, last, last_seq = None, 0, 0, None, None
+    start = clock()
+    deadline = start + seconds + 5          # the camera stopped: stop waiting for it
+    try:
+        while written < total and clock() < deadline:
+            if cancel is not None and cancel.is_set():
+                break
+            got = frame_fn()
+            if got is not None and got[1] and got[0] != last_seq:
+                last_seq, last = got[0], got[1]
+                distinct += 1
+            if last is not None and proc is None:
+                first = cv2.imdecode(np.frombuffer(last, np.uint8), cv2.IMREAD_COLOR)
+                if first is None:
+                    last, distinct = None, distinct - 1
+                else:
+                    proc = subprocess.Popen(stream_command(tool, first.shape[1::-1], out_path, fps),
+                                            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                            stderr=subprocess.DEVNULL)
+            due = min(total, int((clock() - start) * fps) + 1)
+            while proc is not None and written < due:
+                proc.stdin.write(last)
+                written += 1
+            sleep(max(0.0, min(start + written / fps - clock(), 1.0 / fps)))
+        if proc is None:
+            return 0
+        proc.stdin.close()
+        proc.wait(timeout=30)
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        log.warning("captures: the video encoder stopped: %s", exc)
+        return 0
+    finally:
+        if proc is not None and proc.poll() is None:
+            proc.kill()
+            proc.wait()
+    if proc.returncode != 0 or not os.path.exists(out_path) or not os.path.getsize(out_path):
+        log.warning("captures: the video encoder failed (exit %s)", proc.returncode)
+        return 0
+    return distinct
 
 
 def mux_sound(video_path, wav_path, out_path, timeout=120):

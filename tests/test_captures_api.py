@@ -206,3 +206,35 @@ def test_with_ffmpeg_the_sound_goes_into_the_video(app_client, user_headers, cam
     probe = cap.subprocess.run([cap.ffmpeg(), "-i", gw.CAPTURES.path_of(out["capture"])],
                                capture_output=True, text=True).stderr
     assert "Audio: opus" in probe and "Video: vp8" in probe
+
+
+@pytest.mark.skipif(not cap.ffmpeg(), reason="ffmpeg is not installed")
+def test_a_video_is_encoded_while_it_records_and_lasts_as_long(tmp_path):
+    frame = np.zeros((48, 64, 3), np.uint8)
+    jpeg = cv2.imencode(".jpg", frame)[1].tobytes()
+    seq = iter(range(1000))
+    out = str(tmp_path / "v.webm")
+    started = time.monotonic()
+    # A slow camera (a new frame every few calls): the newest one fills the gaps.
+    got = cap.stream_video(lambda: (next(seq) // 5, jpeg), 2, out)
+    took = time.monotonic() - started
+    assert got > 0 and took < 2 + 2.5
+    probe = cap.subprocess.run([cap.ffmpeg(), "-i", out], capture_output=True, text=True).stderr
+    assert "Video: vp8" in probe and "Duration: 00:00:02.0" in probe, probe
+
+
+def test_no_frames_no_video(tmp_path):
+    out = str(tmp_path / "v.webm")
+    assert cap.stream_video(lambda: None, 1, out, tool=cap.ffmpeg() or "ffmpeg") == 0
+    assert not (tmp_path / "v.webm").exists()
+
+
+def test_what_a_stopped_recording_left_is_cleared_on_start(tmp_path):
+    tmp_path = tmp_path / "left"
+    tmp_path.mkdir()
+    (tmp_path / "capture-abc").mkdir()
+    (tmp_path / "capture-abc" / "video.webm").write_bytes(b"x")
+    (tmp_path / "123.jpg.part").write_bytes(b"x")
+    (tmp_path / "kept.jpg").write_bytes(b"x")
+    cap.CaptureStore(str(tmp_path))
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["kept.jpg"]

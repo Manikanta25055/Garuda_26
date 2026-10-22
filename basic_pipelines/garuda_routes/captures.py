@@ -12,6 +12,7 @@ camera already shows them. A capture is deleted, or marked keep, by the
 person it was made for (a shortcut's maker) or an admin.
 """
 import asyncio
+import concurrent.futures
 import datetime
 import os
 import tempfile
@@ -57,6 +58,14 @@ def build_captures_router(core):
     router = APIRouter(prefix="/api/captures")
     captures = core._captures_mod
     _tasks = set()              # recordings running in the background (held so they finish)
+    # A video holds a thread for as long as it records and encodes. Its own
+    # threads, so recordings never use up the ones every other route's
+    # asyncio.to_thread shares; two spare for the mux after a recording.
+    _pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_RECORDING + 2,
+                                                  thread_name_prefix="capture")
+
+    async def _in_pool(fn, *args):
+        return await asyncio.get_running_loop().run_in_executor(_pool, fn, *args)
 
     def store():
         return core.CAPTURES
@@ -115,6 +124,16 @@ def build_captures_router(core):
                 "result": (f"Saved the {what}" if entry["status"] == "saved"
                            else f"Recording the {what}; it is saved when it ends")}
 
+    async def _wait_saved(ids):
+        """Their entries once none is still recording, or the time is up.
+        Polls, so a long video holds no thread while an email waits for it."""
+        deadline = time.monotonic() + captures.FINISH_WAIT_S
+        while True:
+            entries = [e for e in (store().get(i) for i in ids) if e]
+            if all(e["status"] != "recording" for e in entries) or time.monotonic() >= deadline:
+                return entries
+            await asyncio.sleep(0.25)
+
     # ── making them ───────────────────────────────────────────────────────────
     @router.post("/snapshot")
     async def capture_snapshot(data: SnapshotRequest, session=Depends(core.require_session)):
@@ -161,15 +180,20 @@ def build_captures_router(core):
         try:
             pcm_task = (_background(core.AUDIO_FEED.record(seconds))
                         if sound and core.AUDIO_FEED.available and captures.ffmpeg() else None)
-            jpegs, fps = await asyncio.to_thread(captures.record_frames, _newest_jpeg, seconds)
-            if not jpegs:
-                store().fail(capture_id, "the camera sent no frames")
-                return
             silent = os.path.join(work, "video.webm")
-            if not await asyncio.to_thread(captures.encode_video, jpegs, fps, silent):
-                store().fail(capture_id, "the video could not be encoded")
-                return
-            del jpegs
+            if captures.ffmpeg():
+                if not await _in_pool(captures.stream_video, _newest_jpeg, seconds, silent):
+                    store().fail(capture_id, "the camera sent no frames, or the video could not be encoded")
+                    return
+            else:
+                jpegs, fps = await _in_pool(captures.record_frames, _newest_jpeg, seconds)
+                if not jpegs:
+                    store().fail(capture_id, "the camera sent no frames")
+                    return
+                if not await _in_pool(captures.encode_video, jpegs, fps, silent):
+                    store().fail(capture_id, "the video could not be encoded")
+                    return
+                del jpegs
             final = silent
             pcm = await pcm_task if pcm_task is not None else None
             if pcm:
@@ -177,7 +201,7 @@ def build_captures_router(core):
                 with open(wav, "wb") as fh:
                     fh.write(core.audio_wav_bytes(pcm))
                 mixed = os.path.join(work, "mixed.webm")
-                if await asyncio.to_thread(captures.mux_sound, silent, wav, mixed):
+                if await _in_pool(captures.mux_sound, silent, wav, mixed):
                     final = mixed
             entry = store().get(capture_id)
             if entry is None:
@@ -284,7 +308,7 @@ def build_captures_router(core):
                                  if data.group]
         if not ids:
             raise HTTPException(400, "Name the captures (ids) or their group")
-        entries = await asyncio.to_thread(store().wait_for, ids)
+        entries = await _wait_saved(ids)
         attachments, skipped, total = [], [], 0
         for entry in sorted((e for e in entries if e["status"] == "saved"), key=lambda e: e["at"]):
             path = store().path_of(entry)
