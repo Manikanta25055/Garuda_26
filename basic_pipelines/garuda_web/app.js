@@ -81,7 +81,7 @@ const G = (() => {
   let _currentPage = 'dashboard';
   let _diAllclearTimer = null; // timer to auto-clear the "All Clear" DI state
   let _alarmInterval  = null; // setInterval ID for repeating alarm beep
-  let _audioCtx       = null; // shared AudioContext — unlocked once during login user gesture
+  let _audioCtx       = null; // the alarm's fallback beep, made when first needed
   let _wsAllowed = false;      // set true after login, false on logout to stop reconnect
   let _clipRecording = false;  // true while a server-side clip is being recorded
 
@@ -536,14 +536,10 @@ const G = (() => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
-    // Unlock AudioContext now while we are inside a user-gesture call stack.
-    // Browsers block audio created outside a user gesture; login click is the
-    // earliest safe opportunity to pre-create and resume the context so that
-    // _beep() can play unconditionally when an alert fires later.
-    const _AC = window.AudioContext || window.webkitAudioContext;
-    if (_AC && (!_audioCtx || _audioCtx.state === 'closed')) {
-      try { _audioCtx = new _AC(); _audioCtx.resume().catch(() => {}); } catch(_) {}
-    }
+    // No AudioContext is opened here any more: one resumed at sign-in ran for
+    // the rest of the visit, and a running context lags Safari's transitions.
+    // sound.js unlocks audio in the first tap and plays the alarm; _beep()
+    // makes its own context only if that sound is missing.
     // Notify feedback widget so it can inject admin Inbox tab
     if (G._afterLoginHook) G._afterLoginHook(_session);
     _syncFeedbackVisibility();
@@ -731,7 +727,13 @@ const G = (() => {
   // Its own socket, so a big video frame never holds sound up. The worklet
   // keeps ~60 ms against jitter and skips ahead rather than fall behind.
   // Off = socket closed: no microphone, no bandwidth.
+  // It plays through the interface sounds' context (Feel.hold), not one of
+  // its own: a second running context was a second real-time audio thread,
+  // and clicks then had to wake theirs beside it, which made them late. It
+  // plays only while the picture is on screen (dashboard, tab visible), so
+  // audio does not keep running behind the other pages.
   let _feedAudio = null;   // { ctx, node, ws, retry }
+  let _feedModule = null;  // the worklet, added to the shared context once
   const _FEED_SOUND_KEY = 'garuda_feed_sound';
 
   function _feedSoundWanted() { return _lsGet(_FEED_SOUND_KEY) !== 'off'; }
@@ -753,18 +755,24 @@ const G = (() => {
     return base + path + (_token ? `?token=${encodeURIComponent(_token)}` : '');
   }
 
-  async function startFeedAudio() {
+  // The camera card is what is being looked at.
+  function _camOnScreen() { return _currentPage === 'dashboard' && !document.hidden; }
+
+  function startFeedAudio() {
     if (_feedAudio) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (!Ctx || !window.AudioWorkletNode) { _feedSoundUi('none'); return; }
-    const fa = _feedAudio = { ctx: null, node: null, ws: null, retry: null };
-    let ctx;
-    // 16 kHz is what the Pi sends: the browser resamples better than we would.
-    try { ctx = new Ctx({ sampleRate: 16000, latencyHint: 'interactive' }); }
-    catch (_) { ctx = new Ctx({ latencyHint: 'interactive' }); }
-    fa.ctx = ctx;
+    const ctx = window.Feel && Feel.hold ? Feel.hold(true) : null;
+    if (!ctx || !ctx.audioWorklet || !window.AudioWorkletNode) {
+      if (window.Feel && Feel.hold) Feel.hold(false);
+      _feedSoundUi('none');
+      return;
+    }
+    const fa = _feedAudio = { ctx, node: null, ws: null, retry: null };
     // The worklet loads while the socket opens; neither waits for the other.
-    const ready = ctx.audioWorklet.addModule('/static/audio-feed-worklet.js?v=1');
+    if (!_feedModule) {
+      _feedModule = ctx.audioWorklet.addModule('/static/audio-feed-worklet.js?v=2');
+      _feedModule.catch(() => { _feedModule = null; });
+    }
+    const ready = _feedModule;
     ready.catch((e) => {
       console.warn('camera sound: worklet failed', e);
       if (_feedAudio === fa) { stopFeedAudio(); _feedSoundUi('none'); }
@@ -793,11 +801,8 @@ const G = (() => {
           }, () => {});
           return;
         }
-        if (!fa.node) return;
-        const pcm = new Int16Array(ev.data);
-        const f32 = new Float32Array(pcm.length);
-        for (let i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
-        fa.node.port.postMessage(f32, [f32.buffer]);
+        // The worklet turns the samples into floats, off this thread.
+        if (fa.node) fa.node.port.postMessage(ev.data, [ev.data]);
       };
       ws.onclose = (ev) => {
         if (_feedAudio !== fa || fa.ws !== ws) return;
@@ -817,7 +822,19 @@ const G = (() => {
     if (fa.retry) clearTimeout(fa.retry);
     if (fa.ws) { try { fa.ws.close(); } catch (_) {} }
     if (fa.node) { try { fa.node.disconnect(); } catch (_) {} }
-    if (fa.ctx) { try { fa.ctx.close(); } catch (_) {} }
+    // The context is shared: released, not closed; it rests on its own.
+    if (window.Feel && Feel.hold) Feel.hold(false);
+  }
+
+  // Sound follows the picture: off while another page or tab is in front,
+  // back (if it was wanted) when the camera card is again.
+  function _syncFeedAudio() {
+    const live = $('cam-toggle-btn')?.classList.contains('active');
+    if (live && _camOnScreen()) {
+      if (!_feedAudio && _feedSoundWanted() && !$('cam-sound-btn')?.classList.contains('is-unavailable')) startFeedAudio();
+    } else if (_feedAudio) {
+      stopFeedAudio();
+    }
   }
 
   function toggleFeedSound() {
@@ -916,6 +933,9 @@ const G = (() => {
     ws.onopen = () => { _camSetStatus('Connecting…'); };
     ws.onmessage = (ev) => {
       try { ws.send('a'); } catch (_) {}
+      // Behind another page or tab nobody sees the picture: decoding every
+      // frame there only took time from the page that is in front.
+      if (connected && !_camOnScreen()) { pending = null; return; }
       pending = new Blob([ev.data], { type: 'image/jpeg' });
       show();
     };
@@ -1558,6 +1578,7 @@ const G = (() => {
     if (window.DI) DI.onNav(pageId);
     _syncDIContext();
     _syncFeedbackVisibility();
+    _syncFeedAudio();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') { loadSysCfg(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
@@ -1650,6 +1671,7 @@ const G = (() => {
   }
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && _tickPending && !_tickRaf) _tickRaf = requestAnimationFrame(_flushTick);
+    _syncFeedAudio();
   });
 
   // ── Offline event sync on reconnect ─────────────────────

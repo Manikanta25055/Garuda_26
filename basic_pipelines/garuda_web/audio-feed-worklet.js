@@ -1,5 +1,6 @@
 // Plays the camera's microphone (/ws/audio) with as little delay as the
-// network allows. app.js posts Float32 chunks; this keeps a small buffer
+// network allows. app.js posts the socket's s16le chunks as they came (the
+// conversion runs here, off the page's main thread); this keeps a small buffer
 // (targetMs) against network jitter and never lets it grow: a little above
 // target it plays 4% fast to catch up, far above (maxMs) it drops the oldest
 // sound. An empty buffer plays silence until the target is refilled.
@@ -15,14 +16,15 @@ class FeedPlayer extends AudioWorkletProcessor {
     this.buf = new Float32Array(inRate * 2);    // 2 s ring, far more than is ever kept
     this.r = 0; this.w = 0; this.count = 0; this.frac = 0;
     this.playing = false;
-    this.reportAt = 0;
     this.port.onmessage = (e) => this.push(e.data);
   }
 
-  push(samples) {
+  push(data) {
+    if (!(data instanceof ArrayBuffer)) return;
+    const samples = new Int16Array(data);
     const n = this.buf.length;
     for (let i = 0; i < samples.length; i++) {
-      this.buf[this.w] = samples[i];
+      this.buf[this.w] = samples[i] / 32768;
       this.w = (this.w + 1) % n;
     }
     this.count += samples.length;
@@ -51,10 +53,6 @@ class FeedPlayer extends AudioWorkletProcessor {
     }
     for (; i < ch0.length; i++) ch0[i] = 0;
     for (let c = 1; c < out.length; c++) out[c].set(ch0);
-    if (currentTime >= this.reportAt) {          // buffered ms, for the status line
-      this.reportAt = currentTime + 1;
-      this.port.postMessage({ bufferedMs: Math.round(this.count / (this.step * sampleRate) * 1000) });
-    }
     return true;
   }
 }

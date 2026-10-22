@@ -106,7 +106,7 @@
   // the context only runs from a press until shortly after its sound ends.
   const IDLE_MS = 1500;
   let ctx = null, buffers = {}, loading = null, lastAt = {}, lastSound = 0, lastTouch = 0;
-  let idleTimer = 0, busyUntil = 0, voiceOn = false, everRan = false;
+  let idleTimer = 0, busyUntil = 0, voiceOn = false, everRan = false, held = false;
   let muted = false;
   try { muted = localStorage.getItem('garuda_sound') === 'off'; } catch (_) {}
   // (session() is hoisted; voiceOn is false here)
@@ -151,7 +151,7 @@
   }
 
   function rest() {
-    if (!ctx || voiceOn || ctx.state !== 'running') return;
+    if (!ctx || voiceOn || held || ctx.state !== 'running') return;
     if (performance.now() < busyUntil) { idleTimer = setTimeout(rest, busyUntil - performance.now() + IDLE_MS); return; }
     ctx.suspend().catch(() => {});
   }
@@ -303,6 +303,16 @@
     if (!active && ctx) wake();                  // the end chime, then rest
   }
 
+  // The camera's sound plays through this same context. A second context
+  // would be a second real-time audio thread, and on an iPhone resuming
+  // this one beside it re-routed the hardware on every click. While held,
+  // the context runs; released, it rests again after IDLE_MS. Call hold()
+  // inside a tap the first time, like any sound.
+  function hold(on) {
+    held = !!on;
+    return wake();
+  }
+
   // The alarm plays whatever the switch says. False when the sound is not
   // loaded yet, so the caller can fall back to its own tone.
   function alarm() { return sound('alert', true); }
@@ -329,6 +339,6 @@
   document.addEventListener('DOMContentLoaded', paintButton);
   if (document.readyState !== 'loading') paintButton();
 
-  window.Feel = { play, sound: name => sound(name), touch, toast, voice, alarm, toggle, state,
+  window.Feel = { play, sound: name => sound(name), touch, toast, voice, alarm, toggle, state, hold,
                   get muted() { return muted; } };
 })();

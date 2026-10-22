@@ -6,6 +6,7 @@ every haptic asked for. PW_ENGINE=webkit runs them in Safari's engine, which
 is where the owner listens; CI runs Chromium.
 """
 import os
+import time
 
 import pytest
 
@@ -204,3 +205,84 @@ def test_a_narada_call_gets_the_microphone_session(server, browser, device, left
         assert p.js("navigator.audioSession.type") == rest
     finally:
         p.close()
+
+
+# Every AudioContext the page makes, and every camera frame it decodes.
+COUNT = """(() => {
+  window.__contexts = 0; window.__decodes = 0;
+  const AC = window.AudioContext;
+  if (AC) window.AudioContext = class extends AC {
+    constructor(...a) { super(...a); window.__contexts++; (window.__ctxStacks = window.__ctxStacks || []).push(new Error().stack); } };
+  const dec = HTMLImageElement.prototype.decode;
+  HTMLImageElement.prototype.decode = function () { window.__decodes++; return dec.call(this); };
+})()"""
+
+
+def test_camera_sound_shares_the_click_context_and_rests_off_the_dashboard(
+        server, browser, monkeypatch):  # noqa: F811
+    # The camera's sound once made its own context and kept it, and the
+    # frame decoding, running on every page: a second real-time audio
+    # thread beside the clicks', and work nobody saw. Now it plays through
+    # the clicks' context, only while the camera card is on screen.
+    import sys
+    import threading
+
+    import cv2
+    import numpy as np
+
+    import Garuda_web as gw
+    from basic_pipelines.garuda_core import audio_feed as af
+
+    script = ("import sys,time\n"
+              "for i in range(3000):\n"
+              f"    sys.stdout.buffer.write((300).to_bytes(2,'little',signed=True)*{af.CHUNK_BYTES // 2}); "
+              "sys.stdout.flush(); time.sleep(0.02)\n")
+    feed = af.AudioFeed(command=lambda: [sys.executable, "-c", script])
+    monkeypatch.setattr(gw, "AUDIO_FEED", feed)
+    jpeg = cv2.imencode(".jpg", np.full((90, 160, 3), 80, np.uint8))[1].tobytes()
+    monkeypatch.setattr(gw.STATE.camera, "frame_buffer", jpeg)
+    monkeypatch.setattr(gw.STATE.camera, "frame_ts", time.time())
+    stop = threading.Event()
+
+    def frames():                                    # a camera at ~20 fps
+        while not stop.wait(0.05):
+            gw.STATE.camera.frame_seq += 1
+    threading.Thread(target=frames, daemon=True).start()
+
+    real = browser.new_context
+
+    def make(**kw):
+        ctx = _recording(real(**kw))
+        ctx.add_init_script(COUNT)
+        return ctx
+    browser.new_context = make
+    try:
+        p = Page(browser, server, "admin")
+    finally:
+        browser.new_context = real
+    try:
+        p.page.wait_for_timeout(1500)                # sound.js made its context
+        p.page.click("#cam-toggle-btn")
+        p.page.wait_for_timeout(1500)
+        assert p.js("document.getElementById('cam-sound-btn').getAttribute('aria-pressed')") == "true"
+        assert p.js("window.__contexts") == 1, p.js("window.__ctxStacks")        # one context for clicks and camera
+        assert p.js("Feel.state()") == "running"
+        assert p.js("window.__decodes") > 3          # the picture is live
+
+        p.go("devices")
+        p.page.wait_for_timeout(2400)                # the sound stops; audio rests
+        assert p.js("Feel.state()") == "suspended"
+        before = p.js("window.__decodes")
+        p.page.wait_for_timeout(1000)
+        assert p.js("window.__decodes") == before    # no frame decoded off screen
+
+        p.go("dashboard")
+        p.page.wait_for_timeout(1200)
+        assert p.js("Feel.state()") == "running"     # back with the picture
+        assert p.js("window.__decodes") > before
+        assert p.js("window.__contexts") == 1
+        p.assert_clean()
+    finally:
+        stop.set()
+        p.close()
+        feed.stop()
