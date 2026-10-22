@@ -1558,6 +1558,7 @@ const N = (() => {
   // the signed-in person; the model never sees it.
   function snapshots(list) {
     for (const im of list || []) {
+      if (im.kind === 'sound') { roomSound(im); continue; }
       if (im.kind !== 'snapshot') continue;
       const el = bubble('extra', '');
       if (!el) continue;
@@ -1573,6 +1574,32 @@ const N = (() => {
       el.append(img, cap);
     }
     if ((list || []).length) scrollLog();
+  }
+
+  // The room's sound, asked for in words: the page records it from the
+  // camera's microphone as the signed-in person; the model never hears it.
+  function roomSound(im) {
+    const el = bubble('extra', '');
+    if (!el) return;
+    el.classList.add('nx-sound');
+    const secs = Math.max(3, Math.min(+im.seconds || 8, 30));
+    const auth = G._authQuery ? G._authQuery() : '';
+    const cap = document.createElement('span');
+    cap.textContent = `Recording the room · ${secs} s…`;
+    el.append(cap);
+    fetch(`${G._base ? G._base() : ''}/api/audio/clip?seconds=${secs}${auth ? '&' + auth : ''}`,
+          { credentials: 'include' })
+      .then(r => { if (!r.ok) throw new Error(r.status); return r.blob(); })
+      .then(blob => {
+        const au = document.createElement('audio');
+        au.controls = true;
+        au.src = URL.createObjectURL(blob);
+        cap.textContent = 'Room sound · ' + new Date((im.at || Date.now() / 1000) * 1000)
+          .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        el.insertBefore(au, cap);
+        scrollLog();
+      })
+      .catch(() => { cap.textContent = 'The microphone has no sound to share right now.'; });
   }
 
   // ── Artifacts: pages Narada writes ─────────────────────────

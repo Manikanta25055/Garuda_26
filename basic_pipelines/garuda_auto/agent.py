@@ -1073,6 +1073,23 @@ class HomeAgent:
         return {"ok": True, "result": "Showed the camera's view",
                 "note": "The picture is on their screen. You cannot see it: do not describe it."}
 
+    def _tool_play_room_sound(self, args, user, role):
+        if getattr(self._turn, "voice", False):
+            return {"error": "a spoken conversation cannot play a recording; they can turn on "
+                             "the camera's sound on the dashboard"}
+        try:
+            seconds = int(args.get("seconds") or 8)
+        except (TypeError, ValueError):
+            seconds = 8
+        seconds = max(3, min(seconds, 30))
+        if not hasattr(self._turn, "images"):
+            self._turn.images = []
+        # Like the snapshot: the chat page records it itself, as the signed-in
+        # person; no sound passes through the model.
+        self._turn.images.append({"kind": "sound", "seconds": seconds, "at": self._clock()})
+        return {"ok": True, "result": f"Put a {seconds}-second recording of the room in the chat",
+                "note": "It records as the player loads. You cannot hear it: do not describe it."}
+
     def _tool_show_artifact(self, args, user, role):
         if self.artifacts is None:
             return {"error": "artifacts are not available here"}

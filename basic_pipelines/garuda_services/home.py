@@ -6,6 +6,7 @@ live module, handed over once by bind(). Garuda_web imports these functions
 back under the same names.
 """
 import datetime
+import json
 import time
 
 try:
@@ -138,6 +139,15 @@ def _shortcut_facts():
     facts["camera"] = "live" if (time.time() - core.STATE.camera.frame_ts) < 5.0 else "down"
     facts["internet"] = "online" if core.STATE.system.net_online else "offline"
     facts["recording"] = "on" if core.STATE.camera.clip_writer is not None else "off"
+    # The microphone runs only while something listens: a shortcut that tests
+    # the sound keeps it running (each tick renews it), nothing else does.
+    shortcuts = getattr(core, "SHORTCUTS", None)
+    if shortcuts is not None and core.AUDIO_FEED.available and any(
+            '"sound' in json.dumps(s, default=str) for s in shortcuts.store.all()):
+        core.AUDIO_FEED.keep_alive(10)
+    level = core.AUDIO_FEED.level(2.0)
+    facts["sound"] = level["sound"] if level else "unknown"
+    facts["sound_db"] = level["db"] if level else -100.0
     loc = core.STATE.config.location or {}
     if _sun.valid_location(loc.get("lat"), loc.get("lon")):
         facts.update(_sun.facts(loc["lat"], loc["lon"]))

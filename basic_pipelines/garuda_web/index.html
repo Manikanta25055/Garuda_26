@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=87"/>
+  <link rel="stylesheet" href="/static/style.css?v=89"/>
 </head>
 <body>
 <div id="app">
@@ -355,6 +355,9 @@
                   </button>
                   <button class="cam-action-btn" id="cam-record-btn" data-click="G.toggleClip" title="Record clip" style="display:none" aria-label="Record 60-second clip">
                     <span class="gi gi-record" aria-hidden="true"></span>
+                  </button>
+                  <button class="cam-action-btn cam-sound-btn is-muted" id="cam-sound-btn" data-click="G.toggleFeedSound" title="Sound off" style="display:none" aria-label="Sound off" aria-pressed="false">
+                    <span class="gi gi-sound s-on" aria-hidden="true"></span><span class="gi gi-sound-off s-off" aria-hidden="true"></span>
                   </button>
                   <button class="cam-toggle-btn" id="cam-toggle-btn" data-click="G.toggleCamera" aria-label="Connect camera feed">
                     <span class="cam-live-dot" id="cam-live-dot"></span><span id="cam-btn-label">Connect</span>
@@ -1330,9 +1333,9 @@
 
 <script src="/static/sound.js?v=7"></script>
 <script src="/static/actions.js?v=2"></script>
-<script src="/static/narada.js?v=28"></script>
+<script src="/static/narada.js?v=29"></script>
 <script src="/static/island.js?v=4"></script>
-<script src="/static/app.js?v=81"></script>
+<script src="/static/app.js?v=83"></script>
 <script src="/static/home.js?v=15"></script>
 </body>
 </html>

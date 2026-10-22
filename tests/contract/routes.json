@@ -26,6 +26,18 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/audio/clip",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/audio/level",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/cascade_metrics",
   "guard": "require_session"
  },
@@ -813,6 +825,12 @@
   "kind": "websocket",
   "method": "WS",
   "path": "/ws",
+  "guard": "none"
+ },
+ {
+  "kind": "websocket",
+  "method": "WS",
+  "path": "/ws/audio",
   "guard": "none"
  },
  {

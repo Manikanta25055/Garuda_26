@@ -271,6 +271,7 @@ try:
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
     from .garuda_core import mailer as _mailer
+    from .garuda_core.audio_feed import FEED as AUDIO_FEED, wav_bytes as audio_wav_bytes, sound_word as audio_sound_word
     from .garuda_core.system_api import build_system_router
     from .garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
@@ -347,6 +348,7 @@ except ImportError:
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
     from basic_pipelines.garuda_core import mailer as _mailer
+    from basic_pipelines.garuda_core.audio_feed import FEED as AUDIO_FEED, wav_bytes as audio_wav_bytes, sound_word as audio_sound_word
     from basic_pipelines.garuda_core.system_api import build_system_router
     from basic_pipelines.garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
         _PBKDF2_ITERS, _hash_password, _verify_password, _DUMMY_PASSWORD_HASH, _validate_password_strength, _MK_PREFIX, _MK_ITERS, _mk_is_hashed, _mk_hash, _mk_check, _mk_mask, _master_key_matches, generate_otp_code, _rt_digest)
@@ -702,6 +704,7 @@ async def _lifespan(app):
         STATE.system.ws_broadcaster_task.cancel()
         await asyncio.gather(STATE.system.ws_broadcaster_task, return_exceptions=True)
         STATE.system.ws_broadcaster_task = None
+    AUDIO_FEED.stop()
     # Close any open WebRTC peer connections on shutdown
     if _pc_set:
         await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)
@@ -998,6 +1001,7 @@ fastapi_app.include_router(build_feedback_router(sys.modules[__name__]))
 
 # ── MJPEG stream (mjpeg_frames is in garuda_services/support.py) ─────────────
 _STREAM_RECHECK_S = 5.0
+_STREAM_FRAMES_IN_FLIGHT = 2   # /ws/stream?ack=1: frames sent but not yet shown
 
 
 DRISHTI_CTX.frame_source = mjpeg_frames
@@ -1046,6 +1050,7 @@ _core_http.tag_routes(fastapi_app, [
     ("/api/logs", "Logs"), ("/api/events", "Events"), ("/api/feedback", "Feedback"),
     ("/api/chat", "Narada"), ("/api/narada", "Narada"), ("/api/home", "Home automation"),
     ("/api/clip", "Camera"), ("/api/snapshot", "Camera"), ("/stream", "Camera"),
+    ("/api/audio", "Camera"),
     ("/webrtc", "Camera"), ("/api/eval", "Evaluation harness"), ("/api/", "Core"),
 ])
 

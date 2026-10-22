@@ -119,3 +119,33 @@ def test_narada_reads_a_digest_of_a_long_day(app_client):
     assert out["total"] == 56 and out["entries"][0]["text"].startswith("Garuda starting")
     assert out["kinds"][0] == {"count": 55, "kind": "Alert triggered.", "source": "system",
                                "first": "2026-09-01 20:00:00", "last": "2026-09-01 20:54:00"}
+
+
+def test_narada_hears_how_loud_the_room_is(app_client, monkeypatch):
+    import sys
+    from basic_pipelines.garuda_core import audio_feed as af
+    script = ("import sys,time\n"
+              "for i in range(2000):\n"
+              f"    sys.stdout.buffer.write((100).to_bytes(2,'little')*{af.CHUNK_BYTES // 2}); "
+              "sys.stdout.flush(); time.sleep(0.02)\n")
+    feed = af.AudioFeed(command=lambda: [sys.executable, '-c', script])
+    monkeypatch.setattr(gw, "AUDIO_FEED", feed)
+    try:
+        out = run("listen_room", {"seconds": 1})
+    finally:
+        feed.stop()
+    assert out.get("sound") == "quiet" and out.get("db") < -40, out
+
+
+def test_play_room_sound_puts_a_player_in_the_chat_and_not_in_a_voice_call():
+    import threading
+    turn = threading.local()
+    monkey = gw.AGENT._turn
+    gw.AGENT._turn = turn
+    try:
+        out = gw.AGENT._tool_play_room_sound({"seconds": 90}, "someone", "user")
+        assert out["ok"] and turn.images[-1]["kind"] == "sound" and turn.images[-1]["seconds"] == 30
+        turn.voice = True
+        assert "error" in gw.AGENT._tool_play_room_sound({}, "someone", "user")
+    finally:
+        gw.AGENT._turn = monkey

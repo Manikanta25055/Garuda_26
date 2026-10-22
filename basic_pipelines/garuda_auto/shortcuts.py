@@ -75,7 +75,8 @@ _PLACEHOLDER = re.compile(r"\{([A-Za-z0-9_]+)\}")
 # Not steps: these build or remove shortcuts and memories, or call a model.
 NOT_STEPS = frozenset({"create_shortcut", "update_shortcut", "delete_shortcut", "check_shortcut",
                        "run_shortcut", "remember_fact", "forget_fact", "create_automation",
-                       "hand_to_planner", "show_artifact", "take_snapshot"})
+                       "hand_to_planner", "show_artifact", "take_snapshot",
+                       "play_room_sound"})
 STEP_KINDS = ("do", "wait", "if", "repeat", "notify", "run", "stop")
 
 

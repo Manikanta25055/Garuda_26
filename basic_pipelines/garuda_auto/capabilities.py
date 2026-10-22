@@ -210,6 +210,12 @@ CAPABILITIES += (
           "GET /api/events/since",
           {"since": {"type": "string", "description": "ISO time; empty for the oldest"},
            "limit": _N}, security=True),
+    _site("listen_room",
+          "How loud the room is right now, from the camera's microphone: level in dBFS and "
+          "a word for it (quiet, talking, loud). You hear no words, only how loud it is.",
+          "GET /api/audio/level",
+          {"seconds": {"type": "number", "description": "how long to listen, 1-10 (default 2)"}},
+          lane="fast", security=True),
     _site("camera_health", "The camera pipeline's speed and health figures.",
           "GET /api/cascade_metrics", security=True),
     _site("read_feedback", "Feedback people have sent from the site.", "GET /api/feedback",
@@ -276,6 +282,11 @@ CAPABILITIES += (
                "Show the person what the camera sees right now, as a still picture in the chat. "
                "You cannot see the picture yourself.",
                security=True, routes=("GET /api/snapshot",)),
+    Capability("play_room_sound",
+               "Let the person hear the room: records the next few seconds from the camera's "
+               "microphone and puts a player in the chat. You cannot hear it.",
+               {"seconds": {"type": "integer", "description": "how long to record, 3-30 (default 8)"}},
+               security=True, routes=("GET /api/audio/clip",)),
     Capability("show_artifact",
                "Show the person a page you write: a chart, table, dashboard or small tool. "
                "Give one complete, self-contained HTML document.",
@@ -465,6 +476,7 @@ PLUMBING = frozenset({
     "GET /apple-touch-icon.png", "GET /apple-touch-icon-precomposed.png",
     "GET /api/health", "GET /api/ready", "GET /api/meta", "GET /api/heartbeat",
     "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
+    "WS /ws/audio",
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
     "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/progress",
     "POST /api/narada/conversation/clear", "GET /api/narada/conversation/last",

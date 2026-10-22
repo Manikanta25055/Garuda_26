@@ -1108,6 +1108,9 @@ textarea:-webkit-autofill {
   transition: background var(--trans), color var(--trans);
 }
 .cam-action-btn:hover { background: rgba(255,255,255,0.14); color: var(--t1); }
+.cam-sound-btn .s-off, .cam-sound-btn.is-muted .s-on { display: none; }
+.cam-sound-btn.is-muted .s-off { display: inline-block; }
+.cam-sound-btn.is-unavailable { opacity: 0.4; }
 .cam-action-btn.recording { color: #ef4444; animation: pulse 1s ease-in-out infinite; }
 
 /* Right info panel */
@@ -5186,6 +5189,8 @@ body { overscroll-behavior: auto; }
 .nx-art-open b { font-weight: 500; color: var(--t2); white-space: nowrap; }
 
 .nx-msg.nx-shot { flex-shrink: 0; display: grid; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.55); }
+.nx-msg.nx-sound { flex-shrink: 0; display: grid; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.55); }
+.nx-sound audio { width: 100%; }
 .nx-shot img { display: block; width: 100%; border-radius: 12px; background: rgba(255,255,255,0.06); aspect-ratio: 16 / 9; object-fit: cover; }
 
 /* No scroll indicators anywhere: what scrolls shows it by fading at its edge

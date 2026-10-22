@@ -704,7 +704,7 @@ const G = (() => {
     // Update connect button: green dot + "Live" when streaming, red + "Connect" otherwise
     const dot   = $('cam-live-dot');
     const label = $('cam-btn-label');
-    const isLive = txt === 'Live';
+    const isLive = txt.startsWith('Live');
     if (dot)   dot.className = 'cam-live-dot ' + (isLive ? 'cam-dot-live' : 'cam-dot-off');
     if (label) label.textContent = isLive ? 'Live' : 'Connect';
     // Show/hide snapshot + record buttons
@@ -712,6 +712,8 @@ const G = (() => {
     const recBtn  = $('cam-record-btn');
     if (snapBtn) snapBtn.style.display = isLive ? '' : 'none';
     if (recBtn)  recBtn.style.display  = isLive ? '' : 'none';
+    const sndBtn = $('cam-sound-btn');
+    if (sndBtn)  sndBtn.style.display  = isLive ? '' : 'none';
   }
 
   function stopCameraStream() {
@@ -722,6 +724,117 @@ const G = (() => {
     if (camVideo) { camVideo.srcObject = null; camVideo.style.display = 'none'; }
     if (_activePc) { _activePc.close(); _activePc = null; }
     if (_wsStream) { _wsStream.close(); _wsStream = null; }
+    stopFeedAudio();
+  }
+
+  // ── Camera sound (/ws/audio) ──────────────────────────────
+  // Its own socket, so a big video frame never holds sound up. The worklet
+  // keeps ~60 ms against jitter and skips ahead rather than fall behind.
+  // Off = socket closed: no microphone, no bandwidth.
+  let _feedAudio = null;   // { ctx, node, ws, retry }
+  const _FEED_SOUND_KEY = 'garuda_feed_sound';
+
+  function _feedSoundWanted() { return _lsGet(_FEED_SOUND_KEY) !== 'off'; }
+
+  function _feedSoundUi(state) {     // 'on' | 'off' | 'blocked' | 'none'
+    const btn = $('cam-sound-btn');
+    if (!btn) return;
+    const on = state === 'on';
+    btn.classList.toggle('is-muted', !on);
+    btn.classList.toggle('is-unavailable', state === 'none');
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    const t = { on: 'Sound on', off: 'Sound off', blocked: 'Tap for sound',
+                none: 'No microphone' }[state];
+    btn.title = t; btn.setAttribute('aria-label', t);
+  }
+
+  function _wsUrl(path) {
+    const base = (getBackend() || location.origin).replace(/^http/, 'ws');
+    return base + path + (_token ? `?token=${encodeURIComponent(_token)}` : '');
+  }
+
+  async function startFeedAudio() {
+    if (_feedAudio) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx || !window.AudioWorkletNode) { _feedSoundUi('none'); return; }
+    const fa = _feedAudio = { ctx: null, node: null, ws: null, retry: null };
+    let ctx;
+    // 16 kHz is what the Pi sends: the browser resamples better than we would.
+    try { ctx = new Ctx({ sampleRate: 16000, latencyHint: 'interactive' }); }
+    catch (_) { ctx = new Ctx({ latencyHint: 'interactive' }); }
+    fa.ctx = ctx;
+    // The worklet loads while the socket opens; neither waits for the other.
+    const ready = ctx.audioWorklet.addModule('/static/audio-feed-worklet.js?v=1');
+    ready.catch((e) => {
+      console.warn('camera sound: worklet failed', e);
+      if (_feedAudio === fa) { stopFeedAudio(); _feedSoundUi('none'); }
+    });
+    ctx.resume().catch(() => {}).finally(() => {
+      if (_feedAudio === fa) _feedSoundUi(ctx.state === 'running' ? 'on' : 'blocked');
+    });
+
+    const open = () => {
+      if (_feedAudio !== fa) return;
+      const ws = new WebSocket(_wsUrl('/ws/audio'));
+      ws.binaryType = 'arraybuffer';
+      fa.ws = ws;
+      ws.onmessage = (ev) => {
+        if (typeof ev.data === 'string') {       // the format header
+          let fmt = {};
+          try { fmt = JSON.parse(ev.data); } catch (_) {}
+          ready.then(() => {
+            if (_feedAudio !== fa || fa.ws !== ws) return;
+            if (fa.node) fa.node.disconnect();
+            fa.node = new AudioWorkletNode(ctx, 'feed-player', {
+              outputChannelCount: [1],
+              processorOptions: { inputRate: fmt.rate || 16000, targetMs: 60, maxMs: 180 },
+            });
+            fa.node.connect(ctx.destination);
+          }, () => {});
+          return;
+        }
+        if (!fa.node) return;
+        const pcm = new Int16Array(ev.data);
+        const f32 = new Float32Array(pcm.length);
+        for (let i = 0; i < pcm.length; i++) f32[i] = pcm[i] / 32768;
+        fa.node.port.postMessage(f32, [f32.buffer]);
+      };
+      ws.onclose = (ev) => {
+        if (_feedAudio !== fa || fa.ws !== ws) return;
+        fa.ws = null;
+        if (ev.code === 4503) { _feedSoundUi('none'); return; }   // no microphone on the Pi
+        if (ev.code === 4001) return;                              // signed out
+        fa.retry = setTimeout(open, 2000);
+      };
+    };
+    open();
+  }
+
+  function stopFeedAudio() {
+    const fa = _feedAudio;
+    _feedAudio = null;
+    if (!fa) return;
+    if (fa.retry) clearTimeout(fa.retry);
+    if (fa.ws) { try { fa.ws.close(); } catch (_) {} }
+    if (fa.node) { try { fa.node.disconnect(); } catch (_) {} }
+    if (fa.ctx) { try { fa.ctx.close(); } catch (_) {} }
+  }
+
+  function toggleFeedSound() {
+    // Starting here, inside the tap, is what lets the browser play sound.
+    if (_feedAudio && _feedAudio.ctx && _feedAudio.ctx.state !== 'running') {
+      _feedAudio.ctx.resume().then(() => _feedSoundUi('on')).catch(() => {});
+      _lsSet(_FEED_SOUND_KEY, 'on');
+      return;
+    }
+    if (_feedAudio) {
+      stopFeedAudio();
+      _lsSet(_FEED_SOUND_KEY, 'off');
+      _feedSoundUi('off');
+    } else {
+      _lsSet(_FEED_SOUND_KEY, 'on');
+      startFeedAudio();
+    }
   }
 
   async function startWebRTC() {
@@ -769,31 +882,42 @@ const G = (() => {
   }
 
   function startWsStream() {
-    const backend  = getBackend() || '';
     const camImg   = $('cam-img');
     const camOffline = $('cam-offline');
-    const wsBase   = backend.replace(/^http/, 'ws');
-    const token    = _token ? `?token=${encodeURIComponent(_token)}` : '';
-    const ws       = new WebSocket(wsBase + '/ws/stream' + token);
+    // ack=1: each frame is answered on arrival and the Pi keeps at most two
+    // unanswered, so a slow link skips frames instead of queuing them (lag).
+    const ws       = new WebSocket(_wsUrl('/ws/stream') + (_token ? '&' : '?') + 'ack=1');
     ws.binaryType  = 'arraybuffer';
     _wsStream      = ws;
     let connected  = false;
+    let pending    = null;    // newest frame not yet shown; older ones are skipped
+    let busy       = false;
+    const show = async () => {
+      if (busy || !pending || !camImg) return;
+      busy = true;
+      const blob = pending; pending = null;
+      const url = URL.createObjectURL(blob);
+      const im = new Image();
+      im.src = url;
+      try { await im.decode(); } catch (_) { URL.revokeObjectURL(url); busy = false; show(); return; }
+      if (_wsStream !== ws) { URL.revokeObjectURL(url); busy = false; return; }
+      const old = camImg.src;
+      camImg.src = url;
+      if (old.startsWith('blob:')) URL.revokeObjectURL(old);
+      if (!connected) {
+        connected = true;
+        camImg.style.display = 'block';
+        if (camOffline) camOffline.style.display = 'none';
+        _camSetStatus('Live · WS');
+      }
+      busy = false;
+      show();
+    };
     ws.onopen = () => { _camSetStatus('Connecting…'); };
     ws.onmessage = (ev) => {
-      if (!camImg) return;
-      const blob = new Blob([ev.data], { type: 'image/jpeg' });
-      const url  = URL.createObjectURL(blob);
-      const old  = camImg.src;
-      camImg.onload = () => {
-        URL.revokeObjectURL(old);
-        if (!connected) {
-          connected = true;
-          camImg.style.display = 'block';
-          if (camOffline) camOffline.style.display = 'none';
-          _camSetStatus('Live · WS');
-        }
-      };
-      camImg.src = url;
+      try { ws.send('a'); } catch (_) {}
+      pending = new Blob([ev.data], { type: 'image/jpeg' });
+      show();
     };
     ws.onerror = () => {
       _camSetStatus('WS stream error — falling back to MJPEG');
@@ -850,9 +974,12 @@ const G = (() => {
     if (!isActive) {
       if (btn) btn.classList.add('active');
       switchCamTab('live');
-      // MJPEG is the fastest and most reliable for Pi5 local streaming.
-      // Browser handles frame decoding natively — no JS per-frame overhead.
-      startMjpeg();
+      // WS frames with acks: an MJPEG response cannot skip frames, so on a
+      // slow link it queues them and the picture drifts behind the room.
+      // MJPEG stays as the fallback when the socket cannot open.
+      startWsStream();
+      // This tap is the gesture that lets the camera's sound play.
+      if (_feedSoundWanted()) startFeedAudio(); else _feedSoundUi('off');
     } else {
       stopCameraStream();
       if (btn) btn.classList.remove('active');
@@ -2928,7 +3055,7 @@ const G = (() => {
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,
-    toggleCamera, takeSnapshot, toggleClip, openDocs,
+    toggleCamera, toggleFeedSound, takeSnapshot, toggleClip, openDocs,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, toggleNightPresence, useHereForLocation, saveSettings,
     filterLogs, exportLogs, downloadFullLog, loadOlderLogs, onLogDate: fetchAndRenderLogs,

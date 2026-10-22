@@ -59,6 +59,39 @@ def build_camera_router(core):
             headers={"Content-Disposition": f'attachment; filename="garuda_{ts}.jpg"'}
         )
 
+    # ── The microphone, for automations and Narada ───────────────────────────────
+    # The live sound is /ws/audio (sockets.py); these answer one question each.
+    def _audio_ready():
+        if not core.AUDIO_FEED.available:
+            raise HTTPException(503, "There is no microphone capture on this system")
+
+    @router.get("/api/audio/level")
+    async def audio_level(seconds: float = 2.0, session=Depends(core.require_session)):
+        """How loud the room is: RMS and peak in dBFS over `seconds` (0.5-10),
+        and a word for it (quiet | talking | loud). Narada's listen_room."""
+        _audio_ready()
+        level = await core.AUDIO_FEED.measure(seconds)
+        if level is None:
+            raise HTTPException(503, "The microphone is not delivering sound right now")
+        return {"ok": True, **level, "at": time.time()}
+
+    @router.get("/api/audio/clip")
+    async def audio_clip(request: Request, seconds: float = 5.0, token: Optional[str] = None):
+        """The next `seconds` (1-30) of the room's sound, as a WAV file. Takes
+        ?token= too, like the snapshot, for an <audio> player or a script."""
+        session_token = request.cookies.get("garuda_session") or request.headers.get("X-Garuda-Token") or token
+        if not core.get_session(session_token):
+            raise HTTPException(401, "Not authenticated")
+        _audio_ready()
+        pcm = await core.AUDIO_FEED.record(seconds)
+        if not pcm:
+            raise HTTPException(503, "The microphone is not delivering sound right now")
+        ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        return Response(
+            content=core.audio_wav_bytes(pcm), media_type="audio/wav",
+            headers={"Content-Disposition": f'inline; filename="garuda_{ts}.wav"',
+                     "Cache-Control": "no-store"})
+
     @router.post("/api/clip/start")
     async def clip_start(session=Depends(core.require_session)):
         # Fast check — avoid I/O if already recording
