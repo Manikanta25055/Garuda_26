@@ -153,6 +153,7 @@ const G = (() => {
     if (s.ram_percent != null) setText('hwm-ram',  Math.round(s.ram_percent) + '%');
     if (s.cpu_temp    != null) setText('hwm-temp', Math.round(s.cpu_temp) + '\u00b0');
     if (s.inference_fps != null) setText('hwm-fps', Math.round(s.inference_fps));
+    if (s.inference_fps != null) setText('hud-fps', Math.round(s.inference_fps) + ' fps');
     if (s.disk_percent != null) setText('hwm-disk', Math.round(s.disk_percent) + '%');
 
     // Update metric rings (kept for any legacy consumers)

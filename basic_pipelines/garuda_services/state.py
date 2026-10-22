@@ -40,6 +40,27 @@ def _recent_alert_history(days: int = 120) -> dict:
     return {day: n for day, n in core.STATE.alerts.history.items() if str(day) >= cutoff}
 
 
+# (time, frame count, rate) at the last re-measure. The frame counter is
+# global, so a rate over the last few seconds is what the camera is doing now;
+# frames / uptime stayed near 52 for minutes after the camera stopped.
+_FPS_WINDOW_S = 2.0
+_fps_sample = None
+
+
+def _live_fps(total_frames: int, uptime: float, clock=time.monotonic) -> float:
+    global _fps_sample
+    now = clock()
+    if _fps_sample is None or total_frames < _fps_sample[1]:
+        avg = round(total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
+        _fps_sample = (now, total_frames, avg)
+        return avg
+    t0, f0, rate = _fps_sample
+    if now - t0 >= _FPS_WINDOW_S:
+        rate = round((total_frames - f0) / (now - t0), 1)
+        _fps_sample = (now, total_frames, rate)
+    return rate
+
+
 def get_state_dict():
     # Expire alert once the wall-clock timer runs out
     _just_cleared = False
@@ -95,7 +116,7 @@ def get_state_dict():
         except Exception:
             pass
 
-    inference_fps = round(core.STATE.camera.total_frames / max(1, uptime), 1) if uptime > 0 else 0.0
+    inference_fps = _live_fps(core.STATE.camera.total_frames, uptime)
 
     # ── Disk usage ──
     disk_pct = None
