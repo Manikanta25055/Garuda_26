@@ -23,6 +23,12 @@ start. The oldest captures go first once there are more than MAX_ITEMS of them
 or they take more than MAX_BYTES; a capture marked keep is never removed that
 way.
 
+The disk is shared with everything else on the Pi, so a capture also keeps
+MIN_FREE_BYTES of it free: the oldest go first when it runs short, and a new
+one is refused (LowDisk) when clearing cannot make the room. A file in the
+folder that the index does not list (one written as the service stopped) is
+removed on start; an index that cannot be read is set aside, not overwritten.
+
 Nothing leaves the Pi except by an email a person or a shortcut asked for.
 """
 import json
@@ -44,15 +50,29 @@ EXT = {"snapshot": (".jpg", "image/jpeg"), "audio": (".wav", "audio/wav"),
        "video": (".webm", "video/webm")}
 MAX_ITEMS = int(os.environ.get("GARUDA_CAPTURES_MAX", "500"))
 MAX_BYTES = int(os.environ.get("GARUDA_CAPTURES_MAX_MB", "2048")) * 1024 * 1024
+MIN_FREE_BYTES = int(os.environ.get("GARUDA_CAPTURES_MIN_FREE_MB", "500")) * 1024 * 1024
 MAX_AUDIO_S = 30
 MAX_VIDEO_S = 60
 VIDEO_FPS_CAP = 15.0
 MAX_LABEL = 80
 FINISH_WAIT_S = MAX_VIDEO_S + 30      # how long anything waits for a recording to end
+_CAPTURE_EXTS = {ext for ext, _ in EXT.values()}
+
+
+class LowDisk(OSError):
+    """There is not room on the disk for another capture."""
+
+
+def _free_bytes(directory):
+    probe = directory
+    while not os.path.exists(probe) and os.path.dirname(probe) != probe:
+        probe = os.path.dirname(probe)
+    return shutil.disk_usage(probe).free
 
 
 class CaptureStore:
-    def __init__(self, directory, clock=time.time, max_items=MAX_ITEMS, max_bytes=MAX_BYTES):
+    def __init__(self, directory, clock=time.time, max_items=MAX_ITEMS, max_bytes=MAX_BYTES,
+                 min_free=MIN_FREE_BYTES, free_fn=_free_bytes):
         self.dir = str(directory)
         self._index_path = os.path.join(self.dir, "index.json")
         self._clock = clock
@@ -60,8 +80,10 @@ class CaptureStore:
         self._done = threading.Condition(self._lock)
         self.max_items = max_items
         self.max_bytes = max_bytes
-        self.items = _load_index(self._index_path)
-        _clear_leftovers(self.dir)
+        self.min_free = min_free
+        self._free_fn = free_fn
+        self.items, readable = _load_index(self._index_path)
+        _clear_leftovers(self.dir, self.items if readable else None)
         stale = [c for c in self.items if c.get("status") == "recording"]
         for entry in stale:
             entry.update(status="failed", error="the service stopped while it was recording")
@@ -79,6 +101,11 @@ class CaptureStore:
         """List a capture that is about to be made; returns its entry."""
         if kind not in KINDS:
             raise ValueError(f"kind is one of {', '.join(KINDS)}")
+        with self._lock:
+            if self._free() < self.min_free:
+                self._prune()
+                if self._free() < self.min_free:
+                    raise LowDisk("the disk is nearly full; clear some captures or other files")
         capture_id = secrets.token_hex(6)
         ext, mime = EXT[kind]
         entry = {"id": capture_id, "kind": kind, "status": "recording",
@@ -130,6 +157,12 @@ class CaptureStore:
             self._done.notify_all()
             return dict(entry)
 
+    def _free(self):
+        try:
+            return self._free_fn(self.dir)
+        except OSError:
+            return self.min_free         # cannot tell: do not block captures on it
+
     def _find(self, capture_id):
         return next((c for c in self.items if c["id"] == capture_id), None)
 
@@ -139,12 +172,18 @@ class CaptureStore:
             return [c for c in reversed(self.items)
                     if not c.get("keep") and c.get("status") != "recording"]
         total = sum(c.get("bytes") or 0 for c in self.items)
+        short = self.min_free - self._free()
+        removed = False
         for entry in removable():
-            if len(self.items) <= self.max_items and total <= self.max_bytes:
+            if len(self.items) <= self.max_items and total <= self.max_bytes and short <= 0:
                 break
             _unlink(self.path_of(entry))
             total -= entry.get("bytes") or 0
+            short -= entry.get("bytes") or 0
             self.items.remove(entry)
+            removed = True
+        if removed:
+            self._save()
 
     # ── reading ──────────────────────────────────────────────────────────────
     def get(self, capture_id):
@@ -201,12 +240,23 @@ class CaptureStore:
 
 
 def _load_index(path):
+    """(entries, readable). An index that is there but cannot be read is moved
+    aside to index.json.bad-<time>, so the next save does not overwrite it."""
     try:
         with open(path, "r", encoding="utf-8") as fh:
             data = json.load(fh)
-    except (OSError, ValueError):
-        return []
-    return [c for c in data if isinstance(c, dict) and c.get("id")] if isinstance(data, list) else []
+    except FileNotFoundError:
+        return [], False
+    except (OSError, ValueError) as exc:
+        log.error("captures: the index could not be read (%s); it is kept aside", exc)
+        try:
+            os.replace(path, f"{path}.bad-{int(time.time())}")
+        except OSError:
+            pass
+        return [], False
+    if not isinstance(data, list):
+        return [], False
+    return [c for c in data if isinstance(c, dict) and c.get("id")], True
 
 
 def _write_atomic(path, data):
@@ -230,18 +280,23 @@ def _unlink(path):
             pass
 
 
-def _clear_leftovers(directory):
+def _clear_leftovers(directory, listed=None):
     """What a recording cut short by a stop leaves: its work folder and any
-    half-written file. Nothing is recording yet when the store starts."""
+    half-written file. Nothing is recording yet when the store starts. With
+    `listed` (a readable index), a capture file it does not name goes too."""
     try:
         names = os.listdir(directory)
     except OSError:
         return
+    known = {c.get("file") for c in listed or ()}
     for name in names:
         path = os.path.join(directory, name)
         if name.startswith("capture-") and os.path.isdir(path):
             shutil.rmtree(path, ignore_errors=True)
         elif name.endswith(".part"):
+            _unlink(path)
+        elif (listed is not None and os.path.splitext(name)[1] in _CAPTURE_EXTS
+              and name not in known):
             _unlink(path)
 
 

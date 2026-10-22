@@ -93,8 +93,11 @@ def build_captures_router(core):
         return sum(1 for c in store().list(limit=50) if c["status"] == "recording")
 
     def _begin(kind, data, session, seconds=None):
-        return store().begin(kind, by=session["username"], label=data.label.strip(),
-                             group=data.group.strip(), alert=_alert_now(), seconds=seconds)
+        try:
+            return store().begin(kind, by=session["username"], label=data.label.strip(),
+                                 group=data.group.strip(), alert=_alert_now(), seconds=seconds)
+        except captures.LowDisk as exc:
+            raise HTTPException(507, f"Not saved: {exc}")
 
     def _owner_or_admin(capture_id, session):
         entry = store().get(capture_id)
