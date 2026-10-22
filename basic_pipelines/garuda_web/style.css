@@ -83,6 +83,9 @@
 .gi-refresh { --gi: url("/static/icons/refresh.svg?v=3"); }
 .gi-download { --gi: url("/static/icons/download.svg?v=3"); }
 .gi-search { --gi: url("/static/icons/search.svg?v=3"); }
+.gi-book { --gi: url("/static/icons/book.svg?v=1"); }
+.gi-layers { --gi: url("/static/icons/layers.svg?v=1"); }
+.gi-media { --gi: url("/static/icons/media.svg?v=1"); }
 .ios-icon .gi { width: 22px; height: 22px; }
 .more-tile-icon .gi { width: 26px; height: 26px; }
 .more-row-icon .gi { width: 22px; height: 22px; }
