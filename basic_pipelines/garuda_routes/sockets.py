@@ -74,7 +74,9 @@ def build_sockets_router(core):
                     in_flight += 1
                     await websocket.send_bytes(frame)
                 else:
-                    await asyncio.sleep(0.01)
+                    # 20 ms, as before: each viewer's loop wakes the Pi's
+                    # event loop this often, and every page request shares it.
+                    await asyncio.sleep(0.02)
         except WebSocketDisconnect:
             pass
         except Exception as e:

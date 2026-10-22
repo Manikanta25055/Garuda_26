@@ -51,6 +51,10 @@ class MemoryEditRequest(BaseModel):
 
 def build_narada_router(core):
     router = APIRouter()
+    # Typed turns being worked on, per person: a chat whose stream was cut
+    # asks whether its answer is still coming before it waits for one.
+    working = {}
+    working_lock = threading.Lock()
 
     @router.post("/api/chat")
     async def chat(data: ChatRequest, request: Request, session=Depends(core.require_session)):
@@ -99,6 +103,11 @@ def build_narada_router(core):
                     on_draft=draft)
             except Exception as exc:
                 result = {"reply": f"Something went wrong: {type(exc).__name__}", "actions": []}
+            finally:
+                with working_lock:
+                    working[user] -= 1
+                    if not working[user]:
+                        del working[user]
             meta = {k: result.get(k) for k in ("lane", "actions", "proposal", "memory", "offer",
                                                "observation", "confirm", "artifacts", "images",
                                                "steps", "planner", "model")}
@@ -106,6 +115,8 @@ def build_narada_router(core):
             loop.call_soon_threadsafe(queue.put_nowait, ("token", result["reply"]))
             loop.call_soon_threadsafe(queue.put_nowait, ("done", None))
 
+        with working_lock:
+            working[user] = working.get(user, 0) + 1
         threading.Thread(target=_agent_worker, daemon=True).start()
 
         async def generate():
@@ -236,10 +247,14 @@ def build_narada_router(core):
     @router.get("/api/narada/conversation/last")
     async def narada_conversation_last(request: Request, session=Depends(core.require_session)):
         """The last question and answer, for a chat whose stream was cut off
-        (a phone that switched apps) while the answer was still being made."""
+        (a phone that switched apps) while the answer was still being made.
+        `working`: a typed turn of this person's is still being answered."""
         scope = core._product_for_host(request.headers.get("host"))
         key = f"security:{session['username']}" if scope == "security" else session["username"]
-        return {"last": core.BRAIN.conversations.last_exchange(key), "now": time.time()}
+        with working_lock:
+            busy = session["username"] in working
+        return {"last": core.BRAIN.conversations.last_exchange(key), "now": time.time(),
+                "working": busy}
 
     @router.post("/api/narada/conversation/clear")
     async def narada_conversation_clear(session=Depends(core.require_session)):
