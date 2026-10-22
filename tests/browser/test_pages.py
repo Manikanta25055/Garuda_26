@@ -858,7 +858,9 @@ def test_the_voice_shows_in_the_text_field_only_while_the_microphone_listens(ser
           window.voiceCallbacks = options; window.level = 0.25;
           options.onConnect();
           return {endSession: async () => options.onDisconnect(), setMicMuted: () => {},
-                  getInputVolume: () => window.level, getId: () => 'wave-conv', sendUserMessage: () => {}};
+                  getInputVolume: () => window.level, getId: () => 'wave-conv', sendUserMessage: () => {},
+                  // The field reads the client's frequency bins (b703bfa), not its volume.
+                  getInputByteFrequencyData: () => new Uint8Array(1024).fill(Math.round(window.level * 255))};
         }};'''))
     page.goto(server + '/')
     page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"

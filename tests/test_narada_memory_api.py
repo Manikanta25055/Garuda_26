@@ -126,6 +126,8 @@ def test_a_cut_stream_can_fetch_the_answer_the_server_finished(app_client, user_
         {"role": "assistant", "content": "", "tool_calls": [{"id": "1"}]},
         {"role": "tool", "content": "{}"},
         {"role": "assistant", "content": "Two alerts, both cleared."}])
-    last = app_client.get('/api/narada/conversation/last', headers=user_headers).json()["last"]
+    body = app_client.get('/api/narada/conversation/last', headers=user_headers).json()
+    assert body["working"] is False        # nothing of theirs is being answered: stop waiting
+    last = body["last"]
     assert last["said"] == "what happened in the last 48 hours?"
     assert last["reply"] == "Two alerts, both cleared." and last["at"] > 0
