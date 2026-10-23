@@ -131,6 +131,14 @@ def render(name, strokes):
 
 # ── the icons ─────────────────────────────────────────────────────────────────
 
+def bubble(x0, y0, x1, y1, r=2.6, tail=((10.2, None), (6.2, 21), (7.2, None))):
+    """A speech bubble: a rounded box whose bottom edge dips into a tail on its way round."""
+    pts = arc(x1 - r, y0 + r, r, -90, 0) + arc(x1 - r, y1 - r, r, 0, 90)
+    pts += line(pts[-1], *[(x, y1 if y is None else y) for x, y in tail])
+    pts += arc(x0 + r, y1 - r, r, 90, 180) + arc(x0 + r, y0 + r, r, 180, 270)
+    return pts + line(pts[-1], (x1 - r + 0.6, y0))
+
+
 def shield():
     return line((12, 2.8), (19.2, 5.6)) + arc(9.4, 6.5, 9.9, 0, 78, 13.6)[1:] + \
         arc(14.6, 6.5, 9.9, 102, 180, 13.6) + line((4.7, 6.5), (4.8, 5.6), (12.6, 2.6))
@@ -232,6 +240,10 @@ ICONS = {
              + arc(16.8, 18.4, 1.8, 90, 0)[1:] + line((18.6, 18.4), (18.6, 9.4)),
              line((10, 20), (10, 16)) + arc(12, 16, 2, 180, 360)[1:] + line((14, 16), (14, 20)),
              light(line((16, 4.8), (16, 6.8)))],
+    # Feedback: a speech bubble with a line of writing in it. Redrawn at the
+    # owner's request, in the same pen as Home.
+    "feedback": [bubble(2.8, 3.6, 21.2, 16.6), line((7.2, 8.4), (16.8, 8.4)),
+                 light(line((7.2, 11.8), (13.4, 11.8)))],
     "media": [box(3, 4.6, 21, 19.4, r=2.2), line((3.4, 16.6), (8.8, 11.2), (12.8, 15.2), (15.4, 12.8), (20.6, 17.4)),
               ring(15.8, 8.8, 1.6)],
 }
