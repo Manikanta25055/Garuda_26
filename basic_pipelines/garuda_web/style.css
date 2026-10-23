@@ -29,7 +29,7 @@
           mask: var(--gi) center / contain no-repeat;
 }
 .gi-documentation { --gi: url("/static/icons/documentation.svg?v=3"); }
-.gi-feedback { --gi: url("/static/icons/feedback.svg?v=3"); }
+.gi-feedback { --gi: url("/static/icons/feedback.svg?v=4"); }
 .gi-sign-in { --gi: url("/static/icons/sign-in.svg?v=3"); }
 .gi-home { --gi: url("/static/icons/home.svg?v=4"); }
 .gi-devices { --gi: url("/static/icons/devices.svg?v=3"); }
