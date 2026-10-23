@@ -165,6 +165,8 @@
   --nav-bg:           rgba(255,255,255,0.85);
   --nav-border:       rgba(0,0,0,0.08);
   --nav-pill:         rgba(0,0,0,0.07);
+  --nav-pill-lift:    rgba(255,255,255,0.92);
+  --nav-pill-lift-shadow: 0 6px 16px rgba(15,23,42,0.14), 0 1px 3px rgba(15,23,42,0.10), inset 0 0 0 0.5px rgba(0,0,0,0.06);
   --nav-item-color:   rgba(0,0,0,0.35);
   --nav-item-active:  #1A1D23;
   --btn-ghost-bg:     rgba(0,0,0,0.05);
@@ -217,6 +219,8 @@
   --nav-bg:           rgba(28,28,30,0.78);
   --nav-border:       rgba(255,255,255,0.10);
   --nav-pill:         rgba(255,255,255,0.10);
+  --nav-pill-lift:    rgba(255,255,255,0.20);
+  --nav-pill-lift-shadow: 0 6px 18px rgba(0,0,0,0.38), inset 0 0 0 0.5px rgba(255,255,255,0.16);
   --nav-item-color:   rgba(255,255,255,0.35);
   --nav-item-active:  #FFFFFF;
   --btn-ghost-bg:     rgba(255,255,255,0.06);
@@ -980,11 +984,26 @@ textarea:-webkit-autofill {
   background: var(--nav-pill);
   border-radius: 16px;
   transform: translateX(6px);
-  transition: transform 0.36s cubic-bezier(0.34, 1.38, 0.64, 1),
-              width    0.36s cubic-bezier(0.34, 1.38, 0.64, 1);
+  /* Position and width are a spring in app.js; only the material eases. */
+  transition: background-color 0.24s ease, box-shadow 0.24s ease;
   pointer-events: none;
   will-change: transform, width;
 }
+/* Picked up: the lens comes forward off the bar. */
+#ios-pill.ios-pill-lifted {
+  background: var(--nav-pill-lift);
+  box-shadow: var(--nav-pill-lift-shadow);
+}
+/* The bar takes every gesture that starts on it, so a sideways swipe moves
+   the pill instead of scrolling the page. */
+#ios-nav { touch-action: none; -webkit-touch-callout: none; }
+#ios-nav .ios-item.active { cursor: grab; }
+#ios-nav.ios-nav-dragging, #ios-nav.ios-nav-dragging .ios-item { cursor: grabbing; }
+/* While it is carried, the tab under the pill reads as chosen, and a
+   pressed tab does not shrink under the hand. */
+#ios-nav.ios-nav-dragging .ios-item.active:not(.ios-peek) { color: var(--nav-item-color); }
+#ios-nav.ios-nav-dragging .ios-item.ios-peek { color: var(--nav-item-active); }
+#ios-nav.ios-nav-dragging .ios-item:active { transform: none; opacity: 1; }
 
 /* Nav items */
 .ios-item {
