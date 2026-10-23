@@ -272,6 +272,7 @@ try:
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
     from .garuda_core import mailer as _mailer
+    from .garuda_core import cloud as _cloud
     from .garuda_core.audio_feed import FEED as AUDIO_FEED, wav_bytes as audio_wav_bytes, sound_word as audio_sound_word
     from .garuda_core.system_api import build_system_router
     from .garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)
@@ -350,6 +351,7 @@ except ImportError:
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
     from basic_pipelines.garuda_core import mailer as _mailer
+    from basic_pipelines.garuda_core import cloud as _cloud
     from basic_pipelines.garuda_core.audio_feed import FEED as AUDIO_FEED, wav_bytes as audio_wav_bytes, sound_word as audio_sound_word
     from basic_pipelines.garuda_core.system_api import build_system_router
     from basic_pipelines.garuda_core.security import (  # noqa: F401  (re-exported: tests and routes use them from here)

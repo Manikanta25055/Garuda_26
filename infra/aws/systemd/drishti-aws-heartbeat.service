@@ -1,0 +1,12 @@
+[Unit]
+Description=Drishti: health metrics to CloudWatch (optional AWS add-on)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=manikanta
+WorkingDirectory=/home/manikanta/Projects/Garuda_26
+# aws_agent.py reads the AWS settings and the upload-only key from .env (chmod 600).
+ExecStart=/usr/bin/python3 /home/manikanta/Projects/Garuda_26/scripts/aws_agent.py heartbeat
+TimeoutStartSec=45
+Nice=10
