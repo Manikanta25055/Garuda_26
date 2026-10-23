@@ -1,0 +1,11 @@
+[Unit]
+Description=Drishti: nightly S3 backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=15min
+# A night the Pi was off is caught up at the next boot.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

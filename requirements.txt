@@ -33,3 +33,4 @@ elevenlabs
 # onnxruntime tokenizers  # Narada's routing model (garuda_auto/router.py); the literal matcher answers without them
 # gpiozero               # relay bank; no-op stub used when unavailable
 # paho-mqtt              # MQTT transport; devices unreachable when absent
+# boto3                  # AWS add-ons (infra/aws): backup, SES, SNS, CloudWatch; off without it

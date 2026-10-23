@@ -97,3 +97,4 @@ basic_pipelines/danger_sightings.txt
 basic_pipelines/night_mode_findings.txt
 evaluation/out/*.log
 evaluation/out/_boot/
+drishti-aws.env

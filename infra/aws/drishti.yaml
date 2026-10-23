@@ -1,0 +1,275 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Drishti optional AWS add-ons: offsite backup (S3 + Glacier Deep Archive),
+  alert email (SES), alert push/SMS (SNS), Pi health alarms (CloudWatch), a
+  monthly budget alarm, and an IAM user for the Pi that can only upload,
+  publish, send from one address and write Drishti metrics. Detection keeps
+  running on the Pi without any of this. Deploy with infra/aws/deploy.sh.
+
+Parameters:
+  AlertEmail:
+    Type: String
+    Description: Gets SNS alerts, CloudWatch alarms and budget warnings.
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+  SenderEmail:
+    Type: String
+    Description: The From address of alert emails (EMAIL_SENDER on the Pi); SES verifies it.
+    AllowedPattern: "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+  AlertPhone:
+    Type: String
+    Default: ""
+    Description: Optional, E.164 (+91...), for SMS alerts. Empty means email only.
+  MonthlyBudgetUSD:
+    Type: Number
+    Default: 5
+    Description: Budget warnings go to AlertEmail at 80% spent and 100% forecast.
+  MetricNamespace:
+    Type: String
+    Default: Drishti
+
+Conditions:
+  HasPhone: !Not [!Equals [!Ref AlertPhone, ""]]
+  AlertIsNotSender: !Not [!Equals [!Ref AlertEmail, !Ref SenderEmail]]
+
+Resources:
+  # ── backup ────────────────────────────────────────────────────────────────
+  BackupBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain          # deleting the stack never deletes the backups
+    UpdateReplacePolicy: Retain
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      LifecycleConfiguration:
+        Rules:
+          # Daily state archives: a month at hand, then the cheapest shelf.
+          - Id: state-to-deep-archive
+            Status: Enabled
+            Prefix: state/
+            Transitions:
+              - StorageClass: DEEP_ARCHIVE
+                TransitionInDays: 30
+            ExpirationInDays: 400
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+          - Id: captures-to-deep-archive
+            Status: Enabled
+            Prefix: captures/
+            Transitions:
+              - StorageClass: DEEP_ARCHIVE
+                TransitionInDays: 30
+          # The current model stays quick to fetch; replaced ones are archived.
+          - Id: old-models-to-deep-archive
+            Status: Enabled
+            Prefix: models/
+            NoncurrentVersionTransitions:
+              - StorageClass: DEEP_ARCHIVE
+                TransitionInDays: 30
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 365
+          - Id: abort-stuck-uploads
+            Status: Enabled
+            Prefix: ""
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 7
+
+  BackupBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref BackupBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: TlsOnly
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt BackupBucket.Arn
+              - !Sub "${BackupBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+
+  # ── alerts ────────────────────────────────────────────────────────────────
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: drishti-alerts
+      DisplayName: Drishti
+      Subscription:
+        - Protocol: email
+          Endpoint: !Ref AlertEmail
+
+  SmsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: HasPhone
+    Properties:
+      TopicArn: !Ref AlertTopic
+      Protocol: sms
+      Endpoint: !Ref AlertPhone
+
+  # ── email ─────────────────────────────────────────────────────────────────
+  # SES starts in its sandbox: it sends only to verified addresses, so the
+  # alert address is verified too. Each gets a confirmation email to click.
+  SenderIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: !Ref SenderEmail
+
+  AlertIdentity:
+    Type: AWS::SES::EmailIdentity
+    Condition: AlertIsNotSender
+    Properties:
+      EmailIdentity: !Ref AlertEmail
+
+  # ── health ────────────────────────────────────────────────────────────────
+  # scripts/aws_agent.py heartbeat sends these every minute.
+  PiOfflineAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drishti-pi-offline
+      AlarmDescription: No heartbeat from the Pi for 10 minutes (powered off, crashed or offline).
+      Namespace: !Ref MetricNamespace
+      MetricName: Heartbeat
+      Statistic: SampleCount
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: breaching
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  ServiceDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drishti-service-down
+      AlarmDescription: The Pi is online but garuda-web has not answered /api/health for 10 minutes.
+      Namespace: !Ref MetricNamespace
+      MetricName: ServiceUp
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching     # an offline Pi is the alarm above
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
+  PiHotAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drishti-pi-hot
+      AlarmDescription: CPU above 80 C for 15 minutes; the Pi throttles and detection slows.
+      Namespace: !Ref MetricNamespace
+      MetricName: CpuTempC
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 3
+      Threshold: 80
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+
+  DiskFullAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drishti-disk-full
+      AlarmDescription: The SD card is over 90% full; captures will start being refused.
+      Namespace: !Ref MetricNamespace
+      MetricName: DiskUsedPercent
+      Statistic: Maximum
+      Period: 3600
+      EvaluationPeriods: 1
+      Threshold: 90
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: notBreaching
+      AlarmActions: [!Ref AlertTopic]
+
+  # ── cost ──────────────────────────────────────────────────────────────────
+  MonthlyBudget:
+    Type: AWS::Budgets::Budget
+    Properties:
+      Budget:
+        BudgetName: drishti-monthly
+        BudgetType: COST
+        TimeUnit: MONTHLY
+        BudgetLimit:
+          Amount: !Ref MonthlyBudgetUSD
+          Unit: USD
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: 80
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+        - Notification:
+            NotificationType: FORECASTED
+            ComparisonOperator: GREATER_THAN
+            Threshold: 100
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref AlertEmail
+
+  # ── the Pi's identity ─────────────────────────────────────────────────────
+  # Can add backups but not read, list or delete them: a stolen key cannot
+  # take the backups, and versioning keeps an overwrite from losing one.
+  PiUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: drishti-pi
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: UploadBackups
+                Effect: Allow
+                Action: [s3:PutObject, s3:AbortMultipartUpload]
+                Resource: !Sub "${BackupBucket.Arn}/*"
+              - Sid: PublishAlerts
+                Effect: Allow
+                Action: sns:Publish
+                Resource: !Ref AlertTopic
+              - Sid: SendMailFromTheSenderOnly
+                Effect: Allow
+                Action: [ses:SendRawEmail, ses:SendEmail]
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    ses:FromAddress: !Ref SenderEmail
+              - Sid: WriteDrishtiMetricsOnly
+                Effect: Allow
+                Action: cloudwatch:PutMetricData
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    cloudwatch:namespace: !Ref MetricNamespace
+
+Outputs:
+  Region:
+    Value: !Ref AWS::Region
+  BucketName:
+    Value: !Ref BackupBucket
+  TopicArn:
+    Value: !Ref AlertTopic
+  PiUserName:
+    Value: !Ref PiUser
+  MetricNamespace:
+    Value: !Ref MetricNamespace

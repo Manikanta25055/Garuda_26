@@ -95,7 +95,8 @@ class Settings:
         """
         out = []
         mail = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-        if not self.email_sender or not self.email_password_set:
+        ses = os.environ.get("GARUDA_MAIL_BACKEND", "smtp").strip().lower() == "ses"
+        if not self.email_sender or not (self.email_password_set or ses):
             out.append(("warning", "Alert email is not configured (EMAIL_SENDER / EMAIL_SENDER_PASS): "
                                    "no alert, OTP or tamper email can be sent, so admin sign-in by OTP will fail."))
         elif not mail.match(self.email_sender):

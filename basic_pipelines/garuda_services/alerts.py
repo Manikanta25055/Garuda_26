@@ -106,6 +106,7 @@ def send_email_alert(note=""):
     body = f"Danger object detected at {now_str}.\nObject(s): {label_str}\nCheck your environment for safety.\n"
     if note:
         body += f"\n{note}\n"
+    core._cloud.publish_alert_async(subject, body)
     try:
         core._send_mail(subject, body)
         core.log_system_update("Email alert sent.")
@@ -124,7 +125,8 @@ def _send_tamper_email():
     Rate-limited to one email per _TAMPER_EMAIL_COOLDOWN so a flickering /
     intermittently-dark camera cannot spam the recipient.
     """
-    if not core.STATE.config.email_sender or not core.STATE.config.email_recipients:
+    have_mail = bool(core.STATE.config.email_sender and core.STATE.config.email_recipients)
+    if not have_mail and not core._cloud.sns_enabled():
         return
     now = time.time()
     if (now - core.STATE.alerts.last_tamper_email) < core._TAMPER_EMAIL_COOLDOWN:
@@ -136,8 +138,12 @@ def _send_tamper_email():
         "The camera lens appears to be covered or the feed has gone blank.\n"
         "Immediate physical inspection required."
     )
+    subject = "CRITICAL TAMPER ALERT — Garuda Camera Covered"
+    core._cloud.publish_alert_async(subject, body)
+    if not have_mail:
+        return
     try:
-        core._send_mail("CRITICAL TAMPER ALERT — Garuda Camera Covered", body)
+        core._send_mail(subject, body)
         core.log_system_update("[TAMPER] Alert email sent.")
     except Exception as e:
         core.log_system_update(f"[TAMPER] Email failed: {e}")
