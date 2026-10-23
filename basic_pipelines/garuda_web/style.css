@@ -1004,6 +1004,9 @@ textarea:-webkit-autofill {
 #ios-nav.ios-nav-dragging .ios-item.active:not(.ios-peek) { color: var(--nav-item-color); }
 #ios-nav.ios-nav-dragging .ios-item.ios-peek { color: var(--nav-item-active); }
 #ios-nav.ios-nav-dragging .ios-item:active { transform: none; opacity: 1; }
+/* The pill bulges under a press of the current tab; the tab itself stays
+   put rather than shrinking away from it. */
+#ios-nav .ios-item.active:active { transform: none; opacity: 1; }
 
 /* Nav items */
 .ios-item {

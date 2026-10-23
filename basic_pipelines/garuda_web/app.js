@@ -1291,7 +1291,7 @@ const G = (() => {
     tap:     { response: 0.38, damping: 0.80 },   // a tab was tapped
     release: { response: 0.42, damping: 0.74 },   // let go: a little settle
     follow:  { response: 0.11, damping: 1.00 },   // under the hand: tight, never bouncy
-    lift:    { response: 0.28, damping: 0.70 },
+    lift:    { response: 0.22, damping: 0.52 },   // the bulge: quick, with a jelly wobble
   };
   const _pill = {
     x: 6, w: 68, vx: 0, vw: 0, tx: 6, tw: 68,     // left edge and width, in the bar's content
@@ -1318,13 +1318,14 @@ const G = (() => {
   function _pillDraw() {
     const el = $('ios-pill'); if (!el) return;
     const p = _pill;
-    // Picked up, the lens swells a touch; moving fast, it stretches along
-    // its path and thins, and gives the shape back as it slows.
+    // Touched, the lens bulges up under the finger; moving fast, it
+    // stretches along its path and thins, and gives the shape back as it
+    // slows. Let go, it springs back with a small wobble.
     let sx = 1, sy = 1;
     if (!_RM.matches) {
       const stretch = Math.min(Math.abs(p.vx) / 6000, 0.10);
-      sx = 1 + 0.06 * p.lift + stretch;
-      sy = 1 + 0.10 * p.lift - stretch * 0.6;
+      sx = 1 + 0.10 * p.lift + stretch;
+      sy = 1 + 0.16 * p.lift - stretch * 0.6;
     }
     el.style.width = p.w.toFixed(2) + 'px';
     el.style.transform = `translate3d(${p.x.toFixed(2)}px,0,0) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
@@ -1376,6 +1377,7 @@ const G = (() => {
   // ── Dragging the pill ──
   let _pillDrag = null;          // the press in progress
   let _pillEatClick = false;     // a drag ended: the click that follows is not a tap
+  let _pillUnpress = 0;          // a quick tap's bulge, waiting to settle
 
   function _pillTabs(navEl) {
     return [...navEl.querySelectorAll('.ios-item')].map(el => {
@@ -1444,8 +1446,13 @@ const G = (() => {
         grab: onPill ? px - (p.x + p.w / 2) : 0,
         trail: [{ x: e.clientX, t: e.timeStamp }],
       };
-      // Pressing the lens itself lifts it at once, as on iOS.
-      if (onPill) { p.tl = 1; _pillGo(p.tx, p.tw, p.spring); }
+      // Pressing the lens itself bulges it at once, as on iOS.
+      if (onPill) {
+        _pillDrag.pressAt = e.timeStamp;
+        clearTimeout(_pillUnpress);
+        $('ios-pill')?.classList.add('ios-pill-lifted');
+        p.tl = 1; _pillGo(p.tx, p.tw, p.spring);
+      }
     });
 
     navEl.addEventListener('pointermove', e => {
@@ -1468,8 +1475,20 @@ const G = (() => {
     const finish = (e, cancelled) => {
       const d = _pillDrag; if (!d || e.pointerId !== d.id) return;
       _pillDrag = null;
+      if (!d.on) {
+        // A tap: the click does the rest. A quick tap still shows its bulge
+        // for a moment before the lens settles back.
+        const unpress = () => {
+          _pill.tl = 0;
+          $('ios-pill')?.classList.remove('ios-pill-lifted');
+          _pillGo(_pill.tx, _pill.tw, _pill.spring);
+        };
+        const held = d.pressAt != null ? e.timeStamp - d.pressAt : Infinity;
+        if (held < 140 && !_RM.matches) _pillUnpress = setTimeout(unpress, 140 - held);
+        else unpress();
+        return;
+      }
       _pill.tl = 0;
-      if (!d.on) { _pillGo(_pill.tx, _pill.tw, _pill.spring); return; }   // a tap: the click does the rest
       navEl.classList.remove('ios-nav-dragging');
       $('ios-pill')?.classList.remove('ios-pill-lifted');
       d.peek?.el.classList.remove('ios-peek');
