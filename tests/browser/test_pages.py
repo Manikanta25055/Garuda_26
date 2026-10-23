@@ -1094,3 +1094,37 @@ def test_a_quick_flick_throws_the_nav_pill_past_the_tab_under_the_hand(user_page
     page.wait_for_timeout(900)
     assert not _active(page, "dashboard") and not _active(page, "devices")
     p.assert_clean()
+
+
+def _pill_scale(page):
+    return page.evaluate("(() => { const m = new DOMMatrix(getComputedStyle(document.getElementById('ios-pill'))"
+                         ".transform); return [m.a, m.d]; })()")
+
+
+def test_the_nav_pill_bulges_while_it_is_pressed(user_page):
+    p = user_page
+    page = p.page
+    p.go("dashboard")
+    page.wait_for_timeout(600)
+    assert _pill_scale(page) == [1, 1]
+    x, y = _pill_center(page)
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.wait_for_timeout(300)
+    sx, sy = _pill_scale(page)
+    assert sx > 1.05 and sy > 1.1                       # swollen under the press, taller than wide
+    assert p.js("document.getElementById('ios-pill').classList.contains('ios-pill-lifted')")
+    page.mouse.up()
+    page.wait_for_timeout(900)
+    assert _pill_scale(page) == [1, 1]
+    assert not p.js("document.getElementById('ios-pill').classList.contains('ios-pill-lifted')")
+
+    # Even a quick tap shows the bulge before the pill settles back.
+    page.mouse.down()
+    page.mouse.up()
+    page.wait_for_timeout(80)
+    assert _pill_scale(page)[1] > 1.03
+    page.wait_for_timeout(900)
+    assert _pill_scale(page) == [1, 1]
+    assert _active(page, "dashboard")
+    p.assert_clean()
