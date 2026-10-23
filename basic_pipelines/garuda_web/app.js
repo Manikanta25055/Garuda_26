@@ -1278,32 +1278,255 @@ const G = (() => {
     { page: null,         label: 'Stop',     icon: 'emergency', danger: true },
   ];
 
-  function movePill(itemEl, instant) {
-    const pill  = $('ios-pill');
-    const navEl = $('ios-nav');
-    if (!pill || !navEl || !itemEl) return;
-    const nr  = navEl.getBoundingClientRect();
-    const ir  = itemEl.getBoundingClientRect();
-    const ovr = 8;
-    // getBoundingClientRect() is viewport-relative; pill is positioned in the
-    // nav's scrollable content area, so we must add scrollLeft to compensate.
-    let tx = ir.left - nr.left + navEl.scrollLeft - ovr;
-    let w  = ir.width + ovr * 2;
-    // Keep the pill inside the bar: the first and last tabs sit near its
-    // rounded ends, where the overhang used to poke out.
-    const inset = 4, maxX = navEl.scrollWidth - inset;
-    if (tx < inset) { w -= inset - tx; tx = inset; }
-    if (tx + w > maxX) w = maxX - tx;
-    if (instant) {
-      pill.style.transition = 'none';
-      pill.style.transform  = `translateX(${tx}px)`;
-      pill.style.width      = w + 'px';
-      pill.offsetHeight;          // force reflow so transition disables cleanly
-      pill.style.transition = '';
-    } else {
-      pill.style.transform = `translateX(${tx}px)`;
-      pill.style.width     = w + 'px';
+  // ── The tab bar's selection pill ──────────────────────────
+  // A lens that sits under the current tab. A tap sends it there; a press
+  // and drag (mouse, pen or finger) picks it up and carries it across the
+  // bar, and letting go throws it to the tab it is heading for, which is
+  // then opened. Motion is a real spring, not a CSS curve: it is integrated
+  // per frame, so a throw keeps the hand's velocity and a tap that lands
+  // mid-flight bends the path instead of restarting it. Springs are given
+  // as SwiftUI gives them, a response (seconds) and a damping fraction.
+  const _RM = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const _SPRING = {
+    tap:     { response: 0.38, damping: 0.80 },   // a tab was tapped
+    release: { response: 0.42, damping: 0.74 },   // let go: a little settle
+    follow:  { response: 0.11, damping: 1.00 },   // under the hand: tight, never bouncy
+    lift:    { response: 0.28, damping: 0.70 },
+  };
+  const _pill = {
+    x: 6, w: 68, vx: 0, vw: 0, tx: 6, tw: 68,     // left edge and width, in the bar's content
+    lift: 0, vl: 0, tl: 0,                         // 0 resting, 1 picked up
+    spring: _SPRING.tap, raf: 0, last: 0,
+    thrown: false,                                 // the next move carries on from a throw
+  };
+
+  // Where the pill sits for a tab: a little wider than the tab, and kept
+  // inside the bar, since the first and last tabs sit near its rounded ends.
+  function _pillSpot(navEl, itemEl) {
+    const nr = navEl.getBoundingClientRect();
+    const ir = itemEl.getBoundingClientRect();
+    const ovr = 8, inset = 4, maxX = navEl.scrollWidth - inset;
+    // getBoundingClientRect() is viewport-relative; the pill is positioned
+    // in the nav's scrollable content, so scrollLeft is added back.
+    let x = ir.left - nr.left + navEl.scrollLeft - ovr;
+    let w = ir.width + ovr * 2;
+    if (x < inset) { w -= inset - x; x = inset; }
+    if (x + w > maxX) w = maxX - x;
+    return { x, w };
+  }
+
+  function _pillDraw() {
+    const el = $('ios-pill'); if (!el) return;
+    const p = _pill;
+    // Picked up, the lens swells a touch; moving fast, it stretches along
+    // its path and thins, and gives the shape back as it slows.
+    let sx = 1, sy = 1;
+    if (!_RM.matches) {
+      const stretch = Math.min(Math.abs(p.vx) / 6000, 0.10);
+      sx = 1 + 0.06 * p.lift + stretch;
+      sy = 1 + 0.10 * p.lift - stretch * 0.6;
     }
+    el.style.width = p.w.toFixed(2) + 'px';
+    el.style.transform = `translate3d(${p.x.toFixed(2)}px,0,0) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
+  }
+
+  function _pillStep(now) {
+    const p = _pill;
+    const dt = Math.min(0.05, Math.max(0, (now - (p.last || now)) / 1000));
+    p.last = now;
+    // Fixed small steps keep the spring the same at 60 and 120 Hz.
+    for (let t = 0; t < dt; t += 1 / 240) {
+      const h = Math.min(1 / 240, dt - t);
+      const sp = p.spring, kx = Math.pow(2 * Math.PI / sp.response, 2), cx = 4 * Math.PI * sp.damping / sp.response;
+      p.vx += (-kx * (p.x - p.tx) - cx * p.vx) * h; p.x += p.vx * h;
+      p.vw += (-kx * (p.w - p.tw) - cx * p.vw) * h; p.w += p.vw * h;
+      const sl = _SPRING.lift, kl = Math.pow(2 * Math.PI / sl.response, 2), cl = 4 * Math.PI * sl.damping / sl.response;
+      p.vl += (-kl * (p.lift - p.tl) - cl * p.vl) * h; p.lift += p.vl * h;
+    }
+    _pillDraw();
+    const still = Math.abs(p.x - p.tx) < 0.05 && Math.abs(p.vx) < 0.5
+      && Math.abs(p.w - p.tw) < 0.05 && Math.abs(p.vw) < 0.5
+      && Math.abs(p.lift - p.tl) < 0.002 && Math.abs(p.vl) < 0.01;
+    if (still && !_pillDrag) {
+      p.x = p.tx; p.w = p.tw; p.lift = p.tl; p.vx = p.vw = p.vl = 0;
+      _pillDraw(); p.raf = 0; p.last = 0;
+      return;
+    }
+    p.raf = requestAnimationFrame(_pillStep);
+  }
+
+  function _pillGo(x, w, spring, instant) {
+    const p = _pill;
+    p.tx = x; p.tw = w; p.spring = spring || _SPRING.tap;
+    if (instant || _RM.matches) {
+      p.x = x; p.w = w; p.vx = p.vw = 0;
+      if (!p.raf) { p.lift = p.tl; p.vl = 0; _pillDraw(); return; }
+    }
+    if (!p.raf) { p.last = 0; p.raf = requestAnimationFrame(_pillStep); }
+  }
+
+  function movePill(itemEl, instant) {
+    const navEl = $('ios-nav');
+    if (!$('ios-pill') || !navEl || !itemEl) return;
+    const { x, w } = _pillSpot(navEl, itemEl);
+    _pillGo(x, w, _pill.thrown ? _SPRING.release : _SPRING.tap, instant);
+    _pill.thrown = false;
+  }
+
+  // ── Dragging the pill ──
+  let _pillDrag = null;          // the press in progress
+  let _pillEatClick = false;     // a drag ended: the click that follows is not a tap
+
+  function _pillTabs(navEl) {
+    return [...navEl.querySelectorAll('.ios-item')].map(el => {
+      const s = _pillSpot(navEl, el);
+      return { el, x: s.x, w: s.w, c: s.x + s.w / 2, danger: el.classList.contains('ios-danger') };
+    });
+  }
+
+  // UIScrollView's rubber band: past the end, the pill gives less and less.
+  const _rubber = (d, dim) => (1 - 1 / (d * 0.55 / dim + 1)) * dim;
+
+  function _pillContentX(navEl, clientX) {
+    return clientX - navEl.getBoundingClientRect().left + navEl.scrollLeft;
+  }
+
+  function _pillPeek(navEl, tab) {
+    if (_pillDrag.peek === tab) return;
+    _pillDrag.peek?.el.classList.remove('ios-peek');
+    _pillDrag.peek = tab;
+    tab?.el.classList.add('ios-peek');
+    if (tab) window.Feel?.touch('selection');   // a detent as it crosses each tab
+  }
+
+  // The tab nearest a point on the bar. The Stop button is never a place to
+  // land: dropping on it must not stop the house.
+  function _pillNearest(tabs, c) {
+    let best = null;
+    for (const t of tabs) {
+      if (t.danger) continue;
+      if (!best || Math.abs(t.c - c) < Math.abs(best.c - c)) best = t;
+    }
+    return best;
+  }
+
+  function _pillFollow(navEl, clientX) {
+    const d = _pillDrag, tabs = d.tabs, first = tabs[0], end = tabs[tabs.length - 1];
+    let c = _pillContentX(navEl, clientX) - d.grab;
+    // Past the first or last tab the pill holds back, as a list does.
+    if (c < first.c) c = first.c - _rubber(first.c - c, 48);
+    else if (c > end.c) c = end.c + _rubber(c - end.c, 48);
+    // Its width blends between the two tabs it is over.
+    let w = first.w;
+    for (let i = 0; i < tabs.length - 1; i++) {
+      const a = tabs[i], b = tabs[i + 1];
+      if (c >= a.c && c <= b.c) { const t = (c - a.c) / (b.c - a.c || 1); w = a.w + (b.w - a.w) * t; break; }
+      if (c > b.c) w = b.w;
+    }
+    _pillGo(c - w / 2, w, _SPRING.follow);
+    _pillPeek(navEl, _pillNearest(tabs, c));
+  }
+
+  function _bindPillDrag(navEl) {
+    if (navEl.dataset.pillDrag) return;
+    navEl.dataset.pillDrag = '1';
+
+    navEl.addEventListener('pointerdown', e => {
+      if (e.button !== 0 || !e.isPrimary || _pillDrag) return;
+      if (!e.target.closest('.ios-item')) return;
+      const tabs = _pillTabs(navEl);
+      if (tabs.length < 2) return;
+      const px = _pillContentX(navEl, e.clientX);
+      const p = _pill, onPill = px >= p.x && px <= p.x + p.w;
+      _pillDrag = {
+        id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false, tabs, peek: null,
+        // Picked up by its side, the pill stays under the hand where it was held.
+        grab: onPill ? px - (p.x + p.w / 2) : 0,
+        trail: [{ x: e.clientX, t: e.timeStamp }],
+      };
+      // Pressing the lens itself lifts it at once, as on iOS.
+      if (onPill) { p.tl = 1; _pillGo(p.tx, p.tw, p.spring); }
+    });
+
+    navEl.addEventListener('pointermove', e => {
+      const d = _pillDrag; if (!d || e.pointerId !== d.id) return;
+      d.trail.push({ x: e.clientX, t: e.timeStamp });
+      while (d.trail.length > 2 && e.timeStamp - d.trail[0].t > 100) d.trail.shift();
+      if (!d.on) {
+        const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+        if (Math.abs(dx) < 6 || Math.abs(dx) < Math.abs(dy)) return;
+        d.on = true;
+        try { navEl.setPointerCapture(d.id); } catch {}
+        navEl.classList.add('ios-nav-dragging');
+        $('ios-pill')?.classList.add('ios-pill-lifted');
+        _pill.tl = 1;
+      }
+      e.preventDefault();
+      _pillFollow(navEl, e.clientX);
+    });
+
+    const finish = (e, cancelled) => {
+      const d = _pillDrag; if (!d || e.pointerId !== d.id) return;
+      _pillDrag = null;
+      _pill.tl = 0;
+      if (!d.on) { _pillGo(_pill.tx, _pill.tw, _pill.spring); return; }   // a tap: the click does the rest
+      navEl.classList.remove('ios-nav-dragging');
+      $('ios-pill')?.classList.remove('ios-pill-lifted');
+      d.peek?.el.classList.remove('ios-peek');
+      _pillEatClick = true;
+      setTimeout(() => { _pillEatClick = false; }, 0);
+      // The hand's speed over the last tenth of a second. A hand that
+      // stopped before letting go throws nothing.
+      d.trail.push({ x: e.clientX, t: e.timeStamp });
+      const recent = d.trail.filter(s => e.timeStamp - s.t <= 100);
+      const a = recent[0], b = recent[recent.length - 1];
+      const v = recent.length > 1 && b.t > a.t ? (b.x - a.x) / ((b.t - a.t) / 1000) : 0;
+      const current = navEl.querySelector('.ios-item.active');
+      let to = null;
+      if (!cancelled) {
+        // Where a throw would come to rest, as iOS projects a flick, so a
+        // quick flick carries on past the tab under the hand.
+        const c = _pill.x + _pill.w / 2 + Math.max(-2500, Math.min(2500, v)) * 0.1;
+        to = _pillNearest(d.tabs, c);
+      }
+      _pill.vx = _RM.matches ? 0 : Math.max(-3000, Math.min(3000, v));
+      _pill.thrown = true;
+      if (!to || to.el === current) { if (current) movePill(current); return; }
+      if (to.el.dataset.page === 'more') {
+        // The More sheet opens over the bar; the pill goes home under it.
+        if (current) movePill(current);
+        openMoreSheet();
+        return;
+      }
+      window.Feel?.touch('light');
+      nav(to.el.dataset.page, to.el);
+    };
+    navEl.addEventListener('pointerup', e => finish(e, false));
+    navEl.addEventListener('pointercancel', e => finish(e, true));
+    // Only the bar losing the pointer counts: a touch starts captured by its
+    // button, which lets go (and says so) when the bar takes it over.
+    navEl.addEventListener('lostpointercapture', e => { if (e.target === navEl && _pillDrag?.on) finish(e, false); });
+
+    // The click after a drag is the end of the drag, not a tap on a tab.
+    navEl.addEventListener('click', e => {
+      if (_pillEatClick) { _pillEatClick = false; e.preventDefault(); e.stopPropagation(); }
+    }, true);
+
+    // Arrow keys walk the tabs, as in a tab bar on the Mac.
+    navEl.addEventListener('keydown', e => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const items = [...navEl.querySelectorAll('.ios-item')];
+      const i = items.indexOf(document.activeElement);
+      if (i < 0) return;
+      const next = items[i + (e.key === 'ArrowRight' ? 1 : -1)];
+      if (next) { e.preventDefault(); next.focus(); }
+    });
+
+    // The bar changes width with the window on a phone; the pill follows.
+    window.addEventListener('resize', () => {
+      const cur = navEl.querySelector('.ios-item.active');
+      if (cur && !_pillDrag) movePill(cur, true);
+    });
   }
 
   // Phone mode: five tabs, the rest in an iOS-style "More" sheet. Eleven
@@ -1330,6 +1553,7 @@ const G = (() => {
     const items = _forProduct(role === 'admin' ? _ADMIN_NAV : _USER_NAV);
     const navEl = $('ios-nav');
     if (!navEl) return;
+    _bindPillDrag(navEl);
     navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
     const phone = _isPhone();
     navEl.classList.toggle('ios-nav-phone', phone);

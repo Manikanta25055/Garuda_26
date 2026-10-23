@@ -968,3 +968,129 @@ def test_captures_of_one_alert_show_together_and_play(admin_page, tmp_path, monk
     p.page.wait_for_timeout(600)
     assert store.get(kept["id"])["keep"] is True
     p.assert_clean()
+
+
+def _pill_center(page):
+    return page.evaluate("(() => { const r = document.getElementById('ios-pill').getBoundingClientRect();"
+                         " return [r.left + r.width / 2, r.top + r.height / 2]; })()")
+
+
+def _tab_center(page, page_id):
+    return page.evaluate(f"(() => {{ const r = document.querySelector('.ios-item[data-page={page_id}]')"
+                         f".getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }})()")
+
+
+def _active(page, page_id):
+    return page.evaluate(f"document.getElementById('page-{page_id}').classList.contains('active')")
+
+
+def test_the_nav_pill_is_dragged_to_a_tab_and_opens_it(user_page):
+    p = user_page
+    page = p.page
+    p.go("dashboard")
+    page.wait_for_timeout(600)
+    x, y = _pill_center(page)
+    tx, _ = _tab_center(page, "insights")
+    page.mouse.move(x, y)
+    page.mouse.down()
+    for i in range(1, 21):                            # a slow drag: no throw
+        page.mouse.move(x + (tx - x) * i / 20, y)
+        page.wait_for_timeout(16)
+    page.wait_for_timeout(200)
+    assert p.js("document.getElementById('ios-nav').classList.contains('ios-nav-dragging')")
+    page.mouse.up()
+    page.wait_for_timeout(900)
+    assert _active(page, "insights") and not _active(page, "dashboard")
+    assert abs(_pill_center(page)[0] - tx) < 2         # settled under the tab
+    assert not p.js("document.getElementById('ios-nav').classList.contains('ios-nav-dragging')")
+
+    # Let go short of a tab: it snaps to the nearest one.
+    dx, _ = _tab_center(page, "devices")
+    x, y = _pill_center(page)
+    page.mouse.move(x, y)
+    page.mouse.down()
+    for i in range(1, 16):
+        page.mouse.move(x + (dx + 12 - x) * i / 15, y)
+        page.wait_for_timeout(16)
+    page.wait_for_timeout(200)
+    page.mouse.up()
+    page.wait_for_timeout(900)
+    assert _active(page, "devices")
+    assert abs(_pill_center(page)[0] - dx) < 2
+
+    # A tap still works, and the click after a drag was not taken as one.
+    p.go("narada")
+    assert _active(page, "narada")
+    page.wait_for_timeout(600)
+    assert abs(_pill_center(page)[0] - _tab_center(page, "narada")[0]) < 2
+    p.assert_clean()
+
+
+def test_the_nav_pill_never_drops_on_the_stop_button(admin_page):
+    p = admin_page
+    page = p.page
+    p.js("window.__stops = 0; const f = window.fetch; window.fetch = (u, o) =>"
+         " { if (String(u).includes('emergency')) window.__stops++; return f(u, o); }")
+    x, y = _pill_center(page)
+    stop = page.evaluate("(() => { const r = document.querySelector('.ios-item.ios-danger')"
+                         ".getBoundingClientRect(); return r.left + r.width / 2; })()")
+    page.mouse.move(x, y)
+    page.mouse.down()
+    for i in range(1, 31):
+        page.mouse.move(x + (stop - x) * i / 30, y)
+        page.wait_for_timeout(16)
+    page.wait_for_timeout(200)
+    page.mouse.up()
+    page.wait_for_timeout(900)
+    assert p.js("window.__stops") == 0
+    assert _active(page, "a-cmds")                     # the last tab before Stop
+    p.assert_clean()
+
+
+@pytest.mark.parametrize("reduced", [False, True])
+def test_on_a_phone_the_nav_pill_is_swiped_with_a_finger(server, browser, reduced):
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True,
+                              reduced_motion="reduce" if reduced else "no-preference")
+    page = ctx.new_page()
+    errors = []
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.goto(server + "/")
+    page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
+                  "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
+    page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.wait_for_timeout(600)
+    cdp = ctx.new_cdp_session(page)
+    x, y = _pill_center(page)
+    tx, _ = _tab_center(page, "auto")
+    touch = lambda kind, px: cdp.send("Input.dispatchTouchEvent", {
+        "type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": px, "y": y}]})
+    touch("touchStart", x)
+    for i in range(1, 21):
+        touch("touchMove", x + (tx - x) * i / 20)
+        page.wait_for_timeout(16)
+    page.wait_for_timeout(200)
+    touch("touchEnd", tx)
+    page.wait_for_timeout(50 if reduced else 900)
+    assert _active(page, "auto")
+    assert abs(_pill_center(page)[0] - tx) < 2
+    assert errors == []
+    ctx.close()
+
+
+def test_a_quick_flick_throws_the_nav_pill_past_the_tab_under_the_hand(user_page):
+    p = user_page
+    page = p.page
+    p.go("dashboard")
+    page.wait_for_timeout(600)
+    x, y = _pill_center(page)
+    near, _ = _tab_center(page, "devices")
+    page.mouse.move(x, y)
+    page.mouse.down()
+    for i in range(1, 6):                              # fast, and let go while still moving
+        page.mouse.move(x + (near - x) * i / 5, y)
+        page.wait_for_timeout(8)
+    page.mouse.up()
+    page.wait_for_timeout(900)
+    assert not _active(page, "dashboard") and not _active(page, "devices")
+    p.assert_clean()
