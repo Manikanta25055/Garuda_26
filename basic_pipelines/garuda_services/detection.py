@@ -1,4 +1,4 @@
-"""Detection: the per-frame GStreamer callback, the night-presence check, the secondary worker and camera source resolution.
+"""Detection: the per-frame GStreamer callback, the night-presence check and camera source resolution.
 
 Moved out of Garuda_web.py (2026-10). Function bodies are unchanged except
 that names belonging to Garuda_web are read, and assigned, through `core`: the
@@ -29,44 +29,6 @@ def bind(module):
     core = module
 
 
-def _secondary_worker_loop():
-    """
-    Daemon thread: consumes person-detection frames from _secondary_queue,
-    runs MobileNet classification + MiDaS depth analysis (when available).
-    Decoupled from the primary GStreamer YOLO pipeline — primary never waits.
-
-    VDevice note: on Garuda_web the primary YOLO runs inside the GStreamer
-    hailonet element (owns the Hailo device). Secondary models would need
-    their own VDevice session or the hailonet would need to release the device.
-    In practice, secondary inference is stubbed here until the cascade HEFs
-    are loaded alongside the GStreamer pipeline. The architecture (queue,
-    daemon thread, drop semantics) is fully production-ready.
-    """
-    import logging
-    _log = logging.getLogger("garuda_web.secondary")
-    _log.info("Secondary worker thread started (daemon).")
-    while not core._secondary_stop.is_set():
-        try:
-            frame, det_info = core._secondary_queue.get(timeout=0.3)
-        except core._queue_mod.Empty:
-            continue
-
-        try:
-            # --- Secondary inference placeholder ---
-            # When cascade HEFs are loaded alongside the GStreamer pipeline,
-            # MobileNet + MiDaS inference runs here on the duplicated frame.
-            # For now: log the event, record completion metric.
-            label = det_info.get("label", "person")
-            conf  = det_info.get("confidence", 0.0)
-            _log.debug(f"Secondary analysis: {label} conf={conf:.2f}")
-        except Exception as e:
-            _log.warning(f"Secondary worker error: {e}")
-        finally:
-            core._cascade_metrics.record_secondary_complete()
-
-    _log.info("Secondary worker thread stopped.")
-
-
 def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
     with core.STATE.alerts.night_presence_lock:
@@ -94,16 +56,14 @@ def app_callback(pad, info, user_data):
 
     user_data.increment()
     core.STATE.camera.total_frames += 1
-    core._cascade_metrics.record_primary()
     frame_num = user_data.get_count()
     text_info = f"Frame: {frame_num}\n"
     format_, width, height = core.get_caps_from_pad(pad)
 
     # The frame is copied out of the buffer only when something here uses it:
-    # the published picture (15 a second), the light reading for the rules,
-    # a danger alert's second look and the secondary queue. Copying all of
-    # the pipeline's 60 frames a second, to use a quarter of them, was the
-    # largest fixed cost of this callback.
+    # the published picture (15 a second), the light reading for the rules and
+    # a danger alert's second look. Copying every frame of the pipeline, to use
+    # a fraction of them, was the largest fixed cost of this callback.
     can_read = bool(user_data.use_frame and format_ and width and height)
     _frame_box = []
 
@@ -150,14 +110,11 @@ def app_callback(pad, info, user_data):
     _watch_set  = {lbl.lower() for lbl in core.STATE.config.watch_labels}
 
     danger_detected = False
-    det_count = 0
     for d in detections:
         label = d.get_label()
         confidence = d.get_confidence()
         if confidence >= threshold:
-            det_count += 1
             text_info += f"{label} ({confidence:.2f})\n"
-            core.STATE.camera.class_counts_today[label] = core.STATE.camera.class_counts_today.get(label, 0) + 1
             # Privacy blur: blur any detected person (case-insensitive)
             if privacy and publish and label.lower() == "person" and _frame() is not None:
                 frame = _frame()
@@ -190,9 +147,6 @@ def app_callback(pad, info, user_data):
     for k in list(core.STATE.camera.label_consec_frames):
         if k not in seen_above_thr:
             core.STATE.camera.label_consec_frames[k] = 0
-
-    if det_count > 0:
-        core.STATE.camera.detections_today += det_count
 
     # Find which danger labels were actually detected this frame (for logging)
     _triggered_labels = [d.get_label() for d in detections
@@ -287,26 +241,6 @@ def app_callback(pad, info, user_data):
                 core._check_night_presence()
             except Exception as exc:
                 core.log_system_update(f"[NIGHT] presence check failed: {exc}")
-        # Async cascade: push frame to secondary queue for MobileNet + MiDaS.
-        # Non-blocking — if queue full, drop and record metric. Primary never waits.
-        if can_read:
-            best_person = max(
-                (d for d in detections if d.get_label().lower() == "person"),
-                key=lambda d: d.get_confidence(),
-                default=None,
-            )
-            if best_person is not None and _frame() is not None:
-                det_info = {
-                    "label": best_person.get_label(),
-                    "confidence": best_person.get_confidence(),
-                }
-                # _frame() is already this callback's own copy of the buffer,
-                # and nothing below writes to it.
-                try:
-                    core._secondary_queue.put_nowait((_frame(), det_info))
-                    core._cascade_metrics.record_secondary_enqueue()
-                except core._queue_mod.Full:
-                    core._cascade_metrics.record_secondary_drop()
 
     # Gated: the encode is the most expensive thing in this callback and no
     # browser can use 60fps MJPEG. Nothing is drawn on the frame -- the debug

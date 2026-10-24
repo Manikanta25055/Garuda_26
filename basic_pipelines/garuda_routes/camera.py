@@ -1,4 +1,4 @@
-"""The camera over HTTP: the MJPEG stream, a snapshot, clip recording and the WebRTC offer.
+"""The camera over HTTP: the MJPEG stream, a snapshot, and clip recording.
 
 Moved out of Garuda_web.py (2026-10). Handler bodies are unchanged except
 that names belonging to Garuda_web are read, and assigned, through `core`.
@@ -11,13 +11,7 @@ import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from typing import Optional
-
-
-class WebRTCOfferRequest(BaseModel):
-    sdp: str
-    type: str
 
 
 def build_camera_router(core):
@@ -134,52 +128,5 @@ def build_camera_router(core):
         core.log_system_update(f"Clip saved: {path}")
         threading.Thread(target=core.exfiltrate_clip, args=(path,), daemon=True).start()
         return {"ok": True, "path": path}
-
-    # ── WebRTC offer/answer ───────────────────────────────────────────────────────
-    @router.post("/webrtc/offer")
-    async def webrtc_offer(data: WebRTCOfferRequest, session=Depends(core.require_session)):
-        if not core._WEBRTC_AVAILABLE:
-            raise HTTPException(501, "aiortc not installed")
-        if data.type != "offer" or len(data.sdp) > 20000:
-            raise HTTPException(400, "Invalid offer")
-        # Each connection runs its own H.264 encoder; without a ceiling a signed-in
-        # client could open them until the Pi had nothing left for detection.
-        if len(core._pc_set) >= core._MAX_PEER_CONNECTIONS:
-            raise HTTPException(503, "Too many live video connections. Close one and try again.")
-        pc = core.RTCPeerConnection()
-        core._pc_set.add(pc)
-
-        @pc.on("connectionstatechange")
-        async def _on_state():
-            if pc.connectionState in ("failed", "closed", "disconnected"):
-                await pc.close()
-                core._pc_set.discard(pc)
-
-        try:
-            pc.addTrack(core.GarudaVideoTrack())
-            offer = core.RTCSessionDescription(sdp=data.sdp, type=data.type)
-            await pc.setRemoteDescription(offer)
-            answer = await pc.createAnswer()
-            await pc.setLocalDescription(answer)
-
-            # Wait for ICE gathering to complete, but not for ever: with no route
-            # out this loop never ended and the request (and the connection) hung.
-            deadline = time.time() + 10
-            while pc.iceGatheringState != "complete":
-                if time.time() > deadline:
-                    raise HTTPException(504, "WebRTC negotiation timed out")
-                await asyncio.sleep(0.1)
-        except Exception as exc:
-            # A bad offer used to leave the half-built connection in _pc_set for good.
-            core._pc_set.discard(pc)
-            try:
-                await pc.close()
-            except Exception:
-                pass
-            if isinstance(exc, HTTPException):
-                raise
-            raise HTTPException(400, f"Could not negotiate video: {type(exc).__name__}")
-
-        return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
 
     return router

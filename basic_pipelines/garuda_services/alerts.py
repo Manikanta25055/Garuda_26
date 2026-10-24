@@ -7,7 +7,6 @@ back under the same names.
 """
 import datetime
 import os
-import subprocess
 import time
 
 core = None
@@ -45,12 +44,9 @@ def trigger_software_alert():
         core.STATE.alerts.last_alert_time = datetime.datetime.now()
         core._record_alert_activity()
         core.log_system_update("Alert triggered.")
+        # The open pages sound the alarm (sound.js). The Pi used to play
+        # ALSA's speaker-test clip as well: a voice saying "front, center".
         core.push_urgent_ws()
-        try:
-            subprocess.Popen(["aplay", "/usr/share/sounds/alsa/Front_Center.wav"],
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        except Exception:
-            pass
 
 
 RECHECK_S = 20      # a held email is looked at again if the detector still sees it after this

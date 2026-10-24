@@ -1,5 +1,4 @@
-"""The camera pipeline: the GStreamer detection app, its per-run callback state and the
-cascade counters.
+"""The camera pipeline: the GStreamer detection app and its per-run callback state.
 
 Moved out of Garuda_web.py (2026-10). Class bodies are unchanged except that
 names belonging to Garuda_web are read through `core`: the live module, handed
@@ -36,41 +35,6 @@ def bind(module):
         raise RuntimeError(f"{__name__} is already bound to {core.__name__}; "
                            f"refusing a second copy, {module.__name__}")
     core = module
-
-
-class _WebCascadeMetrics:
-    """Thread-safe counters for the web server's async cascade path."""
-    def __init__(self):
-        self._lock               = threading.Lock()
-        self.primary_frames      = 0
-        self.secondary_enqueued  = 0
-        self.secondary_dropped   = 0
-        self.secondary_completed = 0
-
-    def record_primary(self):
-        with self._lock:
-            self.primary_frames += 1
-
-    def record_secondary_enqueue(self):
-        with self._lock:
-            self.secondary_enqueued += 1
-
-    def record_secondary_drop(self):
-        with self._lock:
-            self.secondary_dropped += 1
-
-    def record_secondary_complete(self):
-        with self._lock:
-            self.secondary_completed += 1
-
-    def snapshot(self) -> dict:
-        with self._lock:
-            return {
-                "primary_frames":      self.primary_frames,
-                "secondary_enqueued":  self.secondary_enqueued,
-                "secondary_dropped":   self.secondary_dropped,
-                "secondary_completed": self.secondary_completed,
-            }
 
 
 class user_app_callback_class(app_callback_class):
@@ -249,26 +213,37 @@ class GStreamerDetectionApp(GStreamerApp):
                     except Exception:
                         pass
 
+    def _whole_buffer_cropper(self):
+        """TAPPAS's whole-frame cropper, or None when this install lacks it."""
+        path = os.path.join(self.postprocess_dir or "", "cropping_algorithms", "libwhole_buffer.so")
+        return path if os.path.exists(path) else None
+
     def get_pipeline_string(self):
+        """The camera at its own size for the picture, a 640x640 copy for the network.
+
+        The whole stream used to be scaled to 640x640 before the tee, so the
+        live view, snapshots and saved clips were a 16:9 picture squeezed into
+        a square. Now hailocropper hands the network a letterboxed 640x640
+        copy and hailoaggregator puts its detections back on the full frame
+        (boxes are fractions of the frame, so they still line up). Without
+        TAPPAS's whole-buffer cropper it falls back to the old square stream.
+        """
         if self.source_type == "rpi":
-            # 1280x720 @ 60fps — IMX708 supports up to 120fps at 720p vs 30fps at 1536x864
-            # Frames arrive from _feed_pi_camera (picamera2) already RGB at this
-            # size; skip the common videoscale+videoconvert to avoid redundant
-            # processing on the Pi 5. Leaky: a late frame is dropped, never queued.
+            # Frames arrive from _feed_pi_camera (picamera2) already RGB at
+            # this size. Leaky: a late frame is dropped, never queued.
             source_element = (
                 "appsrc name=app_source is-live=true do-timestamp=true format=time "
                 "max-buffers=2 leaky-type=downstream ! "
                 f"video/x-raw, format={self.network_format}, width={core.PI_CAMERA_SIZE[0]}, "
                 f"height={core.PI_CAMERA_SIZE[1]}, framerate={core.PI_CAMERA_FPS}/1 ! "
-                + QUEUE("queue_src_scale")
-                + "videoscale n-threads=2 ! "
-                f"video/x-raw, format={self.network_format}, width={self.network_width}, height={self.network_height}, "
-                "pixel-aspect-ratio=1/1 ! "
             )
         elif self.source_type == "usb":
             source_element = (
                 f"v4l2src device={self.video_source} name=src_0 ! "
                 "video/x-raw, width=640, height=480, framerate=30/1 ! "
+                + QUEUE("queue_src_convert")
+                + "videoconvert n-threads=2 name=src_convert qos=false ! "
+                f"video/x-raw, format={self.network_format} ! "
             )
         else:
             source_element = (
@@ -276,46 +251,57 @@ class GStreamerDetectionApp(GStreamerApp):
                 + QUEUE("queue_dec264")
                 + "qtdemux ! h264parse ! avdec_h264 max-threads=2 ! "
                 "video/x-raw, format=I420 ! "
+                + QUEUE("queue_src_convert")
+                + "videoconvert n-threads=2 name=src_convert qos=false ! "
+                f"video/x-raw, format={self.network_format} ! "
             )
 
-        if self.source_type != "rpi":
-            # USB and file sources need scale + format conversion to network dims
-            source_element += QUEUE("queue_scale")
-            source_element += "videoscale n-threads=2 ! "
-            source_element += QUEUE("queue_src_convert")
-            source_element += "videoconvert n-threads=3 name=src_convert qos=false ! "
-            source_element += (
-                f"video/x-raw, format={self.network_format}, "
-                f"width={self.network_width}, height={self.network_height}, "
-                "pixel-aspect-ratio=1/1 ! "
+        network = (
+            f"hailonet hef-path={self.hef_path} batch-size={self.batch_size} "
+            f"{self.thresholds_str} force-writable=true ! "
+            + QUEUE("queue_hailofilter")
+            + f"hailofilter so-path={self.default_postprocess_so} {self.labels_config} qos=false ! "
+        )
+        # Nothing downstream of the probe is used: the frames the app serves
+        # are taken at identity_callback.
+        tail = (
+            QUEUE("queue_user_callback")
+            + "identity name=identity_callback ! "
+            "fakesink name=hailo_display sync=false "
+        )
+
+        cropper = self._whole_buffer_cropper()
+        if cropper:
+            return (
+                source_element
+                + QUEUE("queue_crop")
+                + f"hailocropper name=crop so-path={cropper} function-name=create_crops "
+                "use-letterbox=true resize-method=inter-area internal-offset=true "
+                "hailoaggregator name=agg "
+                "crop. ! " + QUEUE("bypass_queue", max_size_buffers=20) + "agg.sink_0 "
+                "crop. ! " + QUEUE("queue_hailonet") + network
+                + QUEUE("queue_agg") + "agg.sink_1 "
+                "agg. ! " + tail
             )
 
-        pipeline_string = (
+        # Fallback: the old square stream (the picture is squeezed).
+        square = (
+            QUEUE("queue_src_scale")
+            + "videoscale n-threads=2 ! "
+            f"video/x-raw, format={self.network_format}, width={self.network_width}, "
+            f"height={self.network_height}, pixel-aspect-ratio=1/1 ! "
+        )
+        return (
             "hailomuxer name=hmux "
-            + source_element
+            + source_element + square
             + "tee name=t ! "
             + QUEUE("bypass_queue", max_size_buffers=20)
             + "hmux.sink_0 "
             + "t. ! "
             + QUEUE("queue_hailonet")
-            + "videoconvert n-threads=3 ! "
-            f"hailonet hef-path={self.hef_path} batch-size={self.batch_size} "
-            f"{self.thresholds_str} force-writable=true ! "
-            + QUEUE("queue_hailofilter")
-            + f"hailofilter so-path={self.default_postprocess_so} {self.labels_config} qos=false ! "
+            + network
             + QUEUE("queue_hmuc")
             + "hmux.sink_1 "
             + "hmux. ! "
-            + QUEUE("queue_hailo_python")
-            + QUEUE("queue_user_callback")
-            + "identity name=identity_callback ! "
-            # Nothing downstream of the probe. hailooverlay drew detection
-            # boxes and a three-threaded videoconvert converted them, both
-            # into a fakesink that discards the result -- the frames the app
-            # serves are taken at identity_callback, upstream of all of it.
-            # On a board that had already tripped its soft temperature limit
-            # that was worth reclaiming.
-            + QUEUE("queue_hailo_display")
-            + "fakesink name=hailo_display sync=false "
+            + tail
         )
-        return pipeline_string

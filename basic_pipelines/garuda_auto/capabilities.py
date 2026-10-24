@@ -535,7 +535,7 @@ PLUMBING = frozenset({
     "GET /", "GET /favicon.ico", "GET /manifest.json", "GET /sw.js", "- /static",
     "GET /apple-touch-icon.png", "GET /apple-touch-icon-precomposed.png",
     "GET /api/health", "GET /api/ready", "GET /api/meta", "GET /api/heartbeat",
-    "GET /stream", "POST /webrtc/offer", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
+    "GET /stream", "WS /ws", "WS /ws/stream", "WS /ws/narada-voice",
     "WS /ws/audio",
     "GET /api/events/pending",          # the offline client's own sync; it marks events as sent
     "POST /api/chat", "POST /api/chat/stream", "GET /api/narada/progress",
@@ -546,7 +546,7 @@ PLUMBING = frozenset({
     "GET /api/narada/artifacts", "GET /api/narada/artifacts/{artifact_id}/view",
     "POST /api/narada/artifacts/{artifact_id}/call", "POST /api/narada/artifacts/{artifact_id}/pin",
     "DELETE /api/narada/artifacts/{artifact_id}", "GET /api/narada/info",
-    "POST /api/narada/voice/token", "POST /api/narada/summary",
+    "POST /api/narada/voice/token",
     "GET /api/narada/voice/turns",     # original display results for the bound conversation
     "GET /api/captures/{capture_id}/file",   # the saved file itself, for a player on the page
     "POST /api/narada/voice/error",     # the browser reporting a voice error to the log

@@ -698,12 +698,6 @@
  {
   "kind": "http",
   "method": "POST",
-  "path": "/api/narada/summary",
-  "guard": "require_session"
- },
- {
-  "kind": "http",
-  "method": "POST",
   "path": "/api/narada/voice/error",
   "guard": "require_session"
  },
@@ -862,12 +856,6 @@
   "method": "GET",
   "path": "/sw.js",
   "guard": "none"
- },
- {
-  "kind": "http",
-  "method": "POST",
-  "path": "/webrtc/offer",
-  "guard": "require_session"
  },
  {
   "kind": "websocket",

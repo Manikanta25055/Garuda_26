@@ -161,3 +161,42 @@ def test_a_covered_lens_alarms_after_ten_seconds_not_after_a_frame_count(monkeyp
     clock[0] += detection.BLIND_ALERT_S + 0.1
     run()
     assert gw.STATE.alerts.blind_alert_sent is True
+
+
+# ── the camera pipeline keeps the picture's shape ────────────────────────────
+
+def _app(tmp_path, source_type="rpi", cropper=True):
+    app = pipeline.GStreamerDetectionApp.__new__(pipeline.GStreamerDetectionApp)
+    app.source_type, app.video_source = source_type, "/dev/video0"
+    app.network_format, app.network_width, app.network_height = "RGB", 640, 640
+    app.hef_path, app.batch_size, app.thresholds_str = "m.hef", 1, ""
+    app.default_postprocess_so, app.labels_config = "post.so", ""
+    app.postprocess_dir = str(tmp_path)
+    if cropper:
+        (tmp_path / "cropping_algorithms").mkdir()
+        (tmp_path / "cropping_algorithms" / "libwhole_buffer.so").write_bytes(b"")
+    return app
+
+
+def test_the_picture_is_not_squeezed_before_the_network(tmp_path):
+    s = _app(tmp_path).get_pipeline_string()
+    # The full 1280x720 frame reaches the callback; only the network's copy is 640x640.
+    assert "width=1280, height=720" in s and "hailocropper" in s and "use-letterbox=true" in s
+    assert "videoscale" not in s and "agg. ! " in s and "identity name=identity_callback" in s
+    assert s.index("hailocropper") < s.index("hailonet") < s.index("agg.sink_1")
+
+
+def test_usb_and_file_sources_are_converted_once_at_their_own_size(tmp_path):
+    for kind in ("usb", "file"):
+        (tmp_path / kind).mkdir()
+        s = _app(tmp_path / kind, kind).get_pipeline_string()
+        assert "hailocropper" in s and "format=RGB" in s and "width=640, height=640" not in s
+
+
+def test_without_the_cropper_the_old_square_stream_still_runs(tmp_path):
+    s = _app(tmp_path, cropper=False).get_pipeline_string()
+    assert "hailomuxer" in s and "width=640, height=640" in s and "hailocropper" not in s
+
+
+def test_the_pi_camera_runs_at_30_fps():
+    assert gw.PI_CAMERA_FPS == 30

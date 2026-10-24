@@ -275,7 +275,6 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw.STATE.presence, 'log',  [])
     monkeypatch.setattr(gw.STATE.system, 'net_online',    True)
     monkeypatch.setattr(gw.STATE.camera, 'total_frames',  0)
-    monkeypatch.setattr(gw.STATE.camera, 'detections_today', 0)
     monkeypatch.setattr(gw.STATE.alerts, 'last_email_sent_time', 0)
     monkeypatch.setattr(gw.STATE.config, 'detection_threshold', 0.3)
     monkeypatch.setattr(gw.STATE.config, 'custom_voice_commands', {})
