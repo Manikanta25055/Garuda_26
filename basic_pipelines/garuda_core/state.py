@@ -86,7 +86,7 @@ class Alerts:
     night_presence_end_time: float = 0.0
     night_presence_last_check: float = 0.0
     night_presence_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
-    blind_frame_count: int = 0
+    blind_since: float = 0.0   # when the picture went uniform (lens covered?), 0 when it is not
     blind_alert_sent: bool = False
     # The second look at a weapon detection (garuda_auto/vision_check.py): the
     # last result, and since when its email is held because it looked harmless.
@@ -208,7 +208,7 @@ RETIRED_NAMES = {
     "_night_presence_alert_end_time": ("alerts", "night_presence_end_time"),
     "_np_last_check": ("alerts", "night_presence_last_check"),
     "_np_lock": ("alerts", "night_presence_lock"),
-    "_blind_frame_count": ("alerts", "blind_frame_count"),
+    "_blind_frame_count": ("alerts", "blind_since"),
     "_blind_alert_sent": ("alerts", "blind_alert_sent"),
     # presence
     "_owner_present": ("presence", "owner_present"),

@@ -79,11 +79,11 @@ def email_after_second_look(frame, bbox, label, again=False):
         return result
     core.STATE.alerts.email_held_at = 0.0
     send_email_alert(note=line + (" (an earlier look said harmless; the detector kept seeing it)"
-                                  if again else ""))
+                                  if again else ""), label=label)
     return result
 
 
-def send_email_alert(note=""):
+def send_email_alert(note="", label=None):
     with core.STATE.modes.lock:
         email_off = core.STATE.modes.email_off
         idle = core.STATE.modes.idle
@@ -97,7 +97,9 @@ def send_email_alert(note=""):
             return
         core.STATE.alerts.last_email_sent_time = current_time
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    label_str = ", ".join(core.STATE.config.danger_labels)
+    # The object that was seen. Every watched label was listed, so a knife
+    # alert read "Knife, Scissors, Hammer" whatever had been in view.
+    label_str = label or ", ".join(core.STATE.config.danger_labels)
     subject = f"Danger Object Detected — {label_str}"
     if emergency:
         subject = "EMERGENCY: " + subject

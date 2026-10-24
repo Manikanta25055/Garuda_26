@@ -14,6 +14,9 @@ import time
 
 core = None
 
+# Seconds of a uniform picture before the lens counts as covered.
+BLIND_ALERT_S = 10.0
+
 
 def bind(module):
     """Called by Garuda_web with itself, before anything here runs."""
@@ -96,20 +99,35 @@ def app_callback(pad, info, user_data):
     text_info = f"Frame: {frame_num}\n"
     format_, width, height = core.get_caps_from_pad(pad)
 
-    if user_data.use_frame and format_ and width and height:
-        frame = core.get_numpy_from_buffer(buffer, format_, width, height)
-    else:
-        frame = None
+    # The frame is copied out of the buffer only when something here uses it:
+    # the published picture (15 a second), the light reading for the rules,
+    # a danger alert's second look and the secondary queue. Copying all of
+    # the pipeline's 60 frames a second, to use a quarter of them, was the
+    # largest fixed cost of this callback.
+    can_read = bool(user_data.use_frame and format_ and width and height)
+    _frame_box = []
 
-    # Camera blindness detection — flag if camera is covered/blocked
-    if frame is not None:
-        # Every 4th pixel each way: a covered lens is uniform at any scale, and
-        # this runs on every frame of a 60 fps pipeline.
+    def _frame():
+        if not _frame_box:
+            _frame_box.append(core.get_numpy_from_buffer(buffer, format_, width, height)
+                              if can_read else None)
+        return _frame_box[0]
+
+    publish = can_read and core._frame_publisher.due()
+
+    # Camera blindness detection — flag if camera is covered/blocked. Checked
+    # on the published frames and timed in seconds: it counted frames, and
+    # "300 frames, about 10 s at 30 fps" was 5 s at the pipeline's 60.
+    if publish and _frame() is not None:
+        frame = _frame()
+        # Every 4th pixel each way: a covered lens is uniform at any scale.
         gray = cv2.cvtColor(np.ascontiguousarray(frame[::4, ::4]), cv2.COLOR_RGB2GRAY)
         variance = float(np.var(gray))
         if variance < 50:   # nearly uniform → blocked/covered
-            core.STATE.alerts.blind_frame_count += 1
-            if core.STATE.alerts.blind_frame_count >= 300 and not core.STATE.alerts.blind_alert_sent:   # ~10s at 30fps
+            now_b = time.time()
+            if not core.STATE.alerts.blind_since:
+                core.STATE.alerts.blind_since = now_b
+            if now_b - core.STATE.alerts.blind_since >= BLIND_ALERT_S and not core.STATE.alerts.blind_alert_sent:
                 core.STATE.alerts.blind_alert_sent = True
                 core.log_system_update("[TAMPER] Camera blindness detected — lens may be covered!")
                 core._append_detection_perm("TAMPER", "camera_blind", 0.0, "camera appears blocked")
@@ -117,7 +135,7 @@ def app_callback(pad, info, user_data):
                 # Max-priority: bypass DND/idle and send alert email immediately
                 threading.Thread(target=core._send_tamper_email, daemon=True).start()
         else:
-            core.STATE.alerts.blind_frame_count = 0
+            core.STATE.alerts.blind_since = 0.0
             core.STATE.alerts.blind_alert_sent = False
 
     roi = core.hailo.get_roi_from_buffer(buffer)
@@ -141,7 +159,8 @@ def app_callback(pad, info, user_data):
             text_info += f"{label} ({confidence:.2f})\n"
             core.STATE.camera.class_counts_today[label] = core.STATE.camera.class_counts_today.get(label, 0) + 1
             # Privacy blur: blur any detected person (case-insensitive)
-            if privacy and label.lower() == "person" and frame is not None:
+            if privacy and publish and label.lower() == "person" and _frame() is not None:
+                frame = _frame()
                 bbox = d.get_bbox()
                 x1 = int(bbox.xmin() * width)
                 y1 = int(bbox.ymin() * height)
@@ -193,7 +212,8 @@ def app_callback(pad, info, user_data):
                      for b in [d.get_bbox()]), None)
         _held_since = core.STATE.alerts.email_held_at
         _look_again = bool(_held_since) and time.time() - _held_since >= core._svc_alerts.RECHECK_S
-        _frame_copy = frame.copy() if frame is not None and (_is_rising_edge or _look_again) else None
+        _seen = _frame() if (_is_rising_edge or _look_again) else None
+        _frame_copy = _seen.copy() if _seen is not None else None
 
         # Batch all danger work into ONE daemon thread per frame (not 4-5 separate ones)
         def _danger_work(lbl=_captured_label, conf=_captured_conf, rising=_is_rising_edge,
@@ -250,7 +270,8 @@ def app_callback(pad, info, user_data):
                               "bbox": (b.xmin(), b.ymin(), b.xmax(), b.ymax())})
             # Subsampled: a full mean on every frame is not worth the cycles,
             # and ambient light does not change between adjacent pixels.
-            _luma = float(frame[::8, ::8].mean()) if frame is not None else 0.0
+            _lframe = _frame()
+            _luma = float(_lframe[::8, ::8].mean()) if _lframe is not None else 0.0
             core.DRISHTI_RUNTIME.observe(_dets, _luma)
         except Exception as exc:
             core.log_system_update(f"[DRISHTI] observe failed: {exc}")
@@ -268,19 +289,21 @@ def app_callback(pad, info, user_data):
                 core.log_system_update(f"[NIGHT] presence check failed: {exc}")
         # Async cascade: push frame to secondary queue for MobileNet + MiDaS.
         # Non-blocking — if queue full, drop and record metric. Primary never waits.
-        if frame is not None:
+        if can_read:
             best_person = max(
                 (d for d in detections if d.get_label().lower() == "person"),
                 key=lambda d: d.get_confidence(),
                 default=None,
             )
-            if best_person is not None:
+            if best_person is not None and _frame() is not None:
                 det_info = {
                     "label": best_person.get_label(),
                     "confidence": best_person.get_confidence(),
                 }
+                # _frame() is already this callback's own copy of the buffer,
+                # and nothing below writes to it.
                 try:
-                    core._secondary_queue.put_nowait((frame.copy(), det_info))
+                    core._secondary_queue.put_nowait((_frame(), det_info))
                     core._cascade_metrics.record_secondary_enqueue()
                 except core._queue_mod.Full:
                     core._cascade_metrics.record_secondary_drop()
@@ -289,8 +312,8 @@ def app_callback(pad, info, user_data):
     # browser can use 60fps MJPEG. Nothing is drawn on the frame -- the debug
     # readout that used to be here also reached the WebRTC track and every saved
     # evidence clip, because all three read _frame_raw.
-    if frame is not None and core._frame_publisher.due():
-        frame_bgr, jpeg = core.FramePublisher.encode(frame)
+    if publish and _frame() is not None:
+        frame_bgr, jpeg = core.FramePublisher.encode(_frame())
         with core.STATE.camera.frame_lock:
             core.STATE.camera.frame_buffer = jpeg
             core.STATE.camera.frame_raw    = frame_bgr

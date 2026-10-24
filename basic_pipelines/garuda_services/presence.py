@@ -24,14 +24,34 @@ def bind(module):
     core = module
 
 
+# The ARP sweep sends one datagram to every address in the subnet, every 30 s.
+# A home LAN is a /24; a wider route (a container bridge's /16, a VPN's /10)
+# would be tens of thousands to millions of sends a cycle, so it is skipped.
+_SWEEP_MIN_PREFIX = 22
+_VIRTUAL_IFACES = ("docker", "br-", "veth", "virbr", "tailscale", "wg", "tun", "lo")
+
+
 def _get_local_subnet() -> str:
-    """Return the first local subnet (e.g. '192.168.1.0/24') from ip route."""
+    """The LAN subnet to sweep (e.g. '192.168.1.0/24'), from ip route; '' if none fits.
+
+    It took the first route with a prefix, whichever interface it was on and
+    however large.
+    """
     try:
         out = subprocess.check_output(['ip', 'route'], text=True, timeout=3)
         for line in out.splitlines():
             parts = line.split()
             # Lines like: "192.168.1.0/24 dev wlan0 ..."
-            if parts and '/' in parts[0] and parts[0][0].isdigit():
+            if not parts or '/' not in parts[0] or not parts[0][0].isdigit():
+                continue
+            dev = parts[parts.index('dev') + 1] if 'dev' in parts[:-1] else ''
+            if dev.startswith(_VIRTUAL_IFACES):
+                continue
+            try:
+                net = ipaddress.IPv4Network(parts[0], strict=False)
+            except ValueError:
+                continue
+            if net.prefixlen >= _SWEEP_MIN_PREFIX:
                 return parts[0]
     except Exception:
         pass

@@ -10,6 +10,7 @@ Garuda_web imports these classes back under the same names.
 import os
 import sys
 import threading
+import time
 import traceback
 
 import setproctitle
@@ -17,6 +18,13 @@ import setproctitle
 from hailo_rpi_common import QUEUE, GStreamerApp, app_callback_class
 
 core = None
+
+# No published frame for this long and the pipeline is torn down and started
+# again (_run_pipeline in Garuda_web). A stalled element or a camera read that
+# never returns raised nothing, so the loop never quit: the live view and every
+# detection stayed dead until someone restarted the service.
+STALL_RESTART_S = 30.0
+STALL_CHECK_S = 5
 
 
 def bind(module):
@@ -168,6 +176,9 @@ class GStreamerDetectionApp(GStreamerApp):
         if self.options_menu.dump_dot:
             core.GLib.timeout_add_seconds(3, self.dump_dot_file)
 
+        self._started_at = time.time()
+        core.GLib.timeout_add_seconds(STALL_CHECK_S, self._check_stall)
+
         try:
             self.loop.run()
         except Exception:
@@ -179,6 +190,20 @@ class GStreamerDetectionApp(GStreamerApp):
         if camera_thread is not None:
             camera_thread.join(timeout=8)
         self.pipeline.set_state(core.Gst.State.NULL)
+
+    def _stalled(self, now=None):
+        """True when this run has gone STALL_RESTART_S without publishing a frame."""
+        now = time.time() if now is None else now
+        last = max(self._started_at, core.STATE.camera.frame_ts)
+        return now - last > STALL_RESTART_S
+
+    def _check_stall(self):
+        if not self._stalled():
+            return True                      # GLib: keep the timer
+        core.log_system_update(
+            f"[CAMERA] No frame for {int(STALL_RESTART_S)} s: restarting the camera pipeline.")
+        self.loop.quit()
+        return False
 
     def _feed_pi_camera(self, appsrc, stop):
         """Capture from the Pi camera with picamera2 and push frames into appsrc.
