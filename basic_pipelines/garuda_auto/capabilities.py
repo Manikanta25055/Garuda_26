@@ -242,6 +242,10 @@ CAPABILITIES += (
           "(high-priority alerts) or away (any person raises the alarm).",
           "POST /api/arm", {"state": {"type": "string", "enum": ["off", "home", "night", "away"]}},
           ["state"], tier="change", security=True),
+    # per-object rules and zones (garuda_routes/zones.py)
+    _site("detection_rules", "What each thing the camera sees does in Home, Night and Away "
+          "(alert, log or ignore), and the quiet and alert zones drawn on the picture.",
+          "GET /api/detection/rules", security=True),
     # camera
     _site("start_clip", "Start recording a video clip from the camera.", "POST /api/clip/start",
           tier="change", security=True),
@@ -539,6 +543,8 @@ NEVER = {
     "POST /api/arm/auto": "whether the house arms itself is the owner's setting, on System",
     "POST /api/push/silence": "silencing a phone's alerts is the person holding the phone",
     "POST /api/push/test": "a person checking their own phone",
+    "POST /api/detection/rules": "what alarms is the owner's choice, made on Settings",
+    "POST /api/detection/zones": "zones are drawn on the camera picture by hand",
 }
 
 # Not actions at all: pages, liveness, streams, and the conversation itself.

@@ -1296,6 +1296,7 @@ const G = (() => {
     feedback:  `<span class="gi gi-feedback"></span>`,
     theme:     `<span class="gi gi-light-mode"></span>`,
     signout:   `<span class="gi gi-power"></span>`,
+    shield:    `<span class="gi gi-shield"></span>`,
   };
 
   // Five tabs: what a household uses every day. Everything else is one
@@ -1314,6 +1315,7 @@ const G = (() => {
   const _SETTINGS_ROWS = [
     { page: 'auto',       label: 'Automations',   hint: 'Rules, shortcuts, schedules, away and vacation', icon: 'auto' },
     { page: 'insights',   label: 'House activity', hint: 'Today\'s summary and who switched what',        icon: 'insights' },
+    { page: 'a-zones',    label: 'Detection rules', hint: 'What alerts in Home, Night and Away, and where', icon: 'shield', admin: true },
     { page: 'a-email',    label: 'Notifications', hint: 'Alert e-mail, recipients and cooldown',          icon: 'email',    admin: true },
     { page: 'a-settings', label: 'System',        hint: 'Health, detection, presence, Narada AI, keys',    icon: 'settings', admin: true },
     { page: 'a-logs',     label: 'Logs',          hint: 'System, detection, presence and voice logs',      icon: 'logs',     admin: true },
@@ -1775,6 +1777,7 @@ const G = (() => {
     'devices':     'Devices',
     'auto':        'Automate',
     'insights':    'Activity',
+    'a-zones':     'Rules',
     'a-email':     'Notifications',
     'a-settings':  'System',
     'a-logs':      'Logs',
@@ -1925,6 +1928,7 @@ const G = (() => {
     if (pageId === 'a-cmds')     loadCmds();
     if (window.H) H.onNav(pageId);
     if (window.N) N.onNav(pageId);
+    if (window.Z) Z.onNav(pageId);
   }
 
   // ── Mobile sidebar (no-ops — replaced by iOS nav) ─────────

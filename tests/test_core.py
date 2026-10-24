@@ -298,7 +298,7 @@ def test_the_page_runs_no_inline_script(app_client):
     assert "'unsafe-inline'" not in script_src and 'data:' not in script_src
     import re
     web = os.path.join(os.path.dirname(gw.__file__), 'garuda_web')
-    for name in ('index.html', 'app.js', 'home.js', 'narada.js', 'island.js'):
+    for name in ('index.html', 'app.js', 'home.js', 'narada.js', 'island.js', 'zones.js'):
         text = open(os.path.join(web, name), encoding='utf-8').read()
         assert not re.search(r'<[^>]*\son[a-z]+\s*=\s*["\']', text), name
         assert '<script>' not in text.replace('`<script>`', ''), name

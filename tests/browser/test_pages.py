@@ -1143,3 +1143,32 @@ def test_the_nav_pill_bulges_while_it_is_pressed(user_page):
     assert _pill_scale(page) == [1, 1]
     assert _active(page, "dashboard")
     p.assert_clean()
+
+
+def test_an_admin_sets_a_rule_and_draws_a_zone(admin_page):
+    """Settings › Detection rules: a rule per arm state, and a zone drawn by dragging."""
+    p = admin_page
+    page = p.page
+    p.go("a-zones")
+    page.wait_for_selector("#zr-rules select", timeout=5000)
+    first = p.js("document.querySelector('#zr-rules .zr-row:not(.zr-head) .zr-label').firstChild.textContent.trim()")
+    page.select_option("#zr-rules .zr-row:not(.zr-head) select >> nth=0", "log")
+    page.click("text=Save rules")
+    page.wait_for_timeout(400)
+    assert gw.RULES.data["rules"] == {first: {"home": "log"}}
+
+    box = page.locator("#zr-draw").bounding_box()
+    page.mouse.move(box["x"] + box["width"] * 0.1, box["y"] + box["height"] * 0.1)
+    page.mouse.down()
+    page.mouse.move(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5, steps=5)
+    page.mouse.up()
+    assert p.js("document.querySelectorAll('#zr-draw .zr-box').length") == 1
+    page.select_option("#zr-zones select", "alert")
+    page.fill("#zr-zones .zr-zone input >> nth=1", "person")
+    page.locator("#zr-zones .zr-zone input >> nth=1").dispatch_event("change")
+    page.click("text=Save zones")
+    page.wait_for_timeout(400)
+    zone = gw.RULES.data["zones"][0]
+    assert zone["mode"] == "alert" and zone["labels"] == ["person"]
+    assert abs(zone["rect"][0] - 0.1) < 0.03 and abs(zone["rect"][3] - 0.5) < 0.03
+    p.assert_clean()

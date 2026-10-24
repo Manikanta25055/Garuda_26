@@ -5444,3 +5444,40 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
 }
 .push-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
 .push-actions { display: flex; gap: 8px; }
+
+/* ── Detection rules and zones (Settings › Detection rules) ── */
+.zr-rules { display: grid; gap: 6px; margin: 10px 0 4px; }
+.zr-row { display: grid; grid-template-columns: minmax(90px, 1.2fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.zr-head { font-size: 12px; font-weight: 600; color: var(--t2); }
+.zr-label { font-weight: 600; text-transform: capitalize; overflow-wrap: anywhere; }
+.zr-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--danger); margin-left: 4px; }
+.zr-act { width: 100%; min-width: 0; }
+.zr-act.zr-alert { color: var(--danger); }
+.zr-act.zr-ignore { color: var(--t3, var(--t2)); }
+.zr-canvas {
+  position: relative; margin: 10px 0; border-radius: 12px; overflow: hidden;
+  background: color-mix(in srgb, var(--t1) 8%, transparent); aspect-ratio: 16 / 9;
+}
+.zr-canvas img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+
+.zr-canvas img.zr-missing { visibility: hidden; }
+.zr-draw { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+.zr-box {
+  position: absolute; border: 2px solid; border-radius: 6px; font-size: 11px; font-weight: 600;
+  padding: 2px 5px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); pointer-events: none; box-sizing: border-box;
+}
+.zr-box.zr-quiet { border-color: #3b82f6; background: rgba(59,130,246,.18); }
+.zr-box.zr-alert { border-color: #ef4444; background: rgba(239,68,68,.18); }
+.zr-ghost { border-style: dashed; }
+.zr-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: var(--t2); font-size: 13px; pointer-events: none; }
+.zr-zones { display: grid; gap: 8px; }
+.zr-zone { display: grid; grid-template-columns: 12px minmax(0, 1fr) 90px minmax(0, 1.2fr) auto; gap: 6px; align-items: center; }
+.zr-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.zr-swatch.zr-quiet { background: #3b82f6; }
+.zr-swatch.zr-alert { background: #ef4444; }
+.zr-none { color: var(--t2); font-size: 13px; }
+@media (max-width: 560px) {
+  .zr-zone { grid-template-columns: 12px minmax(0, 1fr) 84px; }
+  .zr-zone > input:nth-of-type(2) { grid-column: 2 / 4; }
+  .zr-zone > button { grid-column: 2 / 4; justify-self: start; }
+}

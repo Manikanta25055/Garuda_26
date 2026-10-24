@@ -158,6 +158,24 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/detection/rules",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/detection/rules",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/detection/zones",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/devices",
   "guard": "require_admin"
  },

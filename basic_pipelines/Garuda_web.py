@@ -134,6 +134,7 @@ try:
     from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from .garuda_routes.arm import build_arm_router, ArmStore, auto_arm_loop, person_alert_wanted
     from .garuda_routes.push import build_push_router, PushStore, watch_alerts
+    from .garuda_routes.zones import build_zones_router, ZoneStore, FrameRules
     from .garuda_core.webpush import Vapid
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from .garuda_routes.pages import build_pages_router
@@ -216,6 +217,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from basic_pipelines.garuda_routes.arm import build_arm_router, ArmStore, auto_arm_loop, person_alert_wanted
     from basic_pipelines.garuda_routes.push import build_push_router, PushStore, watch_alerts
+    from basic_pipelines.garuda_routes.zones import build_zones_router, ZoneStore, FrameRules
     from basic_pipelines.garuda_core.webpush import Vapid
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from basic_pipelines.garuda_routes.pages import build_pages_router
@@ -852,6 +854,10 @@ PUSH = PushStore(os.path.join(DRISHTI_DATA_DIR, "push_subscriptions.json"))
 PUSH_VAPID = Vapid(os.path.join(DRISHTI_DATA_DIR, "push_vapid.pem"),
                    os.environ.get("PUSH_CONTACT", "mailto:admin@localhost"))
 fastapi_app.include_router(build_push_router(sys.modules[__name__], PUSH, PUSH_VAPID))
+
+# What each label does in each arm state, and where (garuda_routes/zones.py).
+RULES = ZoneStore(os.path.join(DRISHTI_DATA_DIR, "detection_rules.json"))
+fastapi_app.include_router(build_zones_router(sys.modules[__name__], RULES))
 
 fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
 

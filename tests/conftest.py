@@ -242,6 +242,8 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw.PUSH, 'silenced_until', 0.0)
     monkeypatch.setattr(gw.PUSH_VAPID, 'path', str(tmp_data / 'push_vapid.pem'))
     monkeypatch.setattr(gw.PUSH_VAPID, '_key', None)
+    monkeypatch.setattr(gw.RULES, 'path', str(tmp_data / 'detection_rules.json'))
+    monkeypatch.setattr(gw.RULES, 'data', {'rules': {}, 'zones': []})
     monkeypatch.setattr(gw.BRAIN.memory, 'path', str(tmp_data / 'system_logs/narada_memory.json'))
     monkeypatch.setattr(gw.BRAIN.memory, '_facts', [])
     monkeypatch.setattr(gw.BRAIN.observer, 'path', str(tmp_data / 'system_logs/narada_offers.json'))

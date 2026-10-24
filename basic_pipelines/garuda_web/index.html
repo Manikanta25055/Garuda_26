@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=94"/>
+  <link rel="stylesheet" href="/static/style.css?v=95"/>
 </head>
 <body>
 <div id="app">
@@ -693,6 +693,39 @@
               <button class="btn btn-primary" data-click="G.saveEmail">Save</button>
             </div>
             <div id="e-msg" class="msg hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADMIN: DETECTION RULES ── -->
+      <div id="page-a-zones" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header"><h2>Detection rules</h2></div>
+          <div class="settings-card">
+            <div class="dash-card-title">What each thing does</div>
+            <p class="cmd-desc">Alert sounds the alarm and sends the e-mail and phone alert. Log adds it to Events without an alarm. Ignore does nothing. Off on the arm switch silences everything.</p>
+            <div id="zr-rules" class="zr-rules"></div>
+            <div class="form-row">
+              <input id="zr-new-label" class="input input-sm" type="text" placeholder="Add a thing, e.g. dog" aria-label="Thing to add" maxlength="40"/>
+              <button class="btn btn-ghost btn-sm" data-click="Z.addLabel">Add</button>
+              <button class="btn btn-primary btn-sm" data-click="Z.saveRules">Save rules</button>
+            </div>
+            <div id="zr-rules-msg" class="msg hidden"></div>
+          </div>
+          <div class="settings-card">
+            <div class="dash-card-title">Zones</div>
+            <p class="cmd-desc">Drag on the picture to draw a zone. A quiet zone turns alerts into log entries inside it, like the kitchen counter where the knives live. An alert zone sounds the alarm for anything it names, like the back door.</p>
+            <div id="zr-canvas" class="zr-canvas">
+              <img id="zr-picture" alt="Camera picture for drawing zones"/>
+              <div id="zr-draw" class="zr-draw"></div>
+              <div id="zr-empty" class="zr-empty hidden">No camera picture yet. Zones can still be saved.</div>
+            </div>
+            <div id="zr-zones" class="zr-zones"></div>
+            <div class="form-row">
+              <button class="btn btn-ghost btn-sm" data-click="Z.refreshPicture">New picture</button>
+              <button class="btn btn-primary btn-sm" data-click="Z.saveZones">Save zones</button>
+            </div>
+            <div id="zr-zones-msg" class="msg hidden"></div>
           </div>
         </div>
       </div>
@@ -1478,10 +1511,11 @@
 <div id="toast-container" class="toast-container"></div>
 
 <script src="/static/sound.js?v=8"></script>
-<script src="/static/actions.js?v=2"></script>
+<script src="/static/actions.js?v=3"></script>
 <script src="/static/narada.js?v=30"></script>
 <script src="/static/island.js?v=4"></script>
-<script src="/static/app.js?v=87"></script>
+<script src="/static/app.js?v=88"></script>
 <script src="/static/home.js?v=16"></script>
+<script src="/static/zones.js?v=1"></script>
 </body>
 </html>
