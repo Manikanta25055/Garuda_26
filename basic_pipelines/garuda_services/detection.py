@@ -33,7 +33,9 @@ def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
     with core.STATE.alerts.night_presence_lock:
         win = dict(core.STATE.config.night_presence_window)   # snapshot — avoids race with config update
-    if not win.get("enabled", True):
+    # Armed Away: nobody should be in, so a person at any hour raises it.
+    away = getattr(core, "ARM", None) is not None and core.person_alert_wanted(core, core.ARM)
+    if not win.get("enabled", True) and not away:
         return
     now_ist = datetime.datetime.now(core._IST) if core._IST is not None else datetime.datetime.now()
     now_hm = now_ist.strftime("%H:%M")
@@ -43,7 +45,7 @@ def _check_night_presence():
         in_window = start <= now_hm < end
     else:
         in_window = now_hm >= start or now_hm < end
-    if in_window:
+    if in_window or away:
         with core.STATE.alerts.night_presence_lock:
             core.STATE.alerts.night_presence_active = True
             core.STATE.alerts.night_presence_end_time = time.time() + 10

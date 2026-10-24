@@ -234,6 +234,14 @@ CAPABILITIES += (
           role="admin", security=True),
     _site("system_info", "Build, uptime, health checks, background workers and backups.",
           "GET /api/system/info", role="admin", security=True),
+    # the arm switch (garuda_routes/arm.py)
+    _site("arm_status", "Whether the house is armed Off, Home, Night or Away, who set it, "
+          "whether auto-arm is on and whether the owner's phone is home.",
+          "GET /api/arm", security=True),
+    _site("arm_system", "Arm the house: off (nothing alerts, admin only), home, night "
+          "(high-priority alerts) or away (any person raises the alarm).",
+          "POST /api/arm", {"state": {"type": "string", "enum": ["off", "home", "night", "away"]}},
+          ["state"], tier="change", security=True),
     # camera
     _site("start_clip", "Start recording a video clip from the camera.", "POST /api/clip/start",
           tier="change", security=True),
@@ -528,6 +536,7 @@ NEVER = {
     "GET /api/history/days": "the date picker's list of days; search_history reads them",
     "GET /api/openapi.json": "developer page",
     "POST /api/feedback": "a person's own words to the owner",
+    "POST /api/arm/auto": "whether the house arms itself is the owner's setting, on System",
 }
 
 # Not actions at all: pages, liveness, streams, and the conversation itself.

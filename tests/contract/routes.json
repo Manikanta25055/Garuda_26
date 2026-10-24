@@ -20,6 +20,24 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/arm",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/arm",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/arm/auto",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/arp",
   "guard": "require_admin"
  },

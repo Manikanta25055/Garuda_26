@@ -132,6 +132,7 @@ try:
     from .garuda_routes.camera import build_camera_router
     from .garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
+    from .garuda_routes.arm import build_arm_router, ArmStore, auto_arm_loop, person_alert_wanted
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from .garuda_routes.pages import build_pages_router
     from .garuda_routes.sockets import build_sockets_router
@@ -211,6 +212,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.camera import build_camera_router
     from basic_pipelines.garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.arm import build_arm_router, ArmStore, auto_arm_loop, person_alert_wanted
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from basic_pipelines.garuda_routes.pages import build_pages_router
     from basic_pipelines.garuda_routes.sockets import build_sockets_router
@@ -566,6 +568,7 @@ async def _lifespan(app):
     SUPERVISOR.spawn("deadman", _deadman_monitor)
     SUPERVISOR.spawn("connectivity", _connectivity_monitor)
     SUPERVISOR.spawn("mode-schedule", _schedule_monitor)
+    SUPERVISOR.spawn("auto-arm", auto_arm_loop, args=(sys.modules[__name__], ARM))
     SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
     heartbeat_task.cancel()
@@ -834,6 +837,10 @@ fastapi_app.include_router(build_captures_router(sys.modules[__name__]))
 fastapi_app.include_router(build_auth_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_control_router(sys.modules[__name__]))
+
+# Off / Home / Night / Away over the mode flags (garuda_routes/arm.py).
+ARM = ArmStore(os.path.join(DRISHTI_DATA_DIR, "arm.json"))
+fastapi_app.include_router(build_arm_router(sys.modules[__name__], ARM))
 
 fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
 

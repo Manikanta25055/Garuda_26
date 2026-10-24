@@ -268,12 +268,21 @@
               </div>
             </div>
 
-            <!-- System Modes -->
-            <div class="card">
+            <!-- Arm switch: Off, Home, Night, Away. The other modes and the
+                 emergency button sit under it. -->
+            <div class="card arm-card">
               <div class="dash-card-hdr">
-                <div class="dash-card-title">System Modes</div>
+                <div class="dash-card-title">Security</div>
               </div>
+              <div id="arm-switch" class="arm-switch" role="radiogroup" aria-label="Arm the system">
+                <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="off" data-click="G.setArm" data-args='["off"]'>Off</button>
+                <button type="button" class="arm-opt" role="radio" aria-checked="true" data-arm="home" data-click="G.setArm" data-args='["home"]'>Home</button>
+                <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="night" data-click="G.setArm" data-args='["night"]'>Night</button>
+                <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="away" data-click="G.setArm" data-args='["away"]'>Away</button>
+              </div>
+              <div id="arm-note" class="arm-note">Alerts on. A person is only flagged in the night window.</div>
               <div id="modes-pills" class="modes-list"></div>
+              <button type="button" id="panic-btn" class="btn btn-danger panic-btn" data-click="G.togglePanic" aria-pressed="false" title="Alerts override Do Not Disturb and are marked EMERGENCY">Emergency</button>
             </div>
 
           </aside><!-- /sidebar-left -->
@@ -952,6 +961,16 @@
             <div style="display:flex;gap:8px;align-items:center;margin-top:10px">
               <button class="btn btn-ghost btn-sm" type="button" data-click="G.useHereForLocation">Use this device's location</button>
               <span id="loc-sun" style="font-size:12px;color:var(--t3)"></span>
+            </div>
+          </div>
+
+          <!-- Auto-arm: follows the phones under Known Devices -->
+          <div class="settings-card">
+            <div class="settings-section-title">Auto-arm</div>
+            <div class="toggle-row">
+              <div class="toggle-info"><div><span>Arm Away when I leave, Home when I'm back</span></div>
+                <div><span class="ha-sub">Uses the phones under Known Devices. An arm state you pick by hand is never undone.</span></div></div>
+              <div class="toggle on" id="arm-auto" role="switch" aria-label="Auto-arm" data-click="G.toggleAutoArm"></div>
             </div>
           </div>
 

@@ -240,12 +240,51 @@ const G = (() => {
 
   const MODE_CFG = [
     { key:'privacy',   label:'Privacy Blur',     icon:'<span class="gi gi-privacy"></span>', cls:'mode-blue'   },
-    { key:'night',     label:'Night Mode',        icon:'<span class="gi gi-night-mode"></span>', cls:'mode-purple' },
+    { key:'night',     label:'Night Mode',        icon:'<span class="gi gi-night-mode"></span>', cls:'mode-purple', arm: true },
     { key:'dnd',       label:'Do Not Disturb',    icon:'<span class="gi gi-dnd"></span>', cls:'mode-warn'   },
-    { key:'idle',      label:'Idle',              icon:'<span class="gi gi-idle"></span>', cls:'mode-muted'  },
+    { key:'idle',      label:'Idle',              icon:'<span class="gi gi-idle"></span>', cls:'mode-muted', arm: true },
     { key:'email_off', label:'Email Alerts Off',  icon:'<span class="gi gi-email-off"></span>', cls:'mode-muted'  },
-    { key:'emergency', label:'Emergency',         icon:'<span class="gi gi-emergency"></span>', cls:'mode-danger' },
+    { key:'emergency', label:'Emergency',         icon:'<span class="gi gi-emergency"></span>', cls:'mode-danger', arm: true },
   ];
+  // Night and Idle are set by the arm switch, Emergency by its own button;
+  // the rest stay as rows under the switch.
+
+  // ── Arm switch ────────────────────────────────────────────
+  const ARM_NOTES = {
+    off:   'Off: nothing alerts. Detection keeps logging quietly.',
+    home:  'Alerts on. A person is only flagged in the night window.',
+    night: 'Night: alerts are sent as high priority.',
+    away:  'Away: any person seen raises the alarm.',
+  };
+  let _arm = null, _armKey = '';
+  function _renderArm(a) {
+    _arm = a;
+    document.querySelectorAll('#arm-switch .arm-opt').forEach(b => {
+      const on = b.dataset.arm === a.state;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+    const note = $('arm-note');
+    if (note) note.textContent = ARM_NOTES[a.state] + (a.auto_set ? ' Set by auto-arm when you left.' : '');
+    const auto = $('arm-auto');
+    if (auto) auto.classList.toggle('on', !!a.auto);
+  }
+  async function loadArm() {
+    try { _renderArm(await api('GET', '/api/arm')); } catch (_) {}
+  }
+  async function setArm(state) {
+    if (_arm && _arm.state === state) return;
+    const was = _arm;
+    _renderArm({ ...(_arm || {}), state, auto_set: false });
+    try { _renderArm(await api('POST', '/api/arm', { state })); window.Feel?.touch('light'); }
+    catch (e) { if (was) _renderArm(was); showToast(extractError(e), 'error'); }
+  }
+  async function toggleAutoArm() {
+    try { _renderArm(await api('POST', '/api/arm/auto', { enabled: !(_arm && _arm.auto) })); }
+    catch (e) { showToast(extractError(e), 'error'); }
+  }
+  let _panicOn = false;
+  function togglePanic() { toggleMode('emergency', _panicOn); }
 
   // ── Backend URL config ───────────────────────────────────
   // True when the page itself is served by the Pi (LAN address or one of the
@@ -1803,7 +1842,7 @@ const G = (() => {
     _syncFeedAudio();
     if (pageId === 'events')     renderHeatmap(_hmActivity);   // drawn to the width it has now
     if (pageId === 'a-email')    loadEmailCfg();
-    if (pageId === 'a-settings') { loadSysCfg(); if (window.H) H.loadAI(); }
+    if (pageId === 'a-settings') { loadSysCfg(); loadArm(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
       if (_logsUnlocked) {
         fetchAndRenderLogs();
@@ -2390,8 +2429,19 @@ const G = (() => {
     const hpills = $('header-pills');
     if (!grid) return;
 
+    // The arm switch follows the flags: re-read it when one it reads changed.
+    const key = `${!!modes.idle}:${!!modes.night}`;
+    if (key !== _armKey) { _armKey = key; loadArm(); }
+    _panicOn = !!modes.emergency;
+    const panic = $('panic-btn');
+    if (panic) {
+      panic.classList.toggle('on', _panicOn);
+      panic.setAttribute('aria-pressed', String(_panicOn));
+      panic.textContent = _panicOn ? 'Emergency on · tap to clear' : 'Emergency';
+    }
+
     // Update rows in-place (preserves CSS transitions); create if first render
-    MODE_CFG.forEach(m => {
+    MODE_CFG.filter(m => !m.arm).forEach(m => {
       const isOn = !!modes[m.key];
       let row = grid.querySelector(`[data-mode="${m.key}"]`);
       if (!row) {
@@ -3296,7 +3346,7 @@ const G = (() => {
     goAdminFlow, backToMain, backToAdminStep1, sendAdminOTP, verifyAdminOTP,
     goMasterKey, submitMasterKeyLogin, unlockLogs,
     goForgot, sendForgotOTP, doReset,
-    nav, toggleMode, emergencyStop,
+    nav, toggleMode, emergencyStop, setArm, toggleAutoArm, togglePanic,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,
