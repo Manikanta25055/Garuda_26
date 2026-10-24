@@ -169,6 +169,22 @@ Resources:
       AlarmActions: [!Ref AlertTopic]
       OKActions: [!Ref AlertTopic]
 
+  CameraDownAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: drishti-camera-down
+      AlarmDescription: garuda-web is up but the camera has delivered no frames for 10 minutes; nothing is being watched.
+      Namespace: !Ref MetricNamespace
+      MetricName: CameraUp
+      Statistic: Maximum
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 1
+      ComparisonOperator: LessThanThreshold
+      TreatMissingData: notBreaching     # an offline Pi or service is the alarms above
+      AlarmActions: [!Ref AlertTopic]
+      OKActions: [!Ref AlertTopic]
+
   PiHotAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:

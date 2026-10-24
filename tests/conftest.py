@@ -65,6 +65,10 @@ sys.modules.setdefault('av', MagicMock())
 for _key in ("NIM_API_KEY", "JEV_API_KEY", "GROQ_API_KEY"):
     os.environ[_key] = ""
 
+# The alert clip records video whenever a test raises an alert; it has its own
+# tests (tests/test_evidence.py) and stays out of everyone else's captures.
+os.environ["GARUDA_ALERT_CLIP"] = "0"
+
 # ── Import the app module ─────────────────────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines'))
 import Garuda_web as gw

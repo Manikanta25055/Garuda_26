@@ -649,8 +649,13 @@ const H = (() => {
     };
     box.innerHTML = groups.length ? groups.map(g => {
       const first = g[g.length - 1], label = g.find(c => c.label)?.label, alert = g.find(c => c.alert)?.alert;
+      // One ZIP of the event with a manifest of hashes, to hand to the police or an insurer.
+      const which = first.group ? `group=${encodeURIComponent(first.group)}` : `id=${encodeURIComponent(first.id)}`;
+      const exportUrl = `${base}/api/evidence/export?${which}${auth ? '&' + auth : ''}`;
+      const exportLink = g.some(c => c.status === 'saved')
+        ? `<a class="btn btn-ghost btn-sm ha-cap-export" href="${esc(exportUrl)}" download title="One ZIP with a manifest of SHA-256 hashes">Export</a>` : '';
       return `<div class="ha-row ha-cap-group"><div class="ha-row-main">
-        <div><b>${esc(label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(first.at))} · ${esc(first.by)}</span></div>
+        <div class="ha-cap-head"><div><b>${esc(label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(first.at))} · ${esc(first.by)}</span></div>${exportLink}</div>
         ${alert ? `<div class="ha-sub warn">During an alert: ${esc(alert)}</div>` : ''}
         <div class="ha-cap-items">${g.slice().reverse().map(item).join('')}</div>
       </div></div>`;

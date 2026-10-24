@@ -8,7 +8,7 @@ running on the Pi with the internet unplugged. AWS adds:
 | S3 + Glacier Deep Archive | Nightly offsite copy of the daily state archives, model files (`resources/`), and, if you opt in, kept or alert captures. Archived after 30 days. | `drishti-aws-backup.timer` (03:30) |
 | SES | Alert, tamper and OTP emails, on a key that can only send from `EMAIL_SENDER`. Gmail SMTP is still the fallback if `EMAIL_SENDER_PASS` stays set. | `garuda_core/mailer.py` |
 | SNS | The same alerts as a push to `drishti-alerts` (email, and SMS if you give a phone number). | `garuda_services/alerts.py` |
-| CloudWatch | Heartbeat, service up, CPU temperature and disk use every minute; alarms when the Pi goes offline, the service is down, it runs hot or the disk fills. | `drishti-aws-heartbeat.timer` |
+| CloudWatch | Heartbeat, service up, camera up, CPU temperature and disk use every minute; alarms when the Pi goes offline, the service is down, the camera stops, it runs hot or the disk fills. | `drishti-aws-heartbeat.timer` |
 | AWS Budgets | Emails at 80% of $5 spent, or when the month is forecast to go over. | AWS |
 
 Everything is in region **ap-south-1 (Mumbai)**. Expected cost is about $2 to $4
@@ -59,7 +59,7 @@ the first backup and restarts `garuda-web`.
 
 - `python3 scripts/aws_agent.py backup --dry-run` lists what the next backup would send.
 - `journalctl -u drishti-aws-heartbeat -n 5` should say `heartbeat sent`.
-- CloudWatch console → Alarms: four `drishti-*` alarms in OK after about 10 minutes.
+- CloudWatch console → Alarms: five `drishti-*` alarms in OK after about 10 minutes.
 - `/api/system/info` no longer warns that the email password is missing once SES is on.
 
 ## Turning things off

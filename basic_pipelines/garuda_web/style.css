@@ -5481,3 +5481,7 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
   .zr-zone > input:nth-of-type(2) { grid-column: 2 / 4; }
   .zr-zone > button { grid-column: 2 / 4; justify-self: start; }
 }
+
+/* Evidence export on each Events capture card */
+.ha-cap-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ha-cap-export { flex-shrink: 0; }

@@ -6,7 +6,8 @@
     python3 scripts/aws_agent.py backup --dry-run
 
 heartbeat sends Heartbeat=1 (the Pi is up and online), ServiceUp (garuda-web
-answers /api/health), CpuTempC and DiskUsedPercent. The alarms in
+answers /api/health), CameraUp (the camera delivers frames, from /api/ready),
+CpuTempC and DiskUsedPercent. The alarms in
 infra/aws/drishti.yaml email when Heartbeat stops arriving: the one failure
 the Pi cannot report about itself.
 
@@ -26,6 +27,7 @@ import logging
 import os
 import shutil
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -71,6 +73,24 @@ def service_up(port=None, timeout=5):
         return 0
 
 
+def camera_up(port=None, timeout=5):
+    """1 while the camera delivers frames, 0 when it has stopped, None when
+    the service does not answer (the service alarm covers that)."""
+    port = port or os.environ.get("GARUDA_PORT", "8080")
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/ready", timeout=timeout) as r:
+            body = json.load(r)
+    except urllib.error.HTTPError as exc:         # 503 when not ready: the body still says why
+        try:
+            body = json.load(exc)
+        except Exception:
+            return None
+    except Exception:
+        return None
+    camera = (body.get("checks") or {}).get("camera")
+    return None if camera is None else int(bool(camera))
+
+
 def disk_used_percent(path="/"):
     try:
         u = shutil.disk_usage(path)
@@ -80,7 +100,7 @@ def disk_used_percent(path="/"):
 
 
 def heartbeat():
-    values = {"Heartbeat": 1, "ServiceUp": service_up(), "CpuTempC": cpu_temp_c(),
+    values = {"Heartbeat": 1, "ServiceUp": service_up(), "CameraUp": camera_up(), "CpuTempC": cpu_temp_c(),
               "DiskUsedPercent": disk_used_percent()}
     try:
         cloud.put_metrics(values)

@@ -545,6 +545,7 @@ NEVER = {
     "POST /api/push/test": "a person checking their own phone",
     "POST /api/detection/rules": "what alarms is the owner's choice, made on Settings",
     "POST /api/detection/zones": "zones are drawn on the camera picture by hand",
+    "GET /api/evidence/export": "a ZIP file for a person to hand over; list_captures covers the content",
 }
 
 # Not actions at all: pages, liveness, streams, and the conversation itself.

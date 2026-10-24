@@ -242,6 +242,12 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/evidence/export",
+  "guard": "none"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/feedback",
   "guard": "require_admin"
  },

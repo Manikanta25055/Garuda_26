@@ -135,6 +135,7 @@ try:
     from .garuda_routes.arm import build_arm_router, ArmStore, auto_arm_loop, person_alert_wanted
     from .garuda_routes.push import build_push_router, PushStore, watch_alerts
     from .garuda_routes.zones import build_zones_router, ZoneStore, FrameRules
+    from .garuda_routes.evidence import build_evidence_router, FrameRing, alert_clip_loop
     from .garuda_core.webpush import Vapid
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from .garuda_routes.pages import build_pages_router
@@ -218,6 +219,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.arm import build_arm_router, ArmStore, auto_arm_loop, person_alert_wanted
     from basic_pipelines.garuda_routes.push import build_push_router, PushStore, watch_alerts
     from basic_pipelines.garuda_routes.zones import build_zones_router, ZoneStore, FrameRules
+    from basic_pipelines.garuda_routes.evidence import build_evidence_router, FrameRing, alert_clip_loop
     from basic_pipelines.garuda_core.webpush import Vapid
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from basic_pipelines.garuda_routes.pages import build_pages_router
@@ -576,6 +578,7 @@ async def _lifespan(app):
     SUPERVISOR.spawn("mode-schedule", _schedule_monitor)
     SUPERVISOR.spawn("auto-arm", auto_arm_loop, args=(sys.modules[__name__], ARM))
     SUPERVISOR.spawn("push-alerts", watch_alerts, args=(sys.modules[__name__], PUSH, PUSH_VAPID))
+    SUPERVISOR.spawn("alert-clip", alert_clip_loop, args=(sys.modules[__name__], PRE_ALERT))
     SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
     heartbeat_task.cancel()
@@ -858,6 +861,10 @@ fastapi_app.include_router(build_push_router(sys.modules[__name__], PUSH, PUSH_V
 # What each label does in each arm state, and where (garuda_routes/zones.py).
 RULES = ZoneStore(os.path.join(DRISHTI_DATA_DIR, "detection_rules.json"))
 fastapi_app.include_router(build_zones_router(sys.modules[__name__], RULES))
+
+# The seconds before an alert, and one-file exports (garuda_routes/evidence.py).
+PRE_ALERT = FrameRing(float(os.environ.get("GARUDA_ALERT_CLIP_BEFORE", "5") or 5))
+fastapi_app.include_router(build_evidence_router(sys.modules[__name__]))
 
 fastapi_app.include_router(build_evaluation_router(sys.modules[__name__]))
 
