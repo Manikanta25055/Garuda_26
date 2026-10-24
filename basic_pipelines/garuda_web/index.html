@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=96"/>
+  <link rel="stylesheet" href="/static/style.css?v=97"/>
 </head>
 <body>
 <div id="app">
@@ -246,52 +246,52 @@
 
       <!-- ── DASHBOARD ── -->
       <div id="page-dashboard" class="page">
-        <div class="app-shell-dash">
+        <!-- Home: answer "is my home safe?" first, then let them act on it.
+             One DOM, two layouts (style.css, "Home page"):
+             · desktop: the camera is the stage, status + arm switch above
+               it, and a right rail of recent activity and quick controls
+               (the UniFi Protect / Apple Home on Mac shape);
+             · phone: one column in the order it is used: status and the arm
+               switch, the camera, the latest activity, then the rest. The
+               two wrappers dissolve (display: contents) and the cards are
+               ordered for the thumb. -->
+        <div class="hp">
 
-          <!-- ── LEFT SIDEBAR ── -->
-          <aside class="sidebar-left">
+          <div class="hp-main">
 
-            <!-- Security Status -->
-            <div id="status-card" class="card status-card">
-              <div class="status-state">
+            <!-- Status + arm switch: the answer and the one control that
+                 changes it, in one card -->
+            <section id="status-card" class="card status-card hp-hero" aria-label="Security">
+              <div class="hp-hero-status">
                 <div class="status-pulse-ring" id="status-pulse-ring"></div>
-                <div class="status-label" id="status-label">ALL CLEAR</div>
-                <div class="status-desc" id="status-desc">No activity detected</div>
-                <span id="owner-badge" class="owner-badge hidden">
-                  <span id="owner-badge-name">Owner</span> is home
-                  <button class="owner-refresh-btn" title="Refresh presence" data-click="G.refreshPresence">↻</button>
-                </span>
+                <div class="hp-hero-text">
+                  <div class="status-label" id="status-label">ALL CLEAR</div>
+                  <div class="status-desc" id="status-desc">No activity detected</div>
+                  <div class="hp-hero-meta">
+                    <span id="owner-badge" class="owner-badge hidden">
+                      <span id="owner-badge-name">Owner</span> is home
+                      <button class="owner-refresh-btn" title="Refresh presence" data-click="G.refreshPresence">↻</button>
+                    </span>
+                    <span class="status-foot">
+                      <span class="status-foot-lbl">Last alert</span>
+                      <span class="status-foot-val" id="status-last">Never</span>
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div class="status-foot">
-                <span class="status-foot-lbl">Last alert</span>
-                <span class="status-foot-val" id="status-last">Never</span>
+              <div class="hp-hero-arm">
+                <div id="arm-switch" class="arm-switch" role="radiogroup" aria-label="Arm the system">
+                  <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="off" data-click="G.setArm" data-args='["off"]'>Off</button>
+                  <button type="button" class="arm-opt" role="radio" aria-checked="true" data-arm="home" data-click="G.setArm" data-args='["home"]'>Home</button>
+                  <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="night" data-click="G.setArm" data-args='["night"]'>Night</button>
+                  <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="away" data-click="G.setArm" data-args='["away"]'>Away</button>
+                </div>
+                <div id="arm-note" class="arm-note">Alerts on. A person is only flagged in the night window.</div>
               </div>
-            </div>
+            </section>
 
-            <!-- Arm switch: Off, Home, Night, Away. The other modes and the
-                 emergency button sit under it. -->
-            <div class="card arm-card">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Security</div>
-              </div>
-              <div id="arm-switch" class="arm-switch" role="radiogroup" aria-label="Arm the system">
-                <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="off" data-click="G.setArm" data-args='["off"]'>Off</button>
-                <button type="button" class="arm-opt" role="radio" aria-checked="true" data-arm="home" data-click="G.setArm" data-args='["home"]'>Home</button>
-                <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="night" data-click="G.setArm" data-args='["night"]'>Night</button>
-                <button type="button" class="arm-opt" role="radio" aria-checked="false" data-arm="away" data-click="G.setArm" data-args='["away"]'>Away</button>
-              </div>
-              <div id="arm-note" class="arm-note">Alerts on. A person is only flagged in the night window.</div>
-              <div id="modes-pills" class="modes-list"></div>
-              <button type="button" id="panic-btn" class="btn btn-danger panic-btn" data-click="G.togglePanic" aria-pressed="false" title="Alerts override Do Not Disturb and are marked EMERGENCY">Emergency</button>
-            </div>
-
-          </aside><!-- /sidebar-left -->
-
-          <!-- ── CENTER STAGE ── -->
-          <div class="center-stage">
-
-            <!-- Camera main card -->
-            <div class="cam-main-card card">
+            <!-- Camera -->
+            <div class="cam-main-card card hp-cam">
               <div class="cam-tab-bar">
                 <button class="cam-tab-btn active" id="cam-tab-live" data-click="G.switchCamTab" data-args='["live"]'>Live</button>
                 <div class="cam-tab-right">
@@ -325,39 +325,45 @@
               </div>
             </div>
 
-            <!-- The house at a glance (user); the alert heatmap moved to Events
-                 and the system console to System -->
-            <div class="dash-split-row">
-            <!-- House at a glance — non-admin profiles -->
-            <div id="dash-home-glance" class="card ha-glance hidden">
+          </div><!-- /hp-main -->
+
+          <aside class="hp-rail">
+
+            <!-- What happened lately; the full history is on Events -->
+            <section class="card hp-activity" aria-label="Recent activity">
+              <div class="dash-card-hdr">
+                <div class="hp-card-title">
+                  <div id="det-live-dot" class="det-live"></div>
+                  <div class="dash-card-title">Recent activity</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" data-click="G.nav" data-args='["events"]'>All events</button>
+              </div>
+              <div id="recent-dets" class="det-timeline">
+                <div class="det-empty">No detections yet this session</div>
+              </div>
+            </section>
+
+            <!-- The house at a glance (non-admin profiles) -->
+            <section id="dash-home-glance" class="card ha-glance hp-glance hidden" aria-label="Home">
               <div class="dash-card-hdr">
                 <div class="dash-card-title">Home</div>
                 <button class="btn btn-ghost btn-sm" data-click="G.nav" data-args='["devices", {"$q": ".ios-item[data-page=devices]"}]'>Open</button>
               </div>
               <div id="ha-glance-body" class="ha-glance-body"></div>
-            </div>
-            </div><!-- /dash-split-row -->
+            </section>
 
-          </div><!-- /center-stage -->
-
-          <!-- ── RIGHT SIDEBAR ── -->
-          <aside class="sidebar-right">
-
-            <!-- Recent Detections -->
-            <div class="card">
+            <!-- The other modes, and the emergency button last -->
+            <section class="card hp-controls" aria-label="Quick controls">
               <div class="dash-card-hdr">
-                <div class="dash-card-title">Detections</div>
-                <button class="btn btn-ghost btn-sm" data-click="G.nav" data-args='["events"]'>All events</button>
-                <div id="det-live-dot" class="det-live"></div>
+                <div class="dash-card-title">Quick controls</div>
               </div>
-              <div id="recent-dets" class="det-timeline">
-                <div class="det-empty">No detections yet this session</div>
-              </div>
-            </div>
+              <div id="modes-pills" class="modes-list"></div>
+              <button type="button" id="panic-btn" class="btn btn-danger panic-btn" data-click="G.togglePanic" aria-pressed="false" title="Alerts override Do Not Disturb and are marked EMERGENCY">Emergency</button>
+            </section>
 
-          </aside><!-- /sidebar-right -->
+          </aside><!-- /hp-rail -->
 
-        </div><!-- /app-shell-dash -->
+        </div><!-- /hp -->
 
         <!-- Camera overlay — kept for JS compatibility, hidden by default -->
         <div id="camera-overlay" class="camera-overlay hidden">
