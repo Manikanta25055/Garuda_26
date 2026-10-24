@@ -65,6 +65,10 @@ sys.modules.setdefault('av', MagicMock())
 for _key in ("NIM_API_KEY", "JEV_API_KEY", "GROQ_API_KEY"):
     os.environ[_key] = ""
 
+# The alert clip records video whenever a test raises an alert; it has its own
+# tests (tests/test_evidence.py) and stays out of everyone else's captures.
+os.environ["GARUDA_ALERT_CLIP"] = "0"
+
 # ── Import the app module ─────────────────────────────────────────────────────
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'basic_pipelines'))
 import Garuda_web as gw
@@ -233,6 +237,17 @@ def app_client(tmp_data, monkeypatch, shared_client):
     # Narada's saved conversation: never the live file, and empty for each test.
     monkeypatch.setattr(gw.BRAIN.conversations, 'path', str(tmp_data / 'system_logs/narada_conversations.json'))
     monkeypatch.setattr(gw.BRAIN.conversations, '_data', {'conversations': {}})
+    # The arm switch's choice: a fresh file, Home and auto-arm on.
+    monkeypatch.setattr(gw.ARM, 'path', str(tmp_data / 'arm.json'))
+    monkeypatch.setattr(gw.ARM, 'data', {'chosen': 'home', 'by': '', 'at': 0.0, 'auto': True, 'auto_set': False})
+    # Phone alerts: no saved phones, a throwaway signing key, nothing silenced.
+    monkeypatch.setattr(gw.PUSH, 'path', str(tmp_data / 'push_subscriptions.json'))
+    monkeypatch.setattr(gw.PUSH, 'subs', {})
+    monkeypatch.setattr(gw.PUSH, 'silenced_until', 0.0)
+    monkeypatch.setattr(gw.PUSH_VAPID, 'path', str(tmp_data / 'push_vapid.pem'))
+    monkeypatch.setattr(gw.PUSH_VAPID, '_key', None)
+    monkeypatch.setattr(gw.RULES, 'path', str(tmp_data / 'detection_rules.json'))
+    monkeypatch.setattr(gw.RULES, 'data', {'rules': {}, 'zones': []})
     monkeypatch.setattr(gw.BRAIN.memory, 'path', str(tmp_data / 'system_logs/narada_memory.json'))
     monkeypatch.setattr(gw.BRAIN.memory, '_facts', [])
     monkeypatch.setattr(gw.BRAIN.observer, 'path', str(tmp_data / 'system_logs/narada_offers.json'))

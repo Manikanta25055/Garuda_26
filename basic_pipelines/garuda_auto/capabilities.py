@@ -234,6 +234,18 @@ CAPABILITIES += (
           role="admin", security=True),
     _site("system_info", "Build, uptime, health checks, background workers and backups.",
           "GET /api/system/info", role="admin", security=True),
+    # the arm switch (garuda_routes/arm.py)
+    _site("arm_status", "Whether the house is armed Off, Home, Night or Away, who set it, "
+          "whether auto-arm is on and whether the owner's phone is home.",
+          "GET /api/arm", security=True),
+    _site("arm_system", "Arm the house: off (nothing alerts, admin only), home, night "
+          "(high-priority alerts) or away (any person raises the alarm).",
+          "POST /api/arm", {"state": {"type": "string", "enum": ["off", "home", "night", "away"]}},
+          ["state"], tier="change", security=True),
+    # per-object rules and zones (garuda_routes/zones.py)
+    _site("detection_rules", "What each thing the camera sees does in Home, Night and Away "
+          "(alert, log or ignore), and the quiet and alert zones drawn on the picture.",
+          "GET /api/detection/rules", security=True),
     # camera
     _site("start_clip", "Start recording a video clip from the camera.", "POST /api/clip/start",
           tier="change", security=True),
@@ -528,6 +540,12 @@ NEVER = {
     "GET /api/history/days": "the date picker's list of days; search_history reads them",
     "GET /api/openapi.json": "developer page",
     "POST /api/feedback": "a person's own words to the owner",
+    "POST /api/arm/auto": "whether the house arms itself is the owner's setting, on System",
+    "POST /api/push/silence": "silencing a phone's alerts is the person holding the phone",
+    "POST /api/push/test": "a person checking their own phone",
+    "POST /api/detection/rules": "what alarms is the owner's choice, made on Settings",
+    "POST /api/detection/zones": "zones are drawn on the camera picture by hand",
+    "GET /api/evidence/export": "a ZIP file for a person to hand over; list_captures covers the content",
 }
 
 # Not actions at all: pages, liveness, streams, and the conversation itself.
@@ -550,6 +568,8 @@ PLUMBING = frozenset({
     "GET /api/narada/voice/turns",     # original display results for the bound conversation
     "GET /api/captures/{capture_id}/file",   # the saved file itself, for a player on the page
     "POST /api/narada/voice/error",     # the browser reporting a voice error to the log
+    # A phone turning its own alerts on and off (garuda_routes/push.py).
+    "GET /api/push/key", "POST /api/push/subscribe", "POST /api/push/unsubscribe",
 })
 
 

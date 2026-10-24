@@ -705,22 +705,6 @@ const N = (() => {
     }
   }
 
-  // A reply too long for the two lines above the bar is shown there as one
-  // sentence the model writes of it; its first words stand in until that comes
-  // (and stay, if no model answers).
-  const PEEK_FITS = 110;
-  function summarise(turn) {
-    if (turn.summary) return;                // already written, by the voice turn
-    const plain = mdPlain(turn.text).trim();
-    if (plain.length <= PEEK_FITS && !plain.includes('\n')) return;
-    G._apiFn('POST', '/api/narada/summary', { text: turn.text.slice(0, 8000) }).then(res => {
-      if (!res || !res.summary || !session.includes(turn)) return;
-      turn.summary = res.summary;
-      save();
-      syncDock();
-    }).catch(() => {});
-  }
-
   // Add a turn. It shows as two lines above the bar; the whole conversation
   // opens when it is asked for (it used to open by itself and cover the page).
   function say(who, text, typed, summary) {
@@ -742,7 +726,6 @@ const N = (() => {
     const el = drafted || bubble(who, typed ? '' : text);
     if (drafted) setReply(drafted, text);
     syncDock();
-    if (who === 'narada') summarise(turn);
     if (typed && el && !drafted) typeInto(el, text); else scrollLog();
     return el;
   }

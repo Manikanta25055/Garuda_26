@@ -116,7 +116,13 @@ class Page:
         return self.page.evaluate(expr)
 
     def go(self, page_id):
-        self.js(f"document.querySelector('.ios-item[data-page={page_id}]').click()")
+        # A tab when the page has one, else its row on the Settings page.
+        if not self.js(f"!!document.querySelector('.ios-item[data-page={page_id}]')"):
+            self.js("document.querySelector('.ios-item[data-page=settings]').click()")
+            self.page.wait_for_timeout(300)
+            self.js(f"document.querySelector('#settings-list .sh-row[data-page={page_id}]').click()")
+        else:
+            self.js(f"document.querySelector('.ios-item[data-page={page_id}]').click()")
         self.page.wait_for_timeout(400)
 
     def calls_since(self, n, fragment):
@@ -253,7 +259,7 @@ def test_an_admin_can_write_feedback_and_read_it_in_the_inbox(admin_page):
 
 
 @pytest.mark.parametrize("page_id", ["dashboard", "narada"])
-def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browser, page_id):
+def test_on_a_phone_feedback_opens_from_settings_at_the_top(server, browser, page_id):
     ctx = browser.new_context(viewport={"width": 390, "height": 844}, is_mobile=True, has_touch=True)
     page = ctx.new_page()
     page.goto(server + "/")
@@ -263,9 +269,9 @@ def test_on_a_phone_feedback_opens_from_the_more_sheet_at_the_top(server, browse
     page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
     page.wait_for_timeout(600)
     page.click(f".ios-item[data-page={page_id}]")
-    page.click(".ios-item[data-page=more]")
+    page.click(".ios-item[data-page=settings]")
     page.wait_for_timeout(400)
-    page.locator(".more-row", has_text="Send feedback").first.click()
+    page.locator(".sh-row", has_text="Send feedback").first.click()
     page.wait_for_timeout(600)
     # Top, so the on-screen keyboard cannot cover the box and Send.
     assert page.evaluate("document.getElementById('fb-panel').getBoundingClientRect().top") < 120
@@ -303,6 +309,9 @@ def test_the_activity_card_is_filtered_by_its_chips(server, browser, tmp_path, m
     page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
                   "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
     page.goto(server + "/")
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.wait_for_timeout(600)
+    page.click(".ios-item[data-page=events]")          # the timeline lives on Events
     page.wait_for_selector("#activity-timeline .timeline-item", timeout=15000)
     titles = lambda: page.locator("#activity-timeline .tl-title").all_inner_texts()
     chip = lambda name: page.locator("#activity-filters .tl-chip", has_text=name)
@@ -327,6 +336,9 @@ def test_the_activity_card_is_filtered_by_its_chips(server, browser, tmp_path, m
     assert box[1] < (50 if phone else 70) and box[2] >= (36 if phone else 26)
 
     page.reload()                                        # the choice is kept
+    page.wait_for_selector("#app.logged-in", state="attached", timeout=15000)
+    page.wait_for_timeout(600)
+    page.click(".ios-item[data-page=events]")
     page.wait_for_selector("#activity-timeline .timeline-item", timeout=15000)
     assert len(titles()) == 2 and chip("Alerts").get_attribute("aria-pressed") == "true"
     chip("Alerts").click(); chip("Warnings").click()
@@ -341,7 +353,7 @@ def test_the_activity_card_is_filtered_by_its_chips(server, browser, tmp_path, m
     ctx.close()
 
 
-def test_a_long_reply_is_two_lines_of_summary_until_it_is_opened(server, browser):
+def test_a_long_reply_is_two_lines_of_its_first_words_until_it_is_opened(server, browser):
     reply = "## Today\n\n" + "\n".join(f"- At {h}:00 the front door camera saw a person." for h in range(8, 20))
     sse = "".join(f"data: {json.dumps(e)}\n\n" for e in (
         [{"type": "start"}, {"type": "meta", "actions": [], "confirm": []}]
@@ -350,9 +362,6 @@ def test_a_long_reply_is_two_lines_of_summary_until_it_is_opened(server, browser
     page = ctx.new_page()
     page.route("**/api/chat/stream", lambda r: r.fulfill(
         status=200, headers={"Content-Type": "text/event-stream"}, body=sse))
-    page.route("**/api/narada/summary", lambda r: r.fulfill(
-        status=200, content_type="application/json",
-        body=json.dumps({"summary": "A person was seen at the front door every hour from 8 to 19."})))
     page.goto(server + "/")
     page.evaluate("fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},"
                   "body:JSON.stringify({username:'user',password:'user'}),credentials:'include'})")
@@ -365,10 +374,10 @@ def test_a_long_reply_is_two_lines_of_summary_until_it_is_opened(server, browser
     page.press("#nx-input", "Enter")
     peek = page.locator("#nx-peek")
     for _ in range(50):
-        if peek.inner_text().startswith("A person was seen"):
+        if peek.inner_text().startswith("Today • At 8:00"):
             break
         page.wait_for_timeout(100)
-    assert peek.inner_text() == "A person was seen at the front door every hour from 8 to 19."
+    assert peek.inner_text().startswith("Today • At 8:00 the front door camera saw a person.")
     # The reply does not open over the page: two lines above the bar, no more.
     assert not page.evaluate("document.getElementById('nx-dock').classList.contains('open')")
     assert page.evaluate("document.getElementById('nx-peek').getBoundingClientRect().height") <= 54
@@ -536,9 +545,9 @@ def test_the_feedback_form_keeps_its_spacing_after_a_send(server, browser):
               " space: kids[1].getBoundingClientRect().top - kids[0].getBoundingClientRect().bottom}; })()")
 
     def open_form():
-        page.click(".ios-item[data-page=more]")
+        page.click(".ios-item[data-page=settings]")
         page.wait_for_timeout(400)
-        page.locator(".more-row", has_text="Send feedback").first.click()
+        page.locator(".sh-row", has_text="Send feedback").first.click()
         page.wait_for_timeout(500)
     open_form()
     before = page.evaluate(layout)
@@ -956,10 +965,16 @@ def test_captures_of_one_alert_show_together_and_play(admin_page, tmp_path, monk
             assert captures.encode_video([jpeg] * 20, 10, store.path_of(entry))
         store.finish(entry["id"], data)
     p = admin_page
-    p.go("auto")
+    p.go("events")
     p.page.wait_for_selector(".ha-cap-group img", timeout=5000)
-    p.page.wait_for_function("document.querySelector('.ha-cap-img').naturalWidth > 0", timeout=5000)
-    p.page.wait_for_function("document.querySelector('.ha-cap-video').readyState >= 1", timeout=8000)
+    def until(expr, seconds):           # not wait_for_function: the page's policy forbids eval
+        for _ in range(int(seconds * 10)):
+            if p.js(expr):
+                return
+            p.page.wait_for_timeout(100)
+        assert p.js(expr), expr
+    until("document.querySelector('.ha-cap-img').naturalWidth > 0", 5)
+    until("document.querySelector('.ha-cap-video').readyState >= 1", 8)
     assert p.js("document.querySelectorAll('.ha-cap-group').length") == 1
     assert p.js("document.querySelectorAll('.ha-cap-group audio').length") == 1
     assert "knife" in p.js("document.querySelector('.ha-cap-group').textContent")
@@ -990,7 +1005,7 @@ def test_the_nav_pill_is_dragged_to_a_tab_and_opens_it(user_page):
     p.go("dashboard")
     page.wait_for_timeout(600)
     x, y = _pill_center(page)
-    tx, _ = _tab_center(page, "insights")
+    tx, _ = _tab_center(page, "events")
     page.mouse.move(x, y)
     page.mouse.down()
     for i in range(1, 21):                            # a slow drag: no throw
@@ -1000,7 +1015,7 @@ def test_the_nav_pill_is_dragged_to_a_tab_and_opens_it(user_page):
     assert p.js("document.getElementById('ios-nav').classList.contains('ios-nav-dragging')")
     page.mouse.up()
     page.wait_for_timeout(900)
-    assert _active(page, "insights") and not _active(page, "dashboard")
+    assert _active(page, "events") and not _active(page, "dashboard")
     assert abs(_pill_center(page)[0] - tx) < 2         # settled under the tab
     assert not p.js("document.getElementById('ios-nav').classList.contains('ios-nav-dragging')")
 
@@ -1026,24 +1041,25 @@ def test_the_nav_pill_is_dragged_to_a_tab_and_opens_it(user_page):
     p.assert_clean()
 
 
-def test_the_nav_pill_never_drops_on_the_stop_button(admin_page):
+def test_emergency_stop_is_not_a_tab_and_asks_first(admin_page):
+    """One tap in the tab bar used to stop the whole system. It now lives on
+    System, behind the confirmation."""
     p = admin_page
     page = p.page
+    assert p.js("document.querySelectorAll('#ios-nav .ios-item').length") == 5
+    assert p.js("document.querySelector('#ios-nav .ios-danger')") is None
     p.js("window.__stops = 0; const f = window.fetch; window.fetch = (u, o) =>"
          " { if (String(u).includes('emergency')) window.__stops++; return f(u, o); }")
-    x, y = _pill_center(page)
-    stop = page.evaluate("(() => { const r = document.querySelector('.ios-item.ios-danger')"
-                         ".getBoundingClientRect(); return r.left + r.width / 2; })()")
-    page.mouse.move(x, y)
-    page.mouse.down()
-    for i in range(1, 31):
-        page.mouse.move(x + (stop - x) * i / 30, y)
-        page.wait_for_timeout(16)
-    page.wait_for_timeout(200)
-    page.mouse.up()
-    page.wait_for_timeout(900)
+    p.go("a-settings")
+    assert p.js("document.querySelector('.ios-item[data-page=settings]').classList.contains('active')")
+    page.click(".danger-zone .btn-danger")
+    page.wait_for_timeout(300)
+    page.click("#m-confirm-cancel")
+    page.wait_for_timeout(300)
     assert p.js("window.__stops") == 0
-    assert _active(page, "a-cmds")                     # the last tab before Stop
+    p.js("document.querySelector('#page-a-settings .sh-back').click()")
+    page.wait_for_timeout(300)
+    assert _active(page, "settings")
     p.assert_clean()
 
 
@@ -1062,7 +1078,7 @@ def test_on_a_phone_the_nav_pill_is_swiped_with_a_finger(server, browser, reduce
     page.wait_for_timeout(600)
     cdp = ctx.new_cdp_session(page)
     x, y = _pill_center(page)
-    tx, _ = _tab_center(page, "auto")
+    tx, _ = _tab_center(page, "narada")
     touch = lambda kind, px: cdp.send("Input.dispatchTouchEvent", {
         "type": kind, "touchPoints": [] if kind == "touchEnd" else [{"x": px, "y": y}]})
     touch("touchStart", x)
@@ -1072,7 +1088,7 @@ def test_on_a_phone_the_nav_pill_is_swiped_with_a_finger(server, browser, reduce
     page.wait_for_timeout(200)
     touch("touchEnd", tx)
     page.wait_for_timeout(50 if reduced else 900)
-    assert _active(page, "auto")
+    assert _active(page, "narada")
     assert abs(_pill_center(page)[0] - tx) < 2
     assert errors == []
     ctx.close()
@@ -1089,10 +1105,9 @@ def test_a_quick_flick_throws_the_nav_pill_past_the_tab_under_the_hand(user_page
     page.mouse.down()
     for i in range(1, 6):                              # fast, and let go while still moving
         page.mouse.move(x + (near - x) * i / 5, y)
-        page.wait_for_timeout(8)
     page.mouse.up()
     page.wait_for_timeout(900)
-    assert not _active(page, "dashboard") and not _active(page, "devices")
+    assert _active(page, "narada") or _active(page, "settings")
     p.assert_clean()
 
 
@@ -1127,4 +1142,33 @@ def test_the_nav_pill_bulges_while_it_is_pressed(user_page):
     page.wait_for_timeout(900)
     assert _pill_scale(page) == [1, 1]
     assert _active(page, "dashboard")
+    p.assert_clean()
+
+
+def test_an_admin_sets_a_rule_and_draws_a_zone(admin_page):
+    """Settings › Detection rules: a rule per arm state, and a zone drawn by dragging."""
+    p = admin_page
+    page = p.page
+    p.go("a-zones")
+    page.wait_for_selector("#zr-rules select", timeout=5000)
+    first = p.js("document.querySelector('#zr-rules .zr-row:not(.zr-head) .zr-label').firstChild.textContent.trim()")
+    page.select_option("#zr-rules .zr-row:not(.zr-head) select >> nth=0", "log")
+    page.click("text=Save rules")
+    page.wait_for_timeout(400)
+    assert gw.RULES.data["rules"] == {first: {"home": "log"}}
+
+    box = page.locator("#zr-draw").bounding_box()
+    page.mouse.move(box["x"] + box["width"] * 0.1, box["y"] + box["height"] * 0.1)
+    page.mouse.down()
+    page.mouse.move(box["x"] + box["width"] * 0.4, box["y"] + box["height"] * 0.5, steps=5)
+    page.mouse.up()
+    assert p.js("document.querySelectorAll('#zr-draw .zr-box').length") == 1
+    page.select_option("#zr-zones select", "alert")
+    page.fill("#zr-zones .zr-zone input >> nth=1", "person")
+    page.locator("#zr-zones .zr-zone input >> nth=1").dispatch_event("change")
+    page.click("text=Save zones")
+    page.wait_for_timeout(400)
+    zone = gw.RULES.data["zones"][0]
+    assert zone["mode"] == "alert" and zone["labels"] == ["person"]
+    assert abs(zone["rect"][0] - 0.1) < 0.03 and abs(zone["rect"][3] - 0.5) < 0.03
     p.assert_clean()

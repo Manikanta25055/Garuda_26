@@ -71,6 +71,7 @@ const H = (() => {
     if (pageId === 'devices') loadOverview();
     if (pageId === 'auto') loadAutomations();
     if (pageId === 'insights') loadInsights();
+    if (pageId === 'events') loadCaptures();
   }
 
   // Called with state.home on every websocket push.
@@ -542,7 +543,6 @@ const H = (() => {
       </div>`).join('') : '<div class="ha-empty">Nothing scheduled.</div>';
 
     loadShortcuts();
-    loadCaptures();
 
     // Schedule form
     const devs = pick.devices.filter(d => d.actuator);
@@ -649,8 +649,13 @@ const H = (() => {
     };
     box.innerHTML = groups.length ? groups.map(g => {
       const first = g[g.length - 1], label = g.find(c => c.label)?.label, alert = g.find(c => c.alert)?.alert;
+      // One ZIP of the event with a manifest of hashes, to hand to the police or an insurer.
+      const which = first.group ? `group=${encodeURIComponent(first.group)}` : `id=${encodeURIComponent(first.id)}`;
+      const exportUrl = `${base}/api/evidence/export?${which}${auth ? '&' + auth : ''}`;
+      const exportLink = g.some(c => c.status === 'saved')
+        ? `<a class="btn btn-ghost btn-sm ha-cap-export" href="${esc(exportUrl)}" download title="One ZIP with a manifest of SHA-256 hashes">Export</a>` : '';
       return `<div class="ha-row ha-cap-group"><div class="ha-row-main">
-        <div><b>${esc(label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(first.at))} · ${esc(first.by)}</span></div>
+        <div class="ha-cap-head"><div><b>${esc(label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(first.at))} · ${esc(first.by)}</span></div>${exportLink}</div>
         ${alert ? `<div class="ha-sub warn">During an alert: ${esc(alert)}</div>` : ''}
         <div class="ha-cap-items">${g.slice().reverse().map(item).join('')}</div>
       </div></div>`;
@@ -753,9 +758,7 @@ const H = (() => {
     loadDigest(false);
     try {
       const all = await api('GET', '/api/home/insights?days=7&limit=60');
-      renderUsage(all.usage);
       renderActivity(all.activity);
-      $('ha-tariff').value = all.settings.tariff_per_kwh || '';
     } catch (e) { G.showToast(errText(e), 'error'); }
   }
 
@@ -766,20 +769,6 @@ const H = (() => {
       $('ha-digest-text').textContent = d.text;
       $('ha-digest-meta').textContent = `${d.source === 'nim' ? 'Written by NVIDIA NIM from local counts' : 'Local summary'} · ${clock(d.generated_at)}`;
     } catch (e) { $('ha-digest-text').textContent = errText(e); }
-  }
-
-  function renderUsage(u) {
-    const max = Math.max(1, ...u.devices.flatMap(d => d.hours_by_day));
-    $('ha-usage-total').textContent = u.total_kwh
-      ? `${u.total_kwh.toFixed(2)} kWh est.${u.cost != null ? ' · ' + u.cost.toFixed(2) : ''}` : 'add watts to devices for kWh';
-    $('ha-usage').innerHTML = u.devices.length ? `
-      <div class="ha-usage-days">${u.days.map(d => `<span>${new Date(d + 'T12:00').toLocaleDateString([], { weekday: 'narrow' })}</span>`).join('')}</div>
-      ${u.devices.map(d => `
-        <div class="ha-usage-row">
-          <div class="ha-usage-name">${esc(d.name)}<span class="ha-sub">${d.hours.toFixed(1)} h${d.kwh != null ? ` · ${d.kwh.toFixed(2)} kWh` : ''} · ${d.switches} switches</span></div>
-          <div class="ha-usage-bars">${d.hours_by_day.map((h, i) =>
-            `<div class="ha-bar" title="${esc(u.days[i])}: ${h.toFixed(1)} h"><div style="height:${Math.round(h / max * 100)}%"></div></div>`).join('')}</div>
-        </div>`).join('')}` : '<div class="ha-empty">No devices yet.</div>';
   }
 
   function cause(e) {
@@ -797,13 +786,6 @@ const H = (() => {
         <span class="ha-act-what"><b>${esc(e.device_name)}</b> ${esc(e.action)}${e.ok ? '' : ` — failed: ${esc(e.reason)}`}</span>
         <span class="ha-sub">${esc(cause(e))}${e.actor ? ' · ' + esc(e.actor) : ''}</span>
       </div>`).join('') : '<div class="ha-empty">Nothing has been switched yet.</div>';
-  }
-
-  async function saveTariff() {
-    try {
-      await api('POST', '/api/home/settings', { settings: { tariff_per_kwh: Number($('ha-tariff').value || 0) } });
-      loadInsights();
-    } catch (e) { G.showToast(errText(e), 'error'); }
   }
 
   // ── AI settings (System page, admin) ──────────────────────
@@ -862,7 +844,7 @@ const H = (() => {
     confirmProposal, discardProposal, toggleRule, deleteRule,
     toggleSchedule, deleteSchedule, acceptSuggestion, dismissSuggestion,
     toggleDay, onSchedMode, addSchedule, toggleSetting, saveAway,
-    loadDigest, saveTariff, loadAI, saveAI, testAI,
+    loadDigest, loadAI, saveAI, testAI,
     runShortcut, cancelShortcut, toggleShortcut, deleteShortcut,
     loadCaptures, filterCaptures, captureNow, keepCapture, deleteCapture,
     // After a card is confirmed in the conversation, whatever page is open reloads.

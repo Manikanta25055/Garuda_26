@@ -250,3 +250,34 @@ def test_backup_dry_run_uploads_nothing(monkeypatch, tmp_path, fake_aws):
     sent, _, _ = aws_agent.backup(dry_run=True, data=data, root=root)
     assert len(sent) == 3 and "s3" not in fake_aws
     assert not (data / aws_agent.MANIFEST).exists()
+
+
+class _Ready:
+    def __init__(self, body): self.body = body
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+    def read(self, *a): return json.dumps(self.body).encode()
+
+
+def test_camera_up_reads_the_readiness_check(monkeypatch):
+    import io
+    import urllib.error
+    monkeypatch.setattr(aws_agent.urllib.request, "urlopen",
+                        lambda url, timeout: _Ready({"ready": True, "checks": {"camera": True}}))
+    assert aws_agent.camera_up() == 1
+
+    def not_ready(url, timeout):                  # 503: the body still says which check failed
+        raise urllib.error.HTTPError(url, 503, "not ready", {},
+                                     io.BytesIO(b'{"ready": false, "checks": {"camera": false}}'))
+    monkeypatch.setattr(aws_agent.urllib.request, "urlopen", not_ready)
+    assert aws_agent.camera_up() == 0
+
+    def down(url, timeout):
+        raise OSError("refused")
+    monkeypatch.setattr(aws_agent.urllib.request, "urlopen", down)
+    assert aws_agent.camera_up() is None          # the service alarm covers a dead service
+
+
+def test_the_stack_alarms_when_the_camera_stops():
+    text = open(os.path.join(os.path.dirname(__file__), "..", "infra", "aws", "drishti.yaml")).read()
+    assert "MetricName: CameraUp" in text and "drishti-camera-down" in text

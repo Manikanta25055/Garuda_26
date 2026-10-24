@@ -5362,3 +5362,126 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
   .logs-bottom-bar .input { width: 100% !important; min-width: 0; grid-column: span 3; height: 40px; font-size: 16px; }
   .logs-bottom-bar .btn { grid-column: span 2; min-height: 40px; padding: 6px 4px; white-space: nowrap; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Events, Settings and System health (five-tab layout)
+   ════════════════════════════════════════════════════════════════ */
+/* Desktop: the alert heatmap across the top, the timeline and the saved
+   evidence side by side. A phone stacks them. */
+#page-events .admin-page {
+  max-width: 1180px; display: grid; gap: 14px; align-content: start;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+#page-events .admin-page-header, #page-events .hm-card { grid-column: 1 / -1; }
+@media (max-width: 900px) { #page-events .admin-page { grid-template-columns: minmax(0, 1fr); } }
+#page-events .card { margin: 0; }
+#page-events .ev-timeline { flex: none; max-height: 560px; }
+#page-events .ev-captures .ha-section-hdr { margin-top: 0; }
+
+.settings-hub {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+}
+.sh-row {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 14px 16px; border: none; background: none; cursor: pointer;
+  color: var(--t1); font-family: var(--font); font-size: 15px; text-align: left;
+  border-bottom: 0.5px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+}
+.sh-row:last-child { border-bottom: none; }
+.sh-row:hover { background: color-mix(in srgb, var(--t1) 4%, transparent); }
+.sh-row:focus-visible { outline: 2px solid var(--t1); outline-offset: -2px; }
+.sh-row.sh-action { font-size: 14px; }
+.sh-row.danger { color: var(--danger); }
+.sh-icon { width: 22px; display: inline-flex; justify-content: center; }
+.sh-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sh-label { font-weight: 600; }
+.sh-hint { font-size: 12.5px; color: var(--t2); }
+.sh-back {
+  border: none; background: none; cursor: pointer; padding: 4px 0;
+  color: var(--t2); font-family: var(--font); font-size: 14px;
+}
+.sh-back:hover { color: var(--t1); }
+.admin-page-header:has(.sh-back) { flex-wrap: wrap; gap: 6px 12px; }
+.admin-page-header .sh-back { flex-basis: 100%; text-align: left; }
+
+.sys-health-card .stat-rows { margin-bottom: 14px; }
+.sys-health-hub .dash-card-hdr { margin-top: 4px; }
+#page-a-settings .dash-console-card { display: flex; flex-direction: column; }
+#page-a-settings .dash-console-card .console {
+  height: 220px; white-space: pre-wrap; word-break: break-word;
+  font-size: 10.5px; line-height: 1.6;
+}
+.danger-zone .dash-card-title { color: var(--danger); margin-bottom: 6px; }
+.danger-zone .cmd-desc { margin: 0 0 12px; }
+
+/* ── Arm switch (Home › Security) ───────────────────────── */
+.arm-switch {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  padding: 4px; border-radius: 12px; background: color-mix(in srgb, var(--t1) 6%, transparent);
+}
+.arm-opt {
+  border: none; background: none; cursor: pointer; padding: 9px 0; border-radius: 9px;
+  font-family: var(--font); font-size: 13px; font-weight: 600; color: var(--t2);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.arm-opt:hover { color: var(--t1); }
+.arm-opt:focus-visible { outline: 2px solid var(--t1); outline-offset: 1px; }
+.arm-opt.on { background: var(--surface); color: var(--t1); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.arm-opt.on[data-arm="away"]  { color: var(--danger); }
+.arm-opt.on[data-arm="off"]   { color: var(--t3); }
+.arm-note { font-size: 12px; color: var(--t2); margin: 10px 2px 8px; line-height: 1.45; }
+.arm-card .modes-list { margin-top: 4px; }
+.panic-btn { width: 100%; margin-top: 10px; }
+.panic-btn:not(.on) { background: none; color: var(--danger); border: 1px solid var(--danger); }
+
+/* ── Phone alerts card (Settings) ───────────────────────── */
+.push-card {
+  flex-direction: row; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 14px 16px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.push-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
+.push-actions { display: flex; gap: 8px; }
+
+/* ── Detection rules and zones (Settings › Detection rules) ── */
+.zr-rules { display: grid; gap: 6px; margin: 10px 0 4px; }
+.zr-row { display: grid; grid-template-columns: minmax(90px, 1.2fr) repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; }
+.zr-head { font-size: 12px; font-weight: 600; color: var(--t2); }
+.zr-label { font-weight: 600; text-transform: capitalize; overflow-wrap: anywhere; }
+.zr-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--danger); margin-left: 4px; }
+.zr-act { width: 100%; min-width: 0; }
+.zr-act.zr-alert { color: var(--danger); }
+.zr-act.zr-ignore { color: var(--t3, var(--t2)); }
+.zr-canvas {
+  position: relative; margin: 10px 0; border-radius: 12px; overflow: hidden;
+  background: color-mix(in srgb, var(--t1) 8%, transparent); aspect-ratio: 16 / 9;
+}
+.zr-canvas img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+
+.zr-canvas img.zr-missing { visibility: hidden; }
+.zr-draw { position: absolute; inset: 0; cursor: crosshair; touch-action: none; }
+.zr-box {
+  position: absolute; border: 2px solid; border-radius: 6px; font-size: 11px; font-weight: 600;
+  padding: 2px 5px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.6); pointer-events: none; box-sizing: border-box;
+}
+.zr-box.zr-quiet { border-color: #3b82f6; background: rgba(59,130,246,.18); }
+.zr-box.zr-alert { border-color: #ef4444; background: rgba(239,68,68,.18); }
+.zr-ghost { border-style: dashed; }
+.zr-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 16px; color: var(--t2); font-size: 13px; pointer-events: none; }
+.zr-zones { display: grid; gap: 8px; }
+.zr-zone { display: grid; grid-template-columns: 12px minmax(0, 1fr) 90px minmax(0, 1.2fr) auto; gap: 6px; align-items: center; }
+.zr-swatch { width: 12px; height: 12px; border-radius: 3px; }
+.zr-swatch.zr-quiet { background: #3b82f6; }
+.zr-swatch.zr-alert { background: #ef4444; }
+.zr-none { color: var(--t2); font-size: 13px; }
+@media (max-width: 560px) {
+  .zr-zone { grid-template-columns: 12px minmax(0, 1fr) 84px; }
+  .zr-zone > input:nth-of-type(2) { grid-column: 2 / 4; }
+  .zr-zone > button { grid-column: 2 / 4; justify-self: start; }
+}
+
+/* Evidence export on each Events capture card */
+.ha-cap-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ha-cap-export { flex-shrink: 0; }

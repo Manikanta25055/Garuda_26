@@ -240,12 +240,118 @@ const G = (() => {
 
   const MODE_CFG = [
     { key:'privacy',   label:'Privacy Blur',     icon:'<span class="gi gi-privacy"></span>', cls:'mode-blue'   },
-    { key:'night',     label:'Night Mode',        icon:'<span class="gi gi-night-mode"></span>', cls:'mode-purple' },
+    { key:'night',     label:'Night Mode',        icon:'<span class="gi gi-night-mode"></span>', cls:'mode-purple', arm: true },
     { key:'dnd',       label:'Do Not Disturb',    icon:'<span class="gi gi-dnd"></span>', cls:'mode-warn'   },
-    { key:'idle',      label:'Idle',              icon:'<span class="gi gi-idle"></span>', cls:'mode-muted'  },
+    { key:'idle',      label:'Idle',              icon:'<span class="gi gi-idle"></span>', cls:'mode-muted', arm: true },
     { key:'email_off', label:'Email Alerts Off',  icon:'<span class="gi gi-email-off"></span>', cls:'mode-muted'  },
-    { key:'emergency', label:'Emergency',         icon:'<span class="gi gi-emergency"></span>', cls:'mode-danger' },
+    { key:'emergency', label:'Emergency',         icon:'<span class="gi gi-emergency"></span>', cls:'mode-danger', arm: true },
   ];
+  // Night and Idle are set by the arm switch, Emergency by its own button;
+  // the rest stay as rows under the switch.
+
+  // ── Arm switch ────────────────────────────────────────────
+  const ARM_NOTES = {
+    off:   'Off: nothing alerts. Detection keeps logging quietly.',
+    home:  'Alerts on. A person is only flagged in the night window.',
+    night: 'Night: alerts are sent as high priority.',
+    away:  'Away: any person seen raises the alarm.',
+  };
+  let _arm = null, _armKey = '';
+  function _renderArm(a) {
+    _arm = a;
+    document.querySelectorAll('#arm-switch .arm-opt').forEach(b => {
+      const on = b.dataset.arm === a.state;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', String(on));
+    });
+    const note = $('arm-note');
+    if (note) note.textContent = ARM_NOTES[a.state] + (a.auto_set ? ' Set by auto-arm when you left.' : '');
+    const auto = $('arm-auto');
+    if (auto) auto.classList.toggle('on', !!a.auto);
+  }
+  async function loadArm() {
+    try { _renderArm(await api('GET', '/api/arm')); } catch (_) {}
+  }
+  async function setArm(state) {
+    if (_arm && _arm.state === state) return;
+    const was = _arm;
+    _renderArm({ ...(_arm || {}), state, auto_set: false });
+    try { _renderArm(await api('POST', '/api/arm', { state })); window.Feel?.touch('light'); }
+    catch (e) { if (was) _renderArm(was); showToast(extractError(e), 'error'); }
+  }
+  async function toggleAutoArm() {
+    try { _renderArm(await api('POST', '/api/arm/auto', { enabled: !(_arm && _arm.auto) })); }
+    catch (e) { showToast(extractError(e), 'error'); }
+  }
+  // ── Phone alerts (Web Push) ───────────────────────────────
+  // A phone subscribes with the Pi's public key; the Pi encrypts each alert
+  // to the phone's keys. iPhone: only once the site is on the Home Screen.
+  function _pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+  }
+  const _b64uToBytes = s => {
+    const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, c => c.charCodeAt(0));
+  };
+  async function _pushSub() {
+    if (!_pushSupported()) return null;
+    const reg = await navigator.serviceWorker.ready;
+    return reg.pushManager.getSubscription();
+  }
+  async function syncPushCard() {
+    const status = $('push-status'), on = $('push-on-btn'), test = $('push-test-btn');
+    if (!status || !on) return;
+    if (!_pushSupported()) {
+      status.textContent = /iPhone|iPad/.test(navigator.userAgent)
+        ? 'On iPhone, add Garuda to your Home Screen first (Share › Add to Home Screen), then open it from there.'
+        : 'This browser cannot receive phone alerts.';
+      on.classList.add('hidden'); test?.classList.add('hidden');
+      return;
+    }
+    let sub = null;
+    try { sub = await _pushSub(); } catch (_) {}
+    if (Notification.permission === 'denied') {
+      status.textContent = 'Notifications are blocked for this site. Allow them in the browser settings, then come back.';
+    } else {
+      status.textContent = sub ? 'On for this phone: alerts, a person while armed, and a covered camera.'
+        : 'Get an alert with a picture on this phone within seconds.';
+    }
+    on.textContent = sub ? 'Turn off' : 'Turn on';
+    on.classList.toggle('btn-primary', !sub);
+    on.classList.toggle('btn-ghost', !!sub);
+    test?.classList.toggle('hidden', !sub);
+  }
+  async function pushToggle() {
+    try {
+      const existing = await _pushSub();
+      if (existing) {
+        await api('POST', '/api/push/unsubscribe', { endpoint: existing.endpoint }).catch(() => {});
+        await existing.unsubscribe();
+        showToast('Phone alerts are off for this phone.', 'success');
+      } else {
+        if (await Notification.requestPermission() !== 'granted') { syncPushCard(); return; }
+        const { key } = await api('GET', '/api/push/key');
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64uToBytes(key) });
+        await api('POST', '/api/push/subscribe', { subscription: sub.toJSON() });
+        showToast('Phone alerts are on. Send a test to see one.', 'success');
+      }
+    } catch (e) { showToast(extractError(e), 'error'); }
+    syncPushCard();
+  }
+  async function pushTest() {
+    try {
+      const r = await api('POST', '/api/push/test', {});
+      showToast(r.delivered ? 'Test sent. It should arrive in a few seconds.' : 'The push service did not take it. Turn alerts off and on again.', r.delivered ? 'success' : 'error');
+    } catch (e) { showToast(extractError(e), 'error'); }
+  }
+  // A tapped notification brings the page here and names the tab to show.
+  navigator.serviceWorker?.addEventListener('message', e => {
+    if (e.data && e.data.nav && _session) nav(e.data.nav);
+  });
+
+  let _panicOn = false;
+  function togglePanic() { toggleMode('emergency', _panicOn); }
 
   // ── Backend URL config ───────────────────────────────────
   // True when the page itself is served by the Pi (LAN address or one of the
@@ -357,6 +463,9 @@ const G = (() => {
     const backend = getBackend();
     updateBackendStatus(backend);
     const samePi = _servedByPi();
+    // Only a copy hosted away from the Pi needs to be told where the Pi is;
+    // ?dev=1 shows the button anywhere for testing.
+    if (!samePi || new URLSearchParams(location.search).has('dev')) $('bk-config-btn')?.classList.remove('hidden');
     // Tokens an older version stored where scripts can read them.
     _lsDel('garuda_token');
     _lsDel('garuda_refresh');
@@ -506,7 +615,10 @@ const G = (() => {
     buildNav(_session.role);
     $('main')?.classList.add('dash-active');
     _setDILabel(_BRAND);
-    nav('dashboard');
+    // A notification opens the page at /#events: start there, once.
+    const start = location.hash === '#events' ? 'events' : 'dashboard';
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    nav(start);
     // Live uptime ticker — save ID so it can be cleared on logout
     if (_uptimeInterval) clearInterval(_uptimeInterval);
     _uptimeInterval = setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
@@ -638,7 +750,7 @@ const G = (() => {
     $('app').classList.remove('logged-in');
     _syncFeedbackVisibility();
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
-    // Stop all camera streams (WebRTC / WS / MJPEG)
+    // Stop all camera streams (WS / MJPEG)
     stopCameraStream();
     const camOv = $('camera-overlay');
     if (camOv) camOv.classList.add('hidden');
@@ -690,9 +802,7 @@ const G = (() => {
   }
 
   // ── Camera overlay ────────────────────────────────────────
-  // Priority: WebRTC (H.264, lowest latency) → WS binary JPEG (CF Tunnel)
-  //            → MJPEG (universal fallback)
-  let _activePc = null;   // RTCPeerConnection when WebRTC is active
+  // WS binary JPEG (works through the Cloudflare tunnel), MJPEG as the fallback.
   let _wsStream = null;   // WebSocket when WS-JPEG stream is active
 
   function _camSetStatus(txt) {
@@ -716,10 +826,7 @@ const G = (() => {
   function stopCameraStream() {
     if (_mjpegRetry) { clearTimeout(_mjpegRetry); _mjpegRetry = null; }
     const camImg   = $('cam-img');
-    const camVideo = $('cam-video');
     if (camImg)   { camImg.onload = null; camImg.onerror = null; camImg.src = ''; camImg.style.display = 'none'; }
-    if (camVideo) { camVideo.srcObject = null; camVideo.style.display = 'none'; }
-    if (_activePc) { _activePc.close(); _activePc = null; }
     if (_wsStream) { _wsStream.close(); _wsStream = null; }
     stopFeedAudio();
   }
@@ -852,50 +959,6 @@ const G = (() => {
     } else {
       _lsSet(_FEED_SOUND_KEY, 'on');
       startFeedAudio();
-    }
-  }
-
-  async function startWebRTC() {
-    const backend = getBackend() || '';
-    const camVideo = $('cam-video');
-    const camOffline = $('cam-offline');
-    try {
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
-      _activePc = pc;
-      pc.addTransceiver('video', { direction: 'recvonly' });
-      pc.ontrack = (ev) => {
-        if (camVideo && ev.streams[0]) {
-          camVideo.srcObject = ev.streams[0];
-          camVideo.style.display = 'block';
-          if (camOffline) camOffline.style.display = 'none';
-          _camSetStatus('Live · WebRTC');
-        }
-      };
-      pc.onconnectionstatechange = () => {
-        if (['failed','disconnected','closed'].includes(pc.connectionState)) {
-          _camSetStatus('WebRTC lost — retrying WS…');
-          pc.close(); _activePc = null;
-          startWsStream();
-        }
-      };
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      const token = _token || '';
-      const resp = await fetch(backend + '/webrtc/offer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Garuda-Token': token } : {}) },
-        body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }),
-        credentials: 'include',
-      });
-      if (!resp.ok) throw new Error('WebRTC offer rejected: ' + resp.status);
-      const answer = await resp.json();
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    } catch(e) {
-      console.warn('WebRTC failed, falling back to WS stream:', e);
-      if (_activePc) { _activePc.close(); _activePc = null; }
-      startWsStream();
     }
   }
 
@@ -1053,34 +1116,11 @@ const G = (() => {
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
   }
 
-  // The floor plan is inlined (not an <object>) so the theme can ink it.
-  let _floorplanLoaded = false;
-  function _loadFloorplan() {
-    const box = $('floorplan-svg');
-    if (!box || _floorplanLoaded) return;
-    _floorplanLoaded = true;
-    fetch('/static/floorplan.svg?v=2').then(r => r.ok ? r.text() : Promise.reject())
-      .then(svg => { box.innerHTML = svg; })
-      .catch(() => { _floorplanLoaded = false; });
-  }
-
-  function switchCamTab(tab) {
-    const live      = $('cam-view-live');
-    const floor     = $('cam-view-floor');
-    const tabLive   = $('cam-tab-live');
-    const tabFloor  = $('cam-tab-floor');
-    if (tab === 'live') {
-      live?.classList.remove('hidden');
-      floor?.classList.add('hidden');
-      tabLive?.classList.add('active');
-      tabFloor?.classList.remove('active');
-    } else {
-      _loadFloorplan();
-      floor?.classList.remove('hidden');
-      live?.classList.add('hidden');
-      tabFloor?.classList.add('active');
-      tabLive?.classList.remove('active');
-    }
+  // One view now: the floor plan tab went with a single camera, so this
+  // only puts the live view back after anything that hid it.
+  function switchCamTab() {
+    $('cam-view-live')?.classList.remove('hidden');
+    $('cam-tab-live')?.classList.add('active');
   }
 
   // ── Chat ──────────────────────────────────────────────────
@@ -1097,9 +1137,10 @@ const G = (() => {
   function _heatmapFit(container) {
     const card = container.closest('.hm-card');
     const row = card && card.parentElement;
-    const tracks = row ? getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/).length : 2;
+    // Whole row: a one-track row, or a card spanning every track (Events).
+    const wide = row && card.offsetWidth >= row.clientWidth * 0.9;
     const room = container.clientWidth - _HM.label;
-    if (tracks !== 1 || room <= 0) return { weeks: _HM.weeks, cell: _HM.cell };
+    if (!wide || room <= 0) return { weeks: _HM.weeks, cell: _HM.cell };
     const weeks = Math.max(_HM.weeks, Math.min(_HM.maxWeeks, Math.floor((room + _HM.gap) / (_HM.cell + _HM.gap))));
     const cell = Math.min(_HM.maxCell, Math.floor(((room - (weeks - 1) * _HM.gap) / weeks) * 100) / 100);
     return { weeks, cell };
@@ -1255,28 +1296,73 @@ const G = (() => {
     feedback:  `<span class="gi gi-feedback"></span>`,
     theme:     `<span class="gi gi-light-mode"></span>`,
     signout:   `<span class="gi gi-power"></span>`,
+    shield:    `<span class="gi gi-shield"></span>`,
   };
 
+  // Five tabs: what a household uses every day. Everything else is one
+  // step down, behind Settings (see _SETTINGS_ROWS).
   const _USER_NAV = [
-    { page: 'dashboard', label: 'Home',   icon: 'dashboard' },
-    { page: 'devices',   label: 'Devices', icon: 'devices'  },
-    { page: 'auto',      label: 'Automate', icon: 'auto'    },
-    { page: 'insights',  label: 'Insights', icon: 'insights' },
-    { page: 'narada',    label: 'Narada', icon: 'narada'    },
+    { page: 'dashboard', label: 'Home',     icon: 'dashboard' },
+    { page: 'events',    label: 'Events',   icon: 'logs'      },
+    { page: 'devices',   label: 'Devices',  icon: 'devices'   },
+    { page: 'narada',    label: 'Narada',   icon: 'narada'    },
+    { page: 'settings',  label: 'Settings', icon: 'settings'  },
   ];
+  const _ADMIN_NAV = _USER_NAV;
 
-  const _ADMIN_NAV = [
-    { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
-    { page: 'devices',    label: 'Devices',  icon: 'devices'   },
-    { page: 'auto',       label: 'Automate', icon: 'auto'      },
-    { page: 'insights',   label: 'Insights', icon: 'insights'  },
-    { page: 'narada',     label: 'Narada',   icon: 'narada'    },
-    { page: 'a-email',    label: 'Email',    icon: 'email'     },
-    { page: 'a-settings', label: 'System',   icon: 'settings'  },
-    { page: 'a-logs',     label: 'Logs',     icon: 'logs'      },
-    { page: 'a-cmds',     label: 'Commands', icon: 'commands'  },
-    { page: null,         label: 'Stop',     icon: 'emergency', danger: true },
+  // The Settings page: one row per page that is not a tab. A sub-page shows
+  // as Settings in the tab bar.
+  const _SETTINGS_ROWS = [
+    { page: 'auto',       label: 'Automations',   hint: 'Rules, shortcuts, schedules, away and vacation', icon: 'auto' },
+    { page: 'insights',   label: 'House activity', hint: 'Today\'s summary and who switched what',        icon: 'insights' },
+    { page: 'a-zones',    label: 'Detection rules', hint: 'What alerts in Home, Night and Away, and where', icon: 'shield', admin: true },
+    { page: 'a-email',    label: 'Notifications', hint: 'Alert e-mail, recipients and cooldown',          icon: 'email',    admin: true },
+    { page: 'a-settings', label: 'System',        hint: 'Health, detection, presence, Narada AI, keys',    icon: 'settings', admin: true },
+    { page: 'a-logs',     label: 'Logs',          hint: 'System, detection, presence and voice logs',      icon: 'logs',     admin: true },
+    { page: 'a-cmds',     label: 'Narada phrases', hint: 'Fixed replies to phrases you choose',            icon: 'commands', admin: true },
   ];
+  const _SETTINGS_PAGES = _SETTINGS_ROWS.map(r => r.page);
+
+  function _renderSettings(role) {
+    const box = $('settings-list');
+    if (!box) return;
+    const rows = _forProduct(_SETTINGS_ROWS).filter(r => !r.admin || role === 'admin');
+    const actions = [
+      { icon: 'feedback', label: 'Send feedback', run: () => G.toggleFeedback && G.toggleFeedback() },
+      { icon: 'theme',    label: 'Switch appearance', run: toggleTheme },
+      { icon: 'signout',  label: 'Sign out', run: logout, danger: true },
+    ];
+    box.innerHTML = '';
+    const mk = (cls, icon, label, hint) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = cls;
+      b.innerHTML = `<span class="sh-icon">${_NAV_ICONS[icon]}</span><span class="sh-text"><span class="sh-label"></span>`
+        + (hint ? '<span class="sh-hint"></span>' : '') + '</span>';
+      b.querySelector('.sh-label').textContent = label;
+      if (hint) b.querySelector('.sh-hint').textContent = hint;
+      box.appendChild(b);
+      return b;
+    };
+    rows.forEach(r => {
+      const b = mk('sh-row', r.icon, r.label, r.hint);
+      b.dataset.page = r.page;
+      b.onclick = () => nav(r.page);
+    });
+    mk('sh-row', 'logs', 'Help', 'How each part of the app works').onclick = () => G.openDocs();
+    actions.forEach(a => { mk('sh-row sh-action' + (a.danger ? ' danger' : ''), a.icon, a.label).onclick = a.run; });
+    // Each page behind Settings gets a way back to it.
+    _SETTINGS_PAGES.forEach(id => {
+      const hdr = document.querySelector(`#page-${id} .admin-page-header`);
+      if (!hdr || hdr.querySelector('.sh-back')) return;
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'sh-back';
+      back.textContent = '‹ Settings';
+      back.onclick = () => nav('settings');
+      hdr.prepend(back);
+    });
+  }
 
   // ── The tab bar's selection pill ──────────────────────────
   // A lens that sits under the current tab. A tap sends it there; a press
@@ -1551,9 +1637,7 @@ const G = (() => {
   // Phone mode: five tabs, the rest in an iOS-style "More" sheet. Eleven
   // items squeezed into a scrolling strip were unreadable at 390 px.
   const _PHONE_MQ = window.matchMedia('(max-width: 768px)');
-  const _PHONE_PRIMARY = _PRODUCT === 'security'
-    ? ['dashboard', 'narada']
-    : ['dashboard', 'devices', 'auto', 'narada'];
+  const _PHONE_PRIMARY = ['dashboard', 'events', 'devices', 'narada', 'settings'];
   let _navRole = null;
 
   function _isPhone() { return _PHONE_MQ.matches; }
@@ -1576,7 +1660,8 @@ const G = (() => {
     navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
     const phone = _isPhone();
     navEl.classList.toggle('ios-nav-phone', phone);
-    const shown = phone
+    const rest = items.filter(i => !_PHONE_PRIMARY.includes(i.page));
+    const shown = phone && rest.length
       ? [...items.filter(i => _PHONE_PRIMARY.includes(i.page)),
          { page: 'more', label: 'More', icon: 'more' }]
       : items;
@@ -1587,7 +1672,8 @@ const G = (() => {
       else btn.onclick = () => nav(item.page, btn);
       navEl.appendChild(btn);
     });
-    _buildMoreSheet(phone ? items.filter(i => !_PHONE_PRIMARY.includes(i.page)) : []);
+    _buildMoreSheet(phone ? rest : []);
+    _renderSettings(role);
     const current = _navItemFor(_currentPage) || navEl.querySelector('.ios-item:not(.ios-danger)');
     if (current) {
       current.classList.add('active');
@@ -1598,6 +1684,7 @@ const G = (() => {
   // The tab that represents a page: its own, or "More" on a phone.
   function _navItemFor(pageId) {
     if (!pageId) return null;
+    if (_SETTINGS_PAGES.includes(pageId)) pageId = 'settings';
     return document.querySelector(`#ios-nav .ios-item[data-page="${pageId}"]`)
       || (_isPhone() ? document.querySelector('#ios-nav .ios-item[data-page="more"]') : null);
   }
@@ -1684,14 +1771,17 @@ const G = (() => {
   // ── Dynamic Island helpers ────────────────────────────────
   const _DI_LABELS = {
     'dashboard':   _BRAND,
+    'events':      'Events',
+    'settings':    'Settings',
     'narada':      'Narada',
     'devices':     'Devices',
     'auto':        'Automate',
-    'insights':    'Insights',
-    'a-email':     'Email',
-    'a-settings':  'Settings',
+    'insights':    'Activity',
+    'a-zones':     'Rules',
+    'a-email':     'Notifications',
+    'a-settings':  'System',
     'a-logs':      'Logs',
-    'a-cmds':      'Commands',
+    'a-cmds':      'Phrases',
   };
 
   function _setDILabel(label) {
@@ -1823,8 +1913,10 @@ const G = (() => {
     _syncDIContext();
     _syncFeedbackVisibility();
     _syncFeedAudio();
+    if (pageId === 'events')     renderHeatmap(_hmActivity);   // drawn to the width it has now
+    if (pageId === 'settings')   syncPushCard();
     if (pageId === 'a-email')    loadEmailCfg();
-    if (pageId === 'a-settings') { loadSysCfg(); if (window.H) H.loadAI(); }
+    if (pageId === 'a-settings') { loadSysCfg(); loadArm(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
       if (_logsUnlocked) {
         fetchAndRenderLogs();
@@ -1836,6 +1928,7 @@ const G = (() => {
     if (pageId === 'a-cmds')     loadCmds();
     if (window.H) H.onNav(pageId);
     if (window.N) N.onNav(pageId);
+    if (window.Z) Z.onNav(pageId);
   }
 
   // ── Mobile sidebar (no-ops — replaced by iOS nav) ─────────
@@ -2411,8 +2504,19 @@ const G = (() => {
     const hpills = $('header-pills');
     if (!grid) return;
 
+    // The arm switch follows the flags: re-read it when one it reads changed.
+    const key = `${!!modes.idle}:${!!modes.night}`;
+    if (key !== _armKey) { _armKey = key; loadArm(); }
+    _panicOn = !!modes.emergency;
+    const panic = $('panic-btn');
+    if (panic) {
+      panic.classList.toggle('on', _panicOn);
+      panic.setAttribute('aria-pressed', String(_panicOn));
+      panic.textContent = _panicOn ? 'Emergency on · tap to clear' : 'Emergency';
+    }
+
     // Update rows in-place (preserves CSS transitions); create if first render
-    MODE_CFG.forEach(m => {
+    MODE_CFG.filter(m => !m.arm).forEach(m => {
       const isOn = !!modes[m.key];
       let row = grid.querySelector(`[data-mode="${m.key}"]`);
       if (!row) {
@@ -3317,7 +3421,7 @@ const G = (() => {
     goAdminFlow, backToMain, backToAdminStep1, sendAdminOTP, verifyAdminOTP,
     goMasterKey, submitMasterKeyLogin, unlockLogs,
     goForgot, sendForgotOTP, doReset,
-    nav, toggleMode, emergencyStop,
+    nav, toggleMode, emergencyStop, setArm, toggleAutoArm, togglePanic, pushToggle, pushTest,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,

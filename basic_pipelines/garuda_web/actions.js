@@ -25,7 +25,7 @@
 (function () {
   'use strict';
 
-  const NAMESPACES = new Set(['G', 'H', 'N', 'Feel', 'UI']);
+  const NAMESPACES = new Set(['G', 'H', 'N', 'Z', 'Feel', 'UI']);
   const NAME = /^[A-Za-z_$][\w$]*$/;
 
   // The few handlers that were expressions rather than a call.

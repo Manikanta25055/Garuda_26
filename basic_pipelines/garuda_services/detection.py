@@ -33,7 +33,9 @@ def _check_night_presence():
     """Activate yellow night-presence alarm if a person is detected in the configured window (IST)."""
     with core.STATE.alerts.night_presence_lock:
         win = dict(core.STATE.config.night_presence_window)   # snapshot — avoids race with config update
-    if not win.get("enabled", True):
+    # Armed Away: nobody should be in, so a person at any hour raises it.
+    away = getattr(core, "ARM", None) is not None and core.person_alert_wanted(core, core.ARM)
+    if not win.get("enabled", True) and not away:
         return
     now_ist = datetime.datetime.now(core._IST) if core._IST is not None else datetime.datetime.now()
     now_hm = now_ist.strftime("%H:%M")
@@ -43,7 +45,7 @@ def _check_night_presence():
         in_window = start <= now_hm < end
     else:
         in_window = now_hm >= start or now_hm < end
-    if in_window:
+    if in_window or away:
         with core.STATE.alerts.night_presence_lock:
             core.STATE.alerts.night_presence_active = True
             core.STATE.alerts.night_presence_end_time = time.time() + 10
@@ -109,11 +111,22 @@ def app_callback(pad, info, user_data):
     _danger_set = {lbl.lower() for lbl in user_data.danger_labels}
     _watch_set  = {lbl.lower() for lbl in core.STATE.config.watch_labels}
 
+    # alert, log or ignore for each detection: the per-object rules and zones
+    # (garuda_routes/zones.py). Nothing saved means the danger labels alert.
+    _rules = getattr(core, "RULES", None)
+    if detections and _rules is not None and (_rules.data["rules"] or _rules.data["zones"]):
+        _decide = core.FrameRules(core, _rules, getattr(core, "ARM", None), _danger_set)
+    else:
+        _decide = lambda lbl, box=None: "alert" if lbl.lower() in _danger_set else "log"
+
     danger_detected = False
+    _alert_dets = []
     for d in detections:
         label = d.get_label()
         confidence = d.get_confidence()
         if confidence >= threshold:
+            _b = d.get_bbox()
+            _act = _decide(label, (_b.xmin(), _b.ymin(), _b.xmax(), _b.ymax()))
             text_info += f"{label} ({confidence:.2f})\n"
             # Privacy blur: blur any detected person (case-insensitive)
             if privacy and publish and label.lower() == "person" and _frame() is not None:
@@ -129,12 +142,14 @@ def app_callback(pad, info, user_data):
                     roi_face = frame[y1:y2, x1:x2]
                     roi_face = cv2.GaussianBlur(roi_face, (51, 51), 30)
                     frame[y1:y2, x1:x2] = roi_face
-            if label.lower() in _danger_set:
+            if _act == "alert":
+                _alert_dets.append(d)
                 core.STATE.camera.label_consec_frames[label] = core.STATE.camera.label_consec_frames.get(label, 0) + 1
                 if core.STATE.camera.label_consec_frames[label] >= 2:   # require 2 consecutive frames to fire
                     danger_detected = True
                 core.STATE.alerts.last_danger_conf = confidence
-            elif label.lower() == "person" or (label.lower() in _watch_set and label.lower() not in _danger_set):
+            elif _act == "log" and (label.lower() == "person" or label.lower() in _watch_set
+                                    or label.lower() in _danger_set):
                 # WATCH: log silently with 30s cooldown to avoid per-frame spam
                 now_t = time.time()
                 if now_t - core.STATE.camera.watch_last_logged.get(label, 0) >= 30:
@@ -149,9 +164,7 @@ def app_callback(pad, info, user_data):
             core.STATE.camera.label_consec_frames[k] = 0
 
     # Find which danger labels were actually detected this frame (for logging)
-    _triggered_labels = [d.get_label() for d in detections
-                         if d.get_label().lower() in _danger_set
-                         and d.get_confidence() >= threshold]
+    _triggered_labels = [d.get_label() for d in _alert_dets]
     if danger_detected:
         core.STATE.alerts.danger_trigger_info = text_info   # snapshot the frame that triggered
         _captured_conf = core.STATE.alerts.last_danger_conf
@@ -161,8 +174,7 @@ def app_callback(pad, info, user_data):
             core.STATE.alerts.danger_active = True
         # The frame and box of the detection, for the second look before the
         # email (garuda_auto/vision_check.py). Copied only when it is needed.
-        _box = next(((b.xmin(), b.ymin(), b.xmax(), b.ymax()) for d in detections
-                     if d.get_label().lower() in _danger_set and d.get_confidence() >= threshold
+        _box = next(((b.xmin(), b.ymin(), b.xmax(), b.ymax()) for d in _alert_dets
                      for b in [d.get_bbox()]), None)
         _held_since = core.STATE.alerts.email_held_at
         _look_again = bool(_held_since) and time.time() - _held_since >= core._svc_alerts.RECHECK_S
