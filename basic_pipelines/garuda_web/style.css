@@ -5485,3 +5485,124 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
 /* Evidence export on each Events capture card */
 .ha-cap-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .ha-cap-export { flex-shrink: 0; }
+
+/* ════════════════════════════════════════════════════════════════
+   Home page (#page-dashboard): one DOM, a layout for each screen.
+   The order follows what people come to the page for (Ring, Nest,
+   Apple Home, UniFi Protect all agree): is the house safe, set the
+   arm state, look at the camera, see what happened, then the rest.
+   ════════════════════════════════════════════════════════════════ */
+.hp { flex: 1; min-height: 0; box-sizing: border-box; padding: 14px; }
+.hp-main, .hp-rail { display: flex; flex-direction: column; gap: 14px; min-width: 0; min-height: 0; }
+
+/* Status + arm switch */
+.hp-hero.status-card { text-align: left; padding: 18px 22px; border-radius: 20px; }
+.hp-hero-status { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.hp-hero .status-pulse-ring { width: 46px; height: 46px; }
+.hp-hero-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hp-hero .status-label { font-size: 21px; letter-spacing: 0.6px; line-height: 1.15; }
+.hp-hero .status-desc { margin-top: 0; font-size: 13.5px; }
+.hp-hero-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+.hp-hero .owner-badge { margin: 0; font-size: 12px; }
+.hp-hero .status-foot { display: inline-flex; gap: 6px; margin: 0; padding: 0; border: 0; }
+.hp-hero .arm-opt { padding: 10px 0; }
+.hp-hero .arm-note { margin: 8px 2px 0; }
+/* The selected state reads from across the room: the arm state tints its
+   own segment, not just the text. */
+.hp-hero .arm-opt.on[data-arm="away"]  { background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
+
+/* Camera: the picture runs to the card's edges, the tab bar is its header.
+   The offline text stays readable on the black view in both themes. */
+.hp-cam.card { padding: 0; }
+.hp-cam .cam-tab-bar { padding: 10px 14px; }
+.hp-cam .cam-offline {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  color: rgba(255,255,255,0.55); font-size: 13px;
+}
+
+.hp-card-title { display: flex; align-items: center; gap: 8px; }
+.hp-activity .dash-card-hdr, .hp-controls .dash-card-hdr { align-items: center; margin-bottom: 12px; }
+.hp-activity .det-item { padding: 8px 0; border-bottom: 0.5px solid var(--border); }
+.hp-activity .det-item:last-child { border-bottom: 0; }
+.hp-activity .det-timeline { gap: 0; }
+.hp-controls .panic-btn { margin-top: 12px; }
+.hp-glance.ha-glance { height: auto; }
+
+/* Cards rise into place, one after another, when Home opens */
+#page-dashboard.active :is(.hp-hero, .hp-cam, .hp-activity, .hp-glance, .hp-controls) {
+  animation: haRise 0.42s var(--ease-apple) both;
+}
+#page-dashboard.active .hp-cam      { animation-delay: 0.04s; }
+#page-dashboard.active .hp-activity { animation-delay: 0.08s; }
+#page-dashboard.active .hp-glance   { animation-delay: 0.11s; }
+#page-dashboard.active .hp-controls { animation-delay: 0.14s; }
+@media (prefers-reduced-motion: reduce) {
+  #page-dashboard.active :is(.hp-hero, .hp-cam, .hp-activity, .hp-glance, .hp-controls) { animation: none; }
+}
+html.perf-lite #page-dashboard.active :is(.hp-hero, .hp-cam, .hp-activity, .hp-glance, .hp-controls) { animation: none; }
+
+/* ── Desktop: the camera is the stage, a rail beside it ──────────
+   Status and the arm switch sit in one bar over the camera; the rail
+   holds recent activity (it takes the spare height) and the quick
+   controls. Nothing scrolls but the activity list. */
+@media (min-width: 1024px) {
+  .hp {
+    display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px;
+    padding-bottom: 88px;                /* clear the floating tab bar */
+    overflow: hidden;
+  }
+  .hp-hero {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+    align-items: center; gap: 28px; flex-shrink: 0;
+  }
+  .hp-cam { flex: 1 1 0%; min-height: 240px; }
+  .hp-rail { overflow-y: auto; }
+  .hp-activity { flex: 1 1 0%; min-height: 200px; display: flex; flex-direction: column; }
+  .hp-activity .det-timeline { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
+  .hp-glance, .hp-controls { flex-shrink: 0; }
+}
+@media (min-width: 1600px) {
+  .hp { grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; padding: 18px 18px 92px; }
+  .hp-main, .hp-rail { gap: 18px; }
+}
+
+/* ── Phone: one column, in the order it is used ──────────────────
+   The two wrappers dissolve so each card can be placed on its own:
+   status and the arm switch first (big targets, one thumb), the
+   camera at its true 16:9, the latest activity, then the rest. */
+@media (max-width: 1023px) {
+  .hp { display: flex; flex-direction: column; gap: 12px; padding: 4px 10px 104px; }
+  .hp-main, .hp-rail { display: contents; }
+  .hp-hero     { order: 1; }
+  .hp-cam      { order: 2; }
+  .hp-activity { order: 3; }
+  .hp-glance   { order: 4; }
+  .hp-controls { order: 5; }
+
+  .hp-hero.status-card { padding: 16px; }
+  .hp-hero-status { gap: 14px; }
+  .hp-hero .status-pulse-ring { width: 40px; height: 40px; }
+  .hp-hero .status-label { font-size: 19px; }
+  .hp-hero-arm { margin-top: 14px; }
+  .hp-hero .arm-opt { padding: 12px 0; font-size: 14px; }   /* 44px targets */
+  .hp-hero .arm-note { font-size: 12px; }
+
+  .hp-cam { flex: none; min-height: 0; }
+  .hp-cam .cam-view { flex: none; aspect-ratio: 16 / 9; }
+  .hp-cam .cam-tab-bar { padding: 8px 10px; }
+
+  .hp-activity .det-timeline { max-height: 212px; }
+  .hp-activity .dash-card-hdr, .hp-controls .dash-card-hdr { margin-bottom: 6px; }
+  .hp .dash-card-title { font-size: 14px; }
+}
+/* A tablet or a narrow window: the same order, but the smaller cards
+   pair up instead of stretching across the whole width. */
+@media (min-width: 700px) and (max-width: 1023px) {
+  .hp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; padding: 4px 16px 104px; }
+  .hp-hero, .hp-cam { grid-column: 1 / -1; }
+  .hp-hero.status-card {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); align-items: center; gap: 20px;
+  }
+  .hp-hero-arm { margin-top: 0; }
+}
