@@ -44,7 +44,7 @@
         <div class="backend-row">
           <div class="bk-dot" id="bk-dot"></div>
           <span id="bk-label" class="bk-host">Checking connection…</span>
-          <button class="btn-text-mono" data-click="G.openBackendConfig">Configure</button>
+          <button class="btn-text-mono hidden" id="bk-config-btn" data-click="G.openBackendConfig">Configure</button>
         </div>
 
         <div class="lc-fields">
@@ -262,24 +262,6 @@
                   <button class="owner-refresh-btn" title="Refresh presence" data-click="G.refreshPresence">↻</button>
                 </span>
               </div>
-              <div class="stat-rows" style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
-                <div class="stat-row">
-                  <span class="stat-lbl">Uptime</span>
-                  <span class="stat-val" id="s-uptime">—</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-lbl">Last Alert</span>
-                  <span class="stat-val" id="s-alert">None</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-lbl">Threshold</span>
-                  <span class="stat-val" id="s-thr">—</span>
-                </div>
-                <div class="stat-row">
-                  <span class="stat-lbl">Pipeline</span>
-                  <span class="stat-val" id="s-pipeline">—</span>
-                </div>
-              </div>
               <div class="status-foot">
                 <span class="status-foot-lbl">Last alert</span>
                 <span class="status-foot-val" id="status-last">Never</span>
@@ -294,50 +276,6 @@
               <div id="modes-pills" class="modes-list"></div>
             </div>
 
-            <!-- Hub Health -->
-            <div class="card">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Hub Health</div>
-              </div>
-              <div class="hub-health-wrap">
-                <div class="hub-health-row">
-                  <span class="hub-health-label">CPU</span>
-                  <div class="hub-health-track">
-                    <div class="hub-health-fill" id="hub-bar-cpu" style="width:0%"></div>
-                  </div>
-                  <span class="hub-health-val" id="hwm-cpu">—</span>
-                </div>
-                <div class="hub-health-row">
-                  <span class="hub-health-label">RAM</span>
-                  <div class="hub-health-track">
-                    <div class="hub-health-fill" id="hub-bar-ram" style="width:0%"></div>
-                  </div>
-                  <span class="hub-health-val" id="hwm-ram">—</span>
-                </div>
-                <div class="hub-health-row">
-                  <span class="hub-health-label">Temp</span>
-                  <div class="hub-health-track">
-                    <div class="hub-health-fill" id="hub-bar-temp" style="width:0%"></div>
-                  </div>
-                  <span class="hub-health-val" id="hwm-temp">—</span>
-                </div>
-                <div class="hub-health-row">
-                  <span class="hub-health-label">FPS</span>
-                  <div class="hub-health-track">
-                    <div class="hub-health-fill" id="hub-bar-fps" style="width:0%"></div>
-                  </div>
-                  <span class="hub-health-val" id="hwm-fps">—</span>
-                </div>
-                <div class="hub-health-row">
-                  <span class="hub-health-label">Disk</span>
-                  <div class="hub-health-track">
-                    <div class="hub-health-fill" id="hub-bar-disk" style="width:0%"></div>
-                  </div>
-                  <span class="hub-health-val" id="hwm-disk">—</span>
-                </div>
-              </div>
-            </div>
-
           </aside><!-- /sidebar-left -->
 
           <!-- ── CENTER STAGE ── -->
@@ -347,7 +285,6 @@
             <div class="cam-main-card card">
               <div class="cam-tab-bar">
                 <button class="cam-tab-btn active" id="cam-tab-live" data-click="G.switchCamTab" data-args='["live"]'>Live</button>
-                <button class="cam-tab-btn" id="cam-tab-floor" data-click="G.switchCamTab" data-args='["floor"]'>Floor Plan</button>
                 <div class="cam-tab-right">
                   <span id="cam-status-txt" class="cam-status-txt">Offline</span>
                   <button class="cam-action-btn" id="cam-snapshot-btn" data-click="G.takeSnapshot" title="Save snapshot" style="display:none" aria-label="Download snapshot">
@@ -366,7 +303,6 @@
               </div>
               <!-- Live feed -->
               <div class="cam-view" id="cam-view-live">
-                <video id="cam-video" autoplay playsinline muted style="display:none"></video>
                 <img id="cam-img" alt="Camera Feed" style="display:none"/>
                 <div id="cam-offline" class="cam-offline">
                   <div class="cam-icon"><span class="gi gi-camera"></span></div>
@@ -375,47 +311,14 @@
                 <div class="cam-hud-overlay">
                   <div class="cam-hud-left">
                     <div class="cam-live-pulse"></div>
-                    <span class="cam-hud-fps" id="hud-fps">-- fps</span>
                   </div>
                 </div>
               </div>
-              <!-- Floor plan -->
-              <div class="cam-view hidden" id="cam-view-floor">
-                <div id="floorplan-svg"></div>
-              </div>
             </div>
 
-            <!-- Alert Activity heatmap, with the system console (admin) or the
-                 house at a glance (user) filling the rest of the row -->
+            <!-- The house at a glance (user); the alert heatmap moved to Events
+                 and the system console to System -->
             <div class="dash-split-row">
-            <div class="card hm-card">
-              <div class="dash-card-hdr">
-                <div>
-                  <div class="dash-card-title">Alert Activity</div>
-                  <div class="dash-card-meta">13 weeks · local</div>
-                </div>
-              </div>
-              <div id="heatmap"></div>
-              <div class="hm-legend">
-                <span class="hm-legend-lbl">Fewer</span>
-                <div class="hm-swatch hm-0"></div>
-                <div class="hm-swatch hm-1"></div>
-                <div class="hm-swatch hm-2"></div>
-                <div class="hm-swatch hm-3"></div>
-                <div class="hm-swatch hm-4"></div>
-                <span class="hm-legend-lbl">More</span>
-              </div>
-            </div>
-
-            <!-- System Console — admin only -->
-            <div id="dash-console-wrap" class="card dash-console-card hidden">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">System Console</div>
-                <div class="dash-card-meta">live</div>
-              </div>
-              <div id="sys-console" class="console"></div>
-            </div>
-
             <!-- House at a glance — non-admin profiles -->
             <div id="dash-home-glance" class="card ha-glance hidden">
               <div class="dash-card-hdr">
@@ -431,33 +334,11 @@
           <!-- ── RIGHT SIDEBAR ── -->
           <aside class="sidebar-right">
 
-            <!-- Activity Timeline -->
-            <div class="card activity-card-scroll">
-              <div class="dash-card-hdr">
-                <div class="dash-card-title">Activity</div>
-                <div class="activity-day-nav">
-                  <button id="activity-prev" class="activity-day-step" data-click="G.stepActivityDay" data-args='[-1]' title="Earlier day with activity" aria-label="Earlier day">&#8249;</button>
-                  <input type="date" id="activity-date" class="activity-date-picker" aria-label="Day"/>
-                  <button id="activity-next" class="activity-day-step" data-click="G.stepActivityDay" data-args='[1]' title="Later day with activity" aria-label="Later day">&#8250;</button>
-                </div>
-              </div>
-              <div id="activity-filters" class="tl-filters" role="group" aria-label="Show only"></div>
-              <div id="activity-timeline" class="timeline-list">
-                <div class="empty-state">
-                  <div class="empty-state-icon">○</div>
-                  <span>No activity yet</span>
-                </div>
-              </div>
-              <!-- Hidden legacy elements for JS compatibility -->
-              <div id="activity-feed" class="hidden"></div>
-              <div id="activity-feed-card" class="hidden"></div>
-              <div id="activity-count" class="hidden">Live</div>
-            </div>
-
             <!-- Recent Detections -->
             <div class="card">
               <div class="dash-card-hdr">
-                <div class="dash-card-title">Recent Detections</div>
+                <div class="dash-card-title">Detections</div>
+                <button class="btn btn-ghost btn-sm" data-click="G.nav" data-args='["events"]'>All events</button>
                 <div id="det-live-dot" class="det-live"></div>
               </div>
               <div id="recent-dets" class="det-timeline">
@@ -481,6 +362,74 @@
         </div>
 
       </div><!-- /page-dashboard -->
+
+      <!-- ── EVENTS ── what happened: the timeline, the alert history and the
+           pictures, sound and video saved for it -->
+      <div id="page-events" class="page">
+        <div class="admin-page ev-page">
+          <div class="admin-page-header"><h2>Events</h2></div>
+
+            <div class="card hm-card">
+              <div class="dash-card-hdr">
+                <div>
+                  <div class="dash-card-title">Alert Activity</div>
+                  <div class="dash-card-meta">13 weeks · local</div>
+                </div>
+              </div>
+              <div id="heatmap"></div>
+              <div class="hm-legend">
+                <span class="hm-legend-lbl">Fewer</span>
+                <div class="hm-swatch hm-0"></div>
+                <div class="hm-swatch hm-1"></div>
+                <div class="hm-swatch hm-2"></div>
+                <div class="hm-swatch hm-3"></div>
+                <div class="hm-swatch hm-4"></div>
+                <span class="hm-legend-lbl">More</span>
+              </div>
+            </div>
+
+            <!-- Activity Timeline -->
+            <div class="card activity-card-scroll ev-timeline">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Activity</div>
+                <div class="activity-day-nav">
+                  <button id="activity-prev" class="activity-day-step" data-click="G.stepActivityDay" data-args='[-1]' title="Earlier day with activity" aria-label="Earlier day">&#8249;</button>
+                  <input type="date" id="activity-date" class="activity-date-picker" aria-label="Day"/>
+                  <button id="activity-next" class="activity-day-step" data-click="G.stepActivityDay" data-args='[1]' title="Later day with activity" aria-label="Later day">&#8250;</button>
+                </div>
+              </div>
+              <div id="activity-filters" class="tl-filters" role="group" aria-label="Show only"></div>
+              <div id="activity-timeline" class="timeline-list">
+                <div class="empty-state">
+                  <div class="empty-state-icon">○</div>
+                  <span>No activity yet</span>
+                </div>
+              </div>
+              <!-- Hidden legacy elements for JS compatibility -->
+              <div id="activity-feed" class="hidden"></div>
+              <div id="activity-feed-card" class="hidden"></div>
+              <div id="activity-count" class="hidden">Live</div>
+            </div>
+
+          <div class="card ev-captures">
+          <div class="ha-section-hdr ev-cap-hdr">
+            <div class="ha-section-title">Captures</div>
+            <span id="ha-cap-usage" class="ha-sub"></span>
+          </div>
+          <div class="ha-hint">Pictures, sound and video kept on the Pi. A shortcut can save them when an alert starts — ask Narada: “when an alert starts, save a picture and the next 10 seconds of sound, and email them to me”.</div>
+          <div class="ha-cap-tools">
+            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["snapshot"]'>Save picture</button>
+            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["audio"]'>Record 10 s sound</button>
+            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["video"]'>Record 10 s video</button>
+            <select class="input input-sm" aria-label="Show" data-change="H.filterCaptures" data-args='[{"$": "value"}]'>
+              <option value="">Everything</option><option value="snapshot">Pictures</option>
+              <option value="audio">Sound</option><option value="video">Video</option>
+            </select>
+          </div>
+          <div id="ha-captures" class="ha-list"></div>
+          </div>
+        </div>
+      </div>
 
       <!-- ── NARADA ── one place to talk or type; narada.js drives it -->
       <div id="page-narada" class="page">
@@ -604,21 +553,6 @@
           <div class="ha-hint">Ask Narada for one — “at 10 pm, if the TV is still on, switch it off and tell me”. It writes the steps from everything the house can do; they are saved only after you confirm the card.</div>
           <div id="ha-shortcuts" class="ha-list"></div>
 
-          <div class="ha-section-hdr">
-            <div class="ha-section-title">Captures</div>
-            <span id="ha-cap-usage" class="ha-sub"></span>
-          </div>
-          <div class="ha-hint">Pictures, sound and video kept on the Pi. A shortcut can save them when an alert starts — ask Narada: “when an alert starts, save a picture and the next 10 seconds of sound, and email them to me”.</div>
-          <div class="ha-cap-tools">
-            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["snapshot"]'>Save picture</button>
-            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["audio"]'>Record 10 s sound</button>
-            <button class="btn btn-ghost btn-sm" data-click="H.captureNow" data-args='["video"]'>Record 10 s video</button>
-            <select class="input input-sm" aria-label="Show" data-change="H.filterCaptures" data-args='[{"$": "value"}]'>
-              <option value="">Everything</option><option value="snapshot">Pictures</option>
-              <option value="audio">Sound</option><option value="video">Video</option>
-            </select>
-          </div>
-          <div id="ha-captures" class="ha-list"></div>
 
           <div class="ha-section-hdr">
             <div class="ha-section-title">Schedules &amp; timers</div>
@@ -680,7 +614,7 @@
       <!-- ── HOME: INSIGHTS ── -->
       <div id="page-insights" class="page">
         <div class="admin-page ha-page">
-          <div class="admin-page-header"><h2>Insights</h2></div>
+          <div class="admin-page-header"><h2>House activity</h2></div>
 
           <div class="settings-card ha-digest">
             <div class="dash-card-hdr">
@@ -693,19 +627,6 @@
 
           <div class="settings-card">
             <div class="dash-card-hdr">
-              <div class="dash-card-title">Energy · last 7 days</div>
-              <div id="ha-usage-total" class="dash-card-meta"></div>
-            </div>
-            <div id="ha-usage" class="ha-usage"></div>
-            <div class="ha-tariff ha-admin-only">
-              <span class="ha-sub">Tariff per kWh</span>
-              <input id="ha-tariff" class="input input-sm" type="number" min="0" max="1000" step="0.1"/>
-              <button class="btn btn-ghost btn-sm" data-click="H.saveTariff">Save</button>
-            </div>
-          </div>
-
-          <div class="settings-card">
-            <div class="dash-card-hdr">
               <div class="dash-card-title">Device activity</div>
               <div class="dash-card-meta">who or what switched each device</div>
             </div>
@@ -714,10 +635,19 @@
         </div>
       </div>
 
+      <!-- ── SETTINGS ── one door to everything that is not used every day;
+           app.js fills the list for the signed-in role and product -->
+      <div id="page-settings" class="page">
+        <div class="admin-page">
+          <div class="admin-page-header"><h2>Settings</h2></div>
+          <div id="settings-list" class="settings-hub"></div>
+        </div>
+      </div>
+
       <!-- ── ADMIN: EMAIL ── -->
       <div id="page-a-email" class="page">
         <div class="admin-page">
-          <div class="admin-page-header"><h2>Email Settings</h2></div>
+          <div class="admin-page-header"><h2>Notifications</h2></div>
           <div class="settings-card">
             <div class="info-banner">
               <strong>Gmail App Password required.</strong> Go to myaccount.google.com → Security → App Passwords to generate one.
@@ -750,7 +680,90 @@
       <!-- ── ADMIN: SYSTEM ── -->
       <div id="page-a-settings" class="page">
         <div class="admin-page">
-          <div class="admin-page-header"><h2>System Settings</h2></div>
+          <div class="admin-page-header"><h2>System</h2></div>
+
+          <!-- System health: the hub's own readouts, moved off Home -->
+          <div class="settings-card sys-health-card">
+            <div class="dash-card-hdr"><div class="dash-card-title">System health</div></div>
+              <div class="stat-rows">
+                <div class="stat-row">
+                  <span class="stat-lbl">Uptime</span>
+                  <span class="stat-val" id="s-uptime">—</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Last Alert</span>
+                  <span class="stat-val" id="s-alert">None</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Threshold</span>
+                  <span class="stat-val" id="s-thr">—</span>
+                </div>
+                <div class="stat-row">
+                  <span class="stat-lbl">Pipeline</span>
+                  <span class="stat-val" id="s-pipeline">—</span>
+                </div>
+              </div>
+            <!-- Hub Health -->
+            <div class="sys-health-hub">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">Hub Health</div>
+              </div>
+              <div class="hub-health-wrap">
+                <div class="hub-health-row">
+                  <span class="hub-health-label">CPU</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-cpu" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-cpu">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">RAM</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-ram" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-ram">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">Temp</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-temp" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-temp">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">FPS</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-fps" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-fps">—</span>
+                </div>
+                <div class="hub-health-row">
+                  <span class="hub-health-label">Disk</span>
+                  <div class="hub-health-track">
+                    <div class="hub-health-fill" id="hub-bar-disk" style="width:0%"></div>
+                  </div>
+                  <span class="hub-health-val" id="hwm-disk">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- System Console: the live log, admin only -->
+          <div id="dash-console-wrap" class="settings-card dash-console-card hidden">
+              <div class="dash-card-hdr">
+                <div class="dash-card-title">System Console</div>
+                <div class="dash-card-meta">live</div>
+              </div>
+              <div id="sys-console" class="console"></div>
+            </div>
+
+          <!-- Emergency stop: shuts the whole system down, so it lives here
+               behind a confirmation, not in the tab bar -->
+          <div class="settings-card danger-zone">
+            <div class="dash-card-title">Emergency stop</div>
+            <p class="cmd-desc">Stops the camera, detection and alerts until the system is started again on the Pi.</p>
+            <button class="btn btn-danger btn-sm" data-click="G.emergencyStop">Stop the system</button>
+          </div>
 
           <!-- Security Health (admin only) -->
           <div class="settings-card sec-health-card">
@@ -1168,34 +1181,36 @@
         <div class="docs-flow">
           <div class="docs-flow-step"><span class="docs-flow-num">1</span>Sign in</div>
           <span class="docs-flow-arrow" aria-hidden="true">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">2</span>Dashboard</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">2</span>Home</div>
           <span class="docs-flow-arrow" aria-hidden="true">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">3</span>Narada</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">3</span>Events</div>
           <span class="docs-flow-arrow" aria-hidden="true">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">4</span>Devices &amp; Automations</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">4</span>Devices &amp; Narada</div>
           <span class="docs-flow-arrow" aria-hidden="true">→</span>
-          <div class="docs-flow-step"><span class="docs-flow-num">5</span>Admin tools</div>
+          <div class="docs-flow-step"><span class="docs-flow-num">5</span>Settings</div>
         </div>
         <h4>What the app includes</h4>
         <ul class="docs-list">
-          <li>Live camera with room sound, a live FPS readout and a floor plan view.</li>
+          <li>Live camera with room sound, a snapshot button and 60-second clips.</li>
           <li>Real-time detection and alerts, with e-mail and the Dynamic Island.</li>
           <li>Captures: pictures, sound and video saved on their own when an alert starts, or on request.</li>
           <li>Narada, a voice and text assistant that runs the house through its tools.</li>
           <li>Devices, scenes, rules, shortcuts, schedules and an away mode.</li>
-          <li>Insights on energy and device activity, logs, feedback and admin settings.</li>
+          <li>An Events page with the timeline, alert history and saved captures, and Settings for everything else.</li>
         </ul>
       </div>
 
       <div id="docs-dashboard" class="docs-section">
-        <h3>Dashboard</h3>
-        <p class="docs-lede">The main operational view: the security state, uptime, last alert, threshold, pipeline status and whether the owner is home.</p>
+        <h3>Home</h3>
+        <p class="docs-lede">Is the house OK right now: the security state, the last alert, whether the owner is home, the system modes, the live camera and the latest detections.</p>
         <h4>Camera card</h4>
-        <p>The card has <code>Live</code> and <code>Floor Plan</code> tabs. Next to the live dot, a label shows the frames per second the detector is processing right now, measured over the last two seconds, so it drops to zero when the camera stops.</p>
+        <p>The card shows the live camera. The frames per second the detector is processing are on System › System health.</p>
         <p>The speaker button plays live sound from the USB microphone beside the video, with about 60 ms of delay. Your choice is remembered. Sound runs only while someone listens, so Narada keeps the microphone the rest of the time.</p>
         <p>The video stream sends a new frame only when the browser has shown the last one, so a slow connection skips frames instead of falling behind.</p>
-        <h4>Side panels</h4>
-        <p><strong>System Modes</strong> and <strong>Hub Health</strong> (CPU, RAM, temperature, FPS and disk) sit on the left. The date-filtered <strong>Activity</strong> timeline and <strong>Recent Detections</strong> sit on the right, with the <strong>Alert Activity</strong> heatmap below the camera.</p>
+        <h4>Events</h4>
+        <p>The <strong>Events</strong> tab holds what happened: the <strong>Alert Activity</strong> heatmap, the date-filtered <strong>Activity</strong> timeline and the <strong>Captures</strong> saved for each alert.</p>
+        <h4>Settings</h4>
+        <p><strong>Settings</strong> opens Automations, House activity, Notifications, System (with System health, the console and the emergency stop), Logs, Narada phrases and this help.</p>
         <h4>Dynamic Island</h4>
         <p>The pill at the top shows live states such as alerts, all clear, recording, Narada activity and offline, so the system status stays visible on every page. Tap it to open it.</p>
       </div>
@@ -1239,7 +1254,7 @@
           <li><strong>The API</strong>, for your own scripts (below).</li>
         </ul>
         <h4>Where to find them</h4>
-        <p>Open <strong>Automations</strong> and scroll to <strong>Captures</strong>. Each run is one card with players for its picture, sound and video. From there you can keep a capture, delete it or e-mail it to the alert recipients.</p>
+        <p>Open <strong>Events</strong> and look at <strong>Captures</strong>. Each run is one card with players for its picture, sound and video. From there you can keep a capture, delete it or e-mail it to the alert recipients.</p>
         <h4>Storage and disk guard</h4>
         <p>Captures live on the Pi. When there are more than 500 of them or they pass 2 GB, the oldest go first. A capture marked keep is never removed this way.</p>
         <div class="docs-note"><span class="gi gi-info" aria-hidden="true"></span><span>Garuda always keeps 500 MB of the disk free. When space runs short it removes the oldest unkept captures, and if that is not enough it refuses the new capture instead of filling the disk. On start it also clears files the capture list does not know about.</span></div>
@@ -1268,12 +1283,11 @@
           <div class="docs-row"><span class="docs-term">Suggested</span><span class="docs-def">Rules proposed from your daily routine.</span></div>
           <div class="docs-row"><span class="docs-term">Rules</span><span class="docs-def">If this happens, do that.</span></div>
           <div class="docs-row"><span class="docs-term">Shortcuts</span><span class="docs-def">Named lists of steps, including capture steps and alert triggers.</span></div>
-          <div class="docs-row"><span class="docs-term">Captures</span><span class="docs-def">Saved pictures, sound and video, one card per run.</span></div>
           <div class="docs-row"><span class="docs-term">Schedules &amp; timers</span><span class="docs-def">Things that run at a set time or after a delay.</span></div>
           <div class="docs-row"><span class="docs-term">Away &amp; vacation</span><span class="docs-def">Behaviour while nobody is home.</span></div>
         </div>
-        <h4>Insights</h4>
-        <p>Today's summary, energy use over the last 7 days and device activity.</p>
+        <h4>House activity</h4>
+        <p>Today's summary and who or what switched each device.</p>
         <h4>MQTT broker</h4>
         <p>Devices talk to the broker over MQTT. Set <code>DRISHTI_MQTT_USER</code> and <code>DRISHTI_MQTT_PASS</code> to log in, and <code>DRISHTI_MQTT_TLS=1</code> to encrypt the connection on port 8883 with the broker's certificate checked.</p>
       </div>

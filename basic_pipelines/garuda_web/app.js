@@ -357,6 +357,9 @@ const G = (() => {
     const backend = getBackend();
     updateBackendStatus(backend);
     const samePi = _servedByPi();
+    // Only a copy hosted away from the Pi needs to be told where the Pi is;
+    // ?dev=1 shows the button anywhere for testing.
+    if (!samePi || new URLSearchParams(location.search).has('dev')) $('bk-config-btn')?.classList.remove('hidden');
     // Tokens an older version stored where scripts can read them.
     _lsDel('garuda_token');
     _lsDel('garuda_refresh');
@@ -638,7 +641,7 @@ const G = (() => {
     $('app').classList.remove('logged-in');
     _syncFeedbackVisibility();
     $('ios-nav')?.querySelectorAll('.ios-item').forEach(el => el.remove());
-    // Stop all camera streams (WebRTC / WS / MJPEG)
+    // Stop all camera streams (WS / MJPEG)
     stopCameraStream();
     const camOv = $('camera-overlay');
     if (camOv) camOv.classList.add('hidden');
@@ -690,9 +693,7 @@ const G = (() => {
   }
 
   // ── Camera overlay ────────────────────────────────────────
-  // Priority: WebRTC (H.264, lowest latency) → WS binary JPEG (CF Tunnel)
-  //            → MJPEG (universal fallback)
-  let _activePc = null;   // RTCPeerConnection when WebRTC is active
+  // WS binary JPEG (works through the Cloudflare tunnel), MJPEG as the fallback.
   let _wsStream = null;   // WebSocket when WS-JPEG stream is active
 
   function _camSetStatus(txt) {
@@ -716,10 +717,7 @@ const G = (() => {
   function stopCameraStream() {
     if (_mjpegRetry) { clearTimeout(_mjpegRetry); _mjpegRetry = null; }
     const camImg   = $('cam-img');
-    const camVideo = $('cam-video');
     if (camImg)   { camImg.onload = null; camImg.onerror = null; camImg.src = ''; camImg.style.display = 'none'; }
-    if (camVideo) { camVideo.srcObject = null; camVideo.style.display = 'none'; }
-    if (_activePc) { _activePc.close(); _activePc = null; }
     if (_wsStream) { _wsStream.close(); _wsStream = null; }
     stopFeedAudio();
   }
@@ -852,50 +850,6 @@ const G = (() => {
     } else {
       _lsSet(_FEED_SOUND_KEY, 'on');
       startFeedAudio();
-    }
-  }
-
-  async function startWebRTC() {
-    const backend = getBackend() || '';
-    const camVideo = $('cam-video');
-    const camOffline = $('cam-offline');
-    try {
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
-      _activePc = pc;
-      pc.addTransceiver('video', { direction: 'recvonly' });
-      pc.ontrack = (ev) => {
-        if (camVideo && ev.streams[0]) {
-          camVideo.srcObject = ev.streams[0];
-          camVideo.style.display = 'block';
-          if (camOffline) camOffline.style.display = 'none';
-          _camSetStatus('Live · WebRTC');
-        }
-      };
-      pc.onconnectionstatechange = () => {
-        if (['failed','disconnected','closed'].includes(pc.connectionState)) {
-          _camSetStatus('WebRTC lost — retrying WS…');
-          pc.close(); _activePc = null;
-          startWsStream();
-        }
-      };
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      const token = _token || '';
-      const resp = await fetch(backend + '/webrtc/offer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(token ? { 'X-Garuda-Token': token } : {}) },
-        body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }),
-        credentials: 'include',
-      });
-      if (!resp.ok) throw new Error('WebRTC offer rejected: ' + resp.status);
-      const answer = await resp.json();
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    } catch(e) {
-      console.warn('WebRTC failed, falling back to WS stream:', e);
-      if (_activePc) { _activePc.close(); _activePc = null; }
-      startWsStream();
     }
   }
 
@@ -1053,34 +1007,11 @@ const G = (() => {
     } catch(e) { showToast('Clip error: ' + (e.detail || e.message || ''), 'error'); }
   }
 
-  // The floor plan is inlined (not an <object>) so the theme can ink it.
-  let _floorplanLoaded = false;
-  function _loadFloorplan() {
-    const box = $('floorplan-svg');
-    if (!box || _floorplanLoaded) return;
-    _floorplanLoaded = true;
-    fetch('/static/floorplan.svg?v=2').then(r => r.ok ? r.text() : Promise.reject())
-      .then(svg => { box.innerHTML = svg; })
-      .catch(() => { _floorplanLoaded = false; });
-  }
-
-  function switchCamTab(tab) {
-    const live      = $('cam-view-live');
-    const floor     = $('cam-view-floor');
-    const tabLive   = $('cam-tab-live');
-    const tabFloor  = $('cam-tab-floor');
-    if (tab === 'live') {
-      live?.classList.remove('hidden');
-      floor?.classList.add('hidden');
-      tabLive?.classList.add('active');
-      tabFloor?.classList.remove('active');
-    } else {
-      _loadFloorplan();
-      floor?.classList.remove('hidden');
-      live?.classList.add('hidden');
-      tabFloor?.classList.add('active');
-      tabLive?.classList.remove('active');
-    }
+  // One view now: the floor plan tab went with a single camera, so this
+  // only puts the live view back after anything that hid it.
+  function switchCamTab() {
+    $('cam-view-live')?.classList.remove('hidden');
+    $('cam-tab-live')?.classList.add('active');
   }
 
   // ── Chat ──────────────────────────────────────────────────
@@ -1097,9 +1028,10 @@ const G = (() => {
   function _heatmapFit(container) {
     const card = container.closest('.hm-card');
     const row = card && card.parentElement;
-    const tracks = row ? getComputedStyle(row).gridTemplateColumns.trim().split(/\s+/).length : 2;
+    // Whole row: a one-track row, or a card spanning every track (Events).
+    const wide = row && card.offsetWidth >= row.clientWidth * 0.9;
     const room = container.clientWidth - _HM.label;
-    if (tracks !== 1 || room <= 0) return { weeks: _HM.weeks, cell: _HM.cell };
+    if (!wide || room <= 0) return { weeks: _HM.weeks, cell: _HM.cell };
     const weeks = Math.max(_HM.weeks, Math.min(_HM.maxWeeks, Math.floor((room + _HM.gap) / (_HM.cell + _HM.gap))));
     const cell = Math.min(_HM.maxCell, Math.floor(((room - (weeks - 1) * _HM.gap) / weeks) * 100) / 100);
     return { weeks, cell };
@@ -1257,26 +1189,69 @@ const G = (() => {
     signout:   `<span class="gi gi-power"></span>`,
   };
 
+  // Five tabs: what a household uses every day. Everything else is one
+  // step down, behind Settings (see _SETTINGS_ROWS).
   const _USER_NAV = [
-    { page: 'dashboard', label: 'Home',   icon: 'dashboard' },
-    { page: 'devices',   label: 'Devices', icon: 'devices'  },
-    { page: 'auto',      label: 'Automate', icon: 'auto'    },
-    { page: 'insights',  label: 'Insights', icon: 'insights' },
-    { page: 'narada',    label: 'Narada', icon: 'narada'    },
+    { page: 'dashboard', label: 'Home',     icon: 'dashboard' },
+    { page: 'events',    label: 'Events',   icon: 'logs'      },
+    { page: 'devices',   label: 'Devices',  icon: 'devices'   },
+    { page: 'narada',    label: 'Narada',   icon: 'narada'    },
+    { page: 'settings',  label: 'Settings', icon: 'settings'  },
   ];
+  const _ADMIN_NAV = _USER_NAV;
 
-  const _ADMIN_NAV = [
-    { page: 'dashboard',  label: 'Home',     icon: 'dashboard' },
-    { page: 'devices',    label: 'Devices',  icon: 'devices'   },
-    { page: 'auto',       label: 'Automate', icon: 'auto'      },
-    { page: 'insights',   label: 'Insights', icon: 'insights'  },
-    { page: 'narada',     label: 'Narada',   icon: 'narada'    },
-    { page: 'a-email',    label: 'Email',    icon: 'email'     },
-    { page: 'a-settings', label: 'System',   icon: 'settings'  },
-    { page: 'a-logs',     label: 'Logs',     icon: 'logs'      },
-    { page: 'a-cmds',     label: 'Commands', icon: 'commands'  },
-    { page: null,         label: 'Stop',     icon: 'emergency', danger: true },
+  // The Settings page: one row per page that is not a tab. A sub-page shows
+  // as Settings in the tab bar.
+  const _SETTINGS_ROWS = [
+    { page: 'auto',       label: 'Automations',   hint: 'Rules, shortcuts, schedules, away and vacation', icon: 'auto' },
+    { page: 'insights',   label: 'House activity', hint: 'Today\'s summary and who switched what',        icon: 'insights' },
+    { page: 'a-email',    label: 'Notifications', hint: 'Alert e-mail, recipients and cooldown',          icon: 'email',    admin: true },
+    { page: 'a-settings', label: 'System',        hint: 'Health, detection, presence, Narada AI, keys',    icon: 'settings', admin: true },
+    { page: 'a-logs',     label: 'Logs',          hint: 'System, detection, presence and voice logs',      icon: 'logs',     admin: true },
+    { page: 'a-cmds',     label: 'Narada phrases', hint: 'Fixed replies to phrases you choose',            icon: 'commands', admin: true },
   ];
+  const _SETTINGS_PAGES = _SETTINGS_ROWS.map(r => r.page);
+
+  function _renderSettings(role) {
+    const box = $('settings-list');
+    if (!box) return;
+    const rows = _forProduct(_SETTINGS_ROWS).filter(r => !r.admin || role === 'admin');
+    const actions = [
+      { icon: 'feedback', label: 'Send feedback', run: () => G.toggleFeedback && G.toggleFeedback() },
+      { icon: 'theme',    label: 'Switch appearance', run: toggleTheme },
+      { icon: 'signout',  label: 'Sign out', run: logout, danger: true },
+    ];
+    box.innerHTML = '';
+    const mk = (cls, icon, label, hint) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = cls;
+      b.innerHTML = `<span class="sh-icon">${_NAV_ICONS[icon]}</span><span class="sh-text"><span class="sh-label"></span>`
+        + (hint ? '<span class="sh-hint"></span>' : '') + '</span>';
+      b.querySelector('.sh-label').textContent = label;
+      if (hint) b.querySelector('.sh-hint').textContent = hint;
+      box.appendChild(b);
+      return b;
+    };
+    rows.forEach(r => {
+      const b = mk('sh-row', r.icon, r.label, r.hint);
+      b.dataset.page = r.page;
+      b.onclick = () => nav(r.page);
+    });
+    mk('sh-row', 'logs', 'Help', 'How each part of the app works').onclick = () => G.openDocs();
+    actions.forEach(a => { mk('sh-row sh-action' + (a.danger ? ' danger' : ''), a.icon, a.label).onclick = a.run; });
+    // Each page behind Settings gets a way back to it.
+    _SETTINGS_PAGES.forEach(id => {
+      const hdr = document.querySelector(`#page-${id} .admin-page-header`);
+      if (!hdr || hdr.querySelector('.sh-back')) return;
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'sh-back';
+      back.textContent = '‹ Settings';
+      back.onclick = () => nav('settings');
+      hdr.prepend(back);
+    });
+  }
 
   // ── The tab bar's selection pill ──────────────────────────
   // A lens that sits under the current tab. A tap sends it there; a press
@@ -1551,9 +1526,7 @@ const G = (() => {
   // Phone mode: five tabs, the rest in an iOS-style "More" sheet. Eleven
   // items squeezed into a scrolling strip were unreadable at 390 px.
   const _PHONE_MQ = window.matchMedia('(max-width: 768px)');
-  const _PHONE_PRIMARY = _PRODUCT === 'security'
-    ? ['dashboard', 'narada']
-    : ['dashboard', 'devices', 'auto', 'narada'];
+  const _PHONE_PRIMARY = ['dashboard', 'events', 'devices', 'narada', 'settings'];
   let _navRole = null;
 
   function _isPhone() { return _PHONE_MQ.matches; }
@@ -1576,7 +1549,8 @@ const G = (() => {
     navEl.querySelectorAll('.ios-item').forEach(el => el.remove());
     const phone = _isPhone();
     navEl.classList.toggle('ios-nav-phone', phone);
-    const shown = phone
+    const rest = items.filter(i => !_PHONE_PRIMARY.includes(i.page));
+    const shown = phone && rest.length
       ? [...items.filter(i => _PHONE_PRIMARY.includes(i.page)),
          { page: 'more', label: 'More', icon: 'more' }]
       : items;
@@ -1587,7 +1561,8 @@ const G = (() => {
       else btn.onclick = () => nav(item.page, btn);
       navEl.appendChild(btn);
     });
-    _buildMoreSheet(phone ? items.filter(i => !_PHONE_PRIMARY.includes(i.page)) : []);
+    _buildMoreSheet(phone ? rest : []);
+    _renderSettings(role);
     const current = _navItemFor(_currentPage) || navEl.querySelector('.ios-item:not(.ios-danger)');
     if (current) {
       current.classList.add('active');
@@ -1598,6 +1573,7 @@ const G = (() => {
   // The tab that represents a page: its own, or "More" on a phone.
   function _navItemFor(pageId) {
     if (!pageId) return null;
+    if (_SETTINGS_PAGES.includes(pageId)) pageId = 'settings';
     return document.querySelector(`#ios-nav .ios-item[data-page="${pageId}"]`)
       || (_isPhone() ? document.querySelector('#ios-nav .ios-item[data-page="more"]') : null);
   }
@@ -1684,14 +1660,16 @@ const G = (() => {
   // ── Dynamic Island helpers ────────────────────────────────
   const _DI_LABELS = {
     'dashboard':   _BRAND,
+    'events':      'Events',
+    'settings':    'Settings',
     'narada':      'Narada',
     'devices':     'Devices',
     'auto':        'Automate',
-    'insights':    'Insights',
-    'a-email':     'Email',
-    'a-settings':  'Settings',
+    'insights':    'Activity',
+    'a-email':     'Notifications',
+    'a-settings':  'System',
     'a-logs':      'Logs',
-    'a-cmds':      'Commands',
+    'a-cmds':      'Phrases',
   };
 
   function _setDILabel(label) {
@@ -1823,6 +1801,7 @@ const G = (() => {
     _syncDIContext();
     _syncFeedbackVisibility();
     _syncFeedAudio();
+    if (pageId === 'events')     renderHeatmap(_hmActivity);   // drawn to the width it has now
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') { loadSysCfg(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {

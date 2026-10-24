@@ -5362,3 +5362,57 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
   .logs-bottom-bar .input { width: 100% !important; min-width: 0; grid-column: span 3; height: 40px; font-size: 16px; }
   .logs-bottom-bar .btn { grid-column: span 2; min-height: 40px; padding: 6px 4px; white-space: nowrap; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   Events, Settings and System health (five-tab layout)
+   ════════════════════════════════════════════════════════════════ */
+/* Desktop: the alert heatmap across the top, the timeline and the saved
+   evidence side by side. A phone stacks them. */
+#page-events .admin-page {
+  max-width: 1180px; display: grid; gap: 14px; align-content: start;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+}
+#page-events .admin-page-header, #page-events .hm-card { grid-column: 1 / -1; }
+@media (max-width: 900px) { #page-events .admin-page { grid-template-columns: minmax(0, 1fr); } }
+#page-events .card { margin: 0; }
+#page-events .ev-timeline { flex: none; max-height: 560px; }
+#page-events .ev-captures .ha-section-hdr { margin-top: 0; }
+
+.settings-hub {
+  display: flex; flex-direction: column;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+}
+.sh-row {
+  display: flex; align-items: center; gap: 14px; width: 100%;
+  padding: 14px 16px; border: none; background: none; cursor: pointer;
+  color: var(--t1); font-family: var(--font); font-size: 15px; text-align: left;
+  border-bottom: 0.5px solid var(--border);
+  -webkit-tap-highlight-color: transparent;
+}
+.sh-row:last-child { border-bottom: none; }
+.sh-row:hover { background: color-mix(in srgb, var(--t1) 4%, transparent); }
+.sh-row:focus-visible { outline: 2px solid var(--t1); outline-offset: -2px; }
+.sh-row.sh-action { font-size: 14px; }
+.sh-row.danger { color: var(--danger); }
+.sh-icon { width: 22px; display: inline-flex; justify-content: center; }
+.sh-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sh-label { font-weight: 600; }
+.sh-hint { font-size: 12.5px; color: var(--t2); }
+.sh-back {
+  border: none; background: none; cursor: pointer; padding: 4px 0;
+  color: var(--t2); font-family: var(--font); font-size: 14px;
+}
+.sh-back:hover { color: var(--t1); }
+.admin-page-header:has(.sh-back) { flex-wrap: wrap; gap: 6px 12px; }
+.admin-page-header .sh-back { flex-basis: 100%; text-align: left; }
+
+.sys-health-card .stat-rows { margin-bottom: 14px; }
+.sys-health-hub .dash-card-hdr { margin-top: 4px; }
+#page-a-settings .dash-console-card { display: flex; flex-direction: column; }
+#page-a-settings .dash-console-card .console {
+  height: 220px; white-space: pre-wrap; word-break: break-word;
+  font-size: 10.5px; line-height: 1.6;
+}
+.danger-zone .dash-card-title { color: var(--danger); margin-bottom: 6px; }
+.danger-zone .cmd-desc { margin: 0 0 12px; }
