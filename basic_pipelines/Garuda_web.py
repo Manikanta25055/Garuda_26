@@ -177,20 +177,6 @@ except ImportError:
     from basic_pipelines.drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
     from basic_pipelines.drishti_config import DATA_DIR as DRISHTI_DATA_DIR
 
-# Both hostnames reach this one app through the one Cloudflare tunnel, so the
-# Host header is what decides which bundle / serves. Without it,
-# drishti.veeramanikanta.in shows the Garuda dashboard.
-# Named so a test harness can point it somewhere else before the lifespan
-# runs. It writes live session tokens; it must never be the real file
-# during a test run.
-DRISHTI_SESSIONS_PATH = os.path.join(DRISHTI_DATA_DIR, "sessions.json")
-DRISHTI_HOST = os.environ.get("DRISHTI_HOST", "drishti.veeramanikanta.in")
-DRISHTI_DIST = _BASE / "drishti_dist"
-# The standalone Drishti app is halted: its features now live in this app's
-# own Home / Automations / Insights pages, behind Garuda's sign-in. Set
-# DRISHTI_APP_ENABLED=1 to serve the Svelte bundle and /api/drishti again.
-DRISHTI_APP_ENABLED = os.environ.get("DRISHTI_APP_ENABLED", "0").lower() in ("1", "true", "yes")
-
 # Two products from one service. Garuda (home security) and Drishti (home
 # automation, built on Garuda) share the camera, the Hailo and this process;
 # the address decides which one a visitor gets. Hosts listed here get the
@@ -253,7 +239,7 @@ try:
         voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from .garuda_services import home as _svc_home
     from .garuda_services.home import (  # noqa: F401
-        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
         _shortcut_facts, _shortcut_role_of, _shortcut_notify)
     from .garuda_services import middleware as _svc_middleware
     from .garuda_services.middleware import (  # noqa: F401
@@ -332,7 +318,7 @@ except ImportError:
         voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from basic_pipelines.garuda_services import home as _svc_home
     from basic_pipelines.garuda_services.home import (  # noqa: F401
-        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
         _shortcut_facts, _shortcut_role_of, _shortcut_notify)
     from basic_pipelines.garuda_services import middleware as _svc_middleware
     from basic_pipelines.garuda_services.middleware import (  # noqa: F401
@@ -670,9 +656,6 @@ async def _lifespan(app):
     load_master_keys()
     # Proposals and sessions from the previous run are stale by definition.
     DRISHTI_CTX.pending.purge()
-    # Backed by a file, so deploying a change does not sign the house out.
-    _drishti_auth.configure(DRISHTI_SESSIONS_PATH)
-    _drishti_auth.prune_expired()
     # Before the rule loop: every relay is driven off, so what the app shows
     # and what the board is doing agree from the first tick.
     unsettled = DRISHTI_CTX.relay_bank.settle()
@@ -751,7 +734,7 @@ fastapi_app.add_middleware(
 # own per-action rate limiting (login, OTP) keep their individual checks; this
 # catches everything else.
 # Health and readiness are polled by monitors; they must not eat the budget.
-_RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
+_RATE_EXEMPT_PREFIXES = ("/static/", "/ws", "/stream", "/api/eval/",
                          "/api/health", "/api/ready")
 
 fastapi_app.middleware("http")(global_rate_limit)
@@ -768,23 +751,14 @@ _static_dir = Path(__file__).parent / "garuda_web"
 if _static_dir.exists():
     fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
-# Vite builds with base=/drishti/, so the SPA's own asset URLs are absolute and
-# index.html can be served from / without rewriting anything.
-if DRISHTI_APP_ENABLED and DRISHTI_DIST.is_dir():
-    fastapi_app.mount("/drishti", StaticFiles(directory=str(DRISHTI_DIST)), name="drishti")
-
-# ── Drishti router ───────────────────────────────────────────────────────────
+# ── Home-automation context ──────────────────────────────────────────────────
 # Same two import paths as the constants above; sys.path is already fixed by
 # the time this runs in script mode.
 try:
     from .drishti_api import build_context as _build_drishti_context
-    from .drishti_api import build_router as _build_drishti_router
-    from . import drishti_auth as _drishti_auth
     from .garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
 except ImportError:
     from basic_pipelines.drishti_api import build_context as _build_drishti_context
-    from basic_pipelines.drishti_api import build_router as _build_drishti_router
-    from basic_pipelines import drishti_auth as _drishti_auth
     from basic_pipelines.garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
 
 DRISHTI_CTX = _build_drishti_context(
@@ -802,18 +776,11 @@ DRISHTI_CTX = _build_drishti_context(
 )
 
 
-DRISHTI_CTX.authenticate = _drishti_authenticate
-DRISHTI_CTX.system_state = _drishti_system_state
-DRISHTI_CTX.set_privacy = _drishti_set_privacy
-
 # The loop that makes rules actually run. Narada-RS built SceneBuilder and
 # RuleEngine, tested them, and connected them to nothing: until now the
 # descriptor was always empty and no rule had ever fired.
 DRISHTI_RUNTIME = _DrishtiRuntime(DRISHTI_CTX)
 DRISHTI_CTX.on_registry_change = DRISHTI_RUNTIME.rebind
-
-if DRISHTI_APP_ENABLED:
-    fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
 
 # ── Home automation (Drishti, merged into Garuda) ────────────────────────────
 # One NIM client for everything that needs a model: the rule compiler, the
@@ -1014,9 +981,6 @@ fastapi_app.include_router(build_feedback_router(sys.modules[__name__]))
 # ── MJPEG stream (mjpeg_frames is in garuda_services/support.py) ─────────────
 _STREAM_RECHECK_S = 5.0
 _STREAM_FRAMES_IN_FLIGHT = 2   # /ws/stream?ack=1: frames sent but not yet shown
-
-
-DRISHTI_CTX.frame_source = mjpeg_frames
 
 
 # ── Clip recording ────────────────────────────────────────────────────────────

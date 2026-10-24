@@ -25,8 +25,7 @@ import Garuda_web as gw
 
 HERE = Path(__file__).resolve().parent
 SNAPSHOT = HERE / "contract" / "routes.json"
-GUARDS = ("require_logs", "require_admin", "require_session",
-          "require_drishti_admin", "require_drishti_session")
+GUARDS = ("require_logs", "require_admin", "require_session")
 
 
 def _guard(dependant):

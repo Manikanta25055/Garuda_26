@@ -49,11 +49,6 @@ def _invalidate_user_sessions(username: str, except_token: str | None = None,
               if s.get("username") == username and d != keep_digest]:
         core.STATE.auth.persisted_refresh.pop(d, None)
         core.STATE.auth.refresh_dirty = True
-    # Drishti keeps its own sessions, persisted across restarts; without this
-    # a deleted account or a changed password left them working for 8 hours.
-    drishti_auth = getattr(core, "_drishti_auth", None)
-    if drishti_auth is not None:
-        drishti_auth.invalidate_user(username)
     return len(to_delete)
 
 

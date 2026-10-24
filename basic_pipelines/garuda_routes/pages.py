@@ -24,10 +24,6 @@ def build_pages_router(core):
     @router.get("/", response_class=HTMLResponse)
     async def index(request: Request):
         host = (request.headers.get("host") or "").split(":")[0].lower()
-        if core.DRISHTI_APP_ENABLED and host == core.DRISHTI_HOST:
-            drishti_index = core.DRISHTI_DIST / "index.html"
-            if drishti_index.is_file():
-                return HTMLResponse(drishti_index.read_text())
         html_path = core._static_dir / "index.html"
         if html_path.exists():
             product = core._product_for_host(host)
