@@ -23,7 +23,6 @@ setproctitle
 # Assistant and integrations
 requests>=2.28
 rapidfuzz
-SpeechRecognition
 elevenlabs
 
 # Optional (graceful fallback if absent)

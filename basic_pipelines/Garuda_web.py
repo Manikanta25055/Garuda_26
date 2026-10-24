@@ -52,7 +52,6 @@ from collections import defaultdict
 from dotenv import load_dotenv
 load_dotenv()
 
-import speech_recognition as sr
 import ctypes
 
 # Silence ALSA/Jack error spam when PortAudio probes audio devices.
@@ -236,7 +235,7 @@ try:
         _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
     from .garuda_services import assistant as _svc_assistant
     from .garuda_services.assistant import (  # noqa: F401
-        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+        _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from .garuda_services import home as _svc_home
     from .garuda_services.home import (  # noqa: F401
         _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
@@ -315,7 +314,7 @@ except ImportError:
         _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
     from basic_pipelines.garuda_services import assistant as _svc_assistant
     from basic_pipelines.garuda_services.assistant import (  # noqa: F401
-        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+        _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from basic_pipelines.garuda_services import home as _svc_home
     from basic_pipelines.garuda_services.home import (  # noqa: F401
         _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
@@ -378,8 +377,6 @@ _detection_log: List[str] = []   # in-memory recent detection events (danger + w
 # ...) are retired: using one on this module raises, naming its new home.
 STATE = _core_state.State()
 _core_state.retire(sys.modules[__name__], _core_state.RETIRED_NAMES)
-
-NARADA_WAKE_WORD = "narada"
 
 _app_start_time = time.time()
 _app_start_mono = time.monotonic()
@@ -469,8 +466,6 @@ _ws_clients: dict = {}
 # EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
 _EMA_A         = 0.25
 
-# Voice stop event
-_voice_stop_event = threading.Event()
 
 ##############################################################################
 # PERSISTENCE
@@ -1076,9 +1071,6 @@ def run_web_app(args):
     for severity, message in SETTINGS.problems():
         if severity != "info":
             log_system_update(f"[CONFIG] {severity}: {message}")
-
-    # Start voice assistant thread (returns at once when there is no microphone)
-    SUPERVISOR.spawn("voice-assistant", voice_assistant_loop, args=(_voice_stop_event,), restart=False)
 
     # Start pipeline thread (restarts automatically on failure)
     SUPERVISOR.spawn("camera-pipeline", _run_pipeline, critical=True)
