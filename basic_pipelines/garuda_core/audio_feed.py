@@ -1,9 +1,9 @@
 """The room's sound, live, for the camera view (/ws/audio).
 
 One capture serves every listener. It records the USB microphone through
-PipeWire's Pulse server (parec), not the ALSA device itself, so Narada's
-speech recognition can keep using the same microphone. The capture runs only
-while someone is listening.
+PipeWire's Pulse server (parec), not the ALSA device itself, so other
+programs can share the microphone. The capture runs only while someone is
+listening.
 
 Lag is kept out by size, at every step: 20 ms chunks, a 10 ms capture buffer,
 and a per-listener queue that keeps only the newest few chunks. A listener

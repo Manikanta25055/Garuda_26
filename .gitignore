@@ -84,7 +84,6 @@ datasets/dataset_v5/test/images/
 
 # Drishti frontend
 node_modules/
-basic_pipelines/drishti_dist/
 
 # Secrets dropped in the repo root
 nvidia_nim_api.txt

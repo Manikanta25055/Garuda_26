@@ -86,7 +86,7 @@ class Alerts:
     night_presence_end_time: float = 0.0
     night_presence_last_check: float = 0.0
     night_presence_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
-    blind_frame_count: int = 0
+    blind_since: float = 0.0   # when the picture went uniform (lens covered?), 0 when it is not
     blind_alert_sent: bool = False
     # The second look at a weapon detection (garuda_auto/vision_check.py): the
     # last result, and since when its email is held because it looked harmless.
@@ -126,14 +126,12 @@ class System:
 class Camera:
     """The latest frame, the detection counters, the clip being recorded and the running pipeline."""
     frame_buffer: object = None
-    frame_raw: object = None   # raw numpy BGR for WebRTC track
+    frame_raw: object = None   # raw numpy BGR of the last published frame (clips, captures)
     frame_seq: int = 0   # incremented every new frame; lets MJPEG clients skip duplicates
     frame_ts: float = 0.0   # wall clock of the last frame; the only liveness signal we have
     frame_lock: object = field(default_factory=threading.Lock, repr=False, compare=False)
     total_frames: int = 0   # total inference frames (for avg FPS)
-    detections_today: int = 0
     latest_detection_info: str = ""
-    class_counts_today: dict = field(default_factory=dict)   # class_name → count since startup
     watch_last_logged: dict = field(default_factory=dict)   # label → last log timestamp (30s cooldown)
     label_consec_frames: dict = field(default_factory=dict)   # label → consecutive frames seen above threshold
     drishti_last_observe: float = 0.0
@@ -208,7 +206,7 @@ RETIRED_NAMES = {
     "_night_presence_alert_end_time": ("alerts", "night_presence_end_time"),
     "_np_last_check": ("alerts", "night_presence_last_check"),
     "_np_lock": ("alerts", "night_presence_lock"),
-    "_blind_frame_count": ("alerts", "blind_frame_count"),
+    "_blind_frame_count": ("alerts", "blind_since"),
     "_blind_alert_sent": ("alerts", "blind_alert_sent"),
     # presence
     "_owner_present": ("presence", "owner_present"),
@@ -227,9 +225,7 @@ RETIRED_NAMES = {
     "_frame_buffer": ("camera", "frame_buffer"), "_frame_raw": ("camera", "frame_raw"),
     "_frame_seq": ("camera", "frame_seq"), "_frame_ts": ("camera", "frame_ts"),
     "_frame_lock": ("camera", "frame_lock"), "_total_frames": ("camera", "total_frames"),
-    "_detections_today": ("camera", "detections_today"),
     "latest_detection_info": ("camera", "latest_detection_info"),
-    "_class_counts_today": ("camera", "class_counts_today"),
     "_watch_last_logged": ("camera", "watch_last_logged"),
     "_label_consec_frames": ("camera", "label_consec_frames"),
     "_drishti_last_observe": ("camera", "drishti_last_observe"),

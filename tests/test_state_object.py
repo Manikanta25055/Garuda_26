@@ -7,7 +7,7 @@ from garuda_core.state import RETIRED_NAMES, State
 
 def test_every_retired_name_points_at_a_real_field():
     fresh = State()
-    assert len(RETIRED_NAMES) == 91
+    assert len(RETIRED_NAMES) == 89   # 91 until two never-read frame counters went (2026-10-24)
     for old, (group, field) in RETIRED_NAMES.items():
         assert hasattr(getattr(fresh, group), field), (old, group, field)
         assert hasattr(getattr(gw.STATE, group), field), (old, group, field)

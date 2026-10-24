@@ -1,4 +1,4 @@
-"""Assistant: the Narada voice loop, the chat reply and the AI provider settings.
+"""Assistant: the chat reply and the AI provider settings.
 
 Moved out of Garuda_web.py (2026-10). Function bodies are unchanged except
 that names belonging to Garuda_web are read, and assigned, through `core`: the
@@ -21,46 +21,6 @@ def bind(module):
         raise RuntimeError(f"{__name__} is already bound to {core.__name__}; "
                            f"refusing a second copy, {module.__name__}")
     core = module
-
-
-def voice_assistant_loop(stop_event, current_user=None):
-
-    recognizer = core.sr.Recognizer()
-    try:
-        mic = core.sr.Microphone()
-        core.STATE.system.voice_mic_ok, core.STATE.system.voice_mic_detail = True, ""
-        core.append_voice_log("Microphone connected.", user_name=current_user)
-    except Exception as e:
-        core.STATE.system.voice_mic_ok, core.STATE.system.voice_mic_detail = False, str(e)
-        core.append_voice_log(f"Error accessing microphone: {e}", user_name=current_user)
-        return
-
-    with mic as source:
-        recognizer.adjust_for_ambient_noise(source)
-        core.append_voice_log("Calibrated for ambient noise.", user_name=current_user)
-
-    while not stop_event.is_set():
-        with mic as source:
-            core.append_voice_log("Listening...", user_name=current_user)
-            try:
-                audio = recognizer.listen(source, timeout=10, phrase_time_limit=10)
-            except core.sr.WaitTimeoutError:
-                continue
-
-        try:
-            user_input = recognizer.recognize_google(audio)
-            core.append_voice_log(f"You said: {user_input}", user_name=current_user)
-        except core.sr.UnknownValueError:
-            core.append_voice_log("Could not understand audio.", user_name=current_user)
-            continue
-        except core.sr.RequestError as e:
-            core.append_voice_log(f"Speech recognition error: {e}", user_name=current_user)
-            continue
-
-        response = core._assistant_reply(user_input, current_user or "voice", "user")["reply"]
-
-        core.append_voice_response(response, user_name=current_user)
-        time.sleep(0.5)
 
 
 def _voice_turn_logged(user, heard, said):

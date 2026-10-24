@@ -28,55 +28,6 @@ def bind(module):
     core = module
 
 
-def _drishti_authenticate(username, password):
-    """Drishti login against Garuda's own user table. Returns a role or None.
-
-    drishti_api cannot import this module to reach USERS: Garuda_web runs as a
-    script, so the live globals are __main__'s, and an import would produce a
-    second copy whose USERS is still the empty dict it starts as. Passing the
-    function in keeps the one live table.
-
-    An admin account is signed in as a user here. Garuda asks an admin for the
-    emailed one-time code as well as the password; this sign-in has no second
-    step, so it must not open the admin side. Admin work is on Garuda's own
-    pages (/api/home), behind that code.
-    """
-    user = core.STATE.auth.users.get(username)
-    # An unknown name costs the same hash as a wrong password, so the time
-    # taken does not say which names exist.
-    stored = user["password"] if user else core._DUMMY_PASSWORD_HASH
-    if not core._verify_password(password, stored) or user is None:
-        return None
-    return "user"
-
-
-def _drishti_system_state():
-    """Mode flags, uptime and camera liveness for the Drishti Home screen."""
-    return {
-        "modes": {
-            "dnd": core.STATE.modes.dnd, "night": core.STATE.modes.night, "idle": core.STATE.modes.idle,
-            "emergency": core.STATE.modes.emergency, "privacy": core.STATE.modes.privacy,
-            "email_off": core.STATE.modes.email_off,
-        },
-        "uptime_s": int(core._uptime_s()),
-        # There is no pipeline liveness flag, and app_gst is set before the
-        # pipeline produces anything. Frame freshness is the honest signal:
-        # what the screen wants to know is whether the camera is delivering.
-        "pipeline": "running" if (time.time() - core.STATE.camera.frame_ts) < 5.0 else "stopped",
-        "rule_loop": core.DRISHTI_RUNTIME.health(),
-    }
-
-
-def _drishti_set_privacy(on):
-    """Turn the camera off from the app.
-
-    MODE_PRIVACY was reachable only through the voice assistant, so the web app
-    could read the flag and never change it.
-    """
-    core.STATE.modes.privacy = bool(on)
-    core.log_system_update(f"[DRISHTI] privacy {'on' if core.STATE.modes.privacy else 'off'}")
-
-
 def _home_presence():
     """True home / False away / None when no phone is registered to watch."""
     return core.STATE.presence.owner_present if core.STATE.config.known_devices else None

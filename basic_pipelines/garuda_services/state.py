@@ -337,7 +337,6 @@ def _client_meta(request: Request) -> dict:
             "home_automation": product != "security",
             "voice": bool(core.NARADA_VOICE.configured),
             "assistant": bool(core.NIM_CHAT.configured),
-            "webrtc": bool(core._WEBRTC_AVAILABLE),
             "clips": True,
             "email_alerts": bool(core.STATE.config.email_sender and core.STATE.config.email_sender_pass and core.STATE.config.email_recipients),
         },
@@ -382,7 +381,7 @@ def _system_extra() -> dict:
     return {"hardware": _hardware_info(),
             "sessions": {"active": len(core.STATE.auth.sessions),
                          "refresh_tokens": len(core.STATE.auth.refresh_tokens) + len(core.STATE.auth.persisted_refresh),
-                         "websockets": len(core._ws_clients), "video_peers": len(core._pc_set)},
+                         "websockets": len(core._ws_clients)},
             "log_file": getattr(core._core_logging.configure, "path", None)}
 
 

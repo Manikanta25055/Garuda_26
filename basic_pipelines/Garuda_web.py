@@ -2,10 +2,7 @@
 # GARUDA WEB — FastAPI web interface for the Garuda Security System
 #
 # SETUP (one-time):
-#   pip install fastapi uvicorn[standard]
-#   # For voice assistant:
-#   curl -fsSL https://ollama.com/install.sh | sh
-#   ollama pull phi3:latest
+#   pip install -r requirements.txt -c constraints.txt
 #
 # RUN:
 #   source setup_env.sh
@@ -18,93 +15,30 @@ gi.require_version('Gst', '1.0')
 from gi.repository import Gst, GLib
 
 import os
-import argparse
-import numpy as np
-import setproctitle
-import cv2
 import time
 import hailo
 import sys
 import datetime
-import smtplib
-from email.mime.text import MIMEText
-import random
-import string
-import json
-import requests
-import secrets
-import socket
-import ipaddress
-import subprocess
+import smtplib  # noqa: F401  (tests patch SMTP_SSL through this module)
 import asyncio
 import threading
-import traceback
-import hashlib
-import hmac
-import math
-import signal
-import tempfile
 import re
-import anyio.to_thread
 from pathlib import Path
 from collections import defaultdict
 
 from dotenv import load_dotenv
 load_dotenv()
 
-import speech_recognition as sr
-import ctypes
-
-# Silence ALSA/Jack error spam when PortAudio probes audio devices.
-# IMPORTANT: keep callbacks at module level — temporary CFUNCTYPE objects get
-# garbage-collected and the dangling C pointer causes a segfault.
-_ALSA_ERROR_CB = None
-_JACK_ERROR_CB = None
-_JACK_INFO_CB  = None
-
-try:
-    _asound = ctypes.cdll.LoadLibrary('libasound.so.2')
-    _ALSA_ERROR_CB = ctypes.CFUNCTYPE(
-        None,
-        ctypes.c_char_p, ctypes.c_int,
-        ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p
-    )(lambda *_: None)
-    _asound.snd_lib_error_set_handler(_ALSA_ERROR_CB)
-except Exception:
-    pass
-
-try:
-    _libjack = ctypes.cdll.LoadLibrary('libjack.so.0')
-    _JACK_CB_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
-    _JACK_ERROR_CB = _JACK_CB_TYPE(lambda *_: None)
-    _JACK_INFO_CB  = _JACK_CB_TYPE(lambda *_: None)
-    _libjack.jack_set_error_function(_JACK_ERROR_CB)
-    _libjack.jack_set_info_function(_JACK_INFO_CB)
-except Exception:
-    pass
-
-import sqlite3
-
 try:
     import psutil
 except ImportError:
     psutil = None
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, Response, Depends
-from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse, JSONResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import List
 import uvicorn
-
-try:
-    from aiortc import RTCPeerConnection, RTCSessionDescription
-    from aiortc.mediastreams import VideoStreamTrack
-    import av
-    _WEBRTC_AVAILABLE = True
-except ImportError:
-    _WEBRTC_AVAILABLE = False
 
 from hailo_rpi_common import (
     get_default_parser,
@@ -177,20 +111,6 @@ except ImportError:
     from basic_pipelines.drishti_config import CHANNEL_TO_PIN, RELAY_CHANNELS
     from basic_pipelines.drishti_config import DATA_DIR as DRISHTI_DATA_DIR
 
-# Both hostnames reach this one app through the one Cloudflare tunnel, so the
-# Host header is what decides which bundle / serves. Without it,
-# drishti.veeramanikanta.in shows the Garuda dashboard.
-# Named so a test harness can point it somewhere else before the lifespan
-# runs. It writes live session tokens; it must never be the real file
-# during a test run.
-DRISHTI_SESSIONS_PATH = os.path.join(DRISHTI_DATA_DIR, "sessions.json")
-DRISHTI_HOST = os.environ.get("DRISHTI_HOST", "drishti.veeramanikanta.in")
-DRISHTI_DIST = _BASE / "drishti_dist"
-# The standalone Drishti app is halted: its features now live in this app's
-# own Home / Automations / Insights pages, behind Garuda's sign-in. Set
-# DRISHTI_APP_ENABLED=1 to serve the Svelte bundle and /api/drishti again.
-DRISHTI_APP_ENABLED = os.environ.get("DRISHTI_APP_ENABLED", "0").lower() in ("1", "true", "yes")
-
 # Two products from one service. Garuda (home security) and Drishti (home
 # automation, built on Garuda) share the camera, the Hailo and this process;
 # the address decides which one a visitor gets. Hosts listed here get the
@@ -209,7 +129,7 @@ try:
     from .garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from .garuda_routes.logs import build_logs_router
     from .garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
-    from .garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
+    from .garuda_routes.camera import build_camera_router
     from .garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from .garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
@@ -238,10 +158,10 @@ try:
         _load_logs_from_disk, _rotate_log, _do_flush_logs, _flush_log_thread, _perm_write, _append_detection_perm, log_system_update, append_voice_log, append_voice_response)
     from .garuda_services import detection as _svc_detection
     from .garuda_services.detection import (  # noqa: F401
-        _secondary_worker_loop, _check_night_presence, app_callback, _resolve_camera)
+        _check_night_presence, app_callback, _resolve_camera)
     from .garuda_services import pipeline as _svc_pipeline
     from .garuda_services.pipeline import (  # noqa: F401
-        _WebCascadeMetrics, user_app_callback_class, GStreamerDetectionApp)
+        user_app_callback_class, GStreamerDetectionApp)
     from .garuda_services import sessions as _svc_sessions
     from .garuda_services.sessions import (  # noqa: F401
         _invalidate_user_sessions, _get_client_ip, _check_rate_limit, _prune_rate_state, _is_login_locked, _record_login_failure, _clear_login_failure, _load_refresh_tokens, _save_refresh_tokens, _revoke_refresh, create_refresh_token, _prune_expired_refresh_tokens, _user_signed_in, _is_cross_site, _cookie_secure, _set_session_cookies, get_refresh_token, create_session, create_master_session, get_session, _prune_expired_sessions, require_session, require_admin, require_logs)
@@ -250,10 +170,10 @@ try:
         _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
     from .garuda_services import assistant as _svc_assistant
     from .garuda_services.assistant import (  # noqa: F401
-        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+        _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from .garuda_services import home as _svc_home
     from .garuda_services.home import (  # noqa: F401
-        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
         _shortcut_facts, _shortcut_role_of, _shortcut_notify)
     from .garuda_services import middleware as _svc_middleware
     from .garuda_services.middleware import (  # noqa: F401
@@ -288,7 +208,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.presence import build_presence_router, DeviceAddRequest, DeviceDeleteRequest  # noqa: F401
     from basic_pipelines.garuda_routes.logs import build_logs_router
     from basic_pipelines.garuda_routes.auth import build_auth_router, LoginRequest, OTPRequest, VerifyOTPRequest, ForgotPasswordRequest, SendForgotOTPRequest  # noqa: F401
-    from basic_pipelines.garuda_routes.camera import build_camera_router, WebRTCOfferRequest  # noqa: F401
+    from basic_pipelines.garuda_routes.camera import build_camera_router
     from basic_pipelines.garuda_routes.narada import build_narada_router, ChatRequest  # noqa: F401
     from basic_pipelines.garuda_routes.control import build_control_router, ModeRequest  # noqa: F401
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
@@ -317,10 +237,10 @@ except ImportError:
         _load_logs_from_disk, _rotate_log, _do_flush_logs, _flush_log_thread, _perm_write, _append_detection_perm, log_system_update, append_voice_log, append_voice_response)
     from basic_pipelines.garuda_services import detection as _svc_detection
     from basic_pipelines.garuda_services.detection import (  # noqa: F401
-        _secondary_worker_loop, _check_night_presence, app_callback, _resolve_camera)
+        _check_night_presence, app_callback, _resolve_camera)
     from basic_pipelines.garuda_services import pipeline as _svc_pipeline
     from basic_pipelines.garuda_services.pipeline import (  # noqa: F401
-        _WebCascadeMetrics, user_app_callback_class, GStreamerDetectionApp)
+        user_app_callback_class, GStreamerDetectionApp)
     from basic_pipelines.garuda_services import sessions as _svc_sessions
     from basic_pipelines.garuda_services.sessions import (  # noqa: F401
         _invalidate_user_sessions, _get_client_ip, _check_rate_limit, _prune_rate_state, _is_login_locked, _record_login_failure, _clear_login_failure, _load_refresh_tokens, _save_refresh_tokens, _revoke_refresh, create_refresh_token, _prune_expired_refresh_tokens, _user_signed_in, _is_cross_site, _cookie_secure, _set_session_cookies, get_refresh_token, create_session, create_master_session, get_session, _prune_expired_sessions, require_session, require_admin, require_logs)
@@ -329,10 +249,10 @@ except ImportError:
         _home_state_summary, _recent_alert_history, get_state_dict, _state_for_role, push_urgent_ws, _ws_connect_allowed, _ws_send, _ws_broadcaster, _client_meta, _system_extra, _probe_camera, _probe_events_db, _probe_disk, _probe_workers, _probe_rules)
     from basic_pipelines.garuda_services import assistant as _svc_assistant
     from basic_pipelines.garuda_services.assistant import (  # noqa: F401
-        voice_assistant_loop, _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
+        _voice_turn_logged, _assistant_reply, _ai_configure, _ai_test)
     from basic_pipelines.garuda_services import home as _svc_home
     from basic_pipelines.garuda_services.home import (  # noqa: F401
-        _drishti_authenticate, _drishti_system_state, _drishti_set_privacy, _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
+        _home_presence, _home_security, _home_email, _home_modes, _home_set_mode, _home_security_summary,
         _shortcut_facts, _shortcut_role_of, _shortcut_notify)
     from basic_pipelines.garuda_services import middleware as _svc_middleware
     from basic_pipelines.garuda_services.middleware import (  # noqa: F401
@@ -393,8 +313,6 @@ _detection_log: List[str] = []   # in-memory recent detection events (danger + w
 STATE = _core_state.State()
 _core_state.retire(sys.modules[__name__], _core_state.RETIRED_NAMES)
 
-NARADA_WAKE_WORD = "narada"
-
 _app_start_time = time.time()
 _app_start_mono = time.monotonic()
 
@@ -449,30 +367,6 @@ _frame_publisher = FramePublisher()
 # Drishti rebuilds its descriptor at this rate, not at frame rate.
 _DRISHTI_OBSERVE_INTERVAL_S = 0.2
 
-# ── Async secondary cascade (MobileNet + MiDaS) ─────────────────────────────
-# Non-blocking queue bridges primary YOLO callback to secondary daemon thread.
-# maxsize=2: if secondary falls behind, new frames are intentionally dropped.
-# Primary GStreamer callback NEVER blocks on secondary inference.
-import queue as _queue_mod
-SECONDARY_QUEUE_SIZE = 2
-_secondary_queue: _queue_mod.Queue = _queue_mod.Queue(maxsize=SECONDARY_QUEUE_SIZE)
-_secondary_stop  = threading.Event()
-
-_cascade_metrics = _WebCascadeMetrics()
-
-
-# Start secondary daemon thread at module load
-_secondary_thread = threading.Thread(
-    target=_secondary_worker_loop,
-    daemon=True,
-    name="secondary_cascade",
-)
-_secondary_thread.start()
-
-# WebRTC peer connections
-_pc_set: set = set()
-_MAX_PEER_CONNECTIONS = 4
-
 # Event-driven WS broadcaster
 
 # Session store: token → {username, role, expires}
@@ -483,8 +377,6 @@ _ws_clients: dict = {}
 # EMA-smoothed system stats (α=0.25 → ~4-tick rolling average)
 _EMA_A         = 0.25
 
-# Voice stop event
-_voice_stop_event = threading.Event()
 
 ##############################################################################
 # PERSISTENCE
@@ -567,26 +459,6 @@ def _send_mail(subject, body, to=None, attachments=()):
                  **({"attachments": attachments} if attachments else {}))
 
 ##############################################################################
-# WEBRTC VIDEO TRACK
-##############################################################################
-if _WEBRTC_AVAILABLE:
-    class GarudaVideoTrack(VideoStreamTrack):
-        """Serves the latest BGR frame from the Hailo pipeline as an H.264 track."""
-        kind = "video"
-
-        async def recv(self):
-            pts, time_base = await self.next_timestamp()
-            with STATE.camera.frame_lock:
-                raw = STATE.camera.frame_raw
-            if raw is not None:
-                vf = av.VideoFrame.from_ndarray(raw, format="bgr24")
-            else:
-                vf = av.VideoFrame(width=1280, height=720, format="yuv420p")
-            vf.pts = pts
-            vf.time_base = time_base
-            return vf
-
-##############################################################################
 # ENCRYPTED EVIDENCE EXFILTRATION
 ##############################################################################
 def _encrypt_clip_aes256(src_path: str) -> str | None:
@@ -614,7 +486,10 @@ except Exception:
 
 
 PI_CAMERA_SIZE = (1280, 720)
-PI_CAMERA_FPS = 60
+# 30, not 60: the browser is sent 15 fps and a person cannot cross the view in
+# a thirtieth of a second, but at 60 the Hailo, the scaler and the frame
+# callback did twice the work and the board reached its temperature limit.
+PI_CAMERA_FPS = 30
 
 
 ##############################################################################
@@ -670,9 +545,6 @@ async def _lifespan(app):
     load_master_keys()
     # Proposals and sessions from the previous run are stale by definition.
     DRISHTI_CTX.pending.purge()
-    # Backed by a file, so deploying a change does not sign the house out.
-    _drishti_auth.configure(DRISHTI_SESSIONS_PATH)
-    _drishti_auth.prune_expired()
     # Before the rule loop: every relay is driven off, so what the app shows
     # and what the board is doing agree from the first tick.
     unsettled = DRISHTI_CTX.relay_bank.settle()
@@ -710,10 +582,6 @@ async def _lifespan(app):
         await asyncio.gather(STATE.system.ws_broadcaster_task, return_exceptions=True)
         STATE.system.ws_broadcaster_task = None
     AUDIO_FEED.stop()
-    # Close any open WebRTC peer connections on shutdown
-    if _pc_set:
-        await asyncio.gather(*[pc.close() for pc in list(_pc_set)], return_exceptions=True)
-        _pc_set.clear()
 
 # /docs, /redoc and /openapi.json were served to anyone who asked, over the
 # tunnel: a map of every route for whoever is probing. The reference is still
@@ -751,7 +619,7 @@ fastapi_app.add_middleware(
 # own per-action rate limiting (login, OTP) keep their individual checks; this
 # catches everything else.
 # Health and readiness are polled by monitors; they must not eat the budget.
-_RATE_EXEMPT_PREFIXES = ("/static/", "/drishti/", "/ws", "/stream", "/api/eval/",
+_RATE_EXEMPT_PREFIXES = ("/static/", "/ws", "/stream", "/api/eval/",
                          "/api/health", "/api/ready")
 
 fastapi_app.middleware("http")(global_rate_limit)
@@ -768,23 +636,14 @@ _static_dir = Path(__file__).parent / "garuda_web"
 if _static_dir.exists():
     fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
-# Vite builds with base=/drishti/, so the SPA's own asset URLs are absolute and
-# index.html can be served from / without rewriting anything.
-if DRISHTI_APP_ENABLED and DRISHTI_DIST.is_dir():
-    fastapi_app.mount("/drishti", StaticFiles(directory=str(DRISHTI_DIST)), name="drishti")
-
-# ── Drishti router ───────────────────────────────────────────────────────────
+# ── Home-automation context ──────────────────────────────────────────────────
 # Same two import paths as the constants above; sys.path is already fixed by
 # the time this runs in script mode.
 try:
     from .drishti_api import build_context as _build_drishti_context
-    from .drishti_api import build_router as _build_drishti_router
-    from . import drishti_auth as _drishti_auth
     from .garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
 except ImportError:
     from basic_pipelines.drishti_api import build_context as _build_drishti_context
-    from basic_pipelines.drishti_api import build_router as _build_drishti_router
-    from basic_pipelines import drishti_auth as _drishti_auth
     from basic_pipelines.garuda_auto.runtime import DrishtiRuntime as _DrishtiRuntime
 
 DRISHTI_CTX = _build_drishti_context(
@@ -802,18 +661,11 @@ DRISHTI_CTX = _build_drishti_context(
 )
 
 
-DRISHTI_CTX.authenticate = _drishti_authenticate
-DRISHTI_CTX.system_state = _drishti_system_state
-DRISHTI_CTX.set_privacy = _drishti_set_privacy
-
 # The loop that makes rules actually run. Narada-RS built SceneBuilder and
 # RuleEngine, tested them, and connected them to nothing: until now the
 # descriptor was always empty and no rule had ever fired.
 DRISHTI_RUNTIME = _DrishtiRuntime(DRISHTI_CTX)
 DRISHTI_CTX.on_registry_change = DRISHTI_RUNTIME.rebind
-
-if DRISHTI_APP_ENABLED:
-    fastapi_app.include_router(_build_drishti_router(DRISHTI_CTX))
 
 # ── Home automation (Drishti, merged into Garuda) ────────────────────────────
 # One NIM client for everything that needs a model: the rule compiler, the
@@ -1016,9 +868,6 @@ _STREAM_RECHECK_S = 5.0
 _STREAM_FRAMES_IN_FLIGHT = 2   # /ws/stream?ack=1: frames sent but not yet shown
 
 
-DRISHTI_CTX.frame_source = mjpeg_frames
-
-
 # ── Clip recording ────────────────────────────────────────────────────────────
 _CLIPS_KEEP = 50
 
@@ -1063,7 +912,7 @@ _core_http.tag_routes(fastapi_app, [
     ("/api/chat", "Narada"), ("/api/narada", "Narada"), ("/api/home", "Home automation"),
     ("/api/clip", "Camera"), ("/api/snapshot", "Camera"), ("/stream", "Camera"),
     ("/api/audio", "Camera"),
-    ("/webrtc", "Camera"), ("/api/eval", "Evaluation harness"), ("/api/", "Core"),
+    ("/api/eval", "Evaluation harness"), ("/api/", "Core"),
 ])
 
 ##############################################################################
@@ -1112,9 +961,6 @@ def run_web_app(args):
     for severity, message in SETTINGS.problems():
         if severity != "info":
             log_system_update(f"[CONFIG] {severity}: {message}")
-
-    # Start voice assistant thread (returns at once when there is no microphone)
-    SUPERVISOR.spawn("voice-assistant", voice_assistant_loop, args=(_voice_stop_event,), restart=False)
 
     # Start pipeline thread (restarts automatically on failure)
     SUPERVISOR.spawn("camera-pipeline", _run_pipeline, critical=True)

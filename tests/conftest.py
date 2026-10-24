@@ -180,11 +180,6 @@ def tmp_data(tmp_path):
 @pytest.fixture(scope="session")
 def shared_client(tmp_path_factory):
     global _SHARED_CLIENT
-    # Redirected before the client is built, because building it runs the real
-    # lifespan -- which configures the Drishti session store. Left alone, every
-    # test login is written into the running service's session file, and
-    # invalidate_user in a test revokes somebody's actual session.
-    gw.DRISHTI_SESSIONS_PATH = str(tmp_path_factory.mktemp("sessions") / "sessions.json")
     gw._presence_poller = lambda: None
     gw._deadman_monitor = lambda: None
     gw._connectivity_monitor = lambda: None
@@ -280,7 +275,6 @@ def app_client(tmp_data, monkeypatch, shared_client):
     monkeypatch.setattr(gw.STATE.presence, 'log',  [])
     monkeypatch.setattr(gw.STATE.system, 'net_online',    True)
     monkeypatch.setattr(gw.STATE.camera, 'total_frames',  0)
-    monkeypatch.setattr(gw.STATE.camera, 'detections_today', 0)
     monkeypatch.setattr(gw.STATE.alerts, 'last_email_sent_time', 0)
     monkeypatch.setattr(gw.STATE.config, 'detection_threshold', 0.3)
     monkeypatch.setattr(gw.STATE.config, 'custom_voice_commands', {})
