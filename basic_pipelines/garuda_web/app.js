@@ -283,6 +283,73 @@ const G = (() => {
     try { _renderArm(await api('POST', '/api/arm/auto', { enabled: !(_arm && _arm.auto) })); }
     catch (e) { showToast(extractError(e), 'error'); }
   }
+  // ── Phone alerts (Web Push) ───────────────────────────────
+  // A phone subscribes with the Pi's public key; the Pi encrypts each alert
+  // to the phone's keys. iPhone: only once the site is on the Home Screen.
+  function _pushSupported() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && typeof Notification !== 'undefined';
+  }
+  const _b64uToBytes = s => {
+    const b = atob((s + '='.repeat((4 - s.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from(b, c => c.charCodeAt(0));
+  };
+  async function _pushSub() {
+    if (!_pushSupported()) return null;
+    const reg = await navigator.serviceWorker.ready;
+    return reg.pushManager.getSubscription();
+  }
+  async function syncPushCard() {
+    const status = $('push-status'), on = $('push-on-btn'), test = $('push-test-btn');
+    if (!status || !on) return;
+    if (!_pushSupported()) {
+      status.textContent = /iPhone|iPad/.test(navigator.userAgent)
+        ? 'On iPhone, add Garuda to your Home Screen first (Share › Add to Home Screen), then open it from there.'
+        : 'This browser cannot receive phone alerts.';
+      on.classList.add('hidden'); test?.classList.add('hidden');
+      return;
+    }
+    let sub = null;
+    try { sub = await _pushSub(); } catch (_) {}
+    if (Notification.permission === 'denied') {
+      status.textContent = 'Notifications are blocked for this site. Allow them in the browser settings, then come back.';
+    } else {
+      status.textContent = sub ? 'On for this phone: alerts, a person while armed, and a covered camera.'
+        : 'Get an alert with a picture on this phone within seconds.';
+    }
+    on.textContent = sub ? 'Turn off' : 'Turn on';
+    on.classList.toggle('btn-primary', !sub);
+    on.classList.toggle('btn-ghost', !!sub);
+    test?.classList.toggle('hidden', !sub);
+  }
+  async function pushToggle() {
+    try {
+      const existing = await _pushSub();
+      if (existing) {
+        await api('POST', '/api/push/unsubscribe', { endpoint: existing.endpoint }).catch(() => {});
+        await existing.unsubscribe();
+        showToast('Phone alerts are off for this phone.', 'success');
+      } else {
+        if (await Notification.requestPermission() !== 'granted') { syncPushCard(); return; }
+        const { key } = await api('GET', '/api/push/key');
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: _b64uToBytes(key) });
+        await api('POST', '/api/push/subscribe', { subscription: sub.toJSON() });
+        showToast('Phone alerts are on. Send a test to see one.', 'success');
+      }
+    } catch (e) { showToast(extractError(e), 'error'); }
+    syncPushCard();
+  }
+  async function pushTest() {
+    try {
+      const r = await api('POST', '/api/push/test', {});
+      showToast(r.delivered ? 'Test sent. It should arrive in a few seconds.' : 'The push service did not take it. Turn alerts off and on again.', r.delivered ? 'success' : 'error');
+    } catch (e) { showToast(extractError(e), 'error'); }
+  }
+  // A tapped notification brings the page here and names the tab to show.
+  navigator.serviceWorker?.addEventListener('message', e => {
+    if (e.data && e.data.nav && _session) nav(e.data.nav);
+  });
+
   let _panicOn = false;
   function togglePanic() { toggleMode('emergency', _panicOn); }
 
@@ -548,7 +615,10 @@ const G = (() => {
     buildNav(_session.role);
     $('main')?.classList.add('dash-active');
     _setDILabel(_BRAND);
-    nav('dashboard');
+    // A notification opens the page at /#events: start there, once.
+    const start = location.hash === '#events' ? 'events' : 'dashboard';
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    nav(start);
     // Live uptime ticker — save ID so it can be cleared on logout
     if (_uptimeInterval) clearInterval(_uptimeInterval);
     _uptimeInterval = setInterval(() => { if (_uptimeReceivedAt) setText('s-uptime', _fmtUptimeLive()); }, 1000);
@@ -1841,6 +1911,7 @@ const G = (() => {
     _syncFeedbackVisibility();
     _syncFeedAudio();
     if (pageId === 'events')     renderHeatmap(_hmActivity);   // drawn to the width it has now
+    if (pageId === 'settings')   syncPushCard();
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') { loadSysCfg(); loadArm(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
@@ -3346,7 +3417,7 @@ const G = (() => {
     goAdminFlow, backToMain, backToAdminStep1, sendAdminOTP, verifyAdminOTP,
     goMasterKey, submitMasterKeyLogin, unlockLogs,
     goForgot, sendForgotOTP, doReset,
-    nav, toggleMode, emergencyStop, setArm, toggleAutoArm, togglePanic,
+    nav, toggleMode, emergencyStop, setArm, toggleAutoArm, togglePanic, pushToggle, pushTest,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
     toggleTheme, switchCamTab,

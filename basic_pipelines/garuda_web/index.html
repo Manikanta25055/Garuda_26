@@ -649,6 +649,17 @@
       <div id="page-settings" class="page">
         <div class="admin-page">
           <div class="admin-page-header"><h2>Settings</h2></div>
+          <!-- Phone alerts: per phone, so every profile has it -->
+          <div class="settings-hub push-card" id="push-card">
+            <div class="push-text">
+              <div class="sh-label">Phone alerts</div>
+              <div class="sh-hint" id="push-status">Get an alert with a picture on this phone within seconds.</div>
+            </div>
+            <div class="push-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="push-on-btn" data-click="G.pushToggle">Turn on</button>
+              <button type="button" class="btn btn-ghost btn-sm hidden" id="push-test-btn" data-click="G.pushTest">Send a test</button>
+            </div>
+          </div>
           <div id="settings-list" class="settings-hub"></div>
         </div>
       </div>

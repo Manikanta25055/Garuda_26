@@ -746,6 +746,36 @@
  {
   "kind": "http",
   "method": "GET",
+  "path": "/api/push/key",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/push/silence",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/push/subscribe",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/push/test",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/push/unsubscribe",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
   "path": "/api/ready",
   "guard": "none"
  },

@@ -537,6 +537,8 @@ NEVER = {
     "GET /api/openapi.json": "developer page",
     "POST /api/feedback": "a person's own words to the owner",
     "POST /api/arm/auto": "whether the house arms itself is the owner's setting, on System",
+    "POST /api/push/silence": "silencing a phone's alerts is the person holding the phone",
+    "POST /api/push/test": "a person checking their own phone",
 }
 
 # Not actions at all: pages, liveness, streams, and the conversation itself.
@@ -559,6 +561,8 @@ PLUMBING = frozenset({
     "GET /api/narada/voice/turns",     # original display results for the bound conversation
     "GET /api/captures/{capture_id}/file",   # the saved file itself, for a player on the page
     "POST /api/narada/voice/error",     # the browser reporting a voice error to the log
+    # A phone turning its own alerts on and off (garuda_routes/push.py).
+    "GET /api/push/key", "POST /api/push/subscribe", "POST /api/push/unsubscribe",
 })
 
 

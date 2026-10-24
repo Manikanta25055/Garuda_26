@@ -1,5 +1,5 @@
 // Garuda Service Worker — enables PWA installability + offline shell caching
-const CACHE = 'garuda-v48';
+const CACHE = 'garuda-v49';
 const SHELL = ['/static/style.css', '/static/sound.js', '/static/actions.js', '/static/app.js', '/static/home.js', '/static/narada.js', '/static/island.js'];
 
 self.addEventListener('install', e => {
@@ -58,4 +58,33 @@ self.addEventListener('fetch', e => {
         .catch(() => caches.match(req).then(c => c || Response.error()))
     );
   }
+});
+
+// Phone alerts (garuda_routes/push.py). The message arrives encrypted and the
+// browser decrypts it; the picture is inside it, so nothing is fetched.
+self.addEventListener('push', e => {
+  let m = {};
+  try { m = e.data ? e.data.json() : {}; } catch (_) { m = { body: e.data ? e.data.text() : '' }; }
+  const opts = {
+    body: m.body || '', icon: '/static/icon-192.png', badge: '/static/icon-192.png',
+    tag: m.tag || 'garuda', renotify: true, timestamp: m.ts ? m.ts * 1000 : Date.now(),
+    data: { url: m.url || '/' },
+    actions: m.kind === 'test' ? [] : [{ action: 'view', title: 'View' }, { action: 'silence', title: 'Silence 30 min' }],
+  };
+  if (m.image) opts.image = m.image;
+  e.waitUntil(self.registration.showNotification(m.title || 'Garuda', opts));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  if (e.action === 'silence') {
+    e.waitUntil(fetch('/api/push/silence', { method: 'POST', credentials: 'include' }).catch(() => {}));
+    return;
+  }
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const open = list.find(c => new URL(c.url).origin === self.location.origin);
+    if (open) { open.postMessage({ nav: url.split('#')[1] || 'dashboard' }); return open.focus(); }
+    return self.clients.openWindow(url);
+  }));
 });

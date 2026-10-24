@@ -236,6 +236,12 @@ def app_client(tmp_data, monkeypatch, shared_client):
     # The arm switch's choice: a fresh file, Home and auto-arm on.
     monkeypatch.setattr(gw.ARM, 'path', str(tmp_data / 'arm.json'))
     monkeypatch.setattr(gw.ARM, 'data', {'chosen': 'home', 'by': '', 'at': 0.0, 'auto': True, 'auto_set': False})
+    # Phone alerts: no saved phones, a throwaway signing key, nothing silenced.
+    monkeypatch.setattr(gw.PUSH, 'path', str(tmp_data / 'push_subscriptions.json'))
+    monkeypatch.setattr(gw.PUSH, 'subs', {})
+    monkeypatch.setattr(gw.PUSH, 'silenced_until', 0.0)
+    monkeypatch.setattr(gw.PUSH_VAPID, 'path', str(tmp_data / 'push_vapid.pem'))
+    monkeypatch.setattr(gw.PUSH_VAPID, '_key', None)
     monkeypatch.setattr(gw.BRAIN.memory, 'path', str(tmp_data / 'system_logs/narada_memory.json'))
     monkeypatch.setattr(gw.BRAIN.memory, '_facts', [])
     monkeypatch.setattr(gw.BRAIN.observer, 'path', str(tmp_data / 'system_logs/narada_offers.json'))
