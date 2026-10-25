@@ -185,6 +185,25 @@ def test_a_typed_reply_carries_one_observation_with_its_rule(long_fan):
     assert "observation" not in agent.handle("hello again", user="mani")
 
 
+def test_a_note_copied_back_into_a_reply_is_taken_out(long_fan):
+    """The history keeps the note beside the reply it came with. A model
+    reading that back copied it into its next answer, so the person saw the
+    note as plain text in the reply instead of in its box."""
+    agent, brain = long_fan
+    seen = agent.handle("hello", user="mani", role="user")["observation"]
+
+    class Echo(Resp):
+        def json(self):
+            body = super().json()
+            body["choices"][0]["message"]["content"] = (
+                f'Hello.\n\n(A note shown beside this reply, from you: "{seen["text"]}")')
+            return body
+    agent.chat._post = lambda *a, **k: Echo()
+    out = agent.handle("hello again", user="mani", role="user")
+    assert out["reply"] == "Hello."
+    assert seen["text"] not in brain.history("mani")[-1]["content"]
+
+
 def test_no_observation_in_speech(long_fan):
     agent, brain = long_fan
     assert "observation" not in agent.handle("hello", user="mani", voice=True)

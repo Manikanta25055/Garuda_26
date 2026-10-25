@@ -1383,6 +1383,7 @@ const G = (() => {
     x: 6, w: 68, vx: 0, vw: 0, tx: 6, tw: 68,     // left edge and width, in the bar's content
     lift: 0, vl: 0, tl: 0,                         // 0 resting, 1 picked up
     spring: _SPRING.tap, raf: 0, last: 0,
+    W: 68, fly: null,                              // drawn width; a flight on the compositor
     thrown: false,                                 // the next move carries on from a throw
   };
 
@@ -1401,26 +1402,33 @@ const G = (() => {
     return { x, w };
   }
 
-  function _pillDraw() {
-    const el = $('ios-pill'); if (!el) return;
-    const p = _pill;
+  // The look for a state: the width it is drawn at (W) and its transform.
+  // The element keeps one width while it moves, and the transform scales it
+  // to the width of the moment: a transform runs on the compositor, a width
+  // is a layout on every frame.
+  function _pillLook(x, w, vx, lift, W) {
     // Touched, the lens bulges up under the finger; moving fast, it
     // stretches along its path and thins, and gives the shape back as it
     // slows. Let go, it springs back with a small wobble.
     let sx = 1, sy = 1;
     if (!_RM.matches) {
-      const stretch = Math.min(Math.abs(p.vx) / 6000, 0.10);
-      sx = 1 + 0.10 * p.lift + stretch;
-      sy = 1 + 0.16 * p.lift - stretch * 0.6;
+      const stretch = Math.min(Math.abs(vx) / 6000, 0.10);
+      sx = 1 + 0.10 * lift + stretch;
+      sy = 1 + 0.16 * lift - stretch * 0.6;
     }
-    el.style.width = p.w.toFixed(2) + 'px';
-    el.style.transform = `translate3d(${p.x.toFixed(2)}px,0,0) scale(${sx.toFixed(4)},${sy.toFixed(4)})`;
+    const kx = w * sx / W, tx = x + (w - W) / 2;
+    return `translate3d(${tx.toFixed(2)}px,0,0) scale(${kx.toFixed(4)},${sy.toFixed(4)})`;
   }
 
-  function _pillStep(now) {
+  function _pillDraw() {
+    const el = $('ios-pill'); if (!el) return;
     const p = _pill;
-    const dt = Math.min(0.05, Math.max(0, (now - (p.last || now)) / 1000));
-    p.last = now;
+    if (p.W !== p.w) { p.W = p.w; el.style.width = p.w.toFixed(2) + 'px'; }
+    el.style.transform = _pillLook(p.x, p.w, p.vx, p.lift, p.W);
+  }
+
+  // One step of the three springs (position, width, the bulge).
+  function _pillIntegrate(p, dt) {
     // Fixed small steps keep the spring the same at 60 and 120 Hz.
     for (let t = 0; t < dt; t += 1 / 240) {
       const h = Math.min(1 / 240, dt - t);
@@ -1430,25 +1438,99 @@ const G = (() => {
       const sl = _SPRING.lift, kl = Math.pow(2 * Math.PI / sl.response, 2), cl = 4 * Math.PI * sl.damping / sl.response;
       p.vl += (-kl * (p.lift - p.tl) - cl * p.vl) * h; p.lift += p.vl * h;
     }
-    _pillDraw();
-    const still = Math.abs(p.x - p.tx) < 0.05 && Math.abs(p.vx) < 0.5
+  }
+
+  function _pillStill(p) {
+    return Math.abs(p.x - p.tx) < 0.05 && Math.abs(p.vx) < 0.5
       && Math.abs(p.w - p.tw) < 0.05 && Math.abs(p.vw) < 0.5
       && Math.abs(p.lift - p.tl) < 0.002 && Math.abs(p.vl) < 0.01;
-    if (still && !_pillDrag) {
-      p.x = p.tx; p.w = p.tw; p.lift = p.tl; p.vx = p.vw = p.vl = 0;
-      _pillDraw(); p.raf = 0; p.last = 0;
+  }
+
+  function _pillSettle(p) {
+    p.x = p.tx; p.w = p.tw; p.lift = p.tl; p.vx = p.vw = p.vl = 0;
+  }
+
+  // Under the hand: integrated frame by frame, since the target moves with
+  // every pointer event.
+  function _pillStep(now) {
+    const p = _pill;
+    const dt = Math.min(0.05, Math.max(0, (now - (p.last || now)) / 1000));
+    p.last = now;
+    _pillIntegrate(p, dt);
+    _pillDraw();
+    if (_pillStill(p) && !_pillDrag) {
+      _pillSettle(p); _pillDraw(); p.raf = 0; p.last = 0;
       return;
     }
     p.raf = requestAnimationFrame(_pillStep);
+  }
+
+  // On its own (a tap, a let-go, the bulge): the whole path is worked out
+  // now and handed to the compositor as one animation. It then runs on its
+  // own thread, so the frames the new page takes to draw (the same moment)
+  // no longer hold the pill up: the nav bar used to stall on every tap.
+  const _PILL_FPS = 60;
+  function _pillFly() {
+    const el = $('ios-pill'), p = _pill;
+    _pillHalt();
+    const q = { ...p }, path = [{ ...q }], frames = [];
+    for (let i = 0; i < _PILL_FPS * 2 && !_pillStill(q); i++) {
+      _pillIntegrate(q, 1 / _PILL_FPS);
+      path.push({ x: q.x, w: q.w, vx: q.vx, vw: q.vw, lift: q.lift, vl: q.vl });
+    }
+    const end = path[path.length - 1];
+    _pillSettle(q);
+    path[path.length - 1] = { ...end, x: q.x, w: q.w, vx: 0, vw: 0, lift: q.lift, vl: 0 };
+    // Drawn at the width it ends at, so at rest it is not scaled at all.
+    const W = p.tw;
+    for (const s of path) frames.push({ transform: _pillLook(s.x, s.w, s.vx, s.lift, W) });
+    _pillSettle(p);
+    if (p.W !== W) { p.W = W; el.style.width = W.toFixed(2) + 'px'; }
+    el.style.transform = frames[frames.length - 1].transform;
+    if (frames.length < 3) return;
+    const anim = el.animate(frames, { duration: (frames.length - 1) * 1000 / _PILL_FPS, easing: 'linear' });
+    p.fly = { anim, path };
+    anim.onfinish = () => { if (p.fly && p.fly.anim === anim) p.fly = null; };
+  }
+
+  // A flight cut short: the pill carries on from where it is, at the speed
+  // it had, rather than jumping to where the flight would have ended.
+  function _pillHalt() {
+    const p = _pill, f = p.fly;
+    if (!f) return;
+    p.fly = null;
+    const t = Math.max(0, (f.anim.currentTime || 0) / 1000 * _PILL_FPS);
+    const i = Math.min(f.path.length - 1, Math.floor(t)), j = Math.min(f.path.length - 1, i + 1), u = t - i;
+    const a = f.path[i], b = f.path[j];
+    for (const k of ['x', 'w', 'vx', 'vw', 'lift', 'vl']) p[k] = a[k] + (b[k] - a[k]) * u;
+    f.anim.cancel();
+    _pillDraw();
+  }
+
+  // Where the pill is drawn right now, mid-flight or not.
+  function _pillNow() {
+    const p = _pill, f = p.fly;
+    if (!f) return { x: p.x, w: p.w };
+    const t = Math.max(0, (f.anim.currentTime || 0) / 1000 * _PILL_FPS);
+    const s = f.path[Math.min(f.path.length - 1, Math.round(t))];
+    return { x: s.x, w: s.w };
   }
 
   function _pillGo(x, w, spring, instant) {
     const p = _pill;
     p.tx = x; p.tw = w; p.spring = spring || _SPRING.tap;
     if (instant || _RM.matches) {
+      _pillHalt();
       p.x = x; p.w = w; p.vx = p.vw = 0;
       if (!p.raf) { p.lift = p.tl; p.vl = 0; _pillDraw(); return; }
     }
+    const el = $('ios-pill');
+    if (!_pillDrag?.on && el && el.animate) {
+      if (p.raf) { cancelAnimationFrame(p.raf); p.raf = 0; p.last = 0; }
+      _pillFly();
+      return;
+    }
+    _pillHalt();
     if (!p.raf) { p.last = 0; p.raf = requestAnimationFrame(_pillStep); }
   }
 
@@ -1525,11 +1607,11 @@ const G = (() => {
       const tabs = _pillTabs(navEl);
       if (tabs.length < 2) return;
       const px = _pillContentX(navEl, e.clientX);
-      const p = _pill, onPill = px >= p.x && px <= p.x + p.w;
+      const p = _pill, at = _pillNow(), onPill = px >= at.x && px <= at.x + at.w;
       _pillDrag = {
         id: e.pointerId, x0: e.clientX, y0: e.clientY, on: false, tabs, peek: null,
         // Picked up by its side, the pill stays under the hand where it was held.
-        grab: onPill ? px - (p.x + p.w / 2) : 0,
+        grab: onPill ? px - (at.x + at.w / 2) : 0,
         trail: [{ x: e.clientX, t: e.timeStamp }],
       };
       // Pressing the lens itself bulges it at once, as on iOS.
@@ -1875,6 +1957,14 @@ const G = (() => {
     if (!navEl || !navEl.isConnected) navEl = _navItemFor(pageId);
     // Always hide logs gate when navigating (re-shows if a-logs and not unlocked)
     $('logs-gate')?.classList.add('hidden');
+    // The pill sets off first, while the layout is still clean: measuring
+    // the tab after the pages have changed forced a layout of the new page
+    // right here, and the pill's flight then started a frame late.
+    document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
+    if (navEl) {
+      navEl.classList.add('active');
+      movePill(navEl);
+    }
     // Every other page is hidden now. The old page used to be hidden from a
     // timer, which could fire after the new page was shown: tapping the tab
     // you were already on then hid it and left the screen blank.
@@ -1888,7 +1978,6 @@ const G = (() => {
     });
     // On a phone the document itself scrolls; a new page starts at its top.
     if (changed && _isPhone()) window.scrollTo(0, 0);
-    document.querySelectorAll('.ios-item').forEach(n => n.classList.remove('active'));
     // Dashboard uses overflow:hidden on #main to avoid nav-bar gap
     const mainEl = $('main');
     if (mainEl) mainEl.classList.toggle('dash-active', pageId === 'dashboard');
@@ -1901,8 +1990,6 @@ const G = (() => {
       });
     }
     if (navEl) {
-      navEl.classList.add('active');
-      movePill(navEl);
       if (window.innerWidth <= 768) {
         navEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
       }
