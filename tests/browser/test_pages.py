@@ -1094,6 +1094,48 @@ def test_on_a_phone_the_nav_pill_is_swiped_with_a_finger(server, browser, reduce
     ctx.close()
 
 
+def test_a_tapped_tab_sends_the_pill_on_the_compositor(user_page):
+    """The pill used to be moved from a per-frame script, with a new width
+    (a layout) on every frame. The tap that moves it also draws a new page,
+    so the pill stalled exactly then. Its flight is now one transform
+    animation, which the compositor runs without waiting for the page."""
+    p = user_page
+    page = p.page
+    p.go("dashboard")
+    page.wait_for_timeout(700)
+    x, y = _tab_center(page, "devices")
+    page.mouse.click(x, y)
+    page.wait_for_timeout(60)
+    anims = p.js("""document.getElementById('ios-pill').getAnimations().map(a =>
+        [...new Set(a.effect.getKeyframes().flatMap(k => Object.keys(k)
+          .filter(n => !['offset', 'easing', 'composite', 'computedOffset'].includes(n))))])""")
+    assert anims == [["transform"]]
+    page.wait_for_timeout(900)
+    assert p.js("document.getElementById('ios-pill').getAnimations().length") == 0
+    assert abs(_pill_center(page)[0] - x) < 2
+    assert _pill_scale(page) == [1, 1]
+    # A second tap mid-flight carries on from where the pill is: no jump.
+    page.mouse.click(*_tab_center(page, "narada"))
+    page.wait_for_timeout(120)
+    before, after = p.js("""(() => { const x = () => { const r = document.getElementById('ios-pill')
+        .getBoundingClientRect(); return r.left + r.width / 2; };
+        const b = x(); document.querySelector('.ios-item[data-page=events]').click(); return [b, x()]; })()""")
+    assert abs(after - before) < 3
+    page.wait_for_timeout(900)
+    assert abs(_pill_center(page)[0] - _tab_center(page, "events")[0]) < 2
+    p.assert_clean()
+
+
+def test_home_shows_its_cards_at_once(user_page):
+    p = user_page
+    p.go("events")
+    p.js("document.querySelector('.ios-item[data-page=dashboard]').click()")
+    p.page.wait_for_timeout(80)
+    assert p.js("""[...document.querySelectorAll('#page-dashboard :is(.hp-hero, .hp-cam, .hp-activity, .hp-controls)')]
+        .flatMap(e => e.getAnimations()).length""") == 0
+    p.assert_clean()
+
+
 def test_a_quick_flick_throws_the_nav_pill_past_the_tab_under_the_hand(user_page):
     p = user_page
     page = p.page

@@ -164,6 +164,17 @@ def test_audio_sleeps_between_sounds(admin):
         admin.page.wait_for_timeout(2600)
 
 
+def test_a_sound_starts_inside_the_tap(admin):
+    # It used to start in the next task, which on a busy page ran only after
+    # the new frame was drawn: the click came late whenever the page had work.
+    admin.page.mouse.click(5, 300)
+    admin.js("""(() => { const b = document.createElement('button'); b.id = 'now-btn'; b.dataset.sound = 'on';
+        document.body.appendChild(b); })()""")
+    admin.page.wait_for_timeout(120)
+    assert admin.js("(() => { const n = window.__sounds.length; document.getElementById('now-btn').click();"
+                    " return window.__sounds.slice(n); })()") == ["on"]
+
+
 # Safari's navigator.audioSession, recorded: Chromium has none. It starts
 # at whatever an earlier page in the tab left (Safari keeps it per process).
 SESSION = """Object.defineProperty(navigator, 'audioSession', { value: {

@@ -5529,18 +5529,10 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
 .hp-controls .panic-btn { margin-top: 12px; }
 .hp-glance.ha-glance { height: auto; }
 
-/* Cards rise into place, one after another, when Home opens */
-#page-dashboard.active :is(.hp-hero, .hp-cam, .hp-activity, .hp-glance, .hp-controls) {
-  animation: haRise 0.42s var(--ease-apple) both;
-}
-#page-dashboard.active .hp-cam      { animation-delay: 0.04s; }
-#page-dashboard.active .hp-activity { animation-delay: 0.08s; }
-#page-dashboard.active .hp-glance   { animation-delay: 0.11s; }
-#page-dashboard.active .hp-controls { animation-delay: 0.14s; }
-@media (prefers-reduced-motion: reduce) {
-  #page-dashboard.active :is(.hp-hero, .hp-cam, .hp-activity, .hp-glance, .hp-controls) { animation: none; }
-}
-html.perf-lite #page-dashboard.active :is(.hp-hero, .hp-cam, .hp-activity, .hp-glance, .hp-controls) { animation: none; }
+/* No card-by-card entrance: Home is the page people come back to most, and
+   five cards rising one after another held its content back for half a
+   second on every visit (and five layers animating at once beside the
+   camera). The page fades in as every other page does. */
 
 /* ── Desktop: the camera is the stage, a rail beside it ──────────
    Status and the arm switch sit in one bar over the camera; the rail

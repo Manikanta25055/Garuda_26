@@ -194,9 +194,11 @@
   }
 
   // Whether the sound will play (decided now, so a toast can stay quiet
-  // behind it); the audio itself starts in the next task, after the
-  // control's own handler has changed the page, so a sound can never hold
-  // up the frame that shows the change. Both land together.
+  // behind it). It is started at once, in the tap: starting a buffer is a
+  // message to the audio thread (well under a millisecond here), and the
+  // audio thread does not wait for the page. It used to start in the next
+  // task, and on a busy page that task ran only after the new frame had
+  // been drawn, so the click came late whenever the page had work to do.
   function sound(name, force) {
     if ((muted && !force) || document.hidden) return false;
     const b = buffers[name];
@@ -205,16 +207,14 @@
     if (now - (lastAt[name] || 0) < 80) return false;
     lastAt[name] = now;
     lastSound = now;
-    setTimeout(() => {
-      const c = wake(b.buf.duration * 1000);
-      if (!c) return;
-      const src = c.createBufferSource();
-      const gain = c.createGain();
-      gain.gain.value = GAIN[name] || 0.3;
-      src.buffer = b.buf;
-      src.connect(gain).connect(c.destination);
-      src.start(0, b.at);
-    }, 0);
+    const c = wake(b.buf.duration * 1000);
+    if (!c) return false;
+    const src = c.createBufferSource();
+    const gain = c.createGain();
+    gain.gain.value = GAIN[name] || 0.3;
+    src.buffer = b.buf;
+    src.connect(gain).connect(c.destination);
+    src.start(0, b.at);
     return true;
   }
 

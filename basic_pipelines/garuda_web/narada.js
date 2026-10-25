@@ -47,6 +47,7 @@ const N = (() => {
   let ink = '#111', accent = '#111', danger = '#ff453a';
   // The dot field, rebuilt on resize: position, direction, distance, size.
   let D = null, cx = 0, cy = 0, Rfx = 1, coreR = 1;
+  let fieldKey = '';                  // the size the field was built for
   let synthTalkUntil = 0;             // text replies animate "talking" too
   let workPulse = -100;               // when the planner last finished a step (s)
 
@@ -111,7 +112,16 @@ const N = (() => {
     if (!r.width || !r.height) return;
     // Four times the pixels at DPR 2: too much for a mid-range phone's canvas.
     const lite = document.documentElement.classList.contains('perf-lite');
-    DPR = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 2);
+    const dock = $('nx-bar');
+    const key = [Math.round(r.width * dpr), Math.round(r.height * dpr), dpr,
+                 dock ? Math.round(dock.getBoundingClientRect().top - r.top) : 0].join(',');
+    // Opening the page asks again; the field is the same if nothing moved.
+    // Rebuilding it (some 29,000 dots) and resizing the canvas, which wipes
+    // it, made every visit to Narada stall for a few frames.
+    if (key === fieldKey && D) return;
+    fieldKey = key;
+    DPR = dpr;
     CW = Math.round(r.width * DPR);
     CH = Math.round(r.height * DPR);
     canvas.width = CW; canvas.height = CH;

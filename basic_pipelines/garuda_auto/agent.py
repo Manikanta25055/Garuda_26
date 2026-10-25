@@ -72,6 +72,18 @@ PLANNER_EXTRA = None            # request fields for the planner model (see llm.
 # The routing model's word for "this needs the planner", and how sure it must be.
 PLANNER_INTENTS = ("build", "automation_rule")
 # What a request to make something says (see _wants_planner).
+# A noticed remark, as the history records it beside the reply it came with.
+_NOTE = "\n\n[Shown to the person in a separate card under this reply, not said by you: \"{}\"]"
+# That record, or the older wording, copied back into a reply by the model.
+_NOTE_ECHO = re.compile(
+    r"\s*[\(\[](?:A note shown beside this reply, from you|Shown to the person in a separate card"
+    r"[^:\]\)]*):\s*\"[^\"]*\"\s*[\)\]]", re.I)
+
+
+def _strip_notes(text):
+    return _NOTE_ECHO.sub("", text).strip() if text else text
+
+
 _MAKING = re.compile(
     r"\b(make|build|create|set ?up|setup|add|draft|write|design|automat\w*|shortcuts?|routines?|"
     r"schedul\w*|scenes?|rules?|dashboards?|pages?|artifacts?|charts?|whenever|every (day|night|morning|evening|week\w*))\b|"
@@ -371,12 +383,19 @@ class HomeAgent:
                 result["observation"] = noticed
         self._live.pop(user, None)
         turn = result.pop("_turn", None)
+        # The note below is kept in the history, and a model reading it back
+        # used to copy it into a later reply: the person then saw the note as
+        # plain text in the answer, with no box. Notes belong in their chip.
+        for key in ("reply", "display_reply"):
+            if isinstance(result.get(key), str):
+                result[key] = _strip_notes(result[key])
+        if turn and isinstance(turn[-1].get("content"), str):
+            turn[-1] = {**turn[-1], "content": _strip_notes(turn[-1]["content"])}
         shown = (result.get("offer") or result.get("observation") or {}).get("text")
         if shown and turn:
             # The chip is on the person's screen, so it belongs in what Narada
             # remembers saying: a follow-up ("why?", "how long?") refers to it.
-            turn[-1] = {**turn[-1], "content": turn[-1]["content"]
-                        + f"\n\n(A note shown beside this reply, from you: \"{shown}\")"}
+            turn[-1] = {**turn[-1], "content": turn[-1]["content"] + _NOTE.format(shown)}
         if result["lane"] in ("agent", "fast") and turn:
             self.brain.record(f"security:{user}" if scope == "security" else user, turn,
                               generation=generation)
