@@ -2,6 +2,7 @@ import json
 import pytest
 from basic_pipelines.garuda_auto.device_registry import DeviceRegistry
 from basic_pipelines.garuda_auto.rule_schema import build_schema
+from basic_pipelines.garuda_auto.llm import NO_THINKING
 from basic_pipelines.garuda_auto.nim_client import NimClient
 
 FAN = {"id": "fan", "name": "Fan", "type": "fan", "room": "study",
@@ -74,6 +75,56 @@ def test_request_carries_the_schema_and_nothing_else(schema):
                           if k not in ("schema", "instruction")})
     for field in schema.fields:
         assert field not in outside, f"{field} leaked outside the schema block"
+
+
+def test_request_holds_the_model_to_the_rule_shape(schema):
+    body = NimClient("key", "some-model").build_request("fan off when empty", [], schema)
+    fmt = body["response_format"]
+    assert fmt["type"] == "json_schema"
+    rule, refusal = fmt["json_schema"]["schema"]["anyOf"]
+    assert rule["required"] == ["source_utterance", "when", "then", "cooldown_s"]
+    assert refusal["required"] == ["error"]
+    shape = rule["properties"]
+    combinators = [branch["required"] for branch in shape["when"]["anyOf"]]
+    assert combinators == [["all"], ["any"]]
+    assert all(branch["additionalProperties"] is False for branch in shape["when"]["anyOf"])
+    condition = shape["when"]["anyOf"][0]["properties"]["all"]["items"]
+    assert condition["required"] == ["field", "op", "value"]
+    assert shape["then"]["items"]["required"] == ["device", "action"]
+
+
+def test_the_rule_shape_says_nothing_about_the_house(schema):
+    """Shape only: no field name, device or value of this house is in it."""
+    fmt = json.dumps(NimClient("key", "m").build_request("x", [], schema)["response_format"])
+    for name in list(schema.fields) + ["lamp", "fan", "occupied", "empty"]:
+        assert f'"{name}"' not in fmt, f"{name} is in the response format"
+
+
+class FakeChat:
+    api_key = "key"
+
+    def __init__(self, content=RULE_JSON):
+        self.content = content
+        self.calls = []
+
+    def chat(self, messages, **kw):
+        self.calls.append(kw)
+        return {"content": self.content}
+
+
+def test_the_shared_chat_path_sends_the_rule_shape(schema):
+    chat = FakeChat()
+    rule, reason = NimClient("", "m", chat=chat).synthesize(
+        "turn the fan off when the room is empty for five minutes", [], schema)
+    assert rule is not None, reason
+    body = NimClient("k", "m").build_request("x", [], schema)
+    assert chat.calls[0]["extra"] == {"response_format": body["response_format"], **NO_THINKING}
+
+
+def test_the_compiler_asks_for_no_chain_of_thought(schema):
+    """Reasoning first cost 5 s a rule and cut some off; held to the schema it is not needed."""
+    body = NimClient("key", "m").build_request("x", [], schema)
+    assert body["chat_template_kwargs"] == {"enable_thinking": False}
 
 
 def test_build_request_cannot_be_handed_a_descriptor(schema):

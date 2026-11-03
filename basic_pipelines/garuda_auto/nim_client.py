@@ -16,6 +16,7 @@ import re
 import anyio.to_thread
 import requests
 
+from .llm import NO_THINKING
 from .validator import rule_from_model, validate_rule
 
 log = logging.getLogger(__name__)
@@ -49,6 +50,37 @@ Durations are in seconds. "five minutes" is 300.
 """
 
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+# The rule's shape, sent as response_format so the model's output is held to it
+# while it is written. Left free, about one compilation in four came back as
+# {"field": "hour", ">=": 23} -- the "op" key dropped -- and was refused. Shape
+# only: field names, devices and value ranges stay with the on-device validator,
+# and nothing about the house is in here.
+_CONDITION = {"type": "object", "additionalProperties": False,
+              "required": ["field", "op", "value"],
+              "properties": {"field": {"type": "string"},
+                             "op": {"type": "string", "enum": ["==", "!=", "<", "<=", ">", ">="]},
+                             "value": {"type": ["string", "number"]}}}
+_ACTION = {"type": "object", "additionalProperties": False, "required": ["device", "action"],
+           "properties": {"device": {"type": "string"}, "action": {"type": "string"}}}
+_CONDITIONS = {"type": "array", "minItems": 1, "items": _CONDITION}
+# A whole rule or a refusal, nothing in between: with the parts optional the
+# model sometimes stopped after "when".
+_RULE = {"type": "object", "additionalProperties": False,
+         "required": ["source_utterance", "when", "then", "cooldown_s"],
+         "properties": {"source_utterance": {"type": "string"},
+                        # Exactly one combinator: left open, the model wrote both.
+                        "when": {"anyOf": [
+                            {"type": "object", "additionalProperties": False,
+                             "required": ["all"], "properties": {"all": _CONDITIONS}},
+                            {"type": "object", "additionalProperties": False,
+                             "required": ["any"], "properties": {"any": _CONDITIONS}}]},
+                        "then": {"type": "array", "minItems": 1, "items": _ACTION},
+                        "cooldown_s": {"type": "number"}}}
+_REFUSAL = {"type": "object", "additionalProperties": False, "required": ["error"],
+            "properties": {"error": {"type": "string"}}}
+RULE_FORMAT = {"type": "json_schema",
+               "json_schema": {"name": "rule", "schema": {"anyOf": [_RULE, _REFUSAL]}}}
 
 
 class NimClient:
@@ -86,6 +118,12 @@ class NimClient:
             ],
             "temperature": 0.1,
             "max_tokens": MAX_COMPLETION_TOKENS,
+            "response_format": RULE_FORMAT,
+            # No chain of thought: held to the schema the model writes the rule
+            # directly. Measured on the 30-request corpus with nemotron-3.5:
+            # 27/30 correct in about 1 s, against 23/30 and a 5 s median (49 s
+            # worst, two cut off) when it reasoned first.
+            **NO_THINKING,
         }
 
     @staticmethod
@@ -163,9 +201,12 @@ class NimClient:
     def _synthesize_via_chat(self, utterance, existing_rules, schema):
         from .llm import NimUnavailable
         body = self.build_request(utterance, existing_rules, schema)
+        # As `extra`, so a model that refuses response_format is asked again without.
+        format_ = {k: body[k] for k in ("response_format", *NO_THINKING) if k in body} or None
         try:
             message = self.chat.chat(body["messages"], max_tokens=body["max_tokens"],
-                                     temperature=body["temperature"], timeout=self.timeout)
+                                     temperature=body["temperature"], timeout=self.timeout,
+                                     extra=format_)
         except NimUnavailable as exc:
             return None, str(exc)
         if message.get("_finish_reason") == "length":
