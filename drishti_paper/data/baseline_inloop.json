@@ -1,0 +1,927 @@
+{
+ "summary": {
+  "model_order": [
+   "nvidia/nemotron-3.5-super-vl-120b-a12b",
+   "nvidia/nemotron-3-ultra-550b-a55b"
+  ],
+  "decisions": 59,
+  "answered": 59,
+  "correct": 48,
+  "correct_at_edges": 11,
+  "edges": 19,
+  "spurious_switch_at_quiet": 3,
+  "missed_or_wrong_at_edge": 8,
+  "decision_seconds": {
+   "n": 59,
+   "min": 0.3509046099998159,
+   "p50": 0.39636184600021807,
+   "p95": 2.5422312099999544,
+   "p99": 6.06186643700039,
+   "max": 15.641370696000195,
+   "mean": 0.8625468891695148
+  },
+  "slower_than_tick": 9,
+  "tokens_per_decision": {
+   "n": 59,
+   "min": 777,
+   "p50": 787,
+   "p95": 806,
+   "p99": 808,
+   "max": 808,
+   "mean": 789.6779661016949
+  },
+  "ticks_per_day": 172800
+ },
+ "rows": [
+  {
+   "tick": 300,
+   "time": "00:02:30",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.541480364000563,
+   "tokens": 777,
+   "error": ""
+  },
+  {
+   "tick": 3681,
+   "time": "00:30:40",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.39742801600004896,
+   "tokens": 779,
+   "error": ""
+  },
+  {
+   "tick": 16327,
+   "time": "02:16:03",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3845566460004193,
+   "tokens": 779,
+   "error": ""
+  },
+  {
+   "tick": 16511,
+   "time": "02:17:35",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.37385075200018036,
+   "tokens": 779,
+   "error": ""
+  },
+  {
+   "tick": 19332,
+   "time": "02:41:06",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.4712529970001924,
+   "tokens": 779,
+   "error": ""
+  },
+  {
+   "tick": 21089,
+   "time": "02:55:44",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.35468883400062623,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 23912,
+   "time": "03:19:16",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.37260229300045467,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 24451,
+   "time": "03:23:45",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3862956659995689,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 25891,
+   "time": "03:35:45",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3647104159999799,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 26399,
+   "time": "03:39:59",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.36378595499991206,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 37355,
+   "time": "05:11:17",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.359887720000188,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 50088,
+   "time": "06:57:24",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.36975898499986215,
+   "tokens": 783,
+   "error": ""
+  },
+  {
+   "tick": 50400,
+   "time": "07:00:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.4281752070000948,
+   "tokens": 805,
+   "error": ""
+  },
+  {
+   "tick": 50580,
+   "time": "07:01:30",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.3995483560001958,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 53605,
+   "time": "07:26:42",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.35707755900057236,
+   "tokens": 785,
+   "error": ""
+  },
+  {
+   "tick": 58121,
+   "time": "08:04:20",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3592142239995155,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 61440,
+   "time": "08:32:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ],
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.4837279720004517,
+   "tokens": 806,
+   "error": ""
+  },
+  {
+   "tick": 61800,
+   "time": "08:35:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.3961043069994048,
+   "tokens": 793,
+   "error": ""
+  },
+  {
+   "tick": 62556,
+   "time": "08:41:18",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.36807865900027537,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 62640,
+   "time": "08:42:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.5780536319998646,
+   "tokens": 805,
+   "error": ""
+  },
+  {
+   "tick": 62670,
+   "time": "08:42:15",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.41326088099958724,
+   "tokens": 794,
+   "error": ""
+  },
+  {
+   "tick": 63360,
+   "time": "08:48:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "got": [],
+   "correct": false,
+   "seconds": 0.3643456649997461,
+   "tokens": 785,
+   "error": ""
+  },
+  {
+   "tick": 63947,
+   "time": "08:52:53",
+   "edge": false,
+   "want": [],
+   "got": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.44100953199995274,
+   "tokens": 798,
+   "error": ""
+  },
+  {
+   "tick": 68294,
+   "time": "09:29:07",
+   "edge": false,
+   "want": [],
+   "got": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.4711967530001857,
+   "tokens": 800,
+   "error": ""
+  },
+  {
+   "tick": 72881,
+   "time": "10:07:20",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "got": [],
+   "correct": false,
+   "seconds": 0.35849584300012793,
+   "tokens": 789,
+   "error": ""
+  },
+  {
+   "tick": 76608,
+   "time": "10:38:24",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.4037447119999342,
+   "tokens": 801,
+   "error": ""
+  },
+  {
+   "tick": 82899,
+   "time": "11:30:49",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 6.06186643700039,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 83910,
+   "time": "11:39:15",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.41894851899996866,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 85260,
+   "time": "11:50:30",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.35627717199986364,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 86569,
+   "time": "12:01:24",
+   "edge": false,
+   "want": [],
+   "got": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.43435476000013296,
+   "tokens": 793,
+   "error": ""
+  },
+  {
+   "tick": 87000,
+   "time": "12:05:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.5001611260004211,
+   "tokens": 795,
+   "error": ""
+  },
+  {
+   "tick": 87340,
+   "time": "12:07:50",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3593683549997877,
+   "tokens": 783,
+   "error": ""
+  },
+  {
+   "tick": 92400,
+   "time": "12:50:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.5373802670001169,
+   "tokens": 808,
+   "error": ""
+  },
+  {
+   "tick": 92756,
+   "time": "12:52:58",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3627532219998102,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 104561,
+   "time": "14:31:20",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3618565939996188,
+   "tokens": 785,
+   "error": ""
+  },
+  {
+   "tick": 113827,
+   "time": "15:48:33",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3578596750003271,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 116061,
+   "time": "16:07:10",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.36959936399944127,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 117444,
+   "time": "16:18:42",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.35334564299955673,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 123781,
+   "time": "17:11:30",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3509046099998159,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 125057,
+   "time": "17:22:08",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 15.641370696000195,
+   "tokens": 791,
+   "error": ""
+  },
+  {
+   "tick": 126240,
+   "time": "17:32:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ],
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.45045855900025344,
+   "tokens": 808,
+   "error": ""
+  },
+  {
+   "tick": 126600,
+   "time": "17:35:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "correct": true,
+   "seconds": 4.174022703999981,
+   "tokens": 795,
+   "error": ""
+  },
+  {
+   "tick": 129402,
+   "time": "17:58:21",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.37126513800012617,
+   "tokens": 783,
+   "error": ""
+  },
+  {
+   "tick": 135600,
+   "time": "18:50:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.5022092509998402,
+   "tokens": 806,
+   "error": ""
+  },
+  {
+   "tick": 136684,
+   "time": "18:59:02",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.36177620500075136,
+   "tokens": 785,
+   "error": ""
+  },
+  {
+   "tick": 142356,
+   "time": "19:46:18",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.47410856199985574,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 143853,
+   "time": "19:58:46",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.36768197799938207,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 144855,
+   "time": "20:07:07",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.40960218999953213,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 146766,
+   "time": "20:23:03",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.4638928170006693,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 148784,
+   "time": "20:39:52",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.43019520599955285,
+   "tokens": 787,
+   "error": ""
+  },
+  {
+   "tick": 151200,
+   "time": "21:00:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.45835673100009444,
+   "tokens": 800,
+   "error": ""
+  },
+  {
+   "tick": 154800,
+   "time": "21:30:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": true,
+   "seconds": 2.5422312099999544,
+   "tokens": 799,
+   "error": ""
+  },
+  {
+   "tick": 155160,
+   "time": "21:33:00",
+   "edge": true,
+   "want": [
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ],
+    [
+     "lamp",
+     "off"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.45447698300085904,
+   "tokens": 806,
+   "error": ""
+  },
+  {
+   "tick": 155520,
+   "time": "21:36:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "got": [
+    [
+     "fan",
+     "off"
+    ]
+   ],
+   "correct": true,
+   "seconds": 0.38820553599998675,
+   "tokens": 793,
+   "error": ""
+  },
+  {
+   "tick": 160159,
+   "time": "22:14:39",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.4291632149997895,
+   "tokens": 783,
+   "error": ""
+  },
+  {
+   "tick": 160424,
+   "time": "22:16:52",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.37189825999939785,
+   "tokens": 783,
+   "error": ""
+  },
+  {
+   "tick": 163928,
+   "time": "22:46:04",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.4569771859996763,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 167902,
+   "time": "23:19:11",
+   "edge": false,
+   "want": [],
+   "got": [],
+   "correct": true,
+   "seconds": 0.3590044980001039,
+   "tokens": 781,
+   "error": ""
+  },
+  {
+   "tick": 170400,
+   "time": "23:40:00",
+   "edge": true,
+   "want": [
+    [
+     "fan",
+     "on"
+    ],
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "got": [
+    [
+     "lamp",
+     "on"
+    ]
+   ],
+   "correct": false,
+   "seconds": 0.39636184600021807,
+   "tokens": 792,
+   "error": ""
+  }
+ ],
+ "meta": {
+  "written_at": "2026-11-04T01:42:23+0530",
+  "host": "ai",
+  "machine": "aarch64",
+  "python": "3.11.2"
+ }
+}

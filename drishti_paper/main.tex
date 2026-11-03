@@ -1,0 +1,73 @@
+% Drishti conference paper. Built on the official IEEEtran conference template
+% (IEEEtran.cls v1.8b, IEEEtran.bst v1.14, CTAN 2015/08/26); bare_conf.tex in template/.
+% Build: pdflatex main && bibtex main && pdflatex main && pdflatex main
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\graphicspath{{figures/}}
+
+% Drafting marker; removed before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\begin{document}
+
+\title{Compile Once, Act Locally: Keeping a Cloud Language Model off the
+Actuation Path of an Edge Home-Automation System}
+
+\author{%
+\IEEEauthorblockN{Veera Manikanta}
+\IEEEauthorblockA{\textit{School of Electrical Engineering}\\
+\textit{Manipal Institute of Technology, Manipal Academy of Higher Education}\\
+Manipal, India\\
+\todo{email}}
+\and
+\IEEEauthorblockN{Sumir Subash Balakrishnan}
+\IEEEauthorblockA{\textit{School of Electrical Engineering}\\
+\textit{Manipal Institute of Technology, Manipal Academy of Higher Education}\\
+Manipal, India\\
+\todo{email}}
+}
+
+\maketitle
+
+\begin{abstract}
+\todo{Written last, from measured numbers only (about 200 words).}
+\end{abstract}
+
+\begin{IEEEkeywords}
+edge computing, home automation, large language models, trigger-action
+programming, Raspberry Pi, offline operation
+\end{IEEEkeywords}
+
+\section{Introduction}\label{sec:intro}
+\todo{Problem, gap, claim, three contributions (PLAN.md, Section 3).}
+
+\section{Related Work}\label{sec:related}
+\todo{Four groups and Table~I (PLAN.md, Section 4).}
+
+\section{System Design}\label{sec:design}
+\todo{Fig.~1 two-lane architecture; rule schema; gate; evaluator; switch guard; egress boundary.}
+
+\section{Evaluation Method}\label{sec:method}
+\todo{Corpus, frozen reference rules, behavioural scoring, replay, hardware rig.}
+
+\section{Results}\label{sec:results}
+\todo{Tables II--III, Figs.~2--3.}
+
+\section{Limitations}\label{sec:limits}
+\todo{One room, scripted descriptors, author corpus, indicator loads.}
+
+\section{Conclusion}\label{sec:conclusion}
+\todo{Claim restated with numbers; artifact link.}
+
+% Enabled once references.bib holds its first verified entry.
+%\bibliographystyle{IEEEtran}
+%\bibliography{references}
+
+\end{document}

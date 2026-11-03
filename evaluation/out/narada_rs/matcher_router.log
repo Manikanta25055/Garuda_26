@@ -1,0 +1,96 @@
+fuzzy {"correct": 25, "false": 21, "escalated": 44, "novel": {"false_suppressed": 49, "queries": 120}} stream cloud calls 58.31 match ms p50 0.11283300000286545
+/home/manikanta/.local/lib/python3.11/site-packages/pandas/core/computation/expressions.py:22: UserWarning: Pandas requires version '2.10.2' or newer of 'numexpr' (version '2.8.4' currently installed).
+  from pandas.core.computation.check import NUMEXPR_INSTALLED
+/home/manikanta/.local/lib/python3.11/site-packages/pandas/core/arrays/masked.py:56: UserWarning: Pandas requires version '1.4.2' or newer of 'bottleneck' (version '1.3.5' currently installed).
+  from pandas.core import (
+embed {"correct": 68, "false": 13, "escalated": 9, "novel": {"false_suppressed": 81, "queries": 120}} stream cloud calls 40.77 match ms p50 2793.7283380001645
+wrote /home/manikanta/Projects/Garuda_26/.claude/worktrees/ieee-paper-draft-a4315e/evaluation/out/narada_rs/matcher.json
+/home/manikanta/.local/lib/python3.11/site-packages/pandas/core/computation/expressions.py:22: UserWarning: Pandas requires version '2.10.2' or newer of 'numexpr' (version '2.8.4' currently installed).
+  from pandas.core.computation.check import NUMEXPR_INSTALLED
+/home/manikanta/.local/lib/python3.11/site-packages/pandas/core/arrays/masked.py:56: UserWarning: Pandas requires version '1.4.2' or newer of 'bottleneck' (version '1.3.5' currently installed).
+  from pandas.core import (
+cached-vector match ms {"n": 90, "min": 43.7, "p50": 53.8, "p95": 68.4, "p99": 71.8, "max": 79.6, "mean": 55.2}
+wrote /home/manikanta/Projects/Garuda_26/.claude/worktrees/ieee-paper-draft-a4315e/evaluation/out/narada_rs/matcher_cached_latency.json
+
+== literal matcher on routing_cases: 50 answered, 0 errors
+  intent 35/50   device 36/44   action 31/44   scene 49/50
+  whole decision right, by kind of sentence:
+    compound          2/2
+    mixed-language    1/4
+    negation          1/4
+    offtopic          2/4
+    paraphrase        0/7
+    plain            24/29
+  whole decision right: 30/50
+  sure of the intent (>= 0.85) on 21/50; wrong while sure: 2
+      "don't turn off the fan": said device_control (0.96), is other
+      'leave the lamp on': said device_control (0.96), is other
+  time per decision: median 0.0 ms, p95 0.1 ms, slowest 0.3 ms
+
+== literal matcher on routing_written (test half): 717 answered, 0 errors
+  intent 186/717   device 152/615   action 310/615   scene 653/654
+  whole decision right, by kind of sentence:
+    build             0/49
+    compound          4/4
+    manage            2/4
+    mixed-language   14/121
+    near-build        2/6
+    negation         31/39
+    offtopic         21/33
+    paraphrase        0/173
+    plain            29/288
+  whole decision right: 103/717
+  sure of the intent (>= 0.85) on 148/717; wrong while sure: 50
+      'When the smart mirror says ‘good night’, turn the motor off.': said automation_rule (0.90), is timer
+      'How do I know if a career in VLSI is right for me?': said automation_rule (0.90), is other
+      'This is why I hate summer afternoons.': said explain (0.85), is device_control
+      'Tell me if any room is awake while the rest sleeps.': said automation_rule (0.90), is state_query
+      'heater, why did you turn off when I was just getting comfortable?': said automation_rule (0.90), is explain
+      'Turn the geyser off when it’s 2 hours from now.': said automation_rule (0.90), is timer
+      'Heater off after the movie ends.': said device_control (0.96), is timer
+      'Did the system auto-start the motor? If so, why?': said automation_rule (0.90), is explain
+  time per decision: median 0.1 ms, p95 0.1 ms, slowest 0.9 ms
+
+routing model loaded in 0.51 s (sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2); before it works: {'temp_c': 63.7, 'camera_fps': None, 'load': 1.22802734375, 'memory_mb': 47}
+
+== routing model on routing_cases: 50 answered, 0 errors
+  intent 50/50   device 44/44   action 43/44   scene 50/50
+  whole decision right, by kind of sentence:
+    compound          2/2
+    mixed-language    4/4
+    negation          4/4
+    offtopic          4/4
+    paraphrase        6/7
+    plain            29/29
+  whole decision right: 49/50
+  sure of the intent (>= 0.85) on 50/50; wrong while sure: 0
+  time per decision: median 12.8 ms, p95 14.0 ms, slowest 14.8 ms
+
+== routing model on routing_written (test half): 717 answered, 0 errors
+  intent 704/717   device 578/615   action 577/615   scene 654/654
+  whole decision right, by kind of sentence:
+    build            47/49
+    compound          4/4
+    manage            4/4
+    mixed-language  117/121
+    near-build        6/6
+    negation         36/39
+    offtopic         32/33
+    paraphrase      117/173
+    plain           273/288
+  whole decision right: 636/717
+  sure of the intent (>= 0.85) on 702/717; wrong while sure: 8
+      'When the smart mirror says ‘good night’, turn the motor off.': said automation_rule (0.97), is timer
+      'This is why I hate summer afternoons.': said other (0.98), is device_control
+      'I’m commanding silence from the motor—obey.': said device_control (0.98), is other
+      'Light, are you trying to signal aliens or just malfunctioning?': said state_query (0.98), is explain
+      'I said no motor action—why is this hard?': said explain (0.98), is other
+      'Geyser: hold current state.': said state_query (0.92), is other
+      'Let the walls forget they ever had power.': said other (0.98), is all_off
+      'Good night — activate sleep mode: lights off, fan low, AC at 72, cameras armed.': said timer (0.97), is build
+  time per decision: median 17.7 ms, p95 32.7 ms, slowest 58.6 ms
+
+== planner routing on routing_build: 29/30 of the planner's jobs sent to it; 0/30 others sent there by mistake
+      'turn the fan on, wait ten minutes, then turn it off if the room is empty': timer (0.65)
+
+after it worked: {'temp_c': 70.8, 'camera_fps': None, 'load': 1.458984375, 'memory_mb': 244}

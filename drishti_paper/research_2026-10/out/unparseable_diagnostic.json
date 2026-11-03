@@ -1,0 +1,90 @@
+[
+ {
+  "id": "c08",
+  "finish": "stop",
+  "content": "{\"source_utterance\":\"turn everything off when the room has been empty for ten minutes\",\"when\":{\"all\":[{\"field\":\"occupancy\",\"op\":\"==\",\"value\":\"empty\"},{\"field\":\"occupancy_duration_s\",\">=\",\"value\":600}]},\"then\":[{\"device\":\"lamp\",\"action\":\"off\"},{\"device\":\"fan\",\"action\":\"off\"}],\"cooldown_s\":0}",
+  "reasoning_len": 1139,
+  "usage": {
+   "prompt_tokens": 588,
+   "completion_tokens": 384,
+   "total_tokens": 972,
+   "prompt_tokens_details": {
+    "audio_tokens": null,
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "accepted_prediction_tokens": null,
+    "audio_tokens": null,
+    "reasoning_tokens": 296,
+    "rejected_prediction_tokens": null
+   }
+  },
+  "parsed": false
+ },
+ {
+  "id": "c08",
+  "finish": "stop",
+  "content": "{\"source_utterance\":\"turn everything off when the room has been empty for ten minutes\",\"when\":{\"all\":[{\"field\":\"occupancy\",\"op\":\"==\",\"value\":\"empty\"},{\"field\":\"occupancy_duration_s\",\">=\",\"value\":600}]},\"then\":[{\"device\":\"lamp\",\"action\":\"off\"},{\"device\":\"fan\",\"action\":\"off\"}],\"cooldown_s\":0}",
+  "reasoning_len": 1462,
+  "usage": {
+   "prompt_tokens": 588,
+   "completion_tokens": 460,
+   "total_tokens": 1048,
+   "prompt_tokens_details": {
+    "audio_tokens": null,
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "accepted_prediction_tokens": null,
+    "audio_tokens": null,
+    "reasoning_tokens": 372,
+    "rejected_prediction_tokens": null
+   }
+  },
+  "parsed": false
+ },
+ {
+  "id": "c22",
+  "finish": "stop",
+  "content": "{\"source_utterance\":\"turn the fan off when the lamp is off after eleven at night\",\"when\":{\"all\":[{\"field\":\"lamp_state\",\"op\":\"==\",\"value\":\"off\"},{\"field\":\"hour\",\">=\",\"value\":23}]},\"then\":[{\"device\":\"fan\",\"action\":\"off\"}],\"cooldown_s\":0}",
+  "reasoning_len": 1170,
+  "usage": {
+   "prompt_tokens": 589,
+   "completion_tokens": 431,
+   "total_tokens": 1020,
+   "prompt_tokens_details": {
+    "audio_tokens": null,
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "accepted_prediction_tokens": null,
+    "audio_tokens": null,
+    "reasoning_tokens": 355,
+    "rejected_prediction_tokens": null
+   }
+  },
+  "parsed": false
+ },
+ {
+  "id": "c27",
+  "finish": "stop",
+  "content": "{\"source_utterance\": \"turn the lamp on when someone has been standing in the room for thirty seconds\", \"when\": {\"all\": [{\"field\": \"posture\", \"op\": \"==\", \"value\": \"standing\"}, {\"field\": \"occupancy_duration_s\", \"op\": \">=\", \"value\": 30}]}, \"then\": [{\"device\": \"lamp\", \"action\": \"on\"}], \"cooldown_s\": 0}",
+  "reasoning_len": 1163,
+  "usage": {
+   "prompt_tokens": 591,
+   "completion_tokens": 389,
+   "total_tokens": 980,
+   "prompt_tokens_details": {
+    "audio_tokens": null,
+    "cached_tokens": 0
+   },
+   "completion_tokens_details": {
+    "accepted_prediction_tokens": null,
+    "audio_tokens": null,
+    "reasoning_tokens": 289,
+    "rejected_prediction_tokens": null
+   }
+  },
+  "parsed": true
+ }
+]
