@@ -196,6 +196,25 @@ dropped presence condition. These reach the confirm step; none is malformed.
 0.7 / 0.7 ms. Medians match an idle run; only the tail grows under load. Either way the 0.5 s
 tick, not evaluation, sets reaction time.
 
+### E4 decision-to-contact on the real relay (2026-11-05, 200 cycles, production path)
+
+Path: RuleEngine.evaluate (edge-triggered) -> DeviceRouter.set (switch guard) -> RelayBank
+(gpiozero/lgpio) -> HW-281 channel 2. Contact wired as a dry contact into GPIO24; GPIO edges
+kernel-timestamped on the same monotonic clock as the decision mark. garuda-web stopped.
+
+| | Decision to GPIO write | Decision to first contact edge | Bounce after first edge |
+|---|---|---|---|
+| On (n=88) | 0.13 ms p50, 0.18 ms p99 | 3.90 ms p50, 3.95 ms p99, 4.47 ms max | 0.44 ms, every switch |
+| Off (n=88) | 0.13 ms p50, 0.16 ms p99 | 3.59 ms p50, 3.62 ms p99, 3.77 ms max | 0.05 ms, every switch |
+
+- Rule evaluation and the software path take about 0.13 ms; the relay's mechanics take the
+  remaining ~3.5-3.8 ms. Reaction time is therefore set by the 0.5 s tick, not by actuation.
+- The switch guard refused 112 of 200 "on" requests (the test asked faster than 10 per minute);
+  all 1,380 contact edges fall inside switches that happened, none during a refusal: the guard
+  holds physically, not only in software.
+- Found on the way: gpiozero 2.0.1 picks gpiochip0/4 and ignores its chip argument; on this
+  Pi's boots the header is gpiochip15, so the harness opens the chip by its label.
+
 ### E5 24-hour replay (172,800 ticks, edge-triggered engine + switch guard)
 
 - Online vs no network interface (`unshare -n`): **identical SHA-256** of the switching log.
@@ -238,5 +257,5 @@ sends house state, as every assistant of this kind does.
 
 ### Still open
 
-- E4 relay latency and E6 physical offline test (hardware session with the owner).
+- E6 physical offline test (hardware session with the owner).
 - c06 false-draft claim: fix in `claims.py`/agent (separate from the paper).

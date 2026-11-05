@@ -1,0 +1,22 @@
+cycle 0
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 20
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 40
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 60
+cycle 80
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 100
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 120
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 140
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 160
+switch guard: fan held back: switched on 10 times in the last minute; held back for 34 s to protect the hardware
+cycle 180
+on decide->contact ms p50 3.90 p99 3.95 max 4.47 | decide->gpio ms p50 0.132 | bounced 88/88
+off decide->contact ms p50 3.59 p99 3.62 max 3.77 | decide->gpio ms p50 0.126 | bounced 88/88
+unmatched 224
+wrote /home/manikanta/Projects/Garuda_26/.claude/worktrees/ieee-paper-draft-a4315e/evaluation/out/narada_rs/relay_latency.json
