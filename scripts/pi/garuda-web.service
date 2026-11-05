@@ -1,9 +1,9 @@
 # The Drishti website, started at boot and kept running.
 # Installed by scripts/pi/setup_boot.sh to /etc/systemd/system/garuda-web.service.
 [Unit]
-Description=Drishti / Garuda web server
+Description=Garuda Web Server (Hailo pipeline + FastAPI on :8080)
 Wants=network-online.target
-After=network-online.target sound.target
+After=network-online.target sound.target hailort.service
 # Never give up retrying: a power cut is exactly when it must come back.
 StartLimitIntervalSec=0
 
@@ -11,12 +11,21 @@ StartLimitIntervalSec=0
 Type=simple
 User=manikanta
 WorkingDirectory=/home/manikanta/Projects/Garuda_26
+EnvironmentFile=/etc/garuda/garuda-web.env
+# As root ("+"): wake the Hailo chip if an earlier stop left it in D3cold.
+ExecStartPre=+/usr/local/sbin/drishti-hailo-recover
 ExecStart=/bin/bash /home/manikanta/Projects/Garuda_26/scripts/run_garuda_web.sh
 Restart=always
 RestartSec=5
-TimeoutStartSec=180
-StandardOutput=journal
-StandardError=journal
+TimeoutStartSec=300
+# The app pings while its event loop turns (garuda_core/watchdog.py); a hung
+# one is killed and restarted.
+WatchdogSec=180
+NotifyAccess=main
+MemoryHigh=3G
+MemoryMax=4G
+StandardOutput=append:/home/manikanta/Projects/Garuda_26/evaluation/out/garuda-web.stdout.log
+StandardError=append:/home/manikanta/Projects/Garuda_26/evaluation/out/garuda-web.stderr.log
 
 [Install]
 WantedBy=multi-user.target
