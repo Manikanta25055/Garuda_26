@@ -215,6 +215,23 @@ kernel-timestamped on the same monotonic clock as the decision mark. garuda-web 
 - Found on the way: gpiozero 2.0.1 picks gpiochip0/4 and ignores its chip argument; on this
   Pi's boots the header is gpiochip15, so the harness opens the chip by its label.
 
+### E6 physical offline test (2026-11-05, live service, camera, Wi-Fi removed)
+
+Wi-Fi (the Pi's only network) switched off for 600 s by a systemd unit that restored it
+itself; 120/120 reachability checks in the window failed. The owner walked in and out
+in front of the camera; 4 temporary rules (lamp on when occupied, lamp off after 20 s empty,
+fan on after 30 s occupied, fan off when empty), removed afterwards.
+
+- Lamp: 9 rule-driven switches while offline (4 on, 5 off), every one in the service's
+  actuation log with its rule id and matched by the relay drive pin (GPIO17) changing within
+  0.1 s. No switch missed, none spurious.
+- Fan: never commanded. Person detection dropped the owner within the 30 s dwell each time
+  (three presences ended about 0.6 s after detection), so the dwell rule never held. A
+  perception limitation, not an actuation one; say so in Limitations.
+- Relay-contact evidence for E6 is missing: a stray second wire on pin 18 made the sense
+  line unreliable (bursts of spurious edges, no closure). Contact timing stands on E4.
+- Data: data/e6/ (monitor.jsonl, events.log, actuations_window.jsonl).
+
 ### E5 24-hour replay (172,800 ticks, edge-triggered engine + switch guard)
 
 - Online vs no network interface (`unshare -n`): **identical SHA-256** of the switching log.
@@ -257,5 +274,4 @@ sends house state, as every assistant of this kind does.
 
 ### Still open
 
-- E6 physical offline test (hardware session with the owner).
 - c06 false-draft claim: fix in `claims.py`/agent (separate from the paper).
