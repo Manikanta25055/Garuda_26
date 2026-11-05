@@ -1,0 +1,10 @@
+# Paste each person's reply below, exactly as they sent it (do not fix spelling).
+# One block per person: a line "## <initials or w01, w02, ...>" then their lines.
+# Do not write names in full; initials are enough. Example layout:
+#
+# ## w01
+# first instruction from this person
+# second instruction (what they meant, if they added it)
+#
+# ## w02
+# ...

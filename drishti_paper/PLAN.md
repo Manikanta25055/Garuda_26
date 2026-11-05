@@ -323,3 +323,23 @@ Read as a systems/IoT reviewer and as an LLM reviewer. Fixed in the text:
 
 Still open for a second pass: requests written by people other than the authors; one open or
 local compiler model; ChatIoT full text; owner TODOs (emails, venue, artifact, disclosure).
+
+## 13. Held-out requests from outside the project (in progress)
+
+Procedure (keeps the reference honest):
+1. Owner sends `outside_requests/message.txt` to 10+ people (classmates, family), not to anyone
+   who has seen the corpus. Target 40+ requests.
+2. Owner pastes each reply into `outside_requests/replies.txt` as written (initials only).
+3. `python3 -m evaluation.narada_rs.heldout parse drishti_paper/outside_requests/replies.txt
+   drishti_paper/outside_requests/heldout.json`
+4. Authors write each reference: a rule, `null` (the room cannot do it: should refuse), or
+   `"compound"` (needs two rules; a rule has one combinator and no nesting). Owner confirms.
+5. Commit, set `frozen_at` to that commit, commit again. Only then:
+   `run_eval synth --trials 3 --heldout drishti_paper/outside_requests/heldout.json`
+   (and once with `--model nvidia/nemotron-3-ultra-550b-a55b`).
+6. Report separately: correct / valid-but-wrong / correctly refused / should have refused /
+   compound, per language if replies mix languages.
+
+Seen in the path test: an "AC" request was refused on one run and turned into a fan rule on
+the next. Device substitution passes the gate (the fan is real), so only refusal-type
+references can count it.

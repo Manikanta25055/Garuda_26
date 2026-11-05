@@ -117,6 +117,17 @@ def cmd_synth(args):
         return ok, reason
     nim_module.validate_rule = spy
 
+    # The authors' corpus, or a frozen held-out set written by other people.
+    if args.heldout:
+        from evaluation.narada_rs import heldout
+        entries = heldout.load(args.heldout)
+        refs = {e["id"]: (heldout.reference_rule(e),
+                          e["reference"].get("vague", []) if isinstance(e["reference"], dict) else [])
+                for e in entries}
+    else:
+        entries = CORPUS
+        refs = {e["id"]: (as_rule(e["id"], e["utterance"]), REFERENCE[e["id"]]["vague"]) for e in CORPUS}
+
     trials = []
     for trial in range(args.trials):
         client = nim_module.NimClient(key, model, timeout=args.timeout)
@@ -131,7 +142,7 @@ def cmd_synth(args):
                                                       if k not in drop}
         store = _temp_store(schema)
         rows = []
-        for entry in CORPUS:
+        for entry in entries:
             seen.clear()
             body = client.build_request(entry["utterance"], store.rules, schema)
             user_payload = json.loads(body["messages"][1]["content"])
@@ -149,9 +160,14 @@ def cmd_synth(args):
                 "already_known_sent": len(user_payload.get("already_known", [])),
                 "rule": rule, "reason": reason,
             }
-            if rule is not None:
-                ref = as_rule(entry["id"], entry["utterance"])
-                verdict, detail = score(rule, ref, REFERENCE[entry["id"]]["vague"], schema)
+            ref, vague = refs[entry["id"]]
+            row["should_refuse"] = ref is None
+            row["compound"] = entry.get("reference") == "compound"
+            if rule is not None and ref is None:
+                # The room cannot do this; a rule that passed the gate anyway is wrong.
+                row["outcome"] = "should_have_refused"
+            elif rule is not None:
+                verdict, detail = score(rule, ref, vague, schema)
                 row["outcome"] = "correct" if verdict in ("exact", "threshold") else "valid_but_wrong"
                 row["agreement"] = verdict
                 row["score_detail"] = detail
@@ -195,7 +211,10 @@ def cmd_synth(args):
             "payload_keys_all_ok": all(r["payload_keys_ok"] for r in rows),
             "request_bytes": _dist([r["request_bytes"] for r in rows]),
         })
-    _write(_synth_name(model, args.free, args.think),
+    name = _synth_name(model, args.free, args.think)
+    if args.heldout:
+        name = name.replace("synthesis", "synthesis_heldout", 1)
+    _write(name,
            {"constrained_decoding": not args.free, "reasoning": bool(args.think),
             "max_tokens": nim_module.MAX_COMPLETION_TOKENS, "model": model, "trials": trials, "summary": summary,
             "schema_sent": schema.schema_for_prompt()})
@@ -575,6 +594,7 @@ def main():
     p.add_argument("--model", default="")
     p.add_argument("--free", action="store_true", help="ablation: no response_format")
     p.add_argument("--think", action="store_true", help="ablation: model reasons first (4096 tokens)")
+    p.add_argument("--heldout", default="", help="frozen held-out request file (heldout.py)")
     p.set_defaults(fn=cmd_synth)
     p = sub.add_parser("matcher")
     p.add_argument("--seeds", type=int, default=200)
