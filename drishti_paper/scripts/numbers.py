@@ -83,6 +83,12 @@ synth("synFree", "synthesis_free.json")
 synth("synThink", "synthesis_think.json")
 synth("synUltra", "synthesis_nemotron-3-ultra-550b-a55b.json")
 
+# Production budget before the fix: the partial log of the first run.
+lines = [l.split() for l in open(os.path.join(DATA, "synth_budget2048_partial.log"), encoding="utf-8")
+         if l[:1].isdigit() and len(l.split()) > 2]
+put("oldBudgetN", len(lines))
+put("oldBudgetCut", sum(1 for l in lines if "ran out of room" in " ".join(l)))
+
 # E3 evaluator --------------------------------------------------------------
 reflex = load("reflex.json")["sizes"]
 for size, word in (("8", "Eight"), ("30", "Thirty"), ("64", "SixtyFour")):
@@ -201,6 +207,9 @@ put("blMax", f"{bl['decision_seconds']['max']:.1f}")
 put("blSlow", bl["slower_than_tick"])
 put("blTokens", f"{bl['tokens_per_decision']['mean']:.0f}")
 put("blTokensDay", f"{bl['tokens_per_decision']['mean'] * 2 * 86400 / 1e6:.0f}")
+sc = load("scenario_changes.json")
+put("blEvents", f"{sc['nonclock_changes']:,}")
+put("blEventTokens", f"{bl['tokens_per_decision']['mean'] * sc['nonclock_changes'] / 1e6:.1f}")
 rows = load("baseline_inloop.json")["rows"]
 loop_s = [x["seconds"] for x in rows if x["got"] is not None]
 

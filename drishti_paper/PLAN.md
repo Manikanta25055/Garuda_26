@@ -297,3 +297,29 @@ For the review pass (weakest points a reviewer will hit first):
 4. Router measured on its own command sets, not the rule corpus (stated in Limitations).
 5. 1.6 pages free: room for a short Discussion (edge triggering makes errors persist; perception,
    not actuation, is the bottleneck; structured output beats model size) or a per-request figure.
+
+## 12. Review pass 1 (2026-11-06): findings and fixes
+
+Read as a systems/IoT reviewer and as an LLM reviewer. Fixed in the text:
+1. Abstract overclaimed: "schema and no reasoning mattered more than the model". Data: reasoning
+   -19, schema -5, model +6 correct rules. Now claims only reasoning > model.
+2. In-loop cost was a strawman (a call every tick, 136 M tokens/day). Now the fair bound: a model
+   called only on a non-clock state change, 1,560 calls and ~1.2 M tokens in the scripted day
+   (data/scenario_changes.json).
+3. Baseline said "the most favourable configuration we found"; no search was done. Now: same
+   schema and reasoning settings as the deployed compiler.
+4. Reaction time implied by "the tick bounds it" ignored perception: now states the 0-0.5 s
+   tick wait and that camera detection delay was not measured (also in Limitations).
+5. Byte-identical replay is expected by design; now framed as a check that nothing on the
+   firing path waits for the network, with the live physical test as the stronger evidence.
+6. Authoring needs the cloud: stated in the introduction.
+7. Table I headers now say what was tested/timed, not what exists.
+8. Valid-but-wrong count clarified (two rules, six over three trials); confirmation-step
+   effectiveness with real people stated as unmeasured.
+9. Larger model: 30/30 at 2.4 s vs 0.9 s; trade-off stated (compiled once, so cheap).
+10. Added a Discussion (structured output beats deliberation; edge triggering trades repetition
+    for persistence; privacy is per lane).
+11. Remaining hand-typed numbers moved into numbers.tex (163 macros; none typed by hand).
+
+Still open for a second pass: requests written by people other than the authors; one open or
+local compiler model; ChatIoT full text; owner TODOs (emails, venue, artifact, disclosure).
