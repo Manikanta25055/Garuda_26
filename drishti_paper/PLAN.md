@@ -274,4 +274,5 @@ sends house state, as every assistant of this kind does.
 
 ### Still open
 
-- c06 false-draft claim: fix in `claims.py`/agent (separate from the paper).
+- c06 false-draft claim: fixed on branch claude/narada-draft-claims (b4a7774), not merged or live.
+- All experiments done; next is drafting the paper text and the literature verification (Section 4.2).
