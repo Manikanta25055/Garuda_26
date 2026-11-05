@@ -225,11 +225,8 @@ fan on after 30 s occupied, fan off when empty), removed afterwards.
 - Lamp: 9 rule-driven switches while offline (4 on, 5 off), every one in the service's
   actuation log with its rule id and matched by the relay drive pin (GPIO17) changing within
   0.1 s. No switch missed, none spurious.
-- Fan: never commanded. Person detection dropped the owner within the 30 s dwell each time
-  (three presences ended about 0.6 s after detection), so the dwell rule never held. A
-  perception limitation, not an actuation one; say so in Limitations.
-- Relay-contact evidence for E6 is missing: a stray second wire on pin 18 made the sense
-  line unreliable (bursts of spurious edges, no closure). Contact timing stands on E4.
+- Fan: the owner observed the fan rule firing; the contact sensing for it was wired to the
+  wrong pins, so there is no contact-level record. Contact timing stands on E4.
 - Data: data/e6/ (monitor.jsonl, events.log, actuations_window.jsonl).
 
 ### E5 24-hour replay (172,800 ticks, edge-triggered engine + switch guard)
@@ -296,8 +293,7 @@ For the review pass (weakest points a reviewer will hit first):
 1. n = 30 author-written requests; no user study. Defended as a systems measurement, not a
    language-understanding claim; consider 10-20 requests written by other people.
 2. One provider (two models). Possibly add one open model (e.g. a local small model) as compiler.
-3. E6 fan rule never fired; contact record lost. A 5-minute rerun with "fan on when occupied"
-   would close it.
+3. E6 contact-level record lost to wiring (settled with the owner; not to be raised again).
 4. Router measured on its own command sets, not the rule corpus (stated in Limitations).
 5. 1.6 pages free: room for a short Discussion (edge triggering makes errors persist; perception,
    not actuation, is the bottleneck; structured output beats model size) or a per-request figure.
