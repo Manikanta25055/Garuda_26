@@ -1,0 +1,22 @@
+# The Drishti website, started at boot and kept running.
+# Installed by scripts/pi/setup_boot.sh to /etc/systemd/system/garuda-web.service.
+[Unit]
+Description=Drishti / Garuda web server
+Wants=network-online.target
+After=network-online.target sound.target
+# Never give up retrying: a power cut is exactly when it must come back.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=manikanta
+WorkingDirectory=/home/manikanta/Projects/Garuda_26
+ExecStart=/bin/bash /home/manikanta/Projects/Garuda_26/scripts/run_garuda_web.sh
+Restart=always
+RestartSec=5
+TimeoutStartSec=180
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
