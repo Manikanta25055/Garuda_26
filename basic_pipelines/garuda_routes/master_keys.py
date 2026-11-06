@@ -21,7 +21,7 @@ def build_master_keys_router(core):
         ip = core._get_client_ip(request)
         if core._is_login_locked(ip):
             raise HTTPException(429, "Too many failed attempts. Try again later.")
-        if not core._check_rate_limit(request):
+        if not core._check_rate_limit(request, "signin", core._RATE_LIMIT_SIGNIN):
             raise HTTPException(429, "Too many requests. Try again later.")
         key = str(data.get("key") or "").strip()
         # Also accept the bootstrap env var key in case keys file hasn't been written yet

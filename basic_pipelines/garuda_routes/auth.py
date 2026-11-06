@@ -70,7 +70,7 @@ def build_auth_router(core):
         ip = core._get_client_ip(request)
         if core._is_login_locked(ip):
             raise HTTPException(429, "Too many failed attempts. Try again later.")
-        if not core._check_rate_limit(request):
+        if not core._check_rate_limit(request, "signin", core._RATE_LIMIT_SIGNIN):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()[:64]
         p = data.password.strip()[:256]
@@ -185,7 +185,7 @@ def build_auth_router(core):
         ip = core._get_client_ip(request)
         if core._is_login_locked(ip):
             raise HTTPException(429, "Too many failed attempts. Try again later.")
-        if not core._check_rate_limit(request):
+        if not core._check_rate_limit(request, "signin", core._RATE_LIMIT_SIGNIN):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()[:64]
         p = data.password.strip()[:256]
@@ -216,7 +216,7 @@ def build_auth_router(core):
     @router.post("/api/admin/verify-otp")
     async def admin_verify_otp(data: VerifyOTPRequest, request: Request, response: Response):
         """Admin login step 2: verify OTP, issue session."""
-        if not core._check_rate_limit(request):
+        if not core._check_rate_limit(request, "signin", core._RATE_LIMIT_SIGNIN):
             raise HTTPException(429, "Too many requests. Try again later.")
         ip = core._get_client_ip(request)
         if core._is_login_locked(ip) or _admin_otp_blocked(core):
@@ -261,7 +261,7 @@ def build_auth_router(core):
     @router.post("/api/forgot/send-otp")
     async def forgot_send_otp(data: SendForgotOTPRequest, request: Request,
                               background: BackgroundTasks):
-        if not core._check_rate_limit(request):
+        if not core._check_rate_limit(request, "signin", core._RATE_LIMIT_SIGNIN):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()
         # Always return the same response regardless of whether user exists (anti-enumeration)
@@ -289,7 +289,7 @@ def build_auth_router(core):
         ip = core._get_client_ip(request)
         if core._is_login_locked(ip):
             raise HTTPException(429, "Too many failed attempts. Try again later.")
-        if not core._check_rate_limit(request):
+        if not core._check_rate_limit(request, "signin", core._RATE_LIMIT_SIGNIN):
             raise HTTPException(429, "Too many requests. Try again later.")
         u = data.username.strip()
         state = core.STATE.auth.forgot_otp_store.get(u)

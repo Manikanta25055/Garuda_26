@@ -571,7 +571,7 @@ const H = (() => {
     const box = $('ha-shortcuts');
     if (!box) return;
     let data;
-    try { data = await api('GET', '/api/home/shortcuts'); } catch (e) { box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
+    try { data = await api('GET', '/api/home/shortcuts'); } catch (e) { box._capSig = null; box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
     const me = (G.getSession() || {}).username;
     const running = Object.fromEntries((data.running || []).map(r => [r.shortcut, r]));
     box.innerHTML = data.shortcuts.length ? data.shortcuts.map(sc => {
@@ -620,8 +620,15 @@ const H = (() => {
     clearTimeout(_capTimer);
     let data;
     const q = _capKind ? `?kind=${_capKind}&limit=60` : '?limit=60';
-    try { data = await api('GET', '/api/captures' + q); } catch (e) { box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
+    try { data = await api('GET', '/api/captures' + q); } catch (e) { box._capSig = null; box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
     const me = (G.getSession() || {}).username;
+    // A recording is listed at once; look again until it is saved.
+    if (data.captures.some(c => c.status === 'recording')) _capTimer = setTimeout(loadCaptures, 2000);
+    // Drawn again only when something changed: every redraw made new picture
+    // and video elements, and each asked the Pi for its file again.
+    const sig = JSON.stringify([data.captures, data.usage, me, isAdmin()]);
+    if (box._capSig === sig && box.isConnected) return;
+    box._capSig = sig;
     const base = G._base ? G._base() : '', auth = G._authQuery ? G._authQuery() : '';
     const src = c => `${base}${c.url}${auth ? '?' + auth : ''}`;
     const groups = [], byGroup = {};
@@ -635,7 +642,9 @@ const H = (() => {
       if (c.status !== 'saved') return `<div class="ha-sub warn">${esc(KIND_WORD[c.kind])} failed: ${esc(c.error)}</div>`;
       if (c.kind === 'snapshot') return `<a href="${esc(src(c))}" target="_blank" rel="noopener"><img class="ha-cap-img" loading="lazy" alt="Saved picture" src="${esc(src(c))}"/></a>`;
       if (c.kind === 'audio') return `<audio class="ha-cap-audio" controls preload="none" src="${esc(src(c))}"></audio>`;
-      return `<video class="ha-cap-video" controls preload="metadata" playsinline src="${esc(src(c))}"></video>`;
+      // preload="none": a list of sixty clips was sixty requests for their
+      // first frames the moment it opened, most of a minute's allowance.
+      return `<video class="ha-cap-video" controls preload="none" playsinline src="${esc(src(c))}"></video>`;
     };
     const item = c => {
       const mine = isAdmin() || c.by === me;
@@ -663,8 +672,6 @@ const H = (() => {
     const u = data.usage || {}, meta = $('ha-cap-usage');
     const size = b => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
     if (meta) meta.textContent = u.count ? `${u.count} saved · ${size(u.bytes)} of ${size(u.max_bytes)}` : '';
-    // A recording is listed at once; look again until it is saved.
-    if (data.captures.some(c => c.status === 'recording')) _capTimer = setTimeout(loadCaptures, 2000);
   }
   function filterCaptures(kind) { _capKind = kind || ''; loadCaptures(); }
   async function captureNow(kind) {

@@ -974,6 +974,11 @@ def test_captures_of_one_alert_show_together_and_play(admin_page, tmp_path, monk
             p.page.wait_for_timeout(100)
         assert p.js(expr), expr
     until("document.querySelector('.ha-cap-img').naturalWidth > 0", 5)
+    # A clip is fetched only when it is played: a list of them opening must
+    # not ask the Pi for every file at once (it used up the rate limit).
+    assert p.js("document.querySelector('.ha-cap-video').preload") == "none"
+    assert p.js("document.querySelector('.ha-cap-video').readyState") == 0
+    p.js("(() => { const v = document.querySelector('.ha-cap-video'); v.preload = 'metadata'; v.load(); })()")
     until("document.querySelector('.ha-cap-video').readyState >= 1", 8)
     assert p.js("document.querySelectorAll('.ha-cap-group').length") == 1
     assert p.js("document.querySelectorAll('.ha-cap-group audio').length") == 1
