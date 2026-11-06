@@ -1,6 +1,7 @@
 """Captures: stills, sound and video saved from the camera, by hand, by Narada and
 by a shortcut that an alert starts."""
 import asyncio
+import os
 import threading
 import time
 
@@ -194,7 +195,7 @@ def test_the_store_clears_the_oldest_and_never_a_kept_one(tmp_path):
         ids.append(entry["id"])
     assert {c["id"] for c in store.list()} == {ids[0], ids[2]}
     pending = store.begin("audio", by="a")
-    again = cap.CaptureStore(str(tmp_path))
+    again = cap.CaptureStore(str(tmp_path), clock=lambda: clock[0])
     assert again.get(pending["id"])["status"] == "failed"
 
 
@@ -277,3 +278,128 @@ def test_an_unlisted_file_goes_on_start_and_a_broken_index_is_kept(tmp_path):
     again = cap.CaptureStore(str(tmp_path))
     assert again.list() == [] and (tmp_path / entry["file"]).exists()
     assert any(p.name.startswith("index.json.bad-") for p in tmp_path.iterdir())
+
+
+# ── the page: the latest event, a history by day, and how long they stay ──────
+
+def _saved(store, kind="snapshot", data=b"x", **kw):
+    entry = store.begin(kind, by=kw.pop("by", "admin"), **kw)
+    return store.finish(entry["id"], data)
+
+
+def test_events_group_a_run_and_come_a_page_at_a_time(tmp_path):
+    clock = [1000.0]
+    store = cap.CaptureStore(str(tmp_path), clock=lambda: clock[0])
+    for i in range(5):
+        clock[0] += 10
+        _saved(store, label=f"one {i}")
+    clock[0] += 10
+    _saved(store, group="run", label="alert")
+    clock[0] += 1
+    _saved(store, "audio", group="run")
+    first = store.events(limit=2)
+    assert first["total"] == 6 and first["more"] is True
+    newest = first["events"][0]
+    assert newest["key"] == "run" and newest["label"] == "alert"
+    assert [c["kind"] for c in newest["items"]] == ["snapshot", "audio"]   # in the order made
+    assert newest["kinds"] == {"snapshot": 1, "audio": 1}
+    seen = [e["key"] for e in first["events"]]
+    before = first["next_before"]
+    while before is not None:
+        page = store.events(limit=2, before=before)
+        seen += [e["key"] for e in page["events"]]
+        before = page["next_before"]
+    assert len(seen) == len(set(seen)) == 6                               # each once, none missed
+    assert [e["label"] for e in store.events(kind="audio")["events"]] == ["alert"]
+
+
+def test_captures_older_than_the_retention_go_unless_kept(tmp_path):
+    day = 86400
+    clock = [100 * day]
+    store = cap.CaptureStore(str(tmp_path), clock=lambda: clock[0], days=7)
+    old = _saved(store)
+    kept = _saved(store)
+    store.set_keep(kept["id"], True)
+    clock[0] += 3 * day
+    recent = _saved(store)
+    clock[0] += 5 * day                 # old and kept are 8 days old, recent 5
+    store.events()                      # reading the list clears what aged out
+    ids = {c["id"] for c in store.list()}
+    assert ids == {kept["id"], recent["id"]}
+    assert not os.path.exists(os.path.join(str(tmp_path), old["file"]))
+    assert store.set_days(1) == 1       # shorter: recent goes at once
+    assert {c["id"] for c in store.list()} == {kept["id"]}
+    again = cap.CaptureStore(str(tmp_path), clock=lambda: clock[0])
+    assert again.days == 1              # the admin's choice outlives a restart
+    assert store.set_days(0) == 0       # no age limit
+    with pytest.raises(ValueError):
+        store.set_days(-1)
+
+
+def test_clear_removes_the_history_but_not_the_kept_or_the_latest(tmp_path):
+    clock = [1000.0]
+    store = cap.CaptureStore(str(tmp_path), clock=lambda: clock[0])
+    a = _saved(store)
+    clock[0] += 1
+    b = _saved(store)
+    store.set_keep(b["id"], True)
+    clock[0] += 1
+    latest = _saved(store)
+    assert store.clear(before=latest["at"]) == 1
+    assert {c["id"] for c in store.list()} == {b["id"], latest["id"]}
+    assert store.get(a["id"]) is None
+
+
+def test_a_small_picture_is_made_once_and_goes_with_its_capture(tmp_path):
+    store = cap.CaptureStore(str(tmp_path))
+    frame = np.full((480, 640, 3), 90, np.uint8)
+    pic = _saved(store, data=cv2.imencode(".jpg", frame)[1].tobytes())
+    path = store.thumb(pic["id"])
+    small = cv2.imread(path)
+    assert small.shape[1] == cap.THUMB_WIDTH and small.shape[0] == 240
+    assert store.thumb(pic["id"]) == path
+    sound = _saved(store, "audio")
+    assert store.thumb(sound["id"]) is None
+    cap.CaptureStore(str(tmp_path))     # a thumb is not an unlisted file
+    assert os.path.exists(path)
+    store.delete(pic["id"])
+    assert not os.path.exists(path)
+
+
+def test_a_video_has_a_small_picture_of_its_first_frame(tmp_path):
+    store = cap.CaptureStore(str(tmp_path))
+    jpeg = cv2.imencode(".jpg", np.full((120, 160, 3), 200, np.uint8))[1].tobytes()
+    entry = store.begin("video", by="admin")
+    assert cap.encode_video([jpeg] * 10, 10, store.path_of(entry))
+    store.finish(entry["id"])
+    path = store.thumb(entry["id"])
+    assert path and cv2.imread(path).shape[1] == 160
+
+
+def test_the_events_page_and_its_admin_controls(app_client, user_headers, admin_headers):
+    for label in ("first", "second", "third"):
+        assert app_client.post("/api/captures/snapshot", json={"label": label},
+                               headers=user_headers).status_code == 200
+    got = app_client.get("/api/captures/events?limit=2", headers=user_headers).json()
+    assert got["total"] == 3 and got["more"] is True
+    assert [e["label"] for e in got["events"]] == ["third", "second"]
+    item = got["events"][0]["items"][0]
+    thumb = app_client.get(item["thumb"], headers=user_headers)
+    assert thumb.status_code == 200 and thumb.headers["content-type"] == "image/jpeg"
+    nxt = app_client.get(f"/api/captures/events?before={got['next_before']}",
+                         headers=user_headers).json()
+    assert [e["label"] for e in nxt["events"]] == ["first"]
+    assert got["usage"]["days"] == gw.CAPTURES.days
+    # Only an admin sets how long they stay or clears the history.
+    assert app_client.post("/api/captures/policy", json={"days": 7},
+                          headers=user_headers).status_code == 403
+    assert app_client.post("/api/captures/clear", json={}, headers=user_headers).status_code == 403
+    set_ = app_client.post("/api/captures/policy", json={"days": 7}, headers=admin_headers)
+    assert set_.status_code == 200 and set_.json()["days"] == 7
+    assert app_client.post("/api/captures/policy", json={"days": -1},
+                          headers=admin_headers).status_code == 422
+    latest = got["events"][0]["items"][0]["at"]
+    cleared = app_client.post("/api/captures/clear", json={"before": latest}, headers=admin_headers)
+    assert cleared.json()["removed"] == 2
+    left = app_client.get("/api/captures/events", headers=user_headers).json()
+    assert [e["label"] for e in left["events"]] == ["third"]
