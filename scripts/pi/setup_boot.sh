@@ -6,6 +6,7 @@
 #   - claude-rc.service (claude remote-control in tmux "claude", in ~/Projects)
 #   - labwc touch mapping to DSI-2 (so the screen rotation applies to touch)
 #   - linger for manikanta (keeps /run/user/1000 for PipeWire)
+#   - journal capped at 200 MB, vm.swappiness=10
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -15,6 +16,9 @@ install -m 755 "$here/drishti-hailo-recover" /usr/local/sbin/drishti-hailo-recov
 install -d /etc/systemd/system/cloudflared.service.d
 install -m 644 "$here/cloudflared-override.conf" /etc/systemd/system/cloudflared.service.d/override.conf
 install -m 644 "$here/claude-rc.service" /etc/systemd/system/claude-rc.service
+install -d /etc/systemd/journald.conf.d
+install -m 644 "$here/journald-drishti.conf" /etc/systemd/journald.conf.d/drishti.conf
+install -m 644 "$here/sysctl-drishti.conf" /etc/sysctl.d/99-drishti.conf
 
 # The old touch calibration rule mis-mapped touch; make sure it is gone.
 if [ -e /etc/udev/rules.d/99-drishti-touch.rules ]; then
@@ -40,5 +44,7 @@ fi
 systemctl daemon-reload
 systemctl enable garuda-web.service cloudflared.service claude-rc.service
 loginctl enable-linger manikanta
+systemctl restart systemd-journald
+sysctl -q -p /etc/sysctl.d/99-drishti.conf
 
 echo "Installed. claude-rc starts at next boot (or now: sudo systemctl restart claude-rc)."
