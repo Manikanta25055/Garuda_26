@@ -1,0 +1,30 @@
+#!/bin/bash
+# Run as root by garuda-web.service before every start (ExecStartPre=+).
+# Installed by scripts/pi/setup_boot.sh to /usr/local/sbin/drishti-hailo-recover.
+# When garuda-web stops, the Hailo PCIe chip can drop to D3cold and never wake
+# ("Failed waking up board -5"), so every restart failed until a reboot.
+# If the chip does not answer, remove it from the PCIe bus and rescan, which
+# powers it up and reloads its firmware. Always exits 0: run_garuda_web.sh
+# waits for the chip and systemd keeps retrying.
+answers() { timeout 5 hailortcli fw-control identify 2>/dev/null | grep -q "Device Architecture"; }
+
+# A cold boot may still be probing the chip; give it 20 s before resetting it.
+for _ in $(seq 1 10); do answers && exit 0; sleep 2; done
+
+for dev in /sys/bus/pci/devices/*; do
+  [ "$(cat "$dev/vendor" 2>/dev/null)" = 0x1e60 ] || continue
+  echo "drishti-hailo-recover: Hailo at ${dev##*/} not answering, resetting it" >&2
+  echo 1 > "$dev/remove"
+done
+sleep 2
+echo 1 > /sys/bus/pci/rescan
+for _ in $(seq 1 15); do
+  if answers; then
+    echo "drishti-hailo-recover: Hailo answering again" >&2
+    systemctl --no-block try-restart hailort.service
+    exit 0
+  fi
+  sleep 2
+done
+echo "drishti-hailo-recover: Hailo still not answering" >&2
+exit 0

@@ -1,0 +1,7 @@
+# Raspberry Pi Touch Display 2 (ili9881c DSI panel, Goodix touch on i2c-11 0x5d).
+# Installed by scripts/pi/setup_boot.sh to /etc/udev/rules.d/99-drishti-touch.rules.
+# labwc shows DSI-2 with transform 270 (landscape) and maps the touch to DSI-2,
+# so the compositor already rotates touches. Left/right on the rotated screen is
+# the panel's native Y axis, and that axis is reversed: flip native Y.
+# If up/down turns out reversed too, use "-1 0 1 0 -1 1" (both axes).
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="Goodix Capacitive TouchScreen", ENV{LIBINPUT_CALIBRATION_MATRIX}="1 0 0 0 -1 1"
