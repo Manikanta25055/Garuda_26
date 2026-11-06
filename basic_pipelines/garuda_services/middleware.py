@@ -7,6 +7,7 @@ back under the same names.
 """
 import hmac
 import os
+import re
 
 from fastapi import Request
 
@@ -24,6 +25,9 @@ def bind(module):
     core = module
 
 
+_CAPTURE_FILE = re.compile(r"^/api/(?:v1/)?captures/[^/]+/file$")
+
+
 async def global_rate_limit(request: Request, call_next):
     path = request.url.path
     _eval_tok = os.environ.get("GARUDA_EVAL_TOKEN", "")
@@ -31,9 +35,21 @@ async def global_rate_limit(request: Request, call_next):
     _eval_bypass = bool(_eval_tok) and hmac.compare_digest(_tok_hdr.encode(), _eval_tok.encode())
     if not _eval_bypass and not any(path.startswith(p) for p in core._RATE_EXEMPT_PREFIXES):
         token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
+        media = request.method in ("GET", "HEAD") and _CAPTURE_FILE.match(path) is not None
+        if media and not token:
+            # <video>, <audio> and <img> can't send a header: they carry ?token=.
+            token = request.query_params.get("token")
         signed_in = bool(token) and core.get_session(token) is not None
-        allowed = (core._check_rate_limit(request, "session", core._RATE_LIMIT_SESSION) if signed_in
-                   else core._check_rate_limit(request))
+        if signed_in and media:
+            # A saved clip is fetched in byte ranges, several per <video>, so
+            # the Captures list alone used up the whole signed-in budget and
+            # every button after it got "Too many requests". A signed-in
+            # person reading their own captures is not counted.
+            allowed = True
+        elif signed_in:
+            allowed = core._check_rate_limit(request, "session", core._RATE_LIMIT_SESSION)
+        else:
+            allowed = core._check_rate_limit(request)
         if not allowed:
             from fastapi.responses import JSONResponse
             return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)

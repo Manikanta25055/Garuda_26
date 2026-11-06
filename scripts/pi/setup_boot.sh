@@ -7,11 +7,15 @@
 #   - labwc touch mapping to DSI-2 (so the screen rotation applies to touch)
 #   - linger for manikanta (keeps /run/user/1000 for PipeWire)
 #   - journal capped at 200 MB, vm.swappiness=10
+#   - garuda-web gets CPU/disk priority; CPU governor "performance"
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
 here="$(cd "$(dirname "$0")" && pwd)"
 
 install -m 644 "$here/garuda-web.service" /etc/systemd/system/garuda-web.service
+install -d /etc/systemd/system/garuda-web.service.d
+install -m 644 "$here/garuda-web-priority.conf" /etc/systemd/system/garuda-web.service.d/priority.conf
+install -m 644 "$here/cpu-performance.service" /etc/systemd/system/cpu-performance.service
 install -m 755 "$here/drishti-hailo-recover" /usr/local/sbin/drishti-hailo-recover
 install -d /etc/systemd/system/cloudflared.service.d
 install -m 644 "$here/cloudflared-override.conf" /etc/systemd/system/cloudflared.service.d/override.conf
@@ -43,6 +47,7 @@ fi
 
 systemctl daemon-reload
 systemctl enable garuda-web.service cloudflared.service claude-rc.service
+systemctl enable --now cpu-performance.service
 loginctl enable-linger manikanta
 systemctl restart systemd-journald
 sysctl -q -p /etc/sysctl.d/99-drishti.conf

@@ -1,0 +1,15 @@
+# Keeps every CPU core at full clock (governor "performance" instead of
+# "ondemand") so the Drishti app never waits for the clock to ramp up.
+# Installed by scripts/pi/setup_boot.sh to /etc/systemd/system/cpu-performance.service.
+# Stopping it puts the cores back on "ondemand".
+[Unit]
+Description=CPU governor performance (Drishti)
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'for g in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do echo performance > "$g"; done'
+ExecStop=/bin/sh -c 'for g in /sys/devices/system/cpu/cpufreq/policy*/scaling_governor; do echo ondemand > "$g"; done'
+
+[Install]
+WantedBy=multi-user.target

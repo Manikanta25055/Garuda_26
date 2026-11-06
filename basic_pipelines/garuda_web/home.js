@@ -635,7 +635,8 @@ const H = (() => {
       if (c.status !== 'saved') return `<div class="ha-sub warn">${esc(KIND_WORD[c.kind])} failed: ${esc(c.error)}</div>`;
       if (c.kind === 'snapshot') return `<a href="${esc(src(c))}" target="_blank" rel="noopener"><img class="ha-cap-img" loading="lazy" alt="Saved picture" src="${esc(src(c))}"/></a>`;
       if (c.kind === 'audio') return `<audio class="ha-cap-audio" controls preload="none" src="${esc(src(c))}"></audio>`;
-      return `<video class="ha-cap-video" controls preload="metadata" playsinline src="${esc(src(c))}"></video>`;
+      // preload="none": "metadata" fetched every clip in the list on opening it.
+      return `<video class="ha-cap-video" controls preload="none" playsinline src="${esc(src(c))}"></video>`;
     };
     const item = c => {
       const mine = isAdmin() || c.by === me;

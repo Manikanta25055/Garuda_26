@@ -277,3 +277,19 @@ def test_an_unlisted_file_goes_on_start_and_a_broken_index_is_kept(tmp_path):
     again = cap.CaptureStore(str(tmp_path))
     assert again.list() == [] and (tmp_path / entry["file"]).exists()
     assert any(p.name.startswith("index.json.bad-") for p in tmp_path.iterdir())
+
+
+def test_reading_saved_captures_does_not_use_up_the_rate_limit(app_client, user_headers,
+                                                               user_token, monkeypatch):
+    """A <video> fetches its clip in several byte ranges; a list of them used
+    up the whole signed-in budget and every button after it got a 429."""
+    monkeypatch.setattr(gw, "_RATE_LIMIT_SESSION", 5)
+    entry = app_client.post("/api/captures/snapshot", json={}, headers=user_headers).json()["capture"]
+    url = f"/api/captures/{entry['id']}/file"
+    for _ in range(12):                                   # as <video src="...?token=">
+        assert app_client.get(f"{url}?token={user_token}").status_code == 200
+    assert app_client.get("/api/captures", headers=user_headers).status_code == 200
+    # Without a session the file is still counted, and refused.
+    app_client._client.cookies.clear()
+    codes = {app_client.get(url).status_code for _ in range(40)}
+    assert codes <= {401, 429} and 429 in codes
