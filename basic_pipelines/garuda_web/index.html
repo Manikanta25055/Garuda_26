@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=98"/>
+  <link rel="stylesheet" href="/static/style.css?v=99"/>
 </head>
 <body>
 <div id="app">
@@ -664,6 +664,18 @@
             <div class="push-actions">
               <button type="button" class="btn btn-primary btn-sm" id="push-on-btn" data-click="G.pushToggle">Turn on</button>
               <button type="button" class="btn btn-ghost btn-sm hidden" id="push-test-btn" data-click="G.pushTest">Send a test</button>
+            </div>
+          </div>
+          <!-- Visual effects: per browser, so a weak device can run light -->
+          <div class="settings-hub push-card fx-card" id="fx-card">
+            <div class="push-text">
+              <div class="sh-label">Visual effects</div>
+              <div class="sh-hint" id="fx-status">Full glass where the device draws it smoothly, light where it would stutter.</div>
+            </div>
+            <div id="fx-switch" class="arm-switch fx-switch" role="radiogroup" aria-label="Visual effects">
+              <button type="button" class="arm-opt" role="radio" aria-checked="true" data-fx="auto" data-click="G.setEffects" data-args='["auto"]'>Auto</button>
+              <button type="button" class="arm-opt" role="radio" aria-checked="false" data-fx="full" data-click="G.setEffects" data-args='["full"]'>Full</button>
+              <button type="button" class="arm-opt" role="radio" aria-checked="false" data-fx="lite" data-click="G.setEffects" data-args='["lite"]'>Light</button>
             </div>
           </div>
           <div id="settings-list" class="settings-hub"></div>
@@ -1518,9 +1530,9 @@
 
 <script src="/static/sound.js?v=9"></script>
 <script src="/static/actions.js?v=3"></script>
-<script src="/static/narada.js?v=31"></script>
+<script src="/static/narada.js?v=32"></script>
 <script src="/static/island.js?v=4"></script>
-<script src="/static/app.js?v=89"></script>
+<script src="/static/app.js?v=90"></script>
 <script src="/static/home.js?v=17"></script>
 <script src="/static/zones.js?v=1"></script>
 </body>

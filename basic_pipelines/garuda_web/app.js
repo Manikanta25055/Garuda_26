@@ -3,9 +3,116 @@
    ============================================================ */
 // Tag the page with what it runs on, before anything paints (style.css,
 // "Every browser, every device"). Apple's own browsers keep the full glass.
-(function () {
+//
+// Visual effects have three settings (Settings > Visual effects), kept per
+// browser in localStorage:
+//   auto  (default) full glass on Apple; elsewhere the cheaper glass, and the
+//         light rendering (perf-lite) when the device is known to be weak or
+//         is measured to be slow. A slow verdict is remembered, so the next
+//         visit starts light instead of stuttering until it measures again.
+//   full  never the light rendering
+//   lite  always the light rendering
+const GarudaFx = (() => {
+  const KEY = 'garuda_fx';             // 'full' | 'lite' | absent (auto)
+  const SLOW = 'garuda_fx_slow';       // why auto chose light, once measured
+  const GPU = 'garuda_fx_gpu';         // '<user agent>|weak' or '|ok'
+  const root = document.documentElement;
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (_) {} },
+  };
+  const ua = navigator.userAgent || '';
+  let apple = false;
+  let reason = '';                     // why the light rendering is on, in auto
+
+  // The graphics chip the browser draws with. A software renderer, no WebGL
+  // at all, or a small mobile GPU (a Raspberry Pi's VideoCore) means blur and
+  // big composited layers are drawn by a weak chip or the CPU. Firefox on a
+  // Pi was the case that stuttered. Asked once per browser version: making a
+  // WebGL context costs a few milliseconds.
+  function weakGpu() {
+    const cached = ls.get(GPU);
+    if (cached && cached.slice(0, cached.lastIndexOf('|')) === ua) return cached.endsWith('|weak');
+    let weak = false;
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) weak = true;
+      else {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || '');
+        weak = /llvmpipe|softpipe|swiftshader|software|basic render|v3d|videocore|vc4|lima|panfrost|mali-[34t]|powervr|adreno \(tm\) [1-4]\d\d/i.test(name);
+        const lose = gl.getExtension('WEBGL_lose_context');
+        if (lose) lose.loseContext();
+      }
+    } catch (_) { weak = false; }
+    ls.set(GPU, ua + '|' + (weak ? 'weak' : 'ok'));
+    return weak;
+  }
+
+  function autoReason() {
+    if (apple) return '';
+    // Phones and tablets that are not Apple's get the light rendering from
+    // the start: blur and layered shadows are what made scrolling stutter
+    // there, and waiting to measure it meant a laggy first minute.
+    if (window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches) return 'touch';
+    if ((navigator.deviceMemory && navigator.deviceMemory <= 2)
+        || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)) return 'small';
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-transparency: reduce)').matches) return 'asked';
+    // A Linux board on ARM (a Raspberry Pi and the like). Chrome reports the
+    // board in navigator.platform even where its user agent says x86_64.
+    if (/aarch64|armv\d|arm64/i.test((navigator.platform || '') + ' ' + ua) && !/Android/.test(ua)) return 'board';
+    if (ls.get(SLOW)) return 'measured';
+    if (weakGpu()) return 'gpu';
+    return '';
+  }
+
+  function mode() {
+    const m = ls.get(KEY);
+    return m === 'full' || m === 'lite' ? m : 'auto';
+  }
+
+  function apply() {
+    const m = mode();
+    reason = m === 'auto' ? autoReason() : '';
+    root.classList.toggle('perf-lite', m === 'lite' || (m === 'auto' && !!reason));
+    root.dataset.fx = m;
+  }
+
+  // Measure real frame times; a device that cannot hold ~40 fps (median
+  // frame over 25 ms, or one frame in ten over 50 ms) goes light, and stays
+  // light on later visits. The first probe runs on the settled page; later
+  // ones run while a page opens, which is when a slow device shows it: an
+  // idle page costs a weak chip nothing and passed the old one-off check.
+  // Apple devices are left alone (Low Power Mode halves their frame rate on
+  // purpose); so is a browser set to full or light by hand.
+  let probing = false, probes = 0, strikes = 0;
+  function probe(ms) {
+    if (apple || mode() !== 'auto' || root.classList.contains('perf-lite')) return;
+    if (probing || probes >= 8 || document.hidden || !window.requestAnimationFrame) return;
+    probing = true; probes++;
+    const gaps = [];
+    let last = 0, t0 = 0;
+    function step(t) {
+      if (document.hidden) { probing = false; return; }   // a hidden tab is throttled, not slow
+      if (!t0) t0 = t;
+      if (last) gaps.push(t - last);
+      last = t;
+      if (t - t0 < ms || gaps.length < 20) { requestAnimationFrame(step); return; }
+      probing = false;
+      gaps.sort((a, b) => a - b);
+      const slow = gaps[gaps.length >> 1] > 25 || gaps[Math.floor(gaps.length * 0.9)] > 50;
+      // Opening a page builds it in one long frame; it takes two slow
+      // openings, or a slow settled page, to call the device slow.
+      if (slow && (ms > 1000 || ++strikes >= 2)) {
+        ls.set(SLOW, '1');
+        apply();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
   try {
-    const ua = navigator.userAgent || '';
     // Apple's own engine draws blur and glass on the GPU almost for free:
     // every browser on an iPhone or iPad, and Safari on a Mac. Chrome, Brave,
     // Edge and Firefox on a Mac were counted here too (their user agents say
@@ -14,42 +121,26 @@
       || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);   // iPadOS asks for the desktop site
     const macSafari = /Macintosh/.test(ua) && /Safari\//.test(ua)
       && !/(Chrome|Chromium|CriOS|Edg|OPR|Brave|Firefox|FxiOS)\//.test(ua);
-    const apple = iOS || macSafari;
-    const root = document.documentElement;
+    apple = iOS || macSafari;
     if (!apple) root.classList.add('plat-other');
-    // Phones and tablets that are not Apple's get the light rendering from
-    // the start: blur and layered shadows are what made scrolling stutter
-    // there, and waiting to measure it meant a laggy first minute.
-    const touchOnly = window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-    if (!apple && touchOnly) root.classList.add('perf-lite');
-    const slowHint = (navigator.deviceMemory && navigator.deviceMemory <= 2)
-      || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2)
-      || (window.matchMedia && window.matchMedia('(prefers-reduced-transparency: reduce)').matches);
-    if (slowHint) root.classList.add('perf-lite');
+    apply();
   } catch (_) {}
-})();
 
-// Measure real frame times once the app is on screen; a device that cannot
-// hold ~40 fps (median frame over 25 ms, or one frame in ten over 50 ms)
-// drops the blur and decoration for this visit. It waited for ~25 fps, by
-// which point the stutter was plain to see. Apple devices
-// are left alone (Low Power Mode halves their frame rate on purpose).
-function _garudaProbeFrames() {
-  const root = document.documentElement;
-  if (!root.classList.contains('plat-other') || root.classList.contains('perf-lite')) return;
-  if (document.hidden || !window.requestAnimationFrame) return;
-  const gaps = [];
-  let last = 0;
-  function step(t) {
-    if (document.hidden) return;                    // a hidden tab is throttled, not slow
-    if (last) gaps.push(t - last);
-    last = t;
-    if (gaps.length < 90) { requestAnimationFrame(step); return; }
-    gaps.sort((a, b) => a - b);
-    if (gaps[gaps.length >> 1] > 25 || gaps[Math.floor(gaps.length * 0.9)] > 50) root.classList.add('perf-lite');
-  }
-  requestAnimationFrame(step);
-}
+  return {
+    mode,
+    reason: () => reason,
+    lite: () => root.classList.contains('perf-lite'),
+    // Picking auto forgets what was measured, so it is measured afresh.
+    set(m) {
+      ls.set(KEY, m === 'full' || m === 'lite' ? m : null);
+      if (m !== 'full' && m !== 'lite') { ls.set(SLOW, null); ls.set(GPU, null); probes = 0; strikes = 0; }
+      apply();
+      try { window.dispatchEvent(new Event('garuda-fx')); } catch (_) {}
+    },
+    settled() { probe(1500); },        // after sign-in, once the page has settled
+    opened() { probe(700); },          // each time a page opens
+  };
+})();
 
 const G = (() => {
 
@@ -638,7 +729,7 @@ const G = (() => {
     _initTimeline();
     _wsAllowed = true;
     connectWS();
-    setTimeout(_garudaProbeFrames, 2500);   // after the first paint and state push have settled
+    setTimeout(GarudaFx.settled, 2500);   // after the first paint and state push have settled
     // Haptic feedback on Dynamic Island tap
     const hudEl = document.getElementById('top-hud');
     if (hudEl && !hudEl._hapticBound) {
@@ -656,6 +747,33 @@ const G = (() => {
     // Notify feedback widget so it can inject admin Inbox tab
     if (G._afterLoginHook) G._afterLoginHook(_session);
     _syncFeedbackVisibility();
+  }
+
+  // Settings > Visual effects (GarudaFx, top of this file).
+  const _FX_WHY = {
+    touch:    'Light: a touch device that is not Apple\'s.',
+    small:    'Light: this device has little memory or few cores.',
+    asked:    'Light: the system asks for less transparency.',
+    board:    'Light: a small ARM board, such as a Raspberry Pi.',
+    gpu:      'Light: this browser draws without a strong graphics chip.',
+    measured: 'Light: this device measured slow here.',
+  };
+  function _syncFxCard() {
+    const m = GarudaFx.mode();
+    document.querySelectorAll('#fx-switch .arm-opt').forEach(b => {
+      const on = b.dataset.fx === m;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    const plat = document.documentElement.classList.contains('plat-other');
+    setText('fx-status', m === 'lite' ? 'Light: no blur, soft shadows or idle motion in this browser. The fastest.'
+      : m === 'full' ? 'Full effects in this browser, even where it is slow.'
+      : _FX_WHY[GarudaFx.reason()] || (plat ? 'Full: lighter glass, and light if this device measures slow.'
+                                            : 'Full: Apple devices draw the glass smoothly.'));
+  }
+  function setEffects(m) {
+    GarudaFx.set(m);
+    _syncFxCard();
   }
 
   function toggleTheme() {
@@ -1988,6 +2106,8 @@ const G = (() => {
         pg.style.opacity = '0';
         requestAnimationFrame(() => { pg.style.opacity = '1'; });
       });
+      // A weak device shows itself while a page opens (GarudaFx).
+      if (changed) GarudaFx.opened();
     }
     if (navEl) {
       if (window.innerWidth <= 768) {
@@ -2001,7 +2121,7 @@ const G = (() => {
     _syncFeedbackVisibility();
     _syncFeedAudio();
     if (pageId === 'events')     renderHeatmap(_hmActivity);   // drawn to the width it has now
-    if (pageId === 'settings')   syncPushCard();
+    if (pageId === 'settings')   { syncPushCard(); _syncFxCard(); }
     if (pageId === 'a-email')    loadEmailCfg();
     if (pageId === 'a-settings') { loadSysCfg(); loadArm(); if (window.H) H.loadAI(); }
     if (pageId === 'a-logs') {
@@ -3511,7 +3631,7 @@ const G = (() => {
     nav, toggleMode, emergencyStop, setArm, toggleAutoArm, togglePanic, pushToggle, pushTest,
     openBackendConfig, saveBackendConfig,
     toggleMenu, closeMobileMenu,
-    toggleTheme, switchCamTab,
+    toggleTheme, setEffects, switchCamTab,
     toggleCamera, toggleFeedSound, takeSnapshot, toggleClip, openDocs,
     loadEmailCfg, saveEmail, testEmail,
     loadSysCfg, togglePrivacy, toggleNightPresence, useHereForLocation, saveSettings,

@@ -4953,6 +4953,38 @@ html.perf-lite #top-hud.di-alert .di-shadow::after { animation: none; opacity: 0
 html.perf-lite .dg *, html.perf-lite .status-pulse-ring, html.perf-lite .cam-live-pulse { animation: none !important; }
 html.perf-lite .card, html.perf-lite .settings-card { box-shadow: none; }
 
+/* Firefox on a Raspberry Pi (2026-11) was the slowest case: it draws with a
+   weak GPU or the CPU, where every blur, blurred shadow and full-page fade is
+   redrawn each frame. The light rendering removes all of them. */
+/* No blur filter anywhere (only fade-ins used one), animated or not. */
+html.perf-lite *, html.perf-lite *::before, html.perf-lite *::after { filter: none !important; }
+/* Soft shadows become a hairline or a short one; layered 16-32 px blurs were
+   the cost. Dark mode set its own, hence the theme selector. */
+html.perf-lite, html.perf-lite[data-theme] {
+  --shadow: 0 2px 6px rgba(0,0,0,0.16);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.12);
+  --shadow-card: 0 0 0 1px var(--border);
+  --shadow-inset: none;
+}
+/* A page appears at once instead of fading and sliding in over 0.28 s. */
+html.perf-lite .page { transition: none; transform: none; }
+/* Decoration that loops for as long as it shows stops after a few rounds. */
+html.perf-lite .hdr-dot.alert, html.perf-lite .cam-action-btn.recording,
+html.perf-lite .di-pip, html.perf-lite .di-panel .di-p-ic { animation-iteration-count: 4 !important; }
+/* The blurred veils at the top and bottom of a phone-width page are gone
+   (no backdrop blur above); their masks still cost a layer each. */
+html.perf-lite #app.logged-in::before, html.perf-lite #app.logged-in::after { display: none; }
+
+/* Live video under glass: each new frame re-blurred the labels on top of it.
+   Off Apple, the labels over the camera are plain dark glass. */
+html.plat-other .camera-label, html.plat-other .cam-hud-left, html.plat-other .cam-hud-time {
+  -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(0,0,0,0.62);
+}
+/* Fade-ins that started from a blur (Narada's lines, the island's content)
+   fade without it off Apple's Safari. */
+html.plat-other .nx-msg, html.plat-other .nx-work-l li,
+html.plat-other #top-hud .di-cnt-notice, html.plat-other #top-hud .di-panel > * { filter: none !important; }
+
 /* ── Phones could not scroll (Android Chrome) ──────────────────
    Two things together did it. `overscroll-behavior` was set on <body> as well
    as <html>; and on phones <body>, #app, #app-shell, #body and #main all had
@@ -5444,6 +5476,9 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
 }
 .push-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 220px; }
 .push-actions { display: flex; gap: 8px; }
+/* Visual effects (Settings): Auto | Full | Light */
+.fx-switch { grid-template-columns: repeat(3, 1fr); flex: 0 1 260px; min-width: 210px; }
+@media (max-width: 768px) { .fx-switch { flex-basis: 100%; } }
 
 /* ── Detection rules and zones (Settings › Detection rules) ── */
 .zr-rules { display: grid; gap: 6px; margin: 10px 0 4px; }
