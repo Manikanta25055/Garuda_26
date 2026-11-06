@@ -3,8 +3,8 @@
 # power cut. Safe to run again. Usage: sudo scripts/pi/setup_boot.sh
 #   - garuda-web.service (website), with the Hailo wake-up helper
 #   - cloudflared drop-in (tunnel keeps retrying at boot)
-#   - touch calibration udev rule
-#   - claude-rc.service (claude remote-control in tmux "claude")
+#   - claude-rc.service (claude remote-control in tmux "claude", in ~/Projects)
+#   - labwc touch mapping to DSI-2 (so the screen rotation applies to touch)
 #   - linger for manikanta (keeps /run/user/1000 for PipeWire)
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
@@ -15,14 +15,30 @@ install -m 755 "$here/drishti-hailo-recover" /usr/local/sbin/drishti-hailo-recov
 install -d /etc/systemd/system/cloudflared.service.d
 install -m 644 "$here/cloudflared-override.conf" /etc/systemd/system/cloudflared.service.d/override.conf
 install -m 644 "$here/claude-rc.service" /etc/systemd/system/claude-rc.service
-install -m 644 "$here/99-drishti-touch.rules" /etc/udev/rules.d/99-drishti-touch.rules
+
+# The old touch calibration rule mis-mapped touch; make sure it is gone.
+if [ -e /etc/udev/rules.d/99-drishti-touch.rules ]; then
+  rm -f /etc/udev/rules.d/99-drishti-touch.rules
+  udevadm control --reload
+fi
+
+# labwc only rotates touch with the screen when the touch device is mapped to
+# the output. The Pi's autotouch helper wrote the old kernel device name
+# ("11-005d Goodix ..."), which no longer matches, so add a name-less <touch>
+# entry: it applies to any touchscreen.
+rc=/home/manikanta/.config/labwc/rc.xml
+ns=http://openbox.org/3.4/rc
+if [ -f "$rc" ] && ! sudo -u manikanta xmlstarlet sel -N o=$ns -t -c '//o:touch[not(@deviceName)]' "$rc" | grep -q touch; then
+  sudo -u manikanta cp -p "$rc" "$rc.bak-drishti-touch"
+  sudo -u manikanta sh -c "xmlstarlet ed -N o=$ns -s /o:openbox_config -t elem -n touch \
+    -i '/o:openbox_config/touch[last()]' -t attr -n mapToOutput -v DSI-2 \
+    -i '/o:openbox_config/touch[last()]' -t attr -n mouseEmulation -v yes \
+    '$rc.bak-drishti-touch' > '$rc'"
+  pkill -HUP -x labwc || true
+fi
 
 systemctl daemon-reload
 systemctl enable garuda-web.service cloudflared.service claude-rc.service
 loginctl enable-linger manikanta
-udevadm control --reload
-udevadm trigger --subsystem-match=input --action=change
-udevadm settle
 
-echo "Installed. Touch change applies after logging out of the desktop or a reboot."
-echo "claude-rc starts at next boot (or now: sudo systemctl start claude-rc)."
+echo "Installed. claude-rc starts at next boot (or now: sudo systemctl restart claude-rc)."

@@ -1,6 +1,9 @@
 # Starts "claude remote-control" in a detached tmux session named "claude" at
 # boot, relaunching it if it exits. Attach with: tmux attach -t claude
 # Installed by scripts/pi/setup_boot.sh to /etc/systemd/system/claude-rc.service.
+# Runs in ~/Projects, not ~: Claude never saves trust for the home folder, so
+# started there it waits forever at "Trust /home/manikanta? [y/N]".
+# ~/Projects is already trusted in ~/.claude.json.
 [Unit]
 Description=Claude Code remote-control session (tmux session "claude")
 Wants=network-online.target
@@ -10,12 +13,13 @@ After=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 User=manikanta
-WorkingDirectory=/home/manikanta
+WorkingDirectory=/home/manikanta/Projects
 Environment=HOME=/home/manikanta
 Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=TERM=xterm-256color
 Environment=PATH=/home/manikanta/.local/bin:/usr/local/bin:/usr/bin:/bin
 # A "claude" session started by hand is left alone instead of clashing.
-ExecStart=/bin/sh -c '/usr/bin/tmux has-session -t =claude 2>/dev/null || /usr/bin/tmux new-session -d -s claude -c /home/manikanta "while :; do /home/manikanta/.local/bin/claude remote-control; echo claude exited, restarting in 10 s; sleep 10; done"'
+ExecStart=/bin/sh -c '/usr/bin/tmux has-session -t =claude 2>/dev/null || /usr/bin/tmux new-session -d -s claude -c /home/manikanta/Projects "while :; do /home/manikanta/.local/bin/claude remote-control; echo claude exited, restarting in 10 s; sleep 10; done"'
 ExecStop=/usr/bin/tmux kill-session -t =claude
 Restart=on-failure
 RestartSec=30
