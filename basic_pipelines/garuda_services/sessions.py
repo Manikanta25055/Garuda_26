@@ -71,10 +71,14 @@ def _get_client_ip(request) -> str:
     return client
 
 
-def _check_rate_limit(request, bucket: str = "", limit: Optional[int] = None) -> bool:
-    """Return True if request is within rate limit, False if exceeded."""
+def _check_rate_limit(request, bucket: str = "", limit: Optional[int] = None,
+                      who: Optional[str] = None) -> bool:
+    """Return True if request is within rate limit, False if exceeded.
+
+    The budget is the client address's, or `who`'s (an account) when given.
+    """
     limit = core._RATE_LIMIT if limit is None else limit
-    ip = core._get_client_ip(request)
+    ip = core._get_client_ip(request) if who is None else who
     now = time.time()
     stamps = core.STATE.auth.rate_store[f"{bucket}:{ip}" if bucket else ip]
     stamps[:] = [t for t in stamps if now - t < core._RATE_WINDOW]

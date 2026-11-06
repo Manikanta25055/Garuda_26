@@ -382,7 +382,8 @@ def _system_extra() -> dict:
             "sessions": {"active": len(core.STATE.auth.sessions),
                          "refresh_tokens": len(core.STATE.auth.refresh_tokens) + len(core.STATE.auth.persisted_refresh),
                          "websockets": len(core._ws_clients)},
-            "log_file": getattr(core._core_logging.configure, "path", None)}
+            "log_file": getattr(core._core_logging.configure, "path", None),
+            "busy": core.BUSY.report()}
 
 
 def _probe_camera():

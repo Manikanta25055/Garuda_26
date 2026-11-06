@@ -194,6 +194,7 @@ try:
     from .garuda_core import state as _core_state
     from .garuda_core import logging_setup as _core_logging
     from .garuda_core import watchdog as _watchdog
+    from .garuda_core.busy import BUSY
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
     from .garuda_core import mailer as _mailer
@@ -278,6 +279,7 @@ except ImportError:
     from basic_pipelines.garuda_core import state as _core_state
     from basic_pipelines.garuda_core import logging_setup as _core_logging
     from basic_pipelines.garuda_core import watchdog as _watchdog
+    from basic_pipelines.garuda_core.busy import BUSY
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
     from basic_pipelines.garuda_core import mailer as _mailer
@@ -352,12 +354,16 @@ _log_buffer_lock = threading.Lock()
 OWNER_AWAY_GRACE = 90         # seconds without seeing device before marking away (3 missed polls)
 
 # ── Rate limiter (in-memory, per-IP) ────────────────────
-_RATE_LIMIT = 30     # max requests
+_RATE_LIMIT = 60     # max requests from one address that is not signed in
 _RATE_WINDOW = 60    # per N seconds
-# A signed-in page is not an attacker: one page load fires several API calls
-# and the home pages refresh on their own. Sharing the anonymous budget made
-# "Too many requests" pop up during ordinary use.
-_RATE_LIMIT_SESSION = 300
+# A signed-in page is not an attacker: one page load fires several API calls,
+# a list of saved clips loads each one, and the home pages refresh on their
+# own. The budget is per account (garuda_services/middleware.py), so every
+# phone in the house no longer shares one.
+_RATE_LIMIT_SESSION = 600
+# Sign-in, admin code and password reset, per address. They have the
+# five-failure lockout too; this is only against hammering.
+_RATE_LIMIT_SIGNIN = 20
 
 # ── Brute-force login lockout ────────────────────────────
 _LOGIN_MAX_ATTEMPTS = 5
@@ -569,6 +575,11 @@ async def _lifespan(app):
     STATE.system.ws_broadcaster_task = asyncio.create_task(_ws_broadcaster())
     # While this task runs, systemd knows the event loop is turning.
     heartbeat_task = asyncio.create_task(_watchdog.heartbeat())
+    # What refused a request, stalled the event loop or is using the
+    # processor (garuda_core/busy.py): kept for /api/system/info and the log.
+    busy_task = asyncio.create_task(BUSY.watch_loop())
+    busy_stop = threading.Event()
+    threading.Thread(target=BUSY.watch_threads, args=(busy_stop,), daemon=True, name="busy-sampler").start()
     _load_refresh_tokens()
     # Supervised: a loop that raises is logged, restarted with a pause, and
     # shows on /api/system/info instead of vanishing until the next restart.
@@ -582,6 +593,8 @@ async def _lifespan(app):
     SUPERVISOR.spawn("log-flush", _flush_log_thread, critical=True)
     yield
     heartbeat_task.cancel()
+    busy_task.cancel()
+    busy_stop.set()
     SHORTCUTS.stop()
     HOME.stop()
     DRISHTI_RUNTIME.stop()
@@ -634,6 +647,14 @@ fastapi_app.add_middleware(
 # Health and readiness are polled by monitors; they must not eat the budget.
 _RATE_EXEMPT_PREFIXES = ("/static/", "/ws", "/stream", "/api/eval/",
                          "/api/health", "/api/ready")
+# The page and its icons: opening the sign-in page must not spend the budget
+# the sign-in itself needs. The sign-in routes check _RATE_LIMIT_SIGNIN
+# themselves, so they are not counted twice.
+_RATE_EXEMPT_PATHS = frozenset({
+    "/", "/sw.js", "/manifest.json", "/favicon.ico",
+    "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png",
+    "/api/login", "/api/admin/send-otp", "/api/admin/verify-otp",
+    "/api/forgot/send-otp", "/api/forgot/reset", "/api/master_key/login"})
 
 fastapi_app.middleware("http")(global_rate_limit)
 fastapi_app.middleware("http")(product_scope)

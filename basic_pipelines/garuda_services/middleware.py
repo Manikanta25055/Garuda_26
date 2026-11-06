@@ -25,19 +25,43 @@ def bind(module):
 
 
 async def global_rate_limit(request: Request, call_next):
+    """One budget per signed-in person, and a small one per address for
+    everyone else.
+
+    The signed-in budget was per address: every phone and laptop in the house
+    reaches the Pi through the tunnel from the same public address, so they
+    all drew on one allowance. It is now per account. A session sent as
+    ?token= (the picture, video and sound links of a page served from another
+    site, which cannot send the header) counts as signed in, as the routes
+    behind those links already accept it. The page itself and its icons cost
+    nothing, and the sign-in routes have their own budget (_RATE_LIMIT_SIGNIN)
+    and lockout instead of eating the address's.
+    """
     path = request.url.path
     _eval_tok = os.environ.get("GARUDA_EVAL_TOKEN", "")
     _tok_hdr = request.headers.get("X-Eval-Token", "")
     _eval_bypass = bool(_eval_tok) and hmac.compare_digest(_tok_hdr.encode(), _eval_tok.encode())
-    if not _eval_bypass and not any(path.startswith(p) for p in core._RATE_EXEMPT_PREFIXES):
-        token = request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
-        signed_in = bool(token) and core.get_session(token) is not None
-        allowed = (core._check_rate_limit(request, "session", core._RATE_LIMIT_SESSION) if signed_in
-                   else core._check_rate_limit(request))
-        if not allowed:
+    if (not _eval_bypass and path not in core._RATE_EXEMPT_PATHS
+            and not any(path.startswith(p) for p in core._RATE_EXEMPT_PREFIXES)):
+        token = (request.headers.get("X-Garuda-Token") or request.cookies.get("garuda_session")
+                 or request.query_params.get("token"))
+        session = core.get_session(token) if token else None
+        if session is not None:
+            budget, who, limit = "user", session.get("username", "?"), core._RATE_LIMIT_SESSION
+        else:
+            budget, who, limit = "", None, core._RATE_LIMIT
+        key = f"user:{who}" if who is not None else f"ip:{core._get_client_ip(request)}"
+        if not core._check_rate_limit(request, budget, limit, who=who):
+            core.BUSY.refused(key, path, limit)
             from fastapi.responses import JSONResponse
-            return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429)
-    return await call_next(request)
+            return JSONResponse({"detail": "Too many requests. Try again later."}, status_code=429,
+                                headers={"Retry-After": "10"})
+        core.BUSY.counted(key, path)
+    n = core.BUSY.enter(request.method, path)
+    try:
+        return await call_next(request)
+    finally:
+        core.BUSY.leave(n)
 
 
 async def product_scope(request: Request, call_next):
