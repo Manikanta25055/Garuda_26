@@ -68,8 +68,26 @@
  {
   "kind": "http",
   "method": "POST",
+  "path": "/api/captures/clear",
+  "guard": "require_admin"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
   "path": "/api/captures/email",
   "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/captures/events",
+  "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "POST",
+  "path": "/api/captures/policy",
+  "guard": "require_admin"
  },
  {
   "kind": "http",
@@ -100,6 +118,12 @@
   "method": "POST",
   "path": "/api/captures/{capture_id}/keep",
   "guard": "require_session"
+ },
+ {
+  "kind": "http",
+  "method": "GET",
+  "path": "/api/captures/{capture_id}/thumb",
+  "guard": "none"
  },
  {
   "kind": "http",
