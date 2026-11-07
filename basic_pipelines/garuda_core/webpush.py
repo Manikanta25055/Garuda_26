@@ -65,6 +65,20 @@ def encrypt(payload: bytes, p256dh: str, auth: str, *, salt=None, private_key=No
     return header + cipher
 
 
+def contact(env=None):
+    """The VAPID `sub`: PUSH_CONTACT, else the alert sender's address.
+
+    Apple's push service answers 403 BadJwtToken to a contact on a domain
+    like localhost, so the old default reached no iPhone.
+    """
+    env = os.environ if env is None else env
+    given = env.get("PUSH_CONTACT", "").strip()
+    if given:
+        return given
+    sender = env.get("EMAIL_SENDER", "").strip()
+    return f"mailto:{sender}" if "@" in sender else "mailto:admin@localhost"
+
+
 class Vapid:
     """The server's signing key, made once and kept in a 0600 file."""
 

@@ -115,7 +115,8 @@ def send(core, store, vapid, kind, body, image=None, post=None):
             elif r.status_code < 300:
                 delivered += 1
             else:
-                core.log_system_update(f"[PUSH] {r.status_code} from push service for {entry['user']}")
+                core.log_system_update(f"[PUSH] {r.status_code} from push service for {entry['user']}: "
+                                       f"{getattr(r, 'text', '')[:120]}")
         except Exception as exc:
             core.log_system_update(f"[PUSH] send failed: {type(exc).__name__}")
     return delivered
