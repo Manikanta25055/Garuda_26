@@ -135,7 +135,7 @@ try:
     from .garuda_routes.push import build_push_router, PushStore, watch_alerts
     from .garuda_routes.zones import build_zones_router, ZoneStore, FrameRules
     from .garuda_routes.evidence import build_evidence_router, FrameRing, alert_clip_loop
-    from .garuda_core.webpush import Vapid
+    from .garuda_core.webpush import Vapid, contact as push_contact
     from .garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from .garuda_routes.pages import build_pages_router
     from .garuda_routes.sockets import build_sockets_router
@@ -221,7 +221,7 @@ except ImportError:
     from basic_pipelines.garuda_routes.push import build_push_router, PushStore, watch_alerts
     from basic_pipelines.garuda_routes.zones import build_zones_router, ZoneStore, FrameRules
     from basic_pipelines.garuda_routes.evidence import build_evidence_router, FrameRing, alert_clip_loop
-    from basic_pipelines.garuda_core.webpush import Vapid
+    from basic_pipelines.garuda_core.webpush import Vapid, contact as push_contact
     from basic_pipelines.garuda_routes.evaluation import build_evaluation_router, EvalInjectRequest, EvalTagRequest  # noqa: F401
     from basic_pipelines.garuda_routes.pages import build_pages_router
     from basic_pipelines.garuda_routes.sockets import build_sockets_router
@@ -877,8 +877,7 @@ fastapi_app.include_router(build_arm_router(sys.modules[__name__], ARM))
 
 # Phone alerts over Web Push (garuda_routes/push.py); the signing key is made on first use.
 PUSH = PushStore(os.path.join(DRISHTI_DATA_DIR, "push_subscriptions.json"))
-PUSH_VAPID = Vapid(os.path.join(DRISHTI_DATA_DIR, "push_vapid.pem"),
-                   os.environ.get("PUSH_CONTACT", "mailto:admin@localhost"))
+PUSH_VAPID = Vapid(os.path.join(DRISHTI_DATA_DIR, "push_vapid.pem"), push_contact())
 fastapi_app.include_router(build_push_router(sys.modules[__name__], PUSH, PUSH_VAPID))
 
 # What each label does in each arm state, and where (garuda_routes/zones.py).

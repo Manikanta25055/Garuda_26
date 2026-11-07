@@ -158,3 +158,10 @@ def test_the_watcher_pushes_once_when_an_alert_starts(app_client, monkeypatch):
     with pytest.raises(_Stop):
         push.watch_alerts(gw, gw.PUSH, gw.PUSH_VAPID, sleep=tick)
     assert sent == ['alert', 'presence']
+
+
+def test_the_vapid_contact_is_one_apple_accepts():
+    # Apple answers 403 BadJwtToken to mailto:admin@localhost.
+    assert webpush.contact({"PUSH_CONTACT": "https://home.example"}) == "https://home.example"
+    assert webpush.contact({"EMAIL_SENDER": "me@gmail.com"}) == "mailto:me@gmail.com"
+    assert webpush.contact({}) == "mailto:admin@localhost"
