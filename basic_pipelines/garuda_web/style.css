@@ -5521,6 +5521,46 @@ html.plat-other #top-hud .dg *, html.plat-other #top-hud .dg { animation-iterati
 .ha-cap-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .ha-cap-export { flex-shrink: 0; }
 
+/* Captures: the latest event in full, the rest a history by day */
+.ha-cap-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--t3); margin: 4px 0 8px;
+}
+.ha-cap-count { font-weight: 500; letter-spacing: 0; margin-left: 4px; }
+.ha-cap-latest .ha-cap-items { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.ha-cap-history { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+.ha-cap-hist-hdr { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.ha-cap-hist-hdr .ha-cap-label { margin: 0; }
+.ha-cap-admin { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ha-cap-admin select.input { width: auto; max-width: 220px; }
+.ha-cap-days-list { display: flex; flex-direction: column; }
+.ha-cap-day { font-size: 12px; font-weight: 600; color: var(--t2); margin: 12px 0 4px; }
+.ha-cap-line { border-radius: var(--r-lg); }
+.ha-cap-line.open { background: var(--surface-2); }
+.ha-cap-sum {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 8px; border: 0; border-radius: var(--r-lg); background: none;
+  color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.ha-cap-sum:hover { background: var(--surface-2); }
+.ha-cap-sum:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.ha-cap-thumb {
+  width: 64px; height: 48px; flex: none; border-radius: 8px; object-fit: cover;
+  background: var(--surface-3);
+}
+.ha-cap-thumb-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--t3); }
+.ha-cap-sum-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.ha-cap-sum-title { font-size: 13.5px; color: var(--t1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ha-cap-sum-main .ha-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ha-cap-sum-main .warn { color: var(--warn); }
+.ha-cap-star { color: var(--warn); }
+.ha-cap-chev { color: var(--t3); transition: transform 0.2s ease; }
+.ha-cap-line.open .ha-cap-chev { transform: rotate(90deg); }
+.ha-cap-open { padding: 0 8px 10px; }
+.ha-cap-open-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.ha-cap-more { margin-top: 10px; width: 100%; }
+.ha-cap-policy { margin-top: 10px; }
+
 /* ════════════════════════════════════════════════════════════════
    Home page (#page-dashboard): one DOM, a layout for each screen.
    The order follows what people come to the page for (Ring, Nest,

@@ -10,6 +10,11 @@ seconds of video of the same moment, side by side.
 Anyone signed in may make and look at captures: they show what the live
 camera already shows them. A capture is deleted, or marked keep, by the
 person it was made for (a shortcut's maker) or an admin.
+
+The Captures page reads /events: the newest event shown in full, the rest a
+page at a time as a history, each with a small picture (/{id}/thumb) that is
+only fetched when it scrolls into view. How long captures are kept, and
+clearing the history at once, are an admin's (/policy, /clear).
 """
 import asyncio
 import concurrent.futures
@@ -52,6 +57,14 @@ class EmailRequest(BaseModel):
 
 class KeepRequest(BaseModel):
     keep: bool = True
+
+
+class PolicyRequest(BaseModel):
+    days: int = Field(..., ge=0, le=3650)
+
+
+class ClearRequest(BaseModel):
+    before: Optional[float] = None
 
 
 def build_captures_router(core):
@@ -262,17 +275,68 @@ def build_captures_router(core):
                 except ValueError:
                     raise HTTPException(400, "since is an ISO time or epoch seconds")
         items = store().list(kind=kind, group=group, label=label, since=after, limit=limit)
-        return {"captures": [{**c, "url": f"/api/captures/{c['id']}/file"} for c in items],
+        return {"captures": [_url(c) for c in items],
                 "usage": store().usage(), "sound_in_video": bool(captures.ffmpeg())}
+
+    def _url(c):
+        out = {**c, "url": f"/api/captures/{c['id']}/file"}
+        if c["kind"] != "audio" and c["status"] == "saved":
+            out["thumb"] = f"/api/captures/{c['id']}/thumb"
+        return out
+
+    @router.get("/events")
+    async def list_events(kind: Optional[str] = None, before: Optional[float] = None,
+                          limit: int = 10, session=Depends(core.require_session)):
+        """Captures grouped into events (one shortcut run, or one capture),
+        newest first, `limit` (1-50) at a time. Pass next_before as before
+        for the next page."""
+        if kind and kind not in captures.KINDS:
+            raise HTTPException(400, f"kind is one of {', '.join(captures.KINDS)}")
+        page = store().events(kind=kind, before=before, limit=max(1, min(limit, 50)))
+        for event in page["events"]:
+            event["items"] = [_url(c) for c in event["items"]]
+        return {**page, "usage": store().usage(), "sound_in_video": bool(captures.ffmpeg())}
+
+    @router.post("/policy")
+    async def set_policy(data: PolicyRequest, session=Depends(core.require_admin)):
+        """How many days captures are kept (0: until room is needed). Older
+        ones not marked keep are removed at once."""
+        before = store().usage()["count"]
+        days = await asyncio.to_thread(store().set_days, data.days)
+        removed = before - store().usage()["count"]
+        core.log_system_update(f"Captures kept for {days or 'unlimited'} days"
+                               f" (set by {session['username']}, {removed} removed)")
+        return {"ok": True, "days": days, "removed": removed}
+
+    @router.post("/clear")
+    async def clear_captures(data: ClearRequest, session=Depends(core.require_admin)):
+        """Delete every capture not marked keep (made before `before`, if given)."""
+        removed = await asyncio.to_thread(store().clear, data.before)
+        core.log_system_update(f"Captures cleared ({removed}) by {session['username']}")
+        return {"ok": True, "removed": removed}
+
+    def _signed_in(request, token):
+        session_token = (request.cookies.get("garuda_session")
+                         or request.headers.get("X-Garuda-Token") or token)
+        if not core.get_session(session_token):
+            raise HTTPException(401, "Not authenticated")
+
+    @router.get("/{capture_id}/thumb")
+    async def capture_thumb(capture_id: str, request: Request, token: Optional[str] = None):
+        """A small JPEG of a picture or a video, for the history. ?token= too."""
+        _signed_in(request, token)
+        path = await asyncio.to_thread(store().thumb, capture_id)
+        if not path:
+            raise HTTPException(404, "no picture of this capture")
+        # The id never names another file, so the browser may keep it.
+        return FileResponse(path, media_type="image/jpeg",
+                            headers={"Cache-Control": "private, max-age=604800, immutable"})
 
     @router.get("/{capture_id}/file")
     async def capture_file(capture_id: str, request: Request, token: Optional[str] = None,
                            download: bool = False):
         """The capture itself. Takes ?token= too, for an <img>, <audio> or <video>."""
-        session_token = (request.cookies.get("garuda_session")
-                         or request.headers.get("X-Garuda-Token") or token)
-        if not core.get_session(session_token):
-            raise HTTPException(401, "Not authenticated")
+        _signed_in(request, token)
         entry = store().get(capture_id)
         path = store().path_of(entry) if entry else None
         if entry is None or entry["status"] != "saved" or not path or not os.path.exists(path):

@@ -966,7 +966,7 @@ def test_captures_of_one_alert_show_together_and_play(admin_page, tmp_path, monk
         store.finish(entry["id"], data)
     p = admin_page
     p.go("events")
-    p.page.wait_for_selector(".ha-cap-group img", timeout=5000)
+    p.page.wait_for_selector(".ha-cap-latest img", timeout=5000)
     def until(expr, seconds):           # not wait_for_function: the page's policy forbids eval
         for _ in range(int(seconds * 10)):
             if p.js(expr):
@@ -987,6 +987,48 @@ def test_captures_of_one_alert_show_together_and_play(admin_page, tmp_path, monk
     p.js("document.querySelector('.ha-cap-item [data-click=\"H.keepCapture\"]').click()")
     p.page.wait_for_timeout(600)
     assert store.get(kept["id"])["keep"] is True
+    p.assert_clean()
+
+
+def test_only_the_latest_is_shown_in_full_and_the_rest_is_a_history(admin_page, tmp_path, monkeypatch):
+    """The newest event in full; older ones a line each, by day, a page at a
+    time, opened in place; an admin sets how long they stay."""
+    import cv2
+    import numpy as np
+    from basic_pipelines.garuda_core import captures
+    clock = [time.time() - 3 * 86400]
+    store = captures.CaptureStore(str(tmp_path / "captures"), clock=lambda: clock[0])
+    monkeypatch.setattr(gw, "CAPTURES", store)
+    jpeg = cv2.imencode(".jpg", np.full((120, 160, 3), 120, np.uint8))[1].tobytes()
+    for i in range(16):
+        clock[0] += 3 * 3600
+        entry = store.begin("snapshot", by="admin", label=f"event {i}")
+        store.finish(entry["id"], jpeg)
+    p = admin_page
+    p.go("events")
+    p.page.wait_for_selector(".ha-cap-latest img", timeout=5000)
+    def until(expr, seconds=5):
+        for _ in range(int(seconds * 10)):
+            if p.js(expr):
+                return
+            p.page.wait_for_timeout(100)
+        assert p.js(expr), expr
+    assert p.js("document.querySelectorAll('.ha-cap-latest').length") == 1
+    assert "event 15" in p.js("document.querySelector('.ha-cap-latest').textContent")
+    # A page of history, not every capture: twelve lines, grouped under days.
+    assert p.js("document.querySelectorAll('.ha-cap-line').length") == 12
+    assert p.js("document.querySelectorAll('.ha-cap-day').length") >= 2
+    assert p.js("document.querySelectorAll('.ha-cap-line .ha-cap-img').length") == 0
+    until("document.querySelector('.ha-cap-thumb').naturalWidth > 0")
+    assert "3 more" in p.js("document.getElementById('ha-cap-more').textContent")
+    p.js("document.getElementById('ha-cap-more').click()")
+    until("document.querySelectorAll('.ha-cap-line').length === 15")
+    assert p.js("document.getElementById('ha-cap-more').classList.contains('hidden')")
+    p.js("document.querySelector('.ha-cap-sum').click()")
+    until("document.querySelector('.ha-cap-line.open .ha-cap-img') !== null")
+    p.page.select_option("#ha-cap-days", "7")
+    until("document.getElementById('ha-cap-policy').textContent.includes('7 days')")
+    assert store.days == 7
     p.assert_clean()
 
 

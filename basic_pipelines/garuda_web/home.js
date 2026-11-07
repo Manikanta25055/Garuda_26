@@ -611,40 +611,60 @@ const H = (() => {
   const deleteShortcut = async (id, name) => (await sureDelete('shortcut', name)) && shortcutCall('DELETE', encodeURIComponent(id), 'Shortcut deleted');
 
   // Captures: pictures, sound and video kept on the Pi, by a shortcut step,
-  // Narada or the buttons here. One run of a shortcut is one card.
-  let _capKind = '', _capTimer = null;
+  // Narada or the buttons here. One run of a shortcut is one event.
+  //
+  // The newest event is shown in full, the way a camera app shows its last
+  // shot; everything older is a history grouped by day, one line per event
+  // with a small picture, opened in place when it is tapped. The history
+  // comes a page at a time and its pictures load as they scroll into view,
+  // so a long history costs the Pi nothing until someone looks at it. How long
+  // captures are kept is set here by an admin; older ones clear themselves.
+  const CAP_PAGE = 12;
+  let _capKind = '', _capTimer = null, _capLimit = CAP_PAGE;
+  const _capOpen = new Set();
   const KIND_WORD = { snapshot: 'Picture', audio: 'Sound', video: 'Video' };
+  const KIND_ICON = { snapshot: 'gi-snapshot', audio: 'gi-sound', video: 'gi-record' };
+  const capSize = b => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB`
+    : b < 1073741824 ? `${(b / 1048576).toFixed(1)} MB` : `${(b / 1073741824).toFixed(1)} GB`;
+  const dayLabel = ts => {
+    const d = new Date(ts * 1000), today = new Date();
+    const y = new Date(today); y.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === y.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short',
+      ...(d.getFullYear() !== today.getFullYear() ? { year: 'numeric' } : {}) });
+  };
+  const keepWord = d => !d ? 'until room is needed' : d === 1 ? 'for 1 day' : d === 365 ? 'for a year' : `for ${d} days`;
+
   async function loadCaptures() {
-    const box = $('ha-captures');
-    if (!box) return;
+    const box = $('ha-captures'), hist = $('ha-cap-history');
+    if (!box || !hist) return;
     clearTimeout(_capTimer);
     let data;
-    const q = _capKind ? `?kind=${_capKind}&limit=60` : '?limit=60';
-    try { data = await api('GET', '/api/captures' + q); } catch (e) { box._capSig = null; box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
+    // One more than shown on top: the newest event plus a page of history.
+    const q = `?limit=${_capLimit + 1}` + (_capKind ? `&kind=${_capKind}` : '');
+    try { data = await api('GET', '/api/captures/events' + q); }
+    catch (e) { box._capSig = null; box.innerHTML = `<div class="ha-empty">${esc(errText(e))}</div>`; return; }
     const me = (G.getSession() || {}).username;
     // A recording is listed at once; look again until it is saved.
-    if (data.captures.some(c => c.status === 'recording')) _capTimer = setTimeout(loadCaptures, 2000);
+    if (data.events.some(e => e.recording)) _capTimer = setTimeout(loadCaptures, 2000);
     // Drawn again only when something changed: every redraw made new picture
     // and video elements, and each asked the Pi for its file again.
-    const sig = JSON.stringify([data.captures, data.usage, me, isAdmin()]);
+    const sig = JSON.stringify([data.events, data.usage, data.more, me, isAdmin(), [..._capOpen]]);
     if (box._capSig === sig && box.isConnected) return;
     box._capSig = sig;
     const base = G._base ? G._base() : '', auth = G._authQuery ? G._authQuery() : '';
-    const src = c => `${base}${c.url}${auth ? '?' + auth : ''}`;
-    const groups = [], byGroup = {};
-    data.captures.forEach(c => {
-      const key = c.group || c.id;
-      if (!byGroup[key]) { byGroup[key] = []; groups.push(byGroup[key]); }
-      byGroup[key].push(c);
-    });
+    const withAuth = url => `${base}${url}${auth ? '?' + auth : ''}`;
+    const src = c => withAuth(c.url);
     const media = c => {
       if (c.status === 'recording') return `<div class="ha-sub">Recording ${KIND_WORD[c.kind].toLowerCase()}${c.seconds ? ` · ${c.seconds} s` : ''}…</div>`;
       if (c.status !== 'saved') return `<div class="ha-sub warn">${esc(KIND_WORD[c.kind])} failed: ${esc(c.error)}</div>`;
       if (c.kind === 'snapshot') return `<a href="${esc(src(c))}" target="_blank" rel="noopener"><img class="ha-cap-img" loading="lazy" alt="Saved picture" src="${esc(src(c))}"/></a>`;
       if (c.kind === 'audio') return `<audio class="ha-cap-audio" controls preload="none" src="${esc(src(c))}"></audio>`;
-      // preload="none": a list of sixty clips was sixty requests for their
-      // first frames the moment it opened, most of a minute's allowance.
-      return `<video class="ha-cap-video" controls preload="none" playsinline src="${esc(src(c))}"></video>`;
+      // preload="none": a clip is fetched only when it is played. The small
+      // picture stands in for its first frame without asking for the clip.
+      const poster = c.thumb ? ` poster="${esc(withAuth(c.thumb))}"` : '';
+      return `<video class="ha-cap-video" controls preload="none" playsinline${poster} src="${esc(src(c))}"></video>`;
     };
     const item = c => {
       const mine = isAdmin() || c.by === me;
@@ -652,28 +672,112 @@ const H = (() => {
         ${media(c)}
         <div class="ha-cap-bar"><span class="ha-sub">${esc(KIND_WORD[c.kind])}${c.seconds ? ` · ${c.seconds} s` : ''}</span>
           ${c.status === 'saved' ? `<a class="btn btn-ghost btn-sm" href="${esc(src(c) + (auth ? '&' : '?') + 'download=true')}">Save</a>` : ''}
-          ${mine && c.status !== 'recording' ? `<button class="btn btn-ghost btn-sm" title="${c.keep ? 'Kept: never cleared to make room' : 'Keep: never clear it to make room'}" ${handler('click', 'H.keepCapture', c.id, !c.keep)}>${c.keep ? '★ Kept' : '☆ Keep'}</button>
+          ${mine && c.status !== 'recording' ? `<button class="btn btn-ghost btn-sm" title="${c.keep ? 'Kept: never cleared' : 'Keep: never clear it on its own'}" ${handler('click', 'H.keepCapture', c.id, !c.keep)}>${c.keep ? '★ Kept' : '☆ Keep'}</button>
           <button class="ha-x" aria-label="Delete capture" ${handler('click', 'H.deleteCapture', c.id)}>&times;</button>` : ''}
         </div></div>`;
     };
-    box.innerHTML = groups.length ? groups.map(g => {
-      const first = g[g.length - 1], label = g.find(c => c.label)?.label, alert = g.find(c => c.alert)?.alert;
+    // The event's items in full, with its export: the latest card, and a
+    // history line once it is opened.
+    const detail = ev => {
       // One ZIP of the event with a manifest of hashes, to hand to the police or an insurer.
-      const which = first.group ? `group=${encodeURIComponent(first.group)}` : `id=${encodeURIComponent(first.id)}`;
+      const which = ev.group ? `group=${encodeURIComponent(ev.group)}` : `id=${encodeURIComponent(ev.items[0].id)}`;
       const exportUrl = `${base}/api/evidence/export?${which}${auth ? '&' + auth : ''}`;
-      const exportLink = g.some(c => c.status === 'saved')
+      const exportLink = ev.items.some(c => c.status === 'saved')
         ? `<a class="btn btn-ghost btn-sm ha-cap-export" href="${esc(exportUrl)}" download title="One ZIP with a manifest of SHA-256 hashes">Export</a>` : '';
-      return `<div class="ha-row ha-cap-group"><div class="ha-row-main">
-        <div class="ha-cap-head"><div><b>${esc(label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(first.at))} · ${esc(first.by)}</span></div>${exportLink}</div>
-        ${alert ? `<div class="ha-sub warn">During an alert: ${esc(alert)}</div>` : ''}
-        <div class="ha-cap-items">${g.slice().reverse().map(item).join('')}</div>
+      return { exportLink, items: `<div class="ha-cap-items">${ev.items.map(item).join('')}</div>` };
+    };
+    const kindsText = ev => ev.items.map(c => KIND_WORD[c.kind] + (c.seconds ? ` ${c.seconds} s` : '')).join(' · ');
+
+    const [latest, ...older] = data.events;
+    if (!latest) {
+      box.innerHTML = `<div class="ha-empty">${_capKind ? 'Nothing of this kind saved.' : 'Nothing saved yet. Ask Narada: “when an alert starts, save a picture and the next 10 seconds of sound”.'}</div>`;
+    } else {
+      const d = detail(latest);
+      box.innerHTML = `<div class="ha-row ha-cap-group ha-cap-latest"><div class="ha-row-main">
+        <div class="ha-cap-head"><div><b>${esc(latest.label || 'Saved by hand')}</b> <span class="ha-sub">${esc(whenLabel(latest.at))} · ${esc(latest.by)}</span></div>${d.exportLink}</div>
+        ${latest.alert ? `<div class="ha-sub warn">During an alert: ${esc(latest.alert)}</div>` : ''}
+        ${d.items}
       </div></div>`;
-    }).join('') : '<div class="ha-empty">Nothing saved yet. Ask Narada: “when an alert starts, save a picture and the next 10 seconds of sound”.</div>';
-    const u = data.usage || {}, meta = $('ha-cap-usage');
-    const size = b => b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1048576).toFixed(1)} MB`;
-    if (meta) meta.textContent = u.count ? `${u.count} saved · ${size(u.bytes)} of ${size(u.max_bytes)}` : '';
+    }
+    $('ha-cap-latest-label')?.classList.toggle('hidden', !latest);
+
+    // History: the rest, by day.
+    const wrap = $('ha-cap-history-wrap');
+    wrap?.classList.toggle('hidden', !older.length && !(isAdmin() && latest));
+    const shown = older.slice(0, _capLimit);
+    let lastDay = '';
+    hist.innerHTML = shown.map(ev => {
+      const day = dayLabel(ev.last);
+      const head = day !== lastDay ? `<div class="ha-cap-day">${esc(day)}</div>` : '';
+      lastDay = day;
+      const pic = ev.items.find(c => c.thumb);
+      const failed = ev.items.every(c => c.status === 'failed');
+      const thumb = pic
+        ? `<img class="ha-cap-thumb" loading="lazy" decoding="async" alt="" src="${esc(withAuth(pic.thumb))}"/>`
+        : `<span class="ha-cap-thumb ha-cap-thumb-icon"><span class="gi ${KIND_ICON[ev.items[0].kind]}" aria-hidden="true"></span></span>`;
+      const open = _capOpen.has(ev.key);
+      const d = open ? detail(ev) : null;
+      return `${head}<div class="ha-cap-line${open ? ' open' : ''}">
+        <button class="ha-cap-sum" aria-expanded="${open}" ${handler('click', 'H.toggleCaptureEvent', ev.key)}>
+          ${thumb}
+          <span class="ha-cap-sum-main">
+            <span class="ha-cap-sum-title">${esc(ev.label || 'Saved by hand')}${ev.keep ? ' <span class="ha-cap-star" title="Kept">★</span>' : ''}</span>
+            <span class="ha-sub${failed ? ' warn' : ''}">${esc(clock(ev.at))} · ${esc(failed ? 'Failed' : kindsText(ev))}${ev.alert ? ` · <span class="warn">${esc(ev.alert)}</span>` : ''}</span>
+          </span>
+          <span class="gi gi-forward ha-cap-chev" aria-hidden="true"></span>
+        </button>
+        ${open ? `<div class="ha-cap-open">${d.exportLink ? `<div class="ha-cap-open-tools"><span class="ha-sub">${esc(whenLabel(ev.at))} · ${esc(ev.by)}</span>${d.exportLink}</div>` : ''}${d.items}</div>` : ''}
+      </div>`;
+    }).join('') || '<div class="ha-empty">No older captures.</div>';
+    const moreBtn = $('ha-cap-more');
+    if (moreBtn) {
+      const left = Math.max(0, data.total - 1 - shown.length);
+      moreBtn.classList.toggle('hidden', !left);
+      moreBtn.textContent = left ? `Show older (${left} more)` : '';
+    }
+
+    const u = data.usage || {}, meta = $('ha-cap-usage'), count = $('ha-cap-count');
+    if (meta) meta.textContent = u.count ? `${capSize(u.bytes)} of ${capSize(u.max_bytes)}` : '';
+    if (count) count.textContent = data.total > 1 ? `${data.total - 1}` : '';
+    const days = $('ha-cap-days');
+    if (days && document.activeElement !== days) {
+      if (![...days.options].some(o => +o.value === u.days)) days.add(new Option(`Keep ${keepWord(u.days)}`, u.days));
+      days.value = String(u.days ?? 30);
+    }
+    const policy = $('ha-cap-policy');
+    if (policy) policy.textContent = `Kept ${keepWord(u.days)}, then cleared on their own`
+      + ` (and sooner if they pass ${capSize(u.max_bytes)}). Starred ones stay until deleted`
+      + (u.kept ? ` · ${u.kept} starred.` : '.');
   }
-  function filterCaptures(kind) { _capKind = kind || ''; loadCaptures(); }
+  function toggleCaptureEvent(key) {
+    if (_capOpen.has(key)) _capOpen.delete(key); else _capOpen.add(key);
+    loadCaptures();
+  }
+  function moreCaptures() { _capLimit += CAP_PAGE; loadCaptures(); }
+  async function setCaptureDays(value) {
+    const days = parseInt(value, 10);
+    if (!(days >= 0)) return;
+    try {
+      const r = await api('POST', '/api/captures/policy', { days });
+      G.showToast(`Captures are kept ${keepWord(r.days)}` + (r.removed ? ` · ${r.removed} cleared` : ''), 'success');
+    } catch (e) { G.showToast(errText(e), 'error'); }
+    loadCaptures();
+  }
+  async function clearCaptureHistory() {
+    const ok = await G.confirmAction({ title: 'Clear the capture history?',
+      body: 'Every capture except the latest and the starred ones is removed from the Pi. It cannot be brought back.',
+      confirmLabel: 'Clear' });
+    if (!ok) return;
+    let latest;
+    try { latest = (await api('GET', '/api/captures/events?limit=1')).events[0]; } catch (e) { return G.showToast(errText(e), 'error'); }
+    try {
+      const r = await api('POST', '/api/captures/clear', latest ? { before: Math.min(...latest.items.map(c => c.at)) } : {});
+      G.showToast(r.removed ? `Cleared ${r.removed} capture${r.removed === 1 ? '' : 's'}` : 'Nothing to clear', 'success');
+    } catch (e) { G.showToast(errText(e), 'error'); }
+    _capOpen.clear(); _capLimit = CAP_PAGE;
+    loadCaptures();
+  }
+  function filterCaptures(kind) { _capKind = kind || ''; _capLimit = CAP_PAGE; _capOpen.clear(); loadCaptures(); }
   async function captureNow(kind) {
     const body = kind === 'snapshot' ? {} : { seconds: 10, wait: false };
     try {
@@ -854,6 +958,7 @@ const H = (() => {
     loadDigest, loadAI, saveAI, testAI,
     runShortcut, cancelShortcut, toggleShortcut, deleteShortcut,
     loadCaptures, filterCaptures, captureNow, keepCapture, deleteCapture,
+    toggleCaptureEvent, moreCaptures, setCaptureDays, clearCaptureHistory,
     // After a card is confirmed in the conversation, whatever page is open reloads.
     refresh: () => onNav(_page),
   };

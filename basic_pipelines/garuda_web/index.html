@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" sizes="64x64" href="/static/favicon.png?v=4"/>
   <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=4"/>
   <title>Garuda</title>
-  <link rel="stylesheet" href="/static/style.css?v=99"/>
+  <link rel="stylesheet" href="/static/style.css?v=100"/>
 </head>
 <body>
 <div id="app">
@@ -441,7 +441,26 @@
               <option value="audio">Sound</option><option value="video">Video</option>
             </select>
           </div>
+          <div id="ha-cap-latest-label" class="ha-cap-label hidden">Latest</div>
           <div id="ha-captures" class="ha-list"></div>
+          <!-- Everything before the latest: by day, a page at a time (home.js) -->
+          <div id="ha-cap-history-wrap" class="ha-cap-history hidden">
+            <div class="ha-cap-hist-hdr">
+              <div class="ha-cap-label">History <span id="ha-cap-count" class="ha-cap-count"></span></div>
+              <div class="ha-cap-admin ha-admin-only">
+                <select id="ha-cap-days" class="input input-sm" aria-label="Keep captures for" data-change="H.setCaptureDays" data-args='[{"$": "value"}]'>
+                  <option value="1">Keep 1 day</option><option value="7">Keep 7 days</option>
+                  <option value="14">Keep 14 days</option><option value="30">Keep 30 days</option>
+                  <option value="90">Keep 90 days</option><option value="365">Keep a year</option>
+                  <option value="0">Keep until room is needed</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" data-click="H.clearCaptureHistory">Clear history</button>
+              </div>
+            </div>
+            <div id="ha-cap-history" class="ha-cap-days-list"></div>
+            <button id="ha-cap-more" class="btn btn-ghost btn-sm ha-cap-more hidden" data-click="H.moreCaptures"></button>
+            <div id="ha-cap-policy" class="ha-sub ha-cap-policy"></div>
+          </div>
           </div>
         </div>
       </div>
@@ -1335,18 +1354,22 @@
           <li><strong>The API</strong>, for your own scripts (below).</li>
         </ul>
         <h4>Where to find them</h4>
-        <p>Open <strong>Events</strong> and look at <strong>Captures</strong>. Each run is one card with players for its picture, sound and video. From there you can keep a capture, delete it or e-mail it to the alert recipients.</p>
+        <p>Open <strong>Events</strong> and look at <strong>Captures</strong>. The <strong>latest</strong> event is shown in full, with players for its picture, sound and video. Everything before it is in <strong>History</strong>, grouped by day: one line per event with a small picture, opened in place when you tap it, and older days a page at a time. From either you can keep a capture, delete it, export it or e-mail it to the alert recipients.</p>
         <h4>Storage and disk guard</h4>
-        <p>Captures live on the Pi. When there are more than 500 of them or they pass 2 GB, the oldest go first. A capture marked keep is never removed this way.</p>
+        <p>Captures live on the Pi and are kept for 30 days, then cleared on their own. An admin can change that in History (1 day to a year, or until room is needed) and clear the whole history at once. When there are more than 500 of them or they pass 2 GB, the oldest go first sooner. A capture marked keep (★) is never removed this way.</p>
         <div class="docs-note"><span class="gi gi-info" aria-hidden="true"></span><span>Garuda always keeps 500 MB of the disk free. When space runs short it removes the oldest unkept captures, and if that is not enough it refuses the new capture instead of filling the disk. On start it also clears files the capture list does not know about.</span></div>
-        <p class="docs-p">Limits can be changed in <code>.env</code> with <code>GARUDA_CAPTURES_MAX</code>, <code>GARUDA_CAPTURES_MAX_MB</code> and <code>GARUDA_CAPTURES_MIN_FREE_MB</code>.</p>
+        <p class="docs-p">Limits can be changed in <code>.env</code> with <code>GARUDA_CAPTURES_MAX</code>, <code>GARUDA_CAPTURES_MAX_MB</code>, <code>GARUDA_CAPTURES_MIN_FREE_MB</code> and <code>GARUDA_CAPTURES_DAYS</code> (the starting retention; the page's choice wins once an admin sets one).</p>
         <h4>API</h4>
         <div class="docs-rows">
           <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/snapshot</span><span class="docs-def">Save a picture now.</span></div>
           <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/audio</span><span class="docs-def">Record sound for 1 to 30 s. Pass <code>wait=false</code> to record in the background.</span></div>
           <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/video</span><span class="docs-def">Record video for 1 to 60 s, also with <code>wait=false</code>.</span></div>
           <div class="docs-row"><span class="docs-term mono-term">GET /api/captures</span><span class="docs-def">List captures with a link to each file.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">GET /api/captures/events</span><span class="docs-def">Captures grouped into events, newest first, a page at a time (<code>limit</code>, <code>before</code>).</span></div>
           <div class="docs-row"><span class="docs-term mono-term">GET /api/captures/{id}/file</span><span class="docs-def">Download one capture.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">GET /api/captures/{id}/thumb</span><span class="docs-def">A small picture of a picture or video.</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/policy</span><span class="docs-def">Admin: how many days captures are kept (0 for until room is needed).</span></div>
+          <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/clear</span><span class="docs-def">Admin: delete every capture not marked keep, optionally only those before a time.</span></div>
           <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/{id}/keep</span><span class="docs-def">Protect a capture from clean-up.</span></div>
           <div class="docs-row"><span class="docs-term mono-term">DELETE /api/captures/{id}</span><span class="docs-def">Delete a capture.</span></div>
           <div class="docs-row"><span class="docs-term mono-term">POST /api/captures/email</span><span class="docs-def">E-mail captures to the alert recipients.</span></div>
@@ -1533,7 +1556,7 @@
 <script src="/static/narada.js?v=32"></script>
 <script src="/static/island.js?v=4"></script>
 <script src="/static/app.js?v=90"></script>
-<script src="/static/home.js?v=17"></script>
+<script src="/static/home.js?v=18"></script>
 <script src="/static/zones.js?v=1"></script>
 </body>
 </html>

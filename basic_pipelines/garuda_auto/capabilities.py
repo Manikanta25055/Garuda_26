@@ -546,6 +546,8 @@ NEVER = {
     "POST /api/detection/rules": "what alarms is the owner's choice, made on Settings",
     "POST /api/detection/zones": "zones are drawn on the camera picture by hand",
     "GET /api/evidence/export": "a ZIP file for a person to hand over; list_captures covers the content",
+    "POST /api/captures/policy": "how long captures are kept is the owner's setting, on Captures",
+    "POST /api/captures/clear": "clearing every capture before a date is the owner's act, on Captures",
 }
 
 # Not actions at all: pages, liveness, streams, and the conversation itself.
@@ -567,6 +569,8 @@ PLUMBING = frozenset({
     "POST /api/narada/voice/token",
     "GET /api/narada/voice/turns",     # original display results for the bound conversation
     "GET /api/captures/{capture_id}/file",   # the saved file itself, for a player on the page
+    "GET /api/captures/events",              # the Captures history, by day; list_captures covers it
+    "GET /api/captures/{capture_id}/thumb",  # a small picture for that history
     "POST /api/narada/voice/error",     # the browser reporting a voice error to the log
     # A phone turning its own alerts on and off (garuda_routes/push.py).
     "GET /api/push/key", "POST /api/push/subscribe", "POST /api/push/unsubscribe",

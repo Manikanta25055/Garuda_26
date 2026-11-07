@@ -12,7 +12,9 @@ picture and the sound of one alert are shown, and emailed, together.
 
     index.json      [{id, kind, status, file, mime, bytes, at, seconds, by,
                       label, group, alert, keep, error}]
+    policy.json     {days}
     <id>.jpg|.wav|.webm
+    <id>.thumb.jpg  made when it is first asked for
 
 With ffmpeg a video is encoded while it is recorded (stream_video) and is
 saved the moment it ends; without it the frames are kept and encoded after.
@@ -21,7 +23,14 @@ A recording is listed at once with status "recording" and becomes "saved" or
 "failed". One still recording when the service stopped is marked failed on
 start. The oldest captures go first once there are more than MAX_ITEMS of them
 or they take more than MAX_BYTES; a capture marked keep is never removed that
-way.
+way, and so do captures older than the retention period (`days`, 30 by
+default, 0 for no limit). An admin changes it on the Captures page; it is kept
+in policy.json beside the index.
+
+The page shows captures as events: one shortcut run's group, or a capture on
+its own, newest first (events()), so the newest event is shown in full and the
+rest as a history, a page at a time. A small JPEG of a picture or a video
+(<id>.thumb.jpg) is made the first time the history asks for it.
 
 The disk is shared with everything else on the Pi, so a capture also keeps
 MIN_FREE_BYTES of it free: the oldest go first when it runs short, and a new
@@ -51,6 +60,11 @@ EXT = {"snapshot": (".jpg", "image/jpeg"), "audio": (".wav", "audio/wav"),
 MAX_ITEMS = int(os.environ.get("GARUDA_CAPTURES_MAX", "500"))
 MAX_BYTES = int(os.environ.get("GARUDA_CAPTURES_MAX_MB", "2048")) * 1024 * 1024
 MIN_FREE_BYTES = int(os.environ.get("GARUDA_CAPTURES_MIN_FREE_MB", "500")) * 1024 * 1024
+RETAIN_DAYS = int(os.environ.get("GARUDA_CAPTURES_DAYS", "30"))      # 0: no age limit
+MAX_RETAIN_DAYS = 3650
+EXPIRE_EVERY_S = 300            # how often reading the list also clears what has aged out
+THUMB_WIDTH = 320
+THUMB_SUFFIX = ".thumb.jpg"
 MAX_AUDIO_S = 30
 MAX_VIDEO_S = 60
 VIDEO_FPS_CAP = 15.0
@@ -72,9 +86,10 @@ def _free_bytes(directory):
 
 class CaptureStore:
     def __init__(self, directory, clock=time.time, max_items=MAX_ITEMS, max_bytes=MAX_BYTES,
-                 min_free=MIN_FREE_BYTES, free_fn=_free_bytes):
+                 min_free=MIN_FREE_BYTES, free_fn=_free_bytes, days=None):
         self.dir = str(directory)
         self._index_path = os.path.join(self.dir, "index.json")
+        self._policy_path = os.path.join(self.dir, "policy.json")
         self._clock = clock
         self._lock = threading.RLock()
         self._done = threading.Condition(self._lock)
@@ -82,6 +97,9 @@ class CaptureStore:
         self.max_bytes = max_bytes
         self.min_free = min_free
         self._free_fn = free_fn
+        self.days = _load_days(self._policy_path, RETAIN_DAYS if days is None else days)
+        self._expired_at = 0.0
+        self._no_thumb = set()          # ids a small picture could not be made of
         self.items, readable = _load_index(self._index_path)
         _clear_leftovers(self.dir, self.items if readable else None)
         stale = [c for c in self.items if c.get("status") == "recording"]
@@ -89,6 +107,8 @@ class CaptureStore:
             entry.update(status="failed", error="the service stopped while it was recording")
         if stale:
             self._save()
+        with self._lock:
+            self._prune()               # what aged out while the service was off
 
     # ── keeping the index ────────────────────────────────────────────────────
     def _save(self):
@@ -151,7 +171,7 @@ class CaptureStore:
             entry = self._find(capture_id)
             if entry is None:
                 return None
-            _unlink(self.path_of(entry))
+            self._remove_files(entry)
             entry.update(status="failed", error=str(why)[:200], bytes=0)
             self._save()
             self._done.notify_all()
@@ -166,18 +186,31 @@ class CaptureStore:
     def _find(self, capture_id):
         return next((c for c in self.items if c["id"] == capture_id), None)
 
+    def thumb_path(self, entry):
+        return os.path.join(self.dir, entry["id"] + THUMB_SUFFIX)
+
+    def _remove_files(self, entry):
+        _unlink(self.path_of(entry))
+        _unlink(self.thumb_path(entry))
+
     def _prune(self):
         # Called with the lock held. Oldest first; kept and recording ones stay.
+        # Past the retention period one goes whatever the room; otherwise only
+        # while there are too many, they take too much, or the disk runs short.
         def removable():
             return [c for c in reversed(self.items)
                     if not c.get("keep") and c.get("status") != "recording"]
         total = sum(c.get("bytes") or 0 for c in self.items)
         short = self.min_free - self._free()
+        cutoff = self._clock() - self.days * 86400 if self.days else None
         removed = False
+        self._expired_at = self._clock()
         for entry in removable():
-            if len(self.items) <= self.max_items and total <= self.max_bytes and short <= 0:
+            aged = cutoff is not None and (entry.get("at") or 0) < cutoff
+            if (not aged and len(self.items) <= self.max_items and total <= self.max_bytes
+                    and short <= 0):
                 break
-            _unlink(self.path_of(entry))
+            self._remove_files(entry)
             total -= entry.get("bytes") or 0
             short -= entry.get("bytes") or 0
             self.items.remove(entry)
@@ -199,11 +232,62 @@ class CaptureStore:
                    and (not label or label.lower() in (c.get("label") or "").lower())]
         return out[:max(1, min(int(limit or 50), 500))]
 
+    def events(self, *, kind=None, before=None, limit=10):
+        """Captures as events, newest first: the captures of one shortcut run
+        (its group) together, any other capture on its own. Each event is
+        {key, at, last, by, label, alert, keep, kinds, items}; `at` is when it
+        started, `last` when its newest capture was made, the order and the
+        cursor: pass the last event's `last` as `before` for the page after.
+
+        Returns {events, total, more, next_before}."""
+        limit = max(1, min(int(limit or 10), 100))
+        with self._lock:
+            if self._clock() - self._expired_at > EXPIRE_EVERY_S:
+                self._prune()
+            items = [dict(c) for c in self.items]
+        groups, order = {}, []
+        for c in items:                             # newest first already
+            key = c.get("group") or c["id"]
+            if key not in groups:
+                groups[key] = []
+                order.append(key)
+            groups[key].append(c)
+        events = []
+        for key in order:
+            whole = sorted(groups[key], key=lambda c: c.get("at") or 0)
+            # A filter picks the events with that kind and shows only those
+            # captures; the event's label and alert are still its own.
+            its = [c for c in whole if not kind or c["kind"] == kind]
+            if not its:
+                continue
+            kinds = {}
+            for c in its:
+                kinds[c["kind"]] = kinds.get(c["kind"], 0) + 1
+            events.append({
+                "key": key, "group": its[0].get("group") or "",
+                "at": its[0].get("at") or 0, "last": its[-1].get("at") or 0,
+                "by": its[0].get("by") or "",
+                "label": next((c["label"] for c in whole if c.get("label")), ""),
+                "alert": next((c["alert"] for c in whole if c.get("alert")), ""),
+                "keep": any(c.get("keep") for c in its),
+                "recording": any(c.get("status") == "recording" for c in its),
+                "kinds": kinds, "items": its})
+        events.sort(key=lambda e: e["last"], reverse=True)
+        total = len(events)
+        if before is not None:
+            events = [e for e in events if e["last"] < before]
+        page = events[:limit]
+        more = len(events) > limit
+        return {"events": page, "total": total, "more": more,
+                "next_before": page[-1]["last"] if more and page else None}
+
     def usage(self):
         with self._lock:
             return {"count": len(self.items),
                     "bytes": sum(c.get("bytes") or 0 for c in self.items),
-                    "max_items": self.max_items, "max_bytes": self.max_bytes}
+                    "kept": sum(1 for c in self.items if c.get("keep")),
+                    "max_items": self.max_items, "max_bytes": self.max_bytes,
+                    "days": self.days}
 
     def wait_for(self, ids, timeout=FINISH_WAIT_S):
         """Block until none of `ids` is still recording, or the time is up.
@@ -235,8 +319,59 @@ class CaptureStore:
             self.items.remove(entry)
             self._save()
             self._done.notify_all()
-        _unlink(self.path_of(entry))
+        self._remove_files(entry)
         return True
+
+    def clear(self, before=None):
+        """Delete every capture not marked keep and not recording, made before
+        `before` (epoch seconds; all of them without it). Returns how many."""
+        with self._lock:
+            gone = [c for c in self.items
+                    if not c.get("keep") and c.get("status") != "recording"
+                    and (before is None or (c.get("at") or 0) < before)]
+            if not gone:
+                return 0
+            ids = {c["id"] for c in gone}
+            self.items = [c for c in self.items if c["id"] not in ids]
+            self._save()
+            self._done.notify_all()
+        for entry in gone:
+            self._remove_files(entry)
+        return len(gone)
+
+    def set_days(self, days):
+        """Keep captures for `days` (0: no age limit); older ones go now."""
+        days = int(days)
+        if not 0 <= days <= MAX_RETAIN_DAYS:
+            raise ValueError(f"days is 0 to {MAX_RETAIN_DAYS}")
+        with self._lock:
+            self.days = days
+            os.makedirs(self.dir, exist_ok=True)
+            _atomic_json_write(self._policy_path, {"days": days})
+            self._prune()
+        return days
+
+    # ── small pictures for the history ───────────────────────────────────────
+    def thumb(self, capture_id):
+        """The path of a small JPEG of a saved picture or video, made the first
+        time it is asked for; None for sound, or when one cannot be made."""
+        entry = self.get(capture_id)
+        if (entry is None or entry["status"] != "saved" or entry["kind"] == "audio"
+                or capture_id in self._no_thumb):
+            return None
+        path = self.thumb_path(entry)
+        if os.path.exists(path):
+            return path
+        data = make_thumb(self.path_of(entry), entry["kind"])
+        if not data:
+            self._no_thumb.add(capture_id)
+            return None
+        _write_atomic(path, data)
+        with self._lock:
+            if self._find(capture_id) is None:      # deleted meanwhile
+                _unlink(path)
+                return None
+        return path
 
 
 def _load_index(path):
@@ -257,6 +392,53 @@ def _load_index(path):
     if not isinstance(data, list):
         return [], False
     return [c for c in data if isinstance(c, dict) and c.get("id")], True
+
+
+def _load_days(path, default):
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            days = int(json.load(fh).get("days"))
+    except (OSError, ValueError, TypeError, AttributeError):
+        return max(0, int(default))
+    return days if 0 <= days <= MAX_RETAIN_DAYS else max(0, int(default))
+
+
+def make_thumb(path, kind, width=THUMB_WIDTH):
+    """A small JPEG of a picture, or of a video's first frame; None when it
+    cannot be read. Decoding a video uses OpenCV, else the ffmpeg command."""
+    import cv2
+    import numpy as np
+    frame = None
+    try:
+        if kind == "snapshot":
+            frame = cv2.imread(path, cv2.IMREAD_COLOR)
+        elif kind == "video":
+            cap = cv2.VideoCapture(path)
+            try:
+                ok, frame = cap.read()
+            finally:
+                cap.release()
+            if not ok:
+                frame = None
+            tool = ffmpeg()
+            if frame is None and tool:
+                out = subprocess.run(
+                    [tool, "-nostdin", "-loglevel", "error", "-i", path, "-frames:v", "1",
+                     "-f", "image2pipe", "-c:v", "mjpeg", "-"],
+                    capture_output=True, timeout=20, check=False).stdout
+                if out:
+                    frame = cv2.imdecode(np.frombuffer(out, np.uint8), cv2.IMREAD_COLOR)
+    except (cv2.error, OSError, subprocess.SubprocessError) as exc:
+        log.warning("captures: no small picture of %s: %s", os.path.basename(path), exc)
+        return None
+    if frame is None:
+        return None
+    h, w = frame.shape[:2]
+    if w > width:
+        frame = cv2.resize(frame, (width, max(1, round(h * width / w))),
+                           interpolation=cv2.INTER_AREA)
+    ok, jpeg = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 72])
+    return jpeg.tobytes() if ok else None
 
 
 def _write_atomic(path, data):
@@ -289,6 +471,7 @@ def _clear_leftovers(directory, listed=None):
     except OSError:
         return
     known = {c.get("file") for c in listed or ()}
+    known |= {c.get("id", "") + THUMB_SUFFIX for c in listed or ()}
     for name in names:
         path = os.path.join(directory, name)
         if name.startswith("capture-") and os.path.isdir(path):
