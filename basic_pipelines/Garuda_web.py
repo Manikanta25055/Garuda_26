@@ -35,7 +35,6 @@ except ImportError:
     psutil = None
 
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 import uvicorn
@@ -195,6 +194,7 @@ try:
     from .garuda_core import logging_setup as _core_logging
     from .garuda_core import watchdog as _watchdog
     from .garuda_core.busy import BUSY
+    from .garuda_core.compress import CompressedStaticFiles as _CompressedStaticFiles, gzip_body as _gzip_body  # noqa: F401
     from .garuda_core import evidence as _evidence
     from .garuda_core import events as _events
     from .garuda_core import mailer as _mailer
@@ -280,6 +280,7 @@ except ImportError:
     from basic_pipelines.garuda_core import logging_setup as _core_logging
     from basic_pipelines.garuda_core import watchdog as _watchdog
     from basic_pipelines.garuda_core.busy import BUSY
+    from basic_pipelines.garuda_core.compress import CompressedStaticFiles as _CompressedStaticFiles, gzip_body as _gzip_body  # noqa: F401
     from basic_pipelines.garuda_core import evidence as _evidence
     from basic_pipelines.garuda_core import events as _events
     from basic_pipelines.garuda_core import mailer as _mailer
@@ -668,7 +669,8 @@ _core_http.install(fastapi_app, api_version=API_VERSION, client_ip=_get_client_i
 # Serve static files from garuda_web/
 _static_dir = Path(__file__).parent / "garuda_web"
 if _static_dir.exists():
-    fastapi_app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+    # Text files go out gzipped (garuda_core/compress.py).
+    fastapi_app.mount("/static", _CompressedStaticFiles(directory=str(_static_dir)), name="static")
 
 # ── Home-automation context ──────────────────────────────────────────────────
 # Same two import paths as the constants above; sys.path is already fixed by

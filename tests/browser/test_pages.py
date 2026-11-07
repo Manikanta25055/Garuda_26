@@ -1261,3 +1261,55 @@ def test_an_admin_sets_a_rule_and_draws_a_zone(admin_page):
     assert zone["mode"] == "alert" and zone["labels"] == ["person"]
     assert abs(zone["rect"][0] - 0.1) < 0.03 and abs(zone["rect"][3] - 0.5) < 0.03
     p.assert_clean()
+
+
+# ── Visual effects: light rendering on weak devices ──────────────────────────
+PI_FIREFOX = "Mozilla/5.0 (X11; Linux aarch64; rv:128.0) Gecko/20100101 Firefox/128.0"
+MAC_SAFARI = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
+              "(KHTML, like Gecko) Version/18.0 Safari/605.1.15")
+
+
+@pytest.mark.parametrize("ua, lite, reason", [(PI_FIREFOX, True, "board"), (MAC_SAFARI, False, "")])
+def test_a_raspberry_pi_runs_light_and_a_mac_keeps_the_glass(browser, server, ua, lite, reason):
+    ctx = browser.new_context(user_agent=ua, service_workers="block")
+    page = ctx.new_page()
+    page.goto(server + "/")
+    assert page.evaluate("document.documentElement.classList.contains('perf-lite')") is lite
+    assert page.evaluate("GarudaFx.reason()") == reason
+    ctx.close()
+
+
+def test_visual_effects_can_be_set_by_hand_and_stay_set(user_page):
+    p = user_page
+    p.go("settings")
+    for mode, lite in (("lite", True), ("full", False)):
+        p.page.click(f"#fx-switch [data-fx={mode}]")
+        assert p.js("document.documentElement.classList.contains('perf-lite')") is lite
+        assert p.js(f"document.querySelector('#fx-switch [data-fx={mode}]').getAttribute('aria-checked')") == "true"
+    p.page.reload()
+    p.page.wait_for_selector("#app.logged-in", state="attached")
+    assert p.js("GarudaFx.mode()") == "full"
+    assert not p.js("document.documentElement.classList.contains('perf-lite')")
+    p.go("settings")
+    p.page.click("#fx-switch [data-fx=auto]")
+    assert p.js("GarudaFx.mode()") == "auto" and p.js("localStorage.getItem('garuda_fx')") is None
+    p.assert_clean()
+
+
+def test_narada_holds_still_when_idle_on_a_light_device(user_page):
+    """Light: the idle field is drawn, then stops redrawing until something changes."""
+    p = user_page
+    p.go("settings")
+    p.page.click("#fx-switch [data-fx=lite]")
+    p.js("window.__draws = 0; (() => { const c = document.querySelector('#page-narada canvas');"
+         " const gl = c.getContext('webgl'); if (!gl) return; const d = gl.drawArrays.bind(gl);"
+         " gl.drawArrays = (...a) => { window.__draws++; return d(...a); }; })()")
+    p.go("narada")
+    p.page.wait_for_timeout(2500)
+    settled = p.js("window.__draws")
+    p.page.wait_for_timeout(1500)
+    assert p.js("!!document.querySelector('#page-narada canvas').getContext('webgl')")
+    assert settled >= 1                                    # it drew the field
+    assert p.js("window.__draws") == settled               # then stopped
+    p.js("GarudaFx.set('auto')")
+    p.assert_clean()

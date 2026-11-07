@@ -78,6 +78,7 @@ const N = (() => {
     state = s;
     stateSince = performance.now();
     _syncChrome();
+    wake();
   }
 
   // ── Haptics ────────────────────────────────────────────────
@@ -104,6 +105,7 @@ const N = (() => {
     accent = cs.getPropertyValue('--accent').trim() || accent;
     danger = cs.getPropertyValue('--danger').trim() || danger;
     if (gl) { inkRGB = glColor(ink); dangerRGB = glColor(danger); }
+    wake(true);
   }
 
   function resize() {
@@ -112,7 +114,8 @@ const N = (() => {
     if (!r.width || !r.height) return;
     // Four times the pixels at DPR 2: too much for a mid-range phone's canvas.
     const lite = document.documentElement.classList.contains('perf-lite');
-    const dpr = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 2);
+    // Light rendering (a Pi, a weak chip): one canvas pixel per CSS pixel.
+    const dpr = Math.min(window.devicePixelRatio || 1, lite ? 1 : 2);
     const dock = $('nx-bar');
     const key = [Math.round(r.width * dpr), Math.round(r.height * dpr), dpr,
                  dock ? Math.round(dock.getBoundingClientRect().top - r.top) : 0].join(',');
@@ -127,6 +130,7 @@ const N = (() => {
     canvas.width = CW; canvas.height = CH;
     buildField(r);
     glUpload();
+    wake(true);
   }
 
   // Concentric rings from the core to the farthest corner. Dot size falls
@@ -433,10 +437,27 @@ const N = (() => {
     gl.drawArrays(gl.POINTS, 0, glN);
   }
 
+  // Running light (a Pi, a weak chip), the field holds still once it has
+  // settled into idle: redrawing a full-screen field 30 times a second for a
+  // slow breath was most of what such a browser did on this page. A new
+  // state, a pointer, a resize or a theme change wakes it.
+  let parked = false, dirty = true;
+  function wake(redraw) {
+    if (redraw) dirty = true;
+    if (parked) { parked = false; schedule(); }
+  }
+
   function schedule() {
     if (!visible || pending) return;
+    const lite = document.documentElement.classList.contains('perf-lite');
+    if (lite && state === 'idle' && !pointer && !dirty && performance.now() - stateSince > 1500) {
+      parked = true;
+      return;
+    }
     pending = true;
     if (reduceMotion.matches || state === 'idle') {
+      // The idle breath is slow (one swell in five seconds): 30 frames a
+      // second is plenty.
       slowTimer = setTimeout(() => { raf = requestAnimationFrame(draw); }, 33);
     } else {
       raf = requestAnimationFrame(draw);
@@ -446,6 +467,7 @@ const N = (() => {
   function draw(now) {
     pending = false; raf = 0;
     if (!visible || !(ctx || gl) || !D) { schedule(); return; }
+    dirty = false;
     const t = now / 1000, since = stateSince / 1000;
     updateLevels(t);
     if (state === 'talking' && !conv && now > synthTalkUntil) setState('idle');
@@ -516,7 +538,7 @@ const N = (() => {
     schedule();
   }
 
-  function start() { visible = true; schedule(); }
+  function start() { visible = true; parked = false; dirty = true; schedule(); }
   function stop() {
     visible = false;
     clearTimeout(slowTimer);
@@ -1975,8 +1997,8 @@ const N = (() => {
 
     const page = $('page-narada');
     const toCanvas = e => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) * DPR, y: (e.clientY - r.top) * DPR }; };
-    page.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') pointer = toCanvas(e); });
-    page.addEventListener('pointerleave', () => { pointer = null; });
+    page.addEventListener('pointermove', e => { if (e.pointerType !== 'touch') { pointer = toCanvas(e); wake(); } });
+    page.addEventListener('pointerleave', () => { pointer = null; wake(true); });
     // Only the core is a button: tapping it starts or ends a conversation.
     canvas.addEventListener('click', e => {
       const p = toCanvas(e);

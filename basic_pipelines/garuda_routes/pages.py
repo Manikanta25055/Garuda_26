@@ -36,7 +36,9 @@ def build_pages_router(core):
                     html = html.replace(f'"/static/{icon}?v=', f'"/static/drishti/{icon}?v=', 1)
             # Always revalidated: the page names the versioned scripts, so a stale
             # copy of it pins a browser to an old build.
-            return HTMLResponse(html, headers={"Cache-Control": "no-cache"})
+            # Gzipped (90 KB -> about 20 KB) when the browser takes it.
+            return core._gzip_body(request.headers, html.encode(), "text/html",
+                                   {"Cache-Control": "no-cache"})
         return HTMLResponse("<h1>Garuda Web</h1><p>garuda_web/index.html not found.</p>")
 
     @router.get("/favicon.ico", include_in_schema=False)
