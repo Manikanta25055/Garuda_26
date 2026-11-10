@@ -240,6 +240,22 @@ put("blEventTokens", f"{bl['tokens_per_decision']['mean'] * sc['nonclock_changes
 rows = load("baseline_inloop.json")["rows"]
 loop_s = [x["seconds"] for x in rows if x["got"] is not None]
 
+# Compiled rules scored at the baseline's own moments (run_eval moments) ------
+mo = load("moments.json")
+for key, word in (("deployed", "Rules"), ("ultra", "Ultra")):
+    x = mo["bases"][key]
+    put(f"mom{word}", x["sampled_right"])
+    put(f"mom{word}Edge", x["sampled_right_at_switching"])
+    put(f"mom{word}EdgePct", f"{100 * x['sampled_right_at_switching'] / bl['edges']:.0f}")
+    put(f"mom{word}QuietSpur", x["sampled_spurious_at_quiet"])
+    put(f"mom{word}Only", x["only_rules_right"])
+    put(f"mom{word}OnlyModel", x["only_model_right"])
+    put(f"mom{word}P", f"{x['mcnemar_p']:.2f}")
+    put(f"mom{word}Missed", bl["edges"] - x["sampled_right_at_switching"])
+    put(f"mom{word}SpurDay", x["spurious_ticks_whole_day"])
+assert mo["switching_moments"] == bl["edges"], "baseline did not sample every switching moment"
+put("momQuietTicks", f"{mo['ticks'] - 1 - mo['switching_moments']:,}")
+
 # Figure: latency ladder (ms), median with p95 and max -----------------------
 rel = relay["rows"]
 on_rows = [x for x in rel if x.get("contact_ns")]

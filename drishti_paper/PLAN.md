@@ -343,3 +343,20 @@ Procedure (keeps the reference honest):
 Seen in the path test: an "AC" request was refused on one run and turned into a fan rule on
 the next. Device substitution passes the gate (the fan is real), so only refusal-type
 references can count it.
+
+## 14. Review pass 3 (2026-11-10): the rules-versus-live-model comparison
+
+Flaw: the headline set 63/69 (91%) against 11/19 (58%). The first counts per-rule condition
+edges over the whole day, the second counts device-switch moments: different units. Fixed by
+scoring the compiled rules exactly as the live model is scored (`run_eval moments`, same 59
+moments, reference device states before each): rules 55/59, live model 48/59; at the 19
+switching moments 15 against 11; paired exact test p = 0.07 (ultra's rules 57/59, p = 0.01).
+The paper now states the gap as suggestive for the deployed model, and rests the case for
+compiling on latency, cost and offline operation. 63/69 stays, labelled as rule firing edges.
+
+Also fixed: "two model families" -> two models; "endpoint stability" replaced by the measured
+maximum round trip (4.4 s against 38.5 s); declined requests stated as the vague-threshold ones
+(checked: all 11); vague-rule edges reported as added 7, missed 4.
+Checked against the Pi and Drishti (d022388): Pi 5 16 GB, Hailo-8L, imx708, 0.5 s tick, 64
+rules, guard 1 s / 10 per minute, model order 3.5-super-vl then 3-ultra. All match the text.
+Still 5 pages. Open: owner TODOs (emails, artifact link, acknowledgment), outside requests.

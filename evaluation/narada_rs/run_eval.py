@@ -17,6 +17,7 @@ import os
 import platform
 import random
 import statistics
+import math
 import sys
 import tempfile
 import time
@@ -536,6 +537,76 @@ def cmd_scenario(args):
 
 
 # --------------------------------------------------------------------------
+# moments: the compiled rules scored exactly as the in-loop baseline is scored
+# --------------------------------------------------------------------------
+
+def _forced(rules, schema, day, ref_trace):
+    """Device switches the rule base asks for at each tick when it is shown the
+    reference device states, as the in-loop model is. {tick: [(device, action)]}"""
+    clock = {"t": 0.0}
+    store = _temp_store(schema)
+    store.rules = rules
+    engine = RuleEngine(store, clock=lambda: clock["t"], once=True)
+    got = {}
+    for i, (t, desc) in enumerate(day):
+        clock["t"] = t
+        before = dict(zip(("lamp", "fan"), ref_trace[i - 1] if i else ("off", "off")))
+        d = dict(desc, lamp_state=before["lamp"], fan_state=before["fan"])
+        if i == 0:
+            engine.prime(d)
+        after = dict(before)
+        for act in engine.evaluate(d):
+            after[act["device"]] = act["action"]
+        change = sorted((dev, s) for dev, s in after.items() if s != before[dev])
+        if change:
+            got[i] = change
+    return got
+
+
+def _mcnemar(only_a, only_b):
+    n, k = only_a + only_b, min(only_a, only_b)
+    return min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n) if n else 1.0
+
+
+def cmd_moments(args):
+    from evaluation.narada_rs.scenario import descriptors
+    schema = build_schema(EVAL_REGISTRY)
+    day = list(descriptors())
+    ref = [dict(as_rule(e["id"], e["utterance"]), cooldown_s=0) for e in CORPUS]
+    trace, _, _ = _replay(ref, schema, day)
+
+    def want(i):
+        return sorted((dev, s) for dev, s, p in (("lamp", trace[i][0], trace[i - 1][0]),
+                                                 ("fan", trace[i][1], trace[i - 1][1])) if s != p)
+
+    edges = [i for i in range(1, len(day)) if trace[i] != trace[i - 1]]
+    with open(os.path.join(OUT_DIR, "baseline_inloop.json"), encoding="utf-8") as fh:
+        sampled = json.load(fh)["rows"]
+    out = {"ticks": len(day), "switching_moments": len(edges), "sampled": len(sampled), "bases": {}}
+    for name, model in (("deployed", PRIMARY_MODEL), ("ultra", "nvidia/nemotron-3-ultra-550b-a55b")):
+        with open(os.path.join(OUT_DIR, _synth_name(model, False, False)), encoding="utf-8") as fh:
+            rows = json.load(fh)["trials"][0]
+        got = _forced([dict(r["rule"], id=r["id"]) for r in rows if r["rule"]], schema, day, trace)
+        rules_ok = {r["tick"]: got.get(r["tick"], []) == [tuple(x) for x in r["want"]] for r in sampled}
+        only_rules = sum(1 for r in sampled if rules_ok[r["tick"]] and not r["correct"])
+        only_model = sum(1 for r in sampled if r["correct"] and not rules_ok[r["tick"]])
+        out["bases"][name] = {
+            "right_at_switching_moments": sum(1 for i in edges if got.get(i) == want(i)),
+            "wrong_moments": [{"t": day[i][0], "want": want(i), "got": got.get(i, [])}
+                              for i in edges if got.get(i) != want(i)],
+            "spurious_ticks_whole_day": sum(1 for i in got if i not in edges),
+            "sampled_right": sum(rules_ok.values()),
+            "sampled_right_at_switching": sum(1 for r in sampled if r["edge"] and rules_ok[r["tick"]]),
+            "sampled_spurious_at_quiet": sum(1 for r in sampled if not r["edge"] and r["tick"] in got),
+            "model_right": sum(1 for r in sampled if r["correct"]),
+            "only_rules_right": only_rules, "only_model_right": only_model,
+            "mcnemar_p": _mcnemar(only_rules, only_model),
+        }
+        print(name, json.dumps({k: v for k, v in out["bases"][name].items() if k != "wrong_moments"}))
+    _write("moments.json", out)
+
+
+# --------------------------------------------------------------------------
 # conflicts: the store's conflict check against exhaustive ground truth
 # --------------------------------------------------------------------------
 
@@ -609,6 +680,8 @@ def main():
     p.set_defaults(fn=cmd_reflex)
     p = sub.add_parser("conflicts")
     p.set_defaults(fn=cmd_conflicts)
+    p = sub.add_parser("moments")
+    p.set_defaults(fn=cmd_moments)
     args = parser.parse_args()
     args.fn(args)
 

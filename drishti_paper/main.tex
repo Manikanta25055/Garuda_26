@@ -58,10 +58,11 @@ compiler produced a correct rule for \synDepTrialCorrect{} of \synDepTrialN{}
 requests with a median round trip of \synDepRtMed{}~s, and no malformed rule
 reached the store. Turning the model's reasoning phase off was decisive: with it
 on, \synThinkRejected{} of 90 compilations ran out of tokens before the rule was
-written and correct rules fell to \synThinkTrialCorrect{} of 30. Over a
-scripted day, the compiled rules reproduced \replayAllMatched{} of
-\replayAllRef{} reference switching events, while the same model deciding live
-was right at only \blEdgeCorrect{} of \blEdges{} switching moments. A firing
+written and correct rules fell to \synThinkTrialCorrect{} of 30. At
+\blN{} moments of a scripted day, the compiled rules made the right switching
+decision \momRules{} times and the same model deciding live \blCorrect{}
+times (\momRulesEdge{} against \blEdgeCorrect{} of the \blEdges{} moments that
+called for a switch), and \blSlow{} live decisions outlasted the tick. A firing
 decision reached the relay contact in \relayOnMed{}~ms, so reaction time is set
 by the 0.5~s evaluation tick, and with the network removed for \offSeconds{}~s
 the live system switched \offSwitches{} times, each by its rule.
@@ -308,7 +309,8 @@ temporary rules.
 \textit{Baseline.} The same 30 instructions were given to the model as text;
 at \blN{} sampled moments of the scripted day (all \blEdges{} moments at which
 the reference rules switched a device, and quiet moments) it was shown the
-previous and current state and asked which devices to switch, with a JSON
+previous and current state, with the reference's device states, and asked
+which devices to switch, with a JSON
 schema and reasoning off, as in the deployed compiler; with reasoning on, its
 median compile time (Table~\ref{tab:compile}) already exceeds the tick
 tenfold. Models were queried
@@ -359,7 +361,8 @@ on correct rules (\synFreeOnlyDep{} requests, $p=\synFreeP$) is too small to
 resolve with 30 requests. The larger model was correct on all 30, fixing the
 \synUltraOnlyOther{} off-by-one rules below ($p=\synUltraP$), at about
 \synUltraRtMed~s instead of \synDepRtMed~s; since a rule is compiled once, that
-trade is cheap, and the deployed choice is a matter of endpoint stability.
+trade is cheap; the smaller model stays primary for its steadier round trip
+(maximum \synDepRtMax~s against \synUltraRtMax~s).
 
 The two valid-but-wrong rules (\synDepWrong{} over three trials) are the
 residue the gate cannot see:
@@ -429,10 +432,16 @@ longer than one tick. It was right at \blCorrect{} of \blN{} moments overall but
 at only \blEdgeCorrect{} of \blEdges{} moments that called for a switch, most
 often switching both devices when one instruction named one, and it switched
 \blSpurious{} times at the \blQuiet{} moments when nothing should have changed.
-For comparison, the rules the same model compiled once reproduced
-\replayAllMatched{} of the day's \replayAllRef{} reference firing edges
-(\replayAllPct\%) against \blEdgePct\% for the model deciding live
-(Section~\ref{sec:offline}). The live model's task is harder, since it must
+Scored the same way, with the same reference device states before each
+moment, the rules the same model had compiled once were right at \momRules{}
+of the \blN{} moments: \momRulesEdge{} of the \blEdges{} switching moments
+and all \blQuiet{} quiet ones. The rules were right where the live model was
+wrong \momRulesOnly{} times and the reverse \momRulesOnlyModel{} times
+($p=\momRulesP$), so this sample suggests an accuracy gap without settling
+it; for the larger model's rules the count is \momUltra{} of \blN{}
+($p=\momUltraP$). Of the rules' \momRulesMissed{} misses, one is the ``after
+nine'' rule of Section~\ref{sec:compile} and the others fall at thresholds the
+request left open. The live model's task is harder, since it must
 read all 30 instructions at every call, and that is the point: compilation
 lets the model see one instruction at a time, once, with a person checking
 the result. Each decision cost about \blTokens{} tokens. Even a model called only when a
@@ -446,10 +455,12 @@ The scripted day produced the same switching log, byte for byte (\replaySameHash
 SHA-256 digests), with and without a network interface. Identity is expected by
 design; the check is that no logging, configuration or model call on the
 firing path waits for the network. Against the reference
-rule base, the deployed rules matched \replayStatedMatched{} firing edges, added
-\replayStatedFalse{} and missed \replayStatedMissed{} on the
-\replayStatedRules{} rules with a stated threshold; on vague rules the model's
-own thresholds moved \replayVagueFalse{} edges. Because a rule acts only on the
+rule base, rule by rule, the deployed rules matched \replayAllMatched{} of
+\replayAllRef{} firing edges (a rule's condition becoming true; several rules
+can share one switch). On the \replayStatedRules{} rules with a stated
+threshold they matched \replayStatedMatched{}, added \replayStatedFalse{} and
+missed \replayStatedMissed{}; on the vague rules the model's own thresholds
+added \replayVagueFalse{} and missed \replayVagueMissed{}. Because a rule acts only on the
 change of its condition, one early disagreement persists: the lamp's state
 agreed with the reference for \replayLampAgree\% of the day and the fan's for
 \replayFanAgree\%.
@@ -458,7 +469,7 @@ In the physical test, all \offChecks{} reachability checks during the
 \offSeconds~s window failed. The house switched \offSwitches{} times in that
 window, each logged with the rule that caused it and matched by the relay drive
 line within one 0.2~s poll. Unlike the replay, this exercised the live service,
-the camera and the relays, with the network genuinely absent.
+camera and relays.
 
 \subsection{What leaves the house}\label{sec:egress}
 We placed canary readings (a person count of 7, a temperature of 27.83~\textdegree C)
@@ -482,8 +493,7 @@ desk''. Added one at a time, \cfPrompts{} of 30 rules raised a conflict prompt,
 \cfPromptsReal{} of them for a real overlap. With two devices conflicts are the
 normal case, but a prompt on most new rules invites people to stop reading
 it; a few implications between fields (an empty room has no person count, no
-zone and no posture) would remove the false pairs we saw, and we leave that
-to future work.
+zone and no posture) would remove the false pairs we saw.
 
 Before the router, a sentence-embedding matcher tried to skip the cloud for
 requests resembling an earlier one. On the 90 paraphrases it matched
@@ -501,15 +511,15 @@ held-out model-written ones right, in \rtHandMs~ms; the hand-coded matcher got
 \section{Discussion}\label{sec:discussion}
 \textit{Compilation is a structured-output task.} The model's reasoning phase
 hurt more than it helped: it consumed the token budget and the latency, and
-the requests it declined were ones the confirmation step handles anyway by
-showing the chosen threshold. A schema plus no reasoning gave a stable,
-second-scale compiler, and a larger model fixed the two remaining rules. We
-would expect the same for other ``language to typed artifact'' steps on the
-edge, but 30 requests cannot separate the smaller effects.
+every request it declined was one with an unstated threshold (``warm'',
+``bright''), which the confirmation step handles anyway by showing the
+threshold chosen. A schema plus no reasoning gave a stable,
+second-scale compiler, and a larger model fixed the two remaining rules. Thirty requests cannot separate the smaller effects.
 
-\textit{Compile once beats deciding live.} The model in the loop was slower,
-costlier and less accurate than its own compiled rules on the same day, and it
-cannot act at all offline. The cost of compiling is that a wrong rule is wrong
+\textit{Compile once against deciding live.} The model in the loop missed
+the tick in \blSlow{} of \blN{} decisions, pays a call for every state change
+and cannot act at all offline. It was also right less often than its own
+rules, though \blN{} moments do not settle that. The cost of compiling is that a wrong rule is wrong
 every time it fires, which is why the confirmation step and the gate matter.
 
 \textit{Edge triggering trades repetition for persistence.} Acting only on a
@@ -528,7 +538,8 @@ reference rules are the authors' (written before any model output was seen);
 the 30 requests are not a user study, and differences of one or two requests
 between settings are not significant. The
 replay's states are scripted, and lamp state does not feed back into the light
-reading. Two model families from one provider were tested. The physical test
+reading. Two models from one provider were tested. The in-loop baseline
+used one untuned prompt at \blN{} moments of one day. The physical test
 was a single 10-minute session, and its contact-level record was lost to a
 wiring fault, so contact timing rests on the bench measurement. The router was
 evaluated on its own command sets, not on the rule corpus. Detection delay in
@@ -540,8 +551,8 @@ A cloud language model can author home-automation rules without sitting on the
 path that switches the house. Held to a schema and kept from deliberating, it
 compiled \synDepTrialCorrect{} of \synDepTrialN{} requests correctly in about a
 second, and the on-device gate kept every malformed rule out. Once stored, the
-rules reproduced \replayAllPct\% of a day's reference switching events where
-the same model deciding live managed \blEdgePct\%, reached the relay contact
+rules were right at \momRules{} of \blN{} sampled moments of a day where the
+same model deciding live was right at \blCorrect{}, reached the relay contact
 \relayOnMed~ms after a decision, and kept switching the house with the network
 removed. The measurements that matter most were the ones taken after the rule
 was stored, and we suggest that systems in this area report them. \todo{artifact link}
