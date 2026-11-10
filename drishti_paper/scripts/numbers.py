@@ -83,6 +83,25 @@ synth("synFree", "synthesis_free.json")
 synth("synThink", "synthesis_think.json")
 synth("synUltra", "synthesis_nemotron-3-ultra-550b-a55b.json")
 
+
+# Paired exact McNemar test against the deployed setting, per request, first
+# trial (the deployed setting gave the same outcome in all three trials).
+def mcnemar(prefix, fname):
+    def good(f):
+        return {r["id"] for r in load(f)["trials"][0] if r["outcome"] == "correct"}
+    a, b = good("synthesis.json"), good(fname)
+    only_dep, only_other = len(a - b), len(b - a)
+    n, k = only_dep + only_other, min(only_dep, only_other)
+    p = min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n) if n else 1.0
+    put(prefix + "OnlyDep", only_dep)
+    put(prefix + "OnlyOther", only_other)
+    put(prefix + "P", f"{p:.2f}")
+
+
+mcnemar("synFree", "synthesis_free.json")
+mcnemar("synThink", "synthesis_think.json")
+mcnemar("synUltra", "synthesis_nemotron-3-ultra-550b-a55b.json")
+
 # Production budget before the fix: the partial log of the first run.
 lines = [l.split() for l in open(os.path.join(DATA, "synth_budget2048_partial.log"), encoding="utf-8")
          if l[:1].isdigit() and len(l.split()) > 2]
@@ -130,6 +149,12 @@ put("replayVagueMissed", va["missed"])
 put("replayLampAgree", f"{100 * b['lamp_agreement_same_intents']:.1f}")
 put("replayFanAgree", f"{100 * b['fan_agreement_same_intents']:.1f}")
 put("replayHeld", b["held_by_guard"])
+all_ref = st["matched"] + st["missed"] + va["matched"] + va["missed"]
+all_hit = st["matched"] + va["matched"]
+put("replayAllRef", all_ref)
+put("replayAllMatched", all_hit)
+put("replayAllFalse", st["false"] + va["false"])
+put("replayAllPct", f"{100 * all_hit / all_ref:.0f}")
 
 # E6 physical offline -------------------------------------------------------
 events = {}
@@ -201,6 +226,8 @@ put("blCorrect", bl["correct"])
 put("blEdges", bl["edges"])
 put("blEdgeCorrect", bl["correct_at_edges"])
 put("blSpurious", bl["spurious_switch_at_quiet"])
+put("blQuiet", bl["decisions"] - bl["edges"])
+put("blEdgePct", f"{100 * bl['correct_at_edges'] / bl['edges']:.0f}")
 put("blMed", f"{bl['decision_seconds']['p50']:.1f}")
 put("blNinetyFive", f"{bl['decision_seconds']['p95']:.1f}")
 put("blMax", f"{bl['decision_seconds']['max']:.1f}")
