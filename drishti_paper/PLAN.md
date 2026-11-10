@@ -176,7 +176,7 @@ Raw files in `data/`. Re-run commands in `evaluation/narada_rs/run_eval.py` head
   about 1 in 4 compilations was cut off (`synth_budget2048_partial.log`): rule creation on the
   live system fails the same way today. 4096 tokens still truncated 2 of 30, median 5 s.
 - Tests: 4 new in `tests/garuda_auto/test_nim_client.py`; full `tests/garuda_auto` passes.
-- Not yet live: the service runs the main checkout; needs merge into Drishti and a restart.
+- Live since 2026-11-10: cherry-picked onto Drishti as d022388, garuda-web restarted 12:38 IST.
 
 ### E1/E2 synthesis (30 requests x 3 trials; outputs identical across trials)
 
