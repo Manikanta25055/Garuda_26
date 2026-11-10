@@ -1,0 +1,22 @@
+Can you help me test a home assistant for my project? It takes 2 minutes.
+
+Imagine a room with a ceiling light and a fan. A camera in the room can tell:
+- whether anyone is in the room, and how many people
+- how long the room has been occupied, or empty
+- where a person is: near the door, at the desk, or in the middle
+- whether they are standing, sitting or walking
+- how bright the room is
+
+The system also knows the time of day, the temperature and humidity, and
+whether the light and fan are on.
+
+Write 3 to 5 instructions you would give this room so that it acts by itself
+from now on. Each one should say WHEN something should happen and WHAT the
+light or fan should do. Write them the way you would say them to a person:
+simple or complicated, exact or vague, all fine. English, or Telugu/Hindi in
+English letters, both fine.
+
+If an instruction could be read two ways, add what you meant in brackets.
+
+Please don't look at anyone else's answers first. Reply with one instruction
+per line. Thank you!

@@ -1,0 +1,113 @@
+gpiozero unavailable -- relay bank running in no-op mode
+c01 11.0s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c02 5.1s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c03 3.2s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c04 3.4s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c05 12.7s agent - [('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c06 0.9s agent - [('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c07 8.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c08 3.6s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c09 2.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c10 2.5s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c11 2.6s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c12 2.7s agent - [('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c13 3.0s agent - [('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c14 7.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+Narada reply misstated Fan (on, is off); asking again
+c15 4.2s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c16 2.3s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c17 2.6s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c18 2.9s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c19 2.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c20 3.4s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+Narada reply misstated Lamp (off, is on); asking again
+c21 4.2s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+Narada reply misstated Lamp (off, is on); asking again
+c22 3.5s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c23 2.5s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c24 2.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c25 5.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c26 0.9s agent - [('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c27 3.7s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c28 2.8s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c29 3.4s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy']), ('agent', ['person_count', 'device_state', 'occupancy'])]
+gpiozero unavailable -- relay bank running in no-op mode
+c30 2.9s agent proposal [('agent', ['person_count', 'device_state', 'occupancy']), ('compile', []), ('agent', ['person_count', 'device_state', 'occupancy'])]
+{
+ "agent": {
+  "requests": 72,
+  "carrying_any_live_value": 72,
+  "carried_counts": {
+   "person_count": 72,
+   "device_state": 72,
+   "occupancy": 72
+  },
+  "bytes": {
+   "n": 72,
+   "min": 15825,
+   "p50": 16884,
+   "p95": 17530,
+   "p99": 17635,
+   "max": 17635,
+   "mean": 16857.875
+  }
+ },
+ "compile": {
+  "requests": 25,
+  "carrying_any_live_value": 0,
+  "carried_counts": {},
+  "bytes": {
+   "n": 25,
+   "min": 3763,
+   "p50": 3778,
+   "p95": 3797,
+   "p99": 3808,
+   "max": 3808,
+   "mean": 3779.28
+  }
+ },
+ "turns": 30,
+ "turns_with_proposal": 25,
+ "authoring_seconds": {
+  "n": 30,
+  "min": 0.8532990619996781,
+  "p50": 2.997337974000402,
+  "p95": 11.005648172000292,
+  "p99": 12.732473760000175,
+  "max": 12.732473760000175,
+  "mean": 4.018684167466775
+ },
+ "models": [
+  "nvidia/nemotron-3.5-super-vl-120b-a12b",
+  "nvidia/nemotron-3-ultra-550b-a55b"
+ ]
+}
+wrote /home/manikanta/Projects/Garuda_26/.claude/worktrees/ieee-paper-draft-a4315e/evaluation/out/narada_rs/egress_audit.json

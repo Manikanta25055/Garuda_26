@@ -1,0 +1,93 @@
+00:02:30 quiet [] [] 0.54s 
+00:30:40 quiet [] [] 0.40s 
+02:16:03 quiet [] [] 0.38s 
+02:17:35 quiet [] [] 0.37s 
+02:41:06 quiet [] [] 0.47s 
+02:55:44 quiet [] [] 0.35s 
+03:19:16 quiet [] [] 0.37s 
+03:23:45 quiet [] [] 0.39s 
+03:35:45 quiet [] [] 0.36s 
+03:39:59 quiet [] [] 0.36s 
+05:11:17 quiet [] [] 0.36s 
+06:57:24 quiet [] [] 0.37s 
+07:00:00 edge [('lamp', 'on')] [('fan', 'on'), ('lamp', 'on')] 0.43s 
+07:01:30 edge [('fan', 'on')] [('fan', 'on')] 0.40s 
+07:26:42 quiet [] [] 0.36s 
+08:04:20 quiet [] [] 0.36s 
+08:32:00 edge [('lamp', 'off')] [('fan', 'off'), ('lamp', 'off')] 0.48s 
+08:35:00 edge [('fan', 'off')] [('fan', 'off')] 0.40s 
+08:41:18 quiet [] [] 0.37s 
+08:42:00 edge [('lamp', 'on')] [('fan', 'on'), ('lamp', 'on')] 0.58s 
+08:42:15 edge [('fan', 'on')] [('fan', 'on')] 0.41s 
+08:48:00 edge [('lamp', 'off')] [] 0.36s 
+08:52:53 quiet [] [('lamp', 'on')] 0.44s 
+09:29:07 quiet [] [('lamp', 'on')] 0.47s 
+10:07:20 edge [('fan', 'off')] [] 0.36s 
+10:38:24 edge [('fan', 'on')] [('fan', 'on')] 0.40s 
+11:30:49 quiet [] [] 6.06s 
+11:39:15 quiet [] [] 0.42s 
+11:50:30 quiet [] [] 0.36s 
+12:01:24 quiet [] [('fan', 'off')] 0.43s 
+12:05:00 edge [('fan', 'off')] [('fan', 'off')] 0.50s 
+12:07:50 quiet [] [] 0.36s 
+12:50:00 edge [('fan', 'on'), ('lamp', 'on')] [('fan', 'on'), ('lamp', 'on')] 0.54s 
+12:52:58 quiet [] [] 0.36s 
+14:31:20 quiet [] [] 0.36s 
+15:48:33 quiet [] [] 0.36s 
+16:07:10 quiet [] [] 0.37s 
+16:18:42 quiet [] [] 0.35s 
+17:11:30 quiet [] [] 0.35s 
+17:22:08 quiet [] [] 15.64s 
+17:32:00 edge [('lamp', 'off')] [('fan', 'off'), ('lamp', 'off')] 0.45s 
+17:35:00 edge [('fan', 'off')] [('fan', 'off')] 4.17s 
+17:58:21 quiet [] [] 0.37s 
+18:50:00 edge [('fan', 'on'), ('lamp', 'on')] [('fan', 'on'), ('lamp', 'on')] 0.50s 
+18:59:02 quiet [] [] 0.36s 
+19:46:18 quiet [] [] 0.47s 
+19:58:46 quiet [] [] 0.37s 
+20:07:07 quiet [] [] 0.41s 
+20:23:03 quiet [] [] 0.46s 
+20:39:52 quiet [] [] 0.43s 
+21:00:00 edge [('lamp', 'off')] [('lamp', 'off')] 0.46s 
+21:30:00 edge [('lamp', 'on')] [('lamp', 'on')] 2.54s 
+21:33:00 edge [('lamp', 'off')] [('fan', 'off'), ('lamp', 'off')] 0.45s 
+21:36:00 edge [('fan', 'off')] [('fan', 'off')] 0.39s 
+22:14:39 quiet [] [] 0.43s 
+22:16:52 quiet [] [] 0.37s 
+22:46:04 quiet [] [] 0.46s 
+23:19:11 quiet [] [] 0.36s 
+23:40:00 edge [('fan', 'on'), ('lamp', 'on')] [('lamp', 'on')] 0.40s 
+{
+ "model_order": [
+  "nvidia/nemotron-3.5-super-vl-120b-a12b",
+  "nvidia/nemotron-3-ultra-550b-a55b"
+ ],
+ "decisions": 59,
+ "answered": 59,
+ "correct": 48,
+ "correct_at_edges": 11,
+ "edges": 19,
+ "spurious_switch_at_quiet": 3,
+ "missed_or_wrong_at_edge": 8,
+ "decision_seconds": {
+  "n": 59,
+  "min": 0.3509046099998159,
+  "p50": 0.39636184600021807,
+  "p95": 2.5422312099999544,
+  "p99": 6.06186643700039,
+  "max": 15.641370696000195,
+  "mean": 0.8625468891695148
+ },
+ "slower_than_tick": 9,
+ "tokens_per_decision": {
+  "n": 59,
+  "min": 777,
+  "p50": 787,
+  "p95": 806,
+  "p99": 808,
+  "max": 808,
+  "mean": 789.6779661016949
+ },
+ "ticks_per_day": 172800
+}
+wrote /home/manikanta/Projects/Garuda_26/.claude/worktrees/ieee-paper-draft-a4315e/evaluation/out/narada_rs/baseline_inloop.json

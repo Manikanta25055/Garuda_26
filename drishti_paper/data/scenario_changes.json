@@ -1,0 +1,9 @@
+{
+ "ticks": 172800,
+ "nonclock_changes": 1560,
+ "excluded_fields": [
+  "hour",
+  "occupancy_duration_s"
+ ],
+ "note": "times a non-clock descriptor field changes in the scripted day: a lower bound on calls for an event-driven in-loop model"
+}

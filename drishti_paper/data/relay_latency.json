@@ -1,0 +1,6348 @@
+{
+ "cycles": 200,
+ "switches": 400,
+ "unmatched": 224,
+ "on": {
+  "decide_to_contact_ms": {
+   "n": 88,
+   "min": 3.857242,
+   "p50": 3.901366,
+   "p95": 3.938981,
+   "p99": 3.945946,
+   "max": 4.473407,
+   "mean": 3.907024693181818
+  },
+  "decide_to_gpio_ms": {
+   "n": 88,
+   "min": 0.099666,
+   "p50": 0.131888,
+   "p95": 0.159443,
+   "p99": 0.175759,
+   "max": 0.806237,
+   "mean": 0.14062261363636364
+  },
+  "evaluate_us": {
+   "n": 88,
+   "min": 38.352,
+   "p50": 51.055,
+   "p95": 64.185,
+   "p99": 80.166,
+   "max": 96.611,
+   "mean": 52.29982954545455
+  },
+  "bounce_ms": {
+   "n": 88,
+   "min": 0.170258,
+   "p50": 0.437387,
+   "p95": 0.468127,
+   "p99": 0.469329,
+   "max": 0.47309,
+   "mean": 0.43914564772727277
+  },
+  "bounced": 88
+ },
+ "off": {
+  "decide_to_contact_ms": {
+   "n": 88,
+   "min": 3.548778,
+   "p50": 3.586632,
+   "p95": 3.605519,
+   "p99": 3.618522,
+   "max": 3.770992,
+   "mean": 3.587317352272727
+  },
+  "decide_to_gpio_ms": {
+   "n": 88,
+   "min": 0.092463,
+   "p50": 0.125758,
+   "p95": 0.147721,
+   "p99": 0.158851,
+   "max": 0.300202,
+   "mean": 0.126657125
+  },
+  "evaluate_us": {
+   "n": 88,
+   "min": 37.537,
+   "p50": 50.611,
+   "p95": 58.037,
+   "p99": 84.444,
+   "max": 233.091,
+   "mean": 53.01928409090909
+  },
+  "bounce_ms": {
+   "n": 88,
+   "min": 0.03737,
+   "p50": 0.046777,
+   "p95": 0.050907,
+   "p99": 0.052944,
+   "max": 0.052963,
+   "mean": 0.046544579545454545
+  },
+  "bounced": 88
+ },
+ "rows": [
+  {
+   "cycle": 0,
+   "action": "on",
+   "t_decide": 249893172283,
+   "t_eval": 249893224024,
+   "t_set": 249893978520,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 249897645690,
+   "settled_ns": 249898113817,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 4.473407,
+   "decide_to_gpio_ms": 0.806237,
+   "evaluate_us": 51.741,
+   "bounce_ms": 0.468127
+  },
+  {
+   "cycle": 0,
+   "action": "off",
+   "t_decide": 251194048018,
+   "t_eval": 251194100462,
+   "t_set": 251194174758,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 251197645224,
+   "settled_ns": 251197691872,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.597206,
+   "decide_to_gpio_ms": 0.12674,
+   "evaluate_us": 52.444,
+   "bounce_ms": 0.046648
+  },
+  {
+   "cycle": 1,
+   "action": "on",
+   "t_decide": 252494307611,
+   "t_eval": 252494364129,
+   "t_set": 252494445648,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 252498221168,
+   "settled_ns": 252498618074,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.913557,
+   "decide_to_gpio_ms": 0.138037,
+   "evaluate_us": 56.518,
+   "bounce_ms": 0.396906
+  },
+  {
+   "cycle": 1,
+   "action": "off",
+   "t_decide": 253794525797,
+   "t_eval": 253794582390,
+   "t_set": 253794684093,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 253798144319,
+   "settled_ns": 253798194763,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.618522,
+   "decide_to_gpio_ms": 0.158296,
+   "evaluate_us": 56.593,
+   "bounce_ms": 0.050444
+  },
+  {
+   "cycle": 2,
+   "action": "on",
+   "t_decide": 255094760777,
+   "t_eval": 255094815776,
+   "t_set": 255094923869,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 255098701426,
+   "settled_ns": 255099136314,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.940649,
+   "decide_to_gpio_ms": 0.163092,
+   "evaluate_us": 54.999,
+   "bounce_ms": 0.434888
+  },
+  {
+   "cycle": 2,
+   "action": "off",
+   "t_decide": 256395001642,
+   "t_eval": 256395058105,
+   "t_set": 256395152104,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 256398612349,
+   "settled_ns": 256398659590,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.610707,
+   "decide_to_gpio_ms": 0.150462,
+   "evaluate_us": 56.463,
+   "bounce_ms": 0.047241
+  },
+  {
+   "cycle": 3,
+   "action": "on",
+   "t_decide": 257695222987,
+   "t_eval": 257695271968,
+   "t_set": 257695376153,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 257699154433,
+   "settled_ns": 257699591820,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.931446,
+   "decide_to_gpio_ms": 0.153166,
+   "evaluate_us": 48.981,
+   "bounce_ms": 0.437387
+  },
+  {
+   "cycle": 3,
+   "action": "off",
+   "t_decide": 258995454176,
+   "t_eval": 258995497769,
+   "t_set": 258995574731,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 258999036846,
+   "settled_ns": 258999082198,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.58267,
+   "decide_to_gpio_ms": 0.120555,
+   "evaluate_us": 43.593,
+   "bounce_ms": 0.045352
+  },
+  {
+   "cycle": 4,
+   "action": "on",
+   "t_decide": 260295643024,
+   "t_eval": 260295695524,
+   "t_set": 260295765042,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 260299547767,
+   "settled_ns": 260299983895,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.904743,
+   "decide_to_gpio_ms": 0.122018,
+   "evaluate_us": 52.5,
+   "bounce_ms": 0.436128
+  },
+  {
+   "cycle": 4,
+   "action": "off",
+   "t_decide": 261595832108,
+   "t_eval": 261595876274,
+   "t_set": 261595940070,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 261599395927,
+   "settled_ns": 261599445389,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.563819,
+   "decide_to_gpio_ms": 0.107962,
+   "evaluate_us": 44.166,
+   "bounce_ms": 0.049462
+  },
+  {
+   "cycle": 5,
+   "action": "on",
+   "t_decide": 262896012994,
+   "t_eval": 262896056401,
+   "t_set": 262896121660,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 262899907266,
+   "settled_ns": 262900311836,
+   "edges_in_window": 9,
+   "decide_to_contact_ms": 3.894272,
+   "decide_to_gpio_ms": 0.108666,
+   "evaluate_us": 43.407,
+   "bounce_ms": 0.40457
+  },
+  {
+   "cycle": 5,
+   "action": "off",
+   "t_decide": 264196194852,
+   "t_eval": 264196250851,
+   "t_set": 264196329091,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 264199780572,
+   "settled_ns": 264199829294,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.58572,
+   "decide_to_gpio_ms": 0.134239,
+   "evaluate_us": 55.999,
+   "bounce_ms": 0.048722
+  },
+  {
+   "cycle": 6,
+   "action": "on",
+   "t_decide": 265496402556,
+   "t_eval": 265496457592,
+   "t_set": 265496541166,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 265500298052,
+   "settled_ns": 265500765102,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.895496,
+   "decide_to_gpio_ms": 0.13861,
+   "evaluate_us": 55.036,
+   "bounce_ms": 0.46705
+  },
+  {
+   "cycle": 6,
+   "action": "off",
+   "t_decide": 266796614427,
+   "t_eval": 266796670815,
+   "t_set": 266796747592,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 266800198667,
+   "settled_ns": 266800245500,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.58424,
+   "decide_to_gpio_ms": 0.133165,
+   "evaluate_us": 56.388,
+   "bounce_ms": 0.046833
+  },
+  {
+   "cycle": 7,
+   "action": "on",
+   "t_decide": 268096823692,
+   "t_eval": 268096879098,
+   "t_set": 268096963449,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 268100725058,
+   "settled_ns": 268101185961,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.901366,
+   "decide_to_gpio_ms": 0.139757,
+   "evaluate_us": 55.406,
+   "bounce_ms": 0.460903
+  },
+  {
+   "cycle": 7,
+   "action": "off",
+   "t_decide": 269397038191,
+   "t_eval": 269397093635,
+   "t_set": 269397170282,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 269400618062,
+   "settled_ns": 269400666413,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579871,
+   "decide_to_gpio_ms": 0.132091,
+   "evaluate_us": 55.444,
+   "bounce_ms": 0.048351
+  },
+  {
+   "cycle": 8,
+   "action": "on",
+   "t_decide": 270697245153,
+   "t_eval": 270697288671,
+   "t_set": 270697355207,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 270701118947,
+   "settled_ns": 270701585461,
+   "edges_in_window": 17,
+   "decide_to_contact_ms": 3.873794,
+   "decide_to_gpio_ms": 0.110054,
+   "evaluate_us": 43.518,
+   "bounce_ms": 0.466514
+  },
+  {
+   "cycle": 8,
+   "action": "off",
+   "t_decide": 271997420630,
+   "t_eval": 271997470148,
+   "t_set": 271997529221,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 272000983261,
+   "settled_ns": 272001026871,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.562631,
+   "decide_to_gpio_ms": 0.108591,
+   "evaluate_us": 49.518,
+   "bounce_ms": 0.04361
+  },
+  {
+   "cycle": 9,
+   "action": "on",
+   "t_decide": 273297596211,
+   "t_eval": 273297634563,
+   "t_set": 273297695877,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 273301496062,
+   "settled_ns": 273301932187,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.899851,
+   "decide_to_gpio_ms": 0.099666,
+   "evaluate_us": 38.352,
+   "bounce_ms": 0.436125
+  },
+  {
+   "cycle": 9,
+   "action": "off",
+   "t_decide": 274597761477,
+   "t_eval": 274597805180,
+   "t_set": 274597863217,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 274601314701,
+   "settled_ns": 274601355645,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.553224,
+   "decide_to_gpio_ms": 0.10174,
+   "evaluate_us": 43.703,
+   "bounce_ms": 0.040944
+  },
+  {
+   "cycle": 10,
+   "action": "on",
+   "t_decide": 275897932693,
+   "t_eval": 275897984285,
+   "t_set": 275898291634,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 10,
+   "action": "off",
+   "t_decide": 277198364817,
+   "t_eval": 277198419021,
+   "t_set": 277198427076,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 11,
+   "action": "on",
+   "t_decide": 278498499463,
+   "t_eval": 278498555981,
+   "t_set": 278498606314,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 11,
+   "action": "off",
+   "t_decide": 279798678854,
+   "t_eval": 279798734464,
+   "t_set": 279798742779,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 12,
+   "action": "on",
+   "t_decide": 281098844870,
+   "t_eval": 281098922666,
+   "t_set": 281098995888,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 12,
+   "action": "off",
+   "t_decide": 282399064517,
+   "t_eval": 282399108276,
+   "t_set": 282399114387,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 13,
+   "action": "on",
+   "t_decide": 283699183115,
+   "t_eval": 283699227059,
+   "t_set": 283699265985,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 13,
+   "action": "off",
+   "t_decide": 284999334108,
+   "t_eval": 284999399885,
+   "t_set": 284999406848,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 14,
+   "action": "on",
+   "t_decide": 286299478069,
+   "t_eval": 286299542327,
+   "t_set": 286299592012,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 14,
+   "action": "off",
+   "t_decide": 287599666385,
+   "t_eval": 287599721847,
+   "t_set": 287599730033,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 15,
+   "action": "on",
+   "t_decide": 288899800572,
+   "t_eval": 288899850831,
+   "t_set": 288899898478,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 15,
+   "action": "off",
+   "t_decide": 290199966330,
+   "t_eval": 290200026033,
+   "t_set": 290200033792,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 16,
+   "action": "on",
+   "t_decide": 291500103690,
+   "t_eval": 291500155023,
+   "t_set": 291500202634,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 16,
+   "action": "off",
+   "t_decide": 292800274364,
+   "t_eval": 292800320456,
+   "t_set": 292800327104,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 17,
+   "action": "on",
+   "t_decide": 294100393214,
+   "t_eval": 294100432676,
+   "t_set": 294100469991,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 17,
+   "action": "off",
+   "t_decide": 295400532744,
+   "t_eval": 295400571948,
+   "t_set": 295400577837,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 18,
+   "action": "on",
+   "t_decide": 296700655015,
+   "t_eval": 296700704774,
+   "t_set": 296700743125,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 18,
+   "action": "off",
+   "t_decide": 298000811066,
+   "t_eval": 298000855232,
+   "t_set": 298000861880,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 19,
+   "action": "on",
+   "t_decide": 299300927786,
+   "t_eval": 299300966804,
+   "t_set": 299301000341,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 19,
+   "action": "off",
+   "t_decide": 300601065856,
+   "t_eval": 300601108170,
+   "t_set": 300601114818,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 20,
+   "action": "on",
+   "t_decide": 301901181479,
+   "t_eval": 301901221367,
+   "t_set": 301901254867,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 20,
+   "action": "off",
+   "t_decide": 303201326635,
+   "t_eval": 303201379856,
+   "t_set": 303201387764,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 21,
+   "action": "on",
+   "t_decide": 304501522333,
+   "t_eval": 304501576165,
+   "t_set": 304501633702,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 21,
+   "action": "off",
+   "t_decide": 305801705046,
+   "t_eval": 305801757564,
+   "t_set": 305801765675,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 22,
+   "action": "on",
+   "t_decide": 307101838473,
+   "t_eval": 307101887880,
+   "t_set": 307101930787,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 22,
+   "action": "off",
+   "t_decide": 308402003097,
+   "t_eval": 308402060486,
+   "t_set": 308402068856,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 23,
+   "action": "on",
+   "t_decide": 309702140237,
+   "t_eval": 309702189514,
+   "t_set": 309702232662,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 23,
+   "action": "off",
+   "t_decide": 311002302122,
+   "t_eval": 311002364788,
+   "t_set": 311002372788,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 24,
+   "action": "on",
+   "t_decide": 312302446250,
+   "t_eval": 312302495935,
+   "t_set": 312302578360,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 312306312259,
+   "settled_ns": 312306781588,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.866009,
+   "decide_to_gpio_ms": 0.13211,
+   "evaluate_us": 49.685,
+   "bounce_ms": 0.469329
+  },
+  {
+   "cycle": 24,
+   "action": "off",
+   "t_decide": 313602645782,
+   "t_eval": 313602695282,
+   "t_set": 313602768152,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 313606242645,
+   "settled_ns": 313606286626,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.596863,
+   "decide_to_gpio_ms": 0.12237,
+   "evaluate_us": 49.5,
+   "bounce_ms": 0.043981
+  },
+  {
+   "cycle": 25,
+   "action": "on",
+   "t_decide": 314902841054,
+   "t_eval": 314902905239,
+   "t_set": 314902987756,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 314906760359,
+   "settled_ns": 314907198041,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.919305,
+   "decide_to_gpio_ms": 0.146702,
+   "evaluate_us": 64.185,
+   "bounce_ms": 0.437682
+  },
+  {
+   "cycle": 25,
+   "action": "off",
+   "t_decide": 316203060583,
+   "t_eval": 316203114971,
+   "t_set": 316203191267,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 316206663260,
+   "settled_ns": 316206705834,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.602677,
+   "decide_to_gpio_ms": 0.130684,
+   "evaluate_us": 54.388,
+   "bounce_ms": 0.042574
+  },
+  {
+   "cycle": 26,
+   "action": "on",
+   "t_decide": 317503264025,
+   "t_eval": 317503316617,
+   "t_set": 317503392413,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 317507167164,
+   "settled_ns": 317507604012,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.903139,
+   "decide_to_gpio_ms": 0.128388,
+   "evaluate_us": 52.592,
+   "bounce_ms": 0.436848
+  },
+  {
+   "cycle": 26,
+   "action": "off",
+   "t_decide": 318803466522,
+   "t_eval": 318803518744,
+   "t_set": 318803592280,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 318807059293,
+   "settled_ns": 318807103755,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.592771,
+   "decide_to_gpio_ms": 0.125758,
+   "evaluate_us": 52.222,
+   "bounce_ms": 0.044462
+  },
+  {
+   "cycle": 27,
+   "action": "on",
+   "t_decide": 320103664198,
+   "t_eval": 320103714327,
+   "t_set": 320103793734,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 320107543245,
+   "settled_ns": 320108010316,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.879047,
+   "decide_to_gpio_ms": 0.129536,
+   "evaluate_us": 50.129,
+   "bounce_ms": 0.467071
+  },
+  {
+   "cycle": 27,
+   "action": "off",
+   "t_decide": 321403865519,
+   "t_eval": 321404098610,
+   "t_set": 321404165721,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 321407636511,
+   "settled_ns": 321407673881,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.770992,
+   "decide_to_gpio_ms": 0.300202,
+   "evaluate_us": 233.091,
+   "bounce_ms": 0.03737
+  },
+  {
+   "cycle": 28,
+   "action": "on",
+   "t_decide": 322704235430,
+   "t_eval": 322704280782,
+   "t_set": 322704345837,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 322708093996,
+   "settled_ns": 322708561308,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.858566,
+   "decide_to_gpio_ms": 0.110407,
+   "evaluate_us": 45.352,
+   "bounce_ms": 0.467312
+  },
+  {
+   "cycle": 28,
+   "action": "off",
+   "t_decide": 324004411110,
+   "t_eval": 324004449832,
+   "t_set": 324004514813,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 324007979289,
+   "settled_ns": 324008022345,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.568179,
+   "decide_to_gpio_ms": 0.103703,
+   "evaluate_us": 38.722,
+   "bounce_ms": 0.043056
+  },
+  {
+   "cycle": 29,
+   "action": "on",
+   "t_decide": 325304580964,
+   "t_eval": 325304619557,
+   "t_set": 325304693593,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 325308447456,
+   "settled_ns": 325308909842,
+   "edges_in_window": 18,
+   "decide_to_contact_ms": 3.866492,
+   "decide_to_gpio_ms": 0.112629,
+   "evaluate_us": 38.593,
+   "bounce_ms": 0.462386
+  },
+  {
+   "cycle": 29,
+   "action": "off",
+   "t_decide": 326604756705,
+   "t_eval": 326604794242,
+   "t_set": 326604849168,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 326608310977,
+   "settled_ns": 326608354329,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.554272,
+   "decide_to_gpio_ms": 0.092463,
+   "evaluate_us": 37.537,
+   "bounce_ms": 0.043352
+  },
+  {
+   "cycle": 30,
+   "action": "on",
+   "t_decide": 327904920376,
+   "t_eval": 327904980543,
+   "t_set": 327905068598,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 327908855572,
+   "settled_ns": 327909291365,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.935196,
+   "decide_to_gpio_ms": 0.148222,
+   "evaluate_us": 60.167,
+   "bounce_ms": 0.435793
+  },
+  {
+   "cycle": 30,
+   "action": "off",
+   "t_decide": 329205139606,
+   "t_eval": 329205191810,
+   "t_set": 329205267365,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 329208722045,
+   "settled_ns": 329208766674,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.582439,
+   "decide_to_gpio_ms": 0.127759,
+   "evaluate_us": 52.204,
+   "bounce_ms": 0.044629
+  },
+  {
+   "cycle": 31,
+   "action": "on",
+   "t_decide": 330505364753,
+   "t_eval": 330505416549,
+   "t_set": 330505496826,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 330509257875,
+   "settled_ns": 330509724205,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.893122,
+   "decide_to_gpio_ms": 0.132073,
+   "evaluate_us": 51.796,
+   "bounce_ms": 0.46633
+  },
+  {
+   "cycle": 31,
+   "action": "off",
+   "t_decide": 331805570885,
+   "t_eval": 331805621903,
+   "t_set": 331805697199,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 331809151546,
+   "settled_ns": 331809194639,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.580661,
+   "decide_to_gpio_ms": 0.126314,
+   "evaluate_us": 51.018,
+   "bounce_ms": 0.043093
+  },
+  {
+   "cycle": 32,
+   "action": "on",
+   "t_decide": 333105770443,
+   "t_eval": 333105832294,
+   "t_set": 333105918849,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 333109704528,
+   "settled_ns": 333110140710,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.934085,
+   "decide_to_gpio_ms": 0.148406,
+   "evaluate_us": 61.851,
+   "bounce_ms": 0.436182
+  },
+  {
+   "cycle": 32,
+   "action": "off",
+   "t_decide": 334405992374,
+   "t_eval": 334406043596,
+   "t_set": 334406117651,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 334409565647,
+   "settled_ns": 334409611757,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.573273,
+   "decide_to_gpio_ms": 0.125277,
+   "evaluate_us": 51.222,
+   "bounce_ms": 0.04611
+  },
+  {
+   "cycle": 33,
+   "action": "on",
+   "t_decide": 335706190141,
+   "t_eval": 335706238826,
+   "t_set": 335706316085,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 335710080505,
+   "settled_ns": 335710544706,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.890364,
+   "decide_to_gpio_ms": 0.125944,
+   "evaluate_us": 48.685,
+   "bounce_ms": 0.464201
+  },
+  {
+   "cycle": 33,
+   "action": "off",
+   "t_decide": 337006386961,
+   "t_eval": 337006437220,
+   "t_set": 337006534682,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 337009980530,
+   "settled_ns": 337010026900,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.593569,
+   "decide_to_gpio_ms": 0.147721,
+   "evaluate_us": 50.259,
+   "bounce_ms": 0.04637
+  },
+  {
+   "cycle": 34,
+   "action": "on",
+   "t_decide": 338306605925,
+   "t_eval": 338306656850,
+   "t_set": 338306887071,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 34,
+   "action": "off",
+   "t_decide": 339606958816,
+   "t_eval": 339607022594,
+   "t_set": 339607030427,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 35,
+   "action": "on",
+   "t_decide": 340907104054,
+   "t_eval": 340907157091,
+   "t_set": 340907200795,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 35,
+   "action": "off",
+   "t_decide": 342207272785,
+   "t_eval": 342207325266,
+   "t_set": 342207333136,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 36,
+   "action": "on",
+   "t_decide": 343507407791,
+   "t_eval": 343507461939,
+   "t_set": 343507506753,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 36,
+   "action": "off",
+   "t_decide": 344807575438,
+   "t_eval": 344807618400,
+   "t_set": 344807624437,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 37,
+   "action": "on",
+   "t_decide": 346107691333,
+   "t_eval": 346107729759,
+   "t_set": 346107763518,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 37,
+   "action": "off",
+   "t_decide": 347407828795,
+   "t_eval": 347407869202,
+   "t_set": 347407875350,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 38,
+   "action": "on",
+   "t_decide": 348707940527,
+   "t_eval": 348707977156,
+   "t_set": 348708026582,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 38,
+   "action": "off",
+   "t_decide": 350008099615,
+   "t_eval": 350008150041,
+   "t_set": 350008157226,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 39,
+   "action": "on",
+   "t_decide": 351308228987,
+   "t_eval": 351308300857,
+   "t_set": 351308343357,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 39,
+   "action": "off",
+   "t_decide": 352608412813,
+   "t_eval": 352608462924,
+   "t_set": 352608470887,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 40,
+   "action": "on",
+   "t_decide": 353908542217,
+   "t_eval": 353908603791,
+   "t_set": 353908648216,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 40,
+   "action": "off",
+   "t_decide": 355208719437,
+   "t_eval": 355208769307,
+   "t_set": 355208777251,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 41,
+   "action": "on",
+   "t_decide": 356508901645,
+   "t_eval": 356508952145,
+   "t_set": 356508994811,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 41,
+   "action": "off",
+   "t_decide": 357809068096,
+   "t_eval": 357809121188,
+   "t_set": 357809129225,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 42,
+   "action": "on",
+   "t_decide": 359109203695,
+   "t_eval": 359109254639,
+   "t_set": 359109298065,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 42,
+   "action": "off",
+   "t_decide": 360409369370,
+   "t_eval": 360409419444,
+   "t_set": 360409427240,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 43,
+   "action": "on",
+   "t_decide": 361709497917,
+   "t_eval": 361709547954,
+   "t_set": 361709589898,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 43,
+   "action": "off",
+   "t_decide": 363009662165,
+   "t_eval": 363009713906,
+   "t_set": 363009721239,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 44,
+   "action": "on",
+   "t_decide": 364309794392,
+   "t_eval": 364309875540,
+   "t_set": 364309920855,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 44,
+   "action": "off",
+   "t_decide": 365609991658,
+   "t_eval": 365610052306,
+   "t_set": 365610059861,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 45,
+   "action": "on",
+   "t_decide": 366910132790,
+   "t_eval": 366910194789,
+   "t_set": 366910238345,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 45,
+   "action": "off",
+   "t_decide": 368210323064,
+   "t_eval": 368210376397,
+   "t_set": 368210384156,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 46,
+   "action": "on",
+   "t_decide": 369510456744,
+   "t_eval": 369510507466,
+   "t_set": 369510552262,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 46,
+   "action": "off",
+   "t_decide": 370810626438,
+   "t_eval": 370810679789,
+   "t_set": 370810687326,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 47,
+   "action": "on",
+   "t_decide": 372110761384,
+   "t_eval": 372110812235,
+   "t_set": 372110855643,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 47,
+   "action": "off",
+   "t_decide": 373410926250,
+   "t_eval": 373410975824,
+   "t_set": 373410983620,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 48,
+   "action": "on",
+   "t_decide": 374711054426,
+   "t_eval": 374711102796,
+   "t_set": 374711181462,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 374714948497,
+   "settled_ns": 374715386846,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.894071,
+   "decide_to_gpio_ms": 0.127036,
+   "evaluate_us": 48.37,
+   "bounce_ms": 0.438349
+  },
+  {
+   "cycle": 48,
+   "action": "off",
+   "t_decide": 376011252870,
+   "t_eval": 376011304611,
+   "t_set": 376011377795,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 376014850350,
+   "settled_ns": 376014896739,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.59748,
+   "decide_to_gpio_ms": 0.124925,
+   "evaluate_us": 51.741,
+   "bounce_ms": 0.046389
+  },
+  {
+   "cycle": 49,
+   "action": "on",
+   "t_decide": 377311450898,
+   "t_eval": 377311499713,
+   "t_set": 377311578897,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 377315346692,
+   "settled_ns": 377315787171,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.895794,
+   "decide_to_gpio_ms": 0.127999,
+   "evaluate_us": 48.815,
+   "bounce_ms": 0.440479
+  },
+  {
+   "cycle": 49,
+   "action": "off",
+   "t_decide": 378611648347,
+   "t_eval": 378611704809,
+   "t_set": 378611778624,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 378615249475,
+   "settled_ns": 378615295105,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.601128,
+   "decide_to_gpio_ms": 0.130277,
+   "evaluate_us": 56.462,
+   "bounce_ms": 0.04563
+  },
+  {
+   "cycle": 50,
+   "action": "on",
+   "t_decide": 379911851303,
+   "t_eval": 379911901469,
+   "t_set": 379911983395,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 379915756893,
+   "settled_ns": 379916195279,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.90559,
+   "decide_to_gpio_ms": 0.132092,
+   "evaluate_us": 50.166,
+   "bounce_ms": 0.438386
+  },
+  {
+   "cycle": 50,
+   "action": "off",
+   "t_decide": 381212017471,
+   "t_eval": 381212070637,
+   "t_set": 381212147248,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 381215614599,
+   "settled_ns": 381215658321,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.597128,
+   "decide_to_gpio_ms": 0.129777,
+   "evaluate_us": 53.166,
+   "bounce_ms": 0.043722
+  },
+  {
+   "cycle": 51,
+   "action": "on",
+   "t_decide": 382512220056,
+   "t_eval": 382512271019,
+   "t_set": 382512351018,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 382516129905,
+   "settled_ns": 382516566977,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.909849,
+   "decide_to_gpio_ms": 0.130962,
+   "evaluate_us": 50.963,
+   "bounce_ms": 0.437072
+  },
+  {
+   "cycle": 51,
+   "action": "off",
+   "t_decide": 383812422297,
+   "t_eval": 383812474852,
+   "t_set": 383812551333,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 383816015537,
+   "settled_ns": 383816060351,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.59324,
+   "decide_to_gpio_ms": 0.129036,
+   "evaluate_us": 52.555,
+   "bounce_ms": 0.044814
+  },
+  {
+   "cycle": 52,
+   "action": "on",
+   "t_decide": 385112624673,
+   "t_eval": 385112675062,
+   "t_set": 385112758710,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 385116540986,
+   "settled_ns": 385116973280,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.916313,
+   "decide_to_gpio_ms": 0.134037,
+   "evaluate_us": 50.389,
+   "bounce_ms": 0.432294
+  },
+  {
+   "cycle": 52,
+   "action": "off",
+   "t_decide": 386412830039,
+   "t_eval": 386412881483,
+   "t_set": 386412954834,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 386416417982,
+   "settled_ns": 386416462075,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.587943,
+   "decide_to_gpio_ms": 0.124795,
+   "evaluate_us": 51.444,
+   "bounce_ms": 0.044093
+  },
+  {
+   "cycle": 53,
+   "action": "on",
+   "t_decide": 387713026726,
+   "t_eval": 387713076429,
+   "t_set": 387713156114,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 387716932927,
+   "settled_ns": 387717368962,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.906201,
+   "decide_to_gpio_ms": 0.129388,
+   "evaluate_us": 49.703,
+   "bounce_ms": 0.436035
+  },
+  {
+   "cycle": 53,
+   "action": "off",
+   "t_decide": 389013228566,
+   "t_eval": 389013282121,
+   "t_set": 389013355750,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 389016816954,
+   "settled_ns": 389016859843,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.588388,
+   "decide_to_gpio_ms": 0.127184,
+   "evaluate_us": 53.555,
+   "bounce_ms": 0.042889
+  },
+  {
+   "cycle": 54,
+   "action": "on",
+   "t_decide": 390313429688,
+   "t_eval": 390313492928,
+   "t_set": 390313573724,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 390317334426,
+   "settled_ns": 390317766091,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.904738,
+   "decide_to_gpio_ms": 0.144036,
+   "evaluate_us": 63.24,
+   "bounce_ms": 0.431665
+  },
+  {
+   "cycle": 54,
+   "action": "off",
+   "t_decide": 391613644576,
+   "t_eval": 391613693891,
+   "t_set": 391613763464,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 391617225983,
+   "settled_ns": 391617264538,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.581407,
+   "decide_to_gpio_ms": 0.118888,
+   "evaluate_us": 49.315,
+   "bounce_ms": 0.038555
+  },
+  {
+   "cycle": 55,
+   "action": "on",
+   "t_decide": 392913954337,
+   "t_eval": 392913994745,
+   "t_set": 392914056855,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 392917847354,
+   "settled_ns": 392918282259,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.893017,
+   "decide_to_gpio_ms": 0.102518,
+   "evaluate_us": 40.408,
+   "bounce_ms": 0.434905
+  },
+  {
+   "cycle": 55,
+   "action": "off",
+   "t_decide": 394214122639,
+   "t_eval": 394214161602,
+   "t_set": 394214223990,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 394217678954,
+   "settled_ns": 394217724509,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.556315,
+   "decide_to_gpio_ms": 0.101351,
+   "evaluate_us": 38.963,
+   "bounce_ms": 0.045555
+  },
+  {
+   "cycle": 56,
+   "action": "on",
+   "t_decide": 395514290464,
+   "t_eval": 395514330334,
+   "t_set": 395514391260,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 395518150277,
+   "settled_ns": 395518615960,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.859813,
+   "decide_to_gpio_ms": 0.100796,
+   "evaluate_us": 39.87,
+   "bounce_ms": 0.465683
+  },
+  {
+   "cycle": 56,
+   "action": "off",
+   "t_decide": 396814461236,
+   "t_eval": 396814501458,
+   "t_set": 396814559365,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 396818010014,
+   "settled_ns": 396818057903,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.548778,
+   "decide_to_gpio_ms": 0.098129,
+   "evaluate_us": 40.222,
+   "bounce_ms": 0.047889
+  },
+  {
+   "cycle": 57,
+   "action": "on",
+   "t_decide": 398114631528,
+   "t_eval": 398114682750,
+   "t_set": 398114760306,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 398118555619,
+   "settled_ns": 398118987376,
+   "edges_in_window": 16,
+   "decide_to_contact_ms": 3.924091,
+   "decide_to_gpio_ms": 0.128778,
+   "evaluate_us": 51.222,
+   "bounce_ms": 0.431757
+  },
+  {
+   "cycle": 57,
+   "action": "off",
+   "t_decide": 399414834286,
+   "t_eval": 399414885711,
+   "t_set": 399414959211,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 399418404619,
+   "settled_ns": 399418455878,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.570333,
+   "decide_to_gpio_ms": 0.124925,
+   "evaluate_us": 51.425,
+   "bounce_ms": 0.051259
+  },
+  {
+   "cycle": 58,
+   "action": "on",
+   "t_decide": 400715034009,
+   "t_eval": 400715085101,
+   "t_set": 400715320637,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 58,
+   "action": "off",
+   "t_decide": 402015395064,
+   "t_eval": 402015447342,
+   "t_set": 402015455694,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 59,
+   "action": "on",
+   "t_decide": 403315528417,
+   "t_eval": 403315579491,
+   "t_set": 403315621380,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 59,
+   "action": "off",
+   "t_decide": 404615690625,
+   "t_eval": 404615742754,
+   "t_set": 404615750736,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 60,
+   "action": "on",
+   "t_decide": 405915822554,
+   "t_eval": 405915873794,
+   "t_set": 405915916738,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 60,
+   "action": "off",
+   "t_decide": 407215990333,
+   "t_eval": 407216054054,
+   "t_set": 407216062073,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 61,
+   "action": "on",
+   "t_decide": 408516187464,
+   "t_eval": 408516239334,
+   "t_set": 408516282204,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 61,
+   "action": "off",
+   "t_decide": 409816369946,
+   "t_eval": 409816425187,
+   "t_set": 409816433094,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 62,
+   "action": "on",
+   "t_decide": 411116507130,
+   "t_eval": 411116558500,
+   "t_set": 411116601055,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 62,
+   "action": "off",
+   "t_decide": 412416670997,
+   "t_eval": 412416722645,
+   "t_set": 412416730793,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 63,
+   "action": "on",
+   "t_decide": 413716802474,
+   "t_eval": 413716852715,
+   "t_set": 413716894863,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 63,
+   "action": "off",
+   "t_decide": 415016969337,
+   "t_eval": 415017032929,
+   "t_set": 415017041170,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 64,
+   "action": "on",
+   "t_decide": 416317116215,
+   "t_eval": 416317166992,
+   "t_set": 416317209881,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 64,
+   "action": "off",
+   "t_decide": 417617285147,
+   "t_eval": 417617334924,
+   "t_set": 417617342313,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 65,
+   "action": "on",
+   "t_decide": 418917415445,
+   "t_eval": 418917466982,
+   "t_set": 418917510296,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 65,
+   "action": "off",
+   "t_decide": 420217582739,
+   "t_eval": 420217635164,
+   "t_set": 420217643090,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 66,
+   "action": "on",
+   "t_decide": 421517716807,
+   "t_eval": 421517767603,
+   "t_set": 421517810603,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 66,
+   "action": "off",
+   "t_decide": 422817886612,
+   "t_eval": 422817940556,
+   "t_set": 422817948390,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 67,
+   "action": "on",
+   "t_decide": 424118022615,
+   "t_eval": 424118073319,
+   "t_set": 424118125615,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 67,
+   "action": "off",
+   "t_decide": 425418197058,
+   "t_eval": 425418248058,
+   "t_set": 425418256058,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 68,
+   "action": "on",
+   "t_decide": 426718326867,
+   "t_eval": 426718385682,
+   "t_set": 426718428571,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 68,
+   "action": "off",
+   "t_decide": 428018498837,
+   "t_eval": 428018548874,
+   "t_set": 428018556836,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 69,
+   "action": "on",
+   "t_decide": 429318633467,
+   "t_eval": 429318686541,
+   "t_set": 429318739003,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 69,
+   "action": "off",
+   "t_decide": 430618809333,
+   "t_eval": 430618859629,
+   "t_set": 430618867203,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 70,
+   "action": "on",
+   "t_decide": 431918940525,
+   "t_eval": 431918993099,
+   "t_set": 431919036432,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 70,
+   "action": "off",
+   "t_decide": 433219106044,
+   "t_eval": 433219156933,
+   "t_set": 433219164914,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 71,
+   "action": "on",
+   "t_decide": 434519236798,
+   "t_eval": 434519289465,
+   "t_set": 434519332298,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 71,
+   "action": "off",
+   "t_decide": 435819408286,
+   "t_eval": 435819463433,
+   "t_set": 435819471563,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 72,
+   "action": "on",
+   "t_decide": 437119544469,
+   "t_eval": 437119594932,
+   "t_set": 437119675468,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 437123440469,
+   "settled_ns": 437123874374,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.896,
+   "decide_to_gpio_ms": 0.130999,
+   "evaluate_us": 50.463,
+   "bounce_ms": 0.433905
+  },
+  {
+   "cycle": 72,
+   "action": "off",
+   "t_decide": 438419746201,
+   "t_eval": 438419797923,
+   "t_set": 438419870681,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 438423342905,
+   "settled_ns": 438423391553,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.596704,
+   "decide_to_gpio_ms": 0.12448,
+   "evaluate_us": 51.722,
+   "bounce_ms": 0.048648
+  },
+  {
+   "cycle": 73,
+   "action": "on",
+   "t_decide": 439719943573,
+   "t_eval": 439719993962,
+   "t_set": 439720096609,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 439723866776,
+   "settled_ns": 439724285608,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.923203,
+   "decide_to_gpio_ms": 0.153036,
+   "evaluate_us": 50.389,
+   "bounce_ms": 0.418832
+  },
+  {
+   "cycle": 73,
+   "action": "off",
+   "t_decide": 441020167530,
+   "t_eval": 441020230641,
+   "t_set": 441020304492,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 441023773049,
+   "settled_ns": 441023820901,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.605519,
+   "decide_to_gpio_ms": 0.136962,
+   "evaluate_us": 63.111,
+   "bounce_ms": 0.047852
+  },
+  {
+   "cycle": 74,
+   "action": "on",
+   "t_decide": 442320377108,
+   "t_eval": 442320428570,
+   "t_set": 442320521311,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 442324293774,
+   "settled_ns": 442324731142,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.916666,
+   "decide_to_gpio_ms": 0.144203,
+   "evaluate_us": 51.462,
+   "bounce_ms": 0.437368
+  },
+  {
+   "cycle": 74,
+   "action": "off",
+   "t_decide": 443620602475,
+   "t_eval": 443620651456,
+   "t_set": 443620731807,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 443624196569,
+   "settled_ns": 443624244661,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.594094,
+   "decide_to_gpio_ms": 0.129332,
+   "evaluate_us": 48.981,
+   "bounce_ms": 0.048092
+  },
+  {
+   "cycle": 75,
+   "action": "on",
+   "t_decide": 444920803999,
+   "t_eval": 444920864277,
+   "t_set": 444920944147,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 444924721240,
+   "settled_ns": 444925159275,
+   "edges_in_window": 16,
+   "decide_to_contact_ms": 3.917241,
+   "decide_to_gpio_ms": 0.140148,
+   "evaluate_us": 60.278,
+   "bounce_ms": 0.438035
+  },
+  {
+   "cycle": 75,
+   "action": "off",
+   "t_decide": 446221021681,
+   "t_eval": 446221070996,
+   "t_set": 446221143699,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 446224606775,
+   "settled_ns": 446224653720,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.585094,
+   "decide_to_gpio_ms": 0.122018,
+   "evaluate_us": 49.315,
+   "bounce_ms": 0.046945
+  },
+  {
+   "cycle": 76,
+   "action": "on",
+   "t_decide": 447521231578,
+   "t_eval": 447521282540,
+   "t_set": 447521388429,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 447525170559,
+   "settled_ns": 447525606705,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.938981,
+   "decide_to_gpio_ms": 0.156851,
+   "evaluate_us": 50.962,
+   "bounce_ms": 0.436146
+  },
+  {
+   "cycle": 76,
+   "action": "off",
+   "t_decide": 448821459428,
+   "t_eval": 448821506909,
+   "t_set": 448821575686,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 448825039151,
+   "settled_ns": 448825082781,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579723,
+   "decide_to_gpio_ms": 0.116258,
+   "evaluate_us": 47.481,
+   "bounce_ms": 0.04363
+  },
+  {
+   "cycle": 77,
+   "action": "on",
+   "t_decide": 450121649101,
+   "t_eval": 450121699064,
+   "t_set": 450121823471,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 450125594768,
+   "settled_ns": 450126030321,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.945667,
+   "decide_to_gpio_ms": 0.17437,
+   "evaluate_us": 49.963,
+   "bounce_ms": 0.435553
+  },
+  {
+   "cycle": 77,
+   "action": "off",
+   "t_decide": 451421894451,
+   "t_eval": 451421944228,
+   "t_set": 451422015098,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 451425473674,
+   "settled_ns": 451425519452,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579223,
+   "decide_to_gpio_ms": 0.120647,
+   "evaluate_us": 49.777,
+   "bounce_ms": 0.045778
+  },
+  {
+   "cycle": 78,
+   "action": "on",
+   "t_decide": 452722088680,
+   "t_eval": 452722139643,
+   "t_set": 452722218531,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 452725999791,
+   "settled_ns": 452726441215,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.911111,
+   "decide_to_gpio_ms": 0.129851,
+   "evaluate_us": 50.963,
+   "bounce_ms": 0.441424
+  },
+  {
+   "cycle": 78,
+   "action": "off",
+   "t_decide": 454022289325,
+   "t_eval": 454022339436,
+   "t_set": 454022415694,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 454025869697,
+   "settled_ns": 454025917882,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.580372,
+   "decide_to_gpio_ms": 0.126369,
+   "evaluate_us": 50.111,
+   "bounce_ms": 0.048185
+  },
+  {
+   "cycle": 79,
+   "action": "on",
+   "t_decide": 455322489663,
+   "t_eval": 455322545089,
+   "t_set": 455322628384,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 455326419144,
+   "settled_ns": 455326845402,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.929481,
+   "decide_to_gpio_ms": 0.138721,
+   "evaluate_us": 55.426,
+   "bounce_ms": 0.426258
+  },
+  {
+   "cycle": 79,
+   "action": "off",
+   "t_decide": 456622699066,
+   "t_eval": 456622748084,
+   "t_set": 456622819325,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 456626272030,
+   "settled_ns": 456626318215,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.572964,
+   "decide_to_gpio_ms": 0.120259,
+   "evaluate_us": 49.018,
+   "bounce_ms": 0.046185
+  },
+  {
+   "cycle": 80,
+   "action": "on",
+   "t_decide": 457922891884,
+   "t_eval": 457922942977,
+   "t_set": 457923021365,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 457926811236,
+   "settled_ns": 457927208086,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.919352,
+   "decide_to_gpio_ms": 0.129481,
+   "evaluate_us": 51.093,
+   "bounce_ms": 0.39685
+  },
+  {
+   "cycle": 80,
+   "action": "off",
+   "t_decide": 459223091932,
+   "t_eval": 459223142173,
+   "t_set": 459223215580,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 459226663767,
+   "settled_ns": 459226711396,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.571835,
+   "decide_to_gpio_ms": 0.123648,
+   "evaluate_us": 50.241,
+   "bounce_ms": 0.047629
+  },
+  {
+   "cycle": 81,
+   "action": "on",
+   "t_decide": 460523341785,
+   "t_eval": 460523391303,
+   "t_set": 460523470469,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 460527264303,
+   "settled_ns": 460527695375,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.922518,
+   "decide_to_gpio_ms": 0.128684,
+   "evaluate_us": 49.518,
+   "bounce_ms": 0.431072
+  },
+  {
+   "cycle": 81,
+   "action": "off",
+   "t_decide": 461823545460,
+   "t_eval": 461823600997,
+   "t_set": 461823675330,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 461827125054,
+   "settled_ns": 461827169628,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579594,
+   "decide_to_gpio_ms": 0.12987,
+   "evaluate_us": 55.537,
+   "bounce_ms": 0.044574
+  },
+  {
+   "cycle": 82,
+   "action": "on",
+   "t_decide": 463123744253,
+   "t_eval": 463123785457,
+   "t_set": 463123953752,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 82,
+   "action": "off",
+   "t_decide": 464424030646,
+   "t_eval": 464424073794,
+   "t_set": 464424079739,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 83,
+   "action": "on",
+   "t_decide": 465724147696,
+   "t_eval": 465724199066,
+   "t_set": 465724232622,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 83,
+   "action": "off",
+   "t_decide": 467024302808,
+   "t_eval": 467024355807,
+   "t_set": 467024363696,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 84,
+   "action": "on",
+   "t_decide": 468324439186,
+   "t_eval": 468324490333,
+   "t_set": 468324532981,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 84,
+   "action": "off",
+   "t_decide": 469624604830,
+   "t_eval": 469624655959,
+   "t_set": 469624663737,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 85,
+   "action": "on",
+   "t_decide": 470924736036,
+   "t_eval": 470924787795,
+   "t_set": 470924831036,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 85,
+   "action": "off",
+   "t_decide": 472224901804,
+   "t_eval": 472224952712,
+   "t_set": 472224960656,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 86,
+   "action": "on",
+   "t_decide": 473525033246,
+   "t_eval": 473525084746,
+   "t_set": 473525127523,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 86,
+   "action": "off",
+   "t_decide": 474825203805,
+   "t_eval": 474825256601,
+   "t_set": 474825264397,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 87,
+   "action": "on",
+   "t_decide": 476125338870,
+   "t_eval": 476125390796,
+   "t_set": 476125431721,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 87,
+   "action": "off",
+   "t_decide": 477425503330,
+   "t_eval": 477425557959,
+   "t_set": 477425566200,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 88,
+   "action": "on",
+   "t_decide": 478725638370,
+   "t_eval": 478725701758,
+   "t_set": 478725745351,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 88,
+   "action": "off",
+   "t_decide": 480025818119,
+   "t_eval": 480025870119,
+   "t_set": 480025878156,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 89,
+   "action": "on",
+   "t_decide": 481325950392,
+   "t_eval": 481326001873,
+   "t_set": 481326044743,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 89,
+   "action": "off",
+   "t_decide": 482626116968,
+   "t_eval": 482626168245,
+   "t_set": 482626176060,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 90,
+   "action": "on",
+   "t_decide": 483926252067,
+   "t_eval": 483926302789,
+   "t_set": 483926345974,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 90,
+   "action": "off",
+   "t_decide": 485226417338,
+   "t_eval": 485226488671,
+   "t_set": 485226496671,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 91,
+   "action": "on",
+   "t_decide": 486526571189,
+   "t_eval": 486526622170,
+   "t_set": 486526665466,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 91,
+   "action": "off",
+   "t_decide": 487826738711,
+   "t_eval": 487826791692,
+   "t_set": 487826799692,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 92,
+   "action": "on",
+   "t_decide": 489126873997,
+   "t_eval": 489126925664,
+   "t_set": 489126969145,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 92,
+   "action": "off",
+   "t_decide": 490427040307,
+   "t_eval": 490427091344,
+   "t_set": 490427099270,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 93,
+   "action": "on",
+   "t_decide": 491727171048,
+   "t_eval": 491727254381,
+   "t_set": 491727297140,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 93,
+   "action": "off",
+   "t_decide": 493027368330,
+   "t_eval": 493027421793,
+   "t_set": 493027429571,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 94,
+   "action": "on",
+   "t_decide": 494327504173,
+   "t_eval": 494327555098,
+   "t_set": 494327598468,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 94,
+   "action": "off",
+   "t_decide": 495627666872,
+   "t_eval": 495627705631,
+   "t_set": 495627712594,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 95,
+   "action": "on",
+   "t_decide": 496927784927,
+   "t_eval": 496927835631,
+   "t_set": 496927879649,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 95,
+   "action": "off",
+   "t_decide": 498227951838,
+   "t_eval": 498228013412,
+   "t_set": 498228021468,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 96,
+   "action": "on",
+   "t_decide": 499528095884,
+   "t_eval": 499528146680,
+   "t_set": 499528227772,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 499531989755,
+   "settled_ns": 499532424882,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.893871,
+   "decide_to_gpio_ms": 0.131888,
+   "evaluate_us": 50.796,
+   "bounce_ms": 0.435127
+  },
+  {
+   "cycle": 96,
+   "action": "off",
+   "t_decide": 500828302322,
+   "t_eval": 500828353618,
+   "t_set": 500828428469,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 500831899842,
+   "settled_ns": 500831948712,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.59752,
+   "decide_to_gpio_ms": 0.126147,
+   "evaluate_us": 51.296,
+   "bounce_ms": 0.04887
+  },
+  {
+   "cycle": 97,
+   "action": "on",
+   "t_decide": 502128501893,
+   "t_eval": 502128553338,
+   "t_set": 502128634652,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 502132404653,
+   "settled_ns": 502132842559,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.90276,
+   "decide_to_gpio_ms": 0.132759,
+   "evaluate_us": 51.445,
+   "bounce_ms": 0.437906
+  },
+  {
+   "cycle": 97,
+   "action": "off",
+   "t_decide": 503428706136,
+   "t_eval": 503428757228,
+   "t_set": 503428832006,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 503432301823,
+   "settled_ns": 503432349008,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.595687,
+   "decide_to_gpio_ms": 0.12587,
+   "evaluate_us": 51.092,
+   "bounce_ms": 0.047185
+  },
+  {
+   "cycle": 98,
+   "action": "on",
+   "t_decide": 504728904105,
+   "t_eval": 504728955438,
+   "t_set": 504729035030,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 504732809772,
+   "settled_ns": 504733246900,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.905667,
+   "decide_to_gpio_ms": 0.130925,
+   "evaluate_us": 51.333,
+   "bounce_ms": 0.437128
+  },
+  {
+   "cycle": 98,
+   "action": "off",
+   "t_decide": 506029107040,
+   "t_eval": 506029157095,
+   "t_set": 506029232224,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 506032696431,
+   "settled_ns": 506032746116,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.589391,
+   "decide_to_gpio_ms": 0.125184,
+   "evaluate_us": 50.055,
+   "bounce_ms": 0.049685
+  },
+  {
+   "cycle": 99,
+   "action": "on",
+   "t_decide": 507329303849,
+   "t_eval": 507329355553,
+   "t_set": 507329435182,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 507333181017,
+   "settled_ns": 507333646366,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.877168,
+   "decide_to_gpio_ms": 0.131333,
+   "evaluate_us": 51.704,
+   "bounce_ms": 0.465349
+  },
+  {
+   "cycle": 99,
+   "action": "off",
+   "t_decide": 508629500459,
+   "t_eval": 508629539218,
+   "t_set": 508629596570,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 508633063165,
+   "settled_ns": 508633111591,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.562706,
+   "decide_to_gpio_ms": 0.096111,
+   "evaluate_us": 38.759,
+   "bounce_ms": 0.048426
+  },
+  {
+   "cycle": 100,
+   "action": "on",
+   "t_decide": 509929663924,
+   "t_eval": 509929702831,
+   "t_set": 509929764405,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 509933543795,
+   "settled_ns": 509933979645,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.879871,
+   "decide_to_gpio_ms": 0.100481,
+   "evaluate_us": 38.907,
+   "bounce_ms": 0.43585
+  },
+  {
+   "cycle": 100,
+   "action": "off",
+   "t_decide": 511229831226,
+   "t_eval": 511229869077,
+   "t_set": 511229924022,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 511233386617,
+   "settled_ns": 511233433987,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.555391,
+   "decide_to_gpio_ms": 0.092796,
+   "evaluate_us": 37.851,
+   "bounce_ms": 0.04737
+  },
+  {
+   "cycle": 101,
+   "action": "on",
+   "t_decide": 512530033550,
+   "t_eval": 512530072901,
+   "t_set": 512530134494,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 512533919884,
+   "settled_ns": 512534354974,
+   "edges_in_window": 17,
+   "decide_to_contact_ms": 3.886334,
+   "decide_to_gpio_ms": 0.100944,
+   "evaluate_us": 39.351,
+   "bounce_ms": 0.43509
+  },
+  {
+   "cycle": 101,
+   "action": "off",
+   "t_decide": 513830205747,
+   "t_eval": 513830255988,
+   "t_set": 513830331913,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 513833797749,
+   "settled_ns": 513833836583,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.592002,
+   "decide_to_gpio_ms": 0.126166,
+   "evaluate_us": 50.241,
+   "bounce_ms": 0.038834
+  },
+  {
+   "cycle": 102,
+   "action": "on",
+   "t_decide": 515130406652,
+   "t_eval": 515130483633,
+   "t_set": 515130562484,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 515134345171,
+   "settled_ns": 515134779484,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.938519,
+   "decide_to_gpio_ms": 0.155832,
+   "evaluate_us": 76.981,
+   "bounce_ms": 0.434313
+  },
+  {
+   "cycle": 102,
+   "action": "off",
+   "t_decide": 516430633541,
+   "t_eval": 516430691578,
+   "t_set": 516430763374,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 516434216302,
+   "settled_ns": 516434265635,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.582761,
+   "decide_to_gpio_ms": 0.129833,
+   "evaluate_us": 58.037,
+   "bounce_ms": 0.049333
+  },
+  {
+   "cycle": 103,
+   "action": "on",
+   "t_decide": 517730834489,
+   "t_eval": 517730884044,
+   "t_set": 517730967359,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 517734754971,
+   "settled_ns": 517735188432,
+   "edges_in_window": 9,
+   "decide_to_contact_ms": 3.920482,
+   "decide_to_gpio_ms": 0.13287,
+   "evaluate_us": 49.555,
+   "bounce_ms": 0.433461
+  },
+  {
+   "cycle": 103,
+   "action": "off",
+   "t_decide": 519031038514,
+   "t_eval": 519031088032,
+   "t_set": 519031160606,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 519034612535,
+   "settled_ns": 519034660627,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.574021,
+   "decide_to_gpio_ms": 0.122092,
+   "evaluate_us": 49.518,
+   "bounce_ms": 0.048092
+  },
+  {
+   "cycle": 104,
+   "action": "on",
+   "t_decide": 520331232246,
+   "t_eval": 520331283005,
+   "t_set": 520331362838,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 520335122358,
+   "settled_ns": 520335584911,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.890112,
+   "decide_to_gpio_ms": 0.130592,
+   "evaluate_us": 50.759,
+   "bounce_ms": 0.462553
+  },
+  {
+   "cycle": 104,
+   "action": "off",
+   "t_decide": 521631432111,
+   "t_eval": 521631495999,
+   "t_set": 521631569888,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 521635018946,
+   "settled_ns": 521635067391,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.586835,
+   "decide_to_gpio_ms": 0.137777,
+   "evaluate_us": 63.888,
+   "bounce_ms": 0.048445
+  },
+  {
+   "cycle": 105,
+   "action": "on",
+   "t_decide": 522931643682,
+   "t_eval": 522931696923,
+   "t_set": 522931780644,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 522935543553,
+   "settled_ns": 522935973218,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.899871,
+   "decide_to_gpio_ms": 0.136962,
+   "evaluate_us": 53.241,
+   "bounce_ms": 0.429665
+  },
+  {
+   "cycle": 105,
+   "action": "off",
+   "t_decide": 524231852256,
+   "t_eval": 524231903330,
+   "t_set": 524231977848,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 524235426073,
+   "settled_ns": 524235473036,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.573817,
+   "decide_to_gpio_ms": 0.125592,
+   "evaluate_us": 51.074,
+   "bounce_ms": 0.046963
+  },
+  {
+   "cycle": 106,
+   "action": "on",
+   "t_decide": 525532052000,
+   "t_eval": 525532105407,
+   "t_set": 525532327258,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 106,
+   "action": "off",
+   "t_decide": 526832402505,
+   "t_eval": 526832457727,
+   "t_set": 526832465486,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 107,
+   "action": "on",
+   "t_decide": 528132538884,
+   "t_eval": 528132599772,
+   "t_set": 528132644346,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 107,
+   "action": "off",
+   "t_decide": 529432716265,
+   "t_eval": 529432767209,
+   "t_set": 529432774783,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 108,
+   "action": "on",
+   "t_decide": 530732847205,
+   "t_eval": 530732897705,
+   "t_set": 530732940482,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 108,
+   "action": "off",
+   "t_decide": 532033015480,
+   "t_eval": 532033058776,
+   "t_set": 532033064851,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 109,
+   "action": "on",
+   "t_decide": 533333132184,
+   "t_eval": 533333180406,
+   "t_set": 533333214480,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 109,
+   "action": "off",
+   "t_decide": 534633283428,
+   "t_eval": 534633324743,
+   "t_set": 534633331187,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 110,
+   "action": "on",
+   "t_decide": 535933397674,
+   "t_eval": 535933437081,
+   "t_set": 535933471007,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 110,
+   "action": "off",
+   "t_decide": 537233540033,
+   "t_eval": 537233590200,
+   "t_set": 537233598218,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 111,
+   "action": "on",
+   "t_decide": 538533671321,
+   "t_eval": 538533723543,
+   "t_set": 538533768043,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 111,
+   "action": "off",
+   "t_decide": 539833842426,
+   "t_eval": 539833897407,
+   "t_set": 539833905351,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 112,
+   "action": "on",
+   "t_decide": 541133977847,
+   "t_eval": 541134039180,
+   "t_set": 541134081939,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 112,
+   "action": "off",
+   "t_decide": 542434153623,
+   "t_eval": 542434217141,
+   "t_set": 542434225567,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 113,
+   "action": "on",
+   "t_decide": 543734296475,
+   "t_eval": 543734342326,
+   "t_set": 543734382326,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 113,
+   "action": "off",
+   "t_decide": 545034471162,
+   "t_eval": 545034531662,
+   "t_set": 545034539495,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 114,
+   "action": "on",
+   "t_decide": 546334614777,
+   "t_eval": 546334670110,
+   "t_set": 546334714684,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 114,
+   "action": "off",
+   "t_decide": 547634784431,
+   "t_eval": 547634834135,
+   "t_set": 547634841579,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 115,
+   "action": "on",
+   "t_decide": 548934914699,
+   "t_eval": 548934965698,
+   "t_set": 548935008883,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 115,
+   "action": "off",
+   "t_decide": 550235080005,
+   "t_eval": 550235130060,
+   "t_set": 550235137690,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 116,
+   "action": "on",
+   "t_decide": 551535210276,
+   "t_eval": 551535257331,
+   "t_set": 551535296961,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 116,
+   "action": "off",
+   "t_decide": 552835368623,
+   "t_eval": 552835422400,
+   "t_set": 552835430493,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 117,
+   "action": "on",
+   "t_decide": 554135504120,
+   "t_eval": 554135560638,
+   "t_set": 554135607434,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 117,
+   "action": "off",
+   "t_decide": 555435678044,
+   "t_eval": 555435729340,
+   "t_set": 555435736970,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 118,
+   "action": "on",
+   "t_decide": 556735808304,
+   "t_eval": 556735859119,
+   "t_set": 556735915341,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 118,
+   "action": "off",
+   "t_decide": 558035986565,
+   "t_eval": 558036049176,
+   "t_set": 558036056824,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 119,
+   "action": "on",
+   "t_decide": 559336130402,
+   "t_eval": 559336180032,
+   "t_set": 559336222772,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 119,
+   "action": "off",
+   "t_decide": 560636292204,
+   "t_eval": 560636342648,
+   "t_set": 560636350111,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 120,
+   "action": "on",
+   "t_decide": 561936423693,
+   "t_eval": 561936474618,
+   "t_set": 561936556266,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 561940319342,
+   "settled_ns": 561940756099,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.895649,
+   "decide_to_gpio_ms": 0.132573,
+   "evaluate_us": 50.925,
+   "bounce_ms": 0.436757
+  },
+  {
+   "cycle": 120,
+   "action": "off",
+   "t_decide": 563236629571,
+   "t_eval": 563236682293,
+   "t_set": 563236756848,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 563240226685,
+   "settled_ns": 563240277647,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.597114,
+   "decide_to_gpio_ms": 0.127277,
+   "evaluate_us": 52.722,
+   "bounce_ms": 0.050962
+  },
+  {
+   "cycle": 121,
+   "action": "on",
+   "t_decide": 564536879451,
+   "t_eval": 564536930506,
+   "t_set": 564537010376,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 564540776193,
+   "settled_ns": 564541207821,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.896742,
+   "decide_to_gpio_ms": 0.130925,
+   "evaluate_us": 51.055,
+   "bounce_ms": 0.431628
+  },
+  {
+   "cycle": 121,
+   "action": "off",
+   "t_decide": 565837080685,
+   "t_eval": 565837133999,
+   "t_set": 565837207666,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 565840676465,
+   "settled_ns": 565840725335,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.59578,
+   "decide_to_gpio_ms": 0.126981,
+   "evaluate_us": 53.314,
+   "bounce_ms": 0.04887
+  },
+  {
+   "cycle": 122,
+   "action": "on",
+   "t_decide": 567137279586,
+   "t_eval": 567137376197,
+   "t_set": 567137455345,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 567141225532,
+   "settled_ns": 567141650030,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.945946,
+   "decide_to_gpio_ms": 0.175759,
+   "evaluate_us": 96.611,
+   "bounce_ms": 0.424498
+  },
+  {
+   "cycle": 122,
+   "action": "off",
+   "t_decide": 568437526711,
+   "t_eval": 568437577489,
+   "t_set": 568437648118,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 568441115306,
+   "settled_ns": 568441162602,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.588595,
+   "decide_to_gpio_ms": 0.121407,
+   "evaluate_us": 50.778,
+   "bounce_ms": 0.047296
+  },
+  {
+   "cycle": 123,
+   "action": "on",
+   "t_decide": 569737718764,
+   "t_eval": 569737767764,
+   "t_set": 569737846504,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 569741624765,
+   "settled_ns": 569742062708,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.906001,
+   "decide_to_gpio_ms": 0.12774,
+   "evaluate_us": 49.0,
+   "bounce_ms": 0.437943
+  },
+  {
+   "cycle": 123,
+   "action": "off",
+   "t_decide": 571037917726,
+   "t_eval": 571037967188,
+   "t_set": 571038052688,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 571041505617,
+   "settled_ns": 571041551209,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.587891,
+   "decide_to_gpio_ms": 0.134962,
+   "evaluate_us": 49.462,
+   "bounce_ms": 0.045592
+  },
+  {
+   "cycle": 124,
+   "action": "on",
+   "t_decide": 572338125966,
+   "t_eval": 572338177632,
+   "t_set": 572338257780,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 572342006504,
+   "settled_ns": 572342472891,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.880538,
+   "decide_to_gpio_ms": 0.131814,
+   "evaluate_us": 51.666,
+   "bounce_ms": 0.466387
+  },
+  {
+   "cycle": 124,
+   "action": "off",
+   "t_decide": 573638327967,
+   "t_eval": 573638377208,
+   "t_set": 573638448078,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 573641914599,
+   "settled_ns": 573641957432,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.586632,
+   "decide_to_gpio_ms": 0.120111,
+   "evaluate_us": 49.241,
+   "bounce_ms": 0.042833
+  },
+  {
+   "cycle": 125,
+   "action": "on",
+   "t_decide": 574938520618,
+   "t_eval": 574938571136,
+   "t_set": 574938653173,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 574942438230,
+   "settled_ns": 574942875506,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.917612,
+   "decide_to_gpio_ms": 0.132555,
+   "evaluate_us": 50.518,
+   "bounce_ms": 0.437276
+  },
+  {
+   "cycle": 125,
+   "action": "off",
+   "t_decide": 576238723862,
+   "t_eval": 576238772584,
+   "t_set": 576238845899,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 576242304217,
+   "settled_ns": 576242350827,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.580355,
+   "decide_to_gpio_ms": 0.122037,
+   "evaluate_us": 48.722,
+   "bounce_ms": 0.04661
+  },
+  {
+   "cycle": 126,
+   "action": "on",
+   "t_decide": 577538920515,
+   "t_eval": 577538974682,
+   "t_set": 577539056089,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 577542827442,
+   "settled_ns": 577543277088,
+   "edges_in_window": 12,
+   "decide_to_contact_ms": 3.906927,
+   "decide_to_gpio_ms": 0.135574,
+   "evaluate_us": 54.167,
+   "bounce_ms": 0.449646
+  },
+  {
+   "cycle": 126,
+   "action": "off",
+   "t_decide": 578839126873,
+   "t_eval": 578839179614,
+   "t_set": 578839255632,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 578842709246,
+   "settled_ns": 578842757524,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.582373,
+   "decide_to_gpio_ms": 0.128759,
+   "evaluate_us": 52.741,
+   "bounce_ms": 0.048278
+  },
+  {
+   "cycle": 127,
+   "action": "on",
+   "t_decide": 580139326788,
+   "t_eval": 580139375362,
+   "t_set": 580139453528,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 580143207178,
+   "settled_ns": 580143672861,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.88039,
+   "decide_to_gpio_ms": 0.12674,
+   "evaluate_us": 48.574,
+   "bounce_ms": 0.465683
+  },
+  {
+   "cycle": 127,
+   "action": "off",
+   "t_decide": 581439525593,
+   "t_eval": 581439578667,
+   "t_set": 581439653037,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 581443106614,
+   "settled_ns": 581443153225,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.581021,
+   "decide_to_gpio_ms": 0.127444,
+   "evaluate_us": 53.074,
+   "bounce_ms": 0.046611
+  },
+  {
+   "cycle": 128,
+   "action": "on",
+   "t_decide": 582739726380,
+   "t_eval": 582739778213,
+   "t_set": 582739859880,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 582743620141,
+   "settled_ns": 582744080453,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.893761,
+   "decide_to_gpio_ms": 0.1335,
+   "evaluate_us": 51.833,
+   "bounce_ms": 0.460312
+  },
+  {
+   "cycle": 128,
+   "action": "off",
+   "t_decide": 584039930799,
+   "t_eval": 584039980409,
+   "t_set": 584040077742,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 584043526727,
+   "settled_ns": 584043575801,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.595928,
+   "decide_to_gpio_ms": 0.146943,
+   "evaluate_us": 49.61,
+   "bounce_ms": 0.049074
+  },
+  {
+   "cycle": 129,
+   "action": "on",
+   "t_decide": 585340150921,
+   "t_eval": 585340201440,
+   "t_set": 585340279532,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 585344043293,
+   "settled_ns": 585344508309,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.892372,
+   "decide_to_gpio_ms": 0.128611,
+   "evaluate_us": 50.519,
+   "bounce_ms": 0.465016
+  },
+  {
+   "cycle": 129,
+   "action": "off",
+   "t_decide": 586640349305,
+   "t_eval": 586640398268,
+   "t_set": 586640470249,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 586643924141,
+   "settled_ns": 586643966326,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.574836,
+   "decide_to_gpio_ms": 0.120944,
+   "evaluate_us": 48.963,
+   "bounce_ms": 0.042185
+  },
+  {
+   "cycle": 130,
+   "action": "on",
+   "t_decide": 587940543893,
+   "t_eval": 587940595133,
+   "t_set": 587940821392,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 130,
+   "action": "off",
+   "t_decide": 589240893444,
+   "t_eval": 589240942944,
+   "t_set": 589240950685,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 131,
+   "action": "on",
+   "t_decide": 590541021442,
+   "t_eval": 590541072072,
+   "t_set": 590541115720,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 131,
+   "action": "off",
+   "t_decide": 591841193515,
+   "t_eval": 591841248978,
+   "t_set": 591841256292,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 132,
+   "action": "on",
+   "t_decide": 593141324867,
+   "t_eval": 593141386959,
+   "t_set": 593141431292,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 132,
+   "action": "off",
+   "t_decide": 594441498256,
+   "t_eval": 594441549274,
+   "t_set": 594441556867,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 133,
+   "action": "on",
+   "t_decide": 595741627869,
+   "t_eval": 595741683461,
+   "t_set": 595741728165,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 133,
+   "action": "off",
+   "t_decide": 597041795501,
+   "t_eval": 597041846130,
+   "t_set": 597041853723,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 134,
+   "action": "on",
+   "t_decide": 598341922078,
+   "t_eval": 598341972486,
+   "t_set": 598342014652,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 134,
+   "action": "off",
+   "t_decide": 599642082453,
+   "t_eval": 599642133897,
+   "t_set": 599642141249,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 135,
+   "action": "on",
+   "t_decide": 600942209051,
+   "t_eval": 600942258884,
+   "t_set": 600942301551,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 135,
+   "action": "off",
+   "t_decide": 602242384742,
+   "t_eval": 602242431260,
+   "t_set": 602242437908,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 136,
+   "action": "on",
+   "t_decide": 603542511638,
+   "t_eval": 603542555415,
+   "t_set": 603542592230,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 136,
+   "action": "off",
+   "t_decide": 604842659942,
+   "t_eval": 604842703868,
+   "t_set": 604842710330,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 137,
+   "action": "on",
+   "t_decide": 606142777895,
+   "t_eval": 606142818432,
+   "t_set": 606142852154,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 137,
+   "action": "off",
+   "t_decide": 607442922811,
+   "t_eval": 607442974700,
+   "t_set": 607442982367,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 138,
+   "action": "on",
+   "t_decide": 608743054359,
+   "t_eval": 608743105636,
+   "t_set": 608743149710,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 138,
+   "action": "off",
+   "t_decide": 610043221573,
+   "t_eval": 610043275443,
+   "t_set": 610043283628,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 139,
+   "action": "on",
+   "t_decide": 611343361140,
+   "t_eval": 611343417788,
+   "t_set": 611343463417,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 139,
+   "action": "off",
+   "t_decide": 612643532096,
+   "t_eval": 612643580985,
+   "t_set": 612643589022,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 140,
+   "action": "on",
+   "t_decide": 613943661813,
+   "t_eval": 613943739813,
+   "t_set": 613943785053,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 140,
+   "action": "off",
+   "t_decide": 615243855549,
+   "t_eval": 615243907196,
+   "t_set": 615243915474,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 141,
+   "action": "on",
+   "t_decide": 616544042711,
+   "t_eval": 616544100451,
+   "t_set": 616544146655,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 141,
+   "action": "off",
+   "t_decide": 617844220448,
+   "t_eval": 617844289577,
+   "t_set": 617844297781,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 142,
+   "action": "on",
+   "t_decide": 619144370445,
+   "t_eval": 619144422611,
+   "t_set": 619144467481,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 142,
+   "action": "off",
+   "t_decide": 620444540072,
+   "t_eval": 620444594072,
+   "t_set": 620444602127,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 143,
+   "action": "on",
+   "t_decide": 621744674292,
+   "t_eval": 621744723681,
+   "t_set": 621744767588,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 143,
+   "action": "off",
+   "t_decide": 623044838976,
+   "t_eval": 623044894569,
+   "t_set": 623044902661,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 144,
+   "action": "on",
+   "t_decide": 624344975050,
+   "t_eval": 624345026587,
+   "t_set": 624345106642,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 624348835181,
+   "settled_ns": 624349290808,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.860131,
+   "decide_to_gpio_ms": 0.131592,
+   "evaluate_us": 51.537,
+   "bounce_ms": 0.455627
+  },
+  {
+   "cycle": 144,
+   "action": "off",
+   "t_decide": 625645176476,
+   "t_eval": 625645225031,
+   "t_set": 625645303105,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 625648780256,
+   "settled_ns": 625648826200,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.60378,
+   "decide_to_gpio_ms": 0.126629,
+   "evaluate_us": 48.555,
+   "bounce_ms": 0.045944
+  },
+  {
+   "cycle": 145,
+   "action": "on",
+   "t_decide": 626945373902,
+   "t_eval": 626945425605,
+   "t_set": 626945506050,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 626949269736,
+   "settled_ns": 626949710568,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.895834,
+   "decide_to_gpio_ms": 0.132148,
+   "evaluate_us": 51.703,
+   "bounce_ms": 0.440832
+  },
+  {
+   "cycle": 145,
+   "action": "off",
+   "t_decide": 628245580310,
+   "t_eval": 628245633977,
+   "t_set": 628245708013,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 628249176924,
+   "settled_ns": 628249226294,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.596614,
+   "decide_to_gpio_ms": 0.127703,
+   "evaluate_us": 53.667,
+   "bounce_ms": 0.04937
+  },
+  {
+   "cycle": 146,
+   "action": "on",
+   "t_decide": 629545781497,
+   "t_eval": 629545832626,
+   "t_set": 629545911885,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 629549652017,
+   "settled_ns": 629550119052,
+   "edges_in_window": 17,
+   "decide_to_contact_ms": 3.87052,
+   "decide_to_gpio_ms": 0.130388,
+   "evaluate_us": 51.129,
+   "bounce_ms": 0.467035
+  },
+  {
+   "cycle": 146,
+   "action": "off",
+   "t_decide": 630845984592,
+   "t_eval": 630846039628,
+   "t_set": 630846114184,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 630849583872,
+   "settled_ns": 630849630427,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.59928,
+   "decide_to_gpio_ms": 0.129592,
+   "evaluate_us": 55.036,
+   "bounce_ms": 0.046555
+  },
+  {
+   "cycle": 147,
+   "action": "on",
+   "t_decide": 632146194372,
+   "t_eval": 632146246557,
+   "t_set": 632146336038,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 632150080669,
+   "settled_ns": 632150548815,
+   "edges_in_window": 15,
+   "decide_to_contact_ms": 3.886297,
+   "decide_to_gpio_ms": 0.141666,
+   "evaluate_us": 52.185,
+   "bounce_ms": 0.468146
+  },
+  {
+   "cycle": 147,
+   "action": "off",
+   "t_decide": 633446406856,
+   "t_eval": 633446458763,
+   "t_set": 633446533485,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 633450003488,
+   "settled_ns": 633450048525,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.596632,
+   "decide_to_gpio_ms": 0.126629,
+   "evaluate_us": 51.907,
+   "bounce_ms": 0.045037
+  },
+  {
+   "cycle": 148,
+   "action": "on",
+   "t_decide": 634746606675,
+   "t_eval": 634746658341,
+   "t_set": 634746739267,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 634750495676,
+   "settled_ns": 634750952729,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.889001,
+   "decide_to_gpio_ms": 0.132592,
+   "evaluate_us": 51.666,
+   "bounce_ms": 0.457053
+  },
+  {
+   "cycle": 148,
+   "action": "off",
+   "t_decide": 636046811031,
+   "t_eval": 636046861179,
+   "t_set": 636046933660,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 636050395015,
+   "settled_ns": 636050442977,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.583984,
+   "decide_to_gpio_ms": 0.122629,
+   "evaluate_us": 50.148,
+   "bounce_ms": 0.047962
+  },
+  {
+   "cycle": 149,
+   "action": "on",
+   "t_decide": 637347014683,
+   "t_eval": 637347067479,
+   "t_set": 637347148090,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 637350930110,
+   "settled_ns": 637351366923,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.915427,
+   "decide_to_gpio_ms": 0.133407,
+   "evaluate_us": 52.796,
+   "bounce_ms": 0.436813
+  },
+  {
+   "cycle": 149,
+   "action": "off",
+   "t_decide": 638647216410,
+   "t_eval": 638647263207,
+   "t_set": 638647333095,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 638650794024,
+   "settled_ns": 638650839728,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.577614,
+   "decide_to_gpio_ms": 0.116685,
+   "evaluate_us": 46.797,
+   "bounce_ms": 0.045704
+  },
+  {
+   "cycle": 150,
+   "action": "on",
+   "t_decide": 639947406212,
+   "t_eval": 639947458823,
+   "t_set": 639947538193,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 639951323102,
+   "settled_ns": 639951760563,
+   "edges_in_window": 18,
+   "decide_to_contact_ms": 3.91689,
+   "decide_to_gpio_ms": 0.131981,
+   "evaluate_us": 52.611,
+   "bounce_ms": 0.437461
+  },
+  {
+   "cycle": 150,
+   "action": "off",
+   "t_decide": 641247607218,
+   "t_eval": 641247657348,
+   "t_set": 641247729255,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 641251187980,
+   "settled_ns": 641251233424,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.580762,
+   "decide_to_gpio_ms": 0.122037,
+   "evaluate_us": 50.13,
+   "bounce_ms": 0.045444
+  },
+  {
+   "cycle": 151,
+   "action": "on",
+   "t_decide": 642547804558,
+   "t_eval": 642547857798,
+   "t_set": 642547937039,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 642551693170,
+   "settled_ns": 642552158853,
+   "edges_in_window": 9,
+   "decide_to_contact_ms": 3.888612,
+   "decide_to_gpio_ms": 0.132481,
+   "evaluate_us": 53.24,
+   "bounce_ms": 0.465683
+  },
+  {
+   "cycle": 151,
+   "action": "off",
+   "t_decide": 643848016917,
+   "t_eval": 643848101361,
+   "t_set": 643848175768,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 643851630456,
+   "settled_ns": 643851676419,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.613539,
+   "decide_to_gpio_ms": 0.158851,
+   "evaluate_us": 84.444,
+   "bounce_ms": 0.045963
+  },
+  {
+   "cycle": 152,
+   "action": "on",
+   "t_decide": 645148248868,
+   "t_eval": 645148300664,
+   "t_set": 645148380516,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 645152165999,
+   "settled_ns": 645152601071,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.917131,
+   "decide_to_gpio_ms": 0.131648,
+   "evaluate_us": 51.796,
+   "bounce_ms": 0.435072
+  },
+  {
+   "cycle": 152,
+   "action": "off",
+   "t_decide": 646448453505,
+   "t_eval": 646448504413,
+   "t_set": 646448579079,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 646452029878,
+   "settled_ns": 646452078434,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.576373,
+   "decide_to_gpio_ms": 0.125574,
+   "evaluate_us": 50.908,
+   "bounce_ms": 0.048556
+  },
+  {
+   "cycle": 153,
+   "action": "on",
+   "t_decide": 647748653606,
+   "t_eval": 647748711198,
+   "t_set": 647748798346,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 647752556366,
+   "settled_ns": 647753005550,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.90276,
+   "decide_to_gpio_ms": 0.14474,
+   "evaluate_us": 57.592,
+   "bounce_ms": 0.449184
+  },
+  {
+   "cycle": 153,
+   "action": "off",
+   "t_decide": 649048871207,
+   "t_eval": 649048921818,
+   "t_set": 649048995114,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 649052442784,
+   "settled_ns": 649052491265,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.571577,
+   "decide_to_gpio_ms": 0.123907,
+   "evaluate_us": 50.611,
+   "bounce_ms": 0.048481
+  },
+  {
+   "cycle": 154,
+   "action": "on",
+   "t_decide": 650349067660,
+   "t_eval": 650349118234,
+   "t_set": 650349345733,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 154,
+   "action": "off",
+   "t_decide": 651649418336,
+   "t_eval": 651649466835,
+   "t_set": 651649474687,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 155,
+   "action": "on",
+   "t_decide": 652949546309,
+   "t_eval": 652949595271,
+   "t_set": 652949638327,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 155,
+   "action": "off",
+   "t_decide": 654249711504,
+   "t_eval": 654249766967,
+   "t_set": 654249774818,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 156,
+   "action": "on",
+   "t_decide": 655549847681,
+   "t_eval": 655549898940,
+   "t_set": 655549943199,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 156,
+   "action": "off",
+   "t_decide": 656850018637,
+   "t_eval": 656850073766,
+   "t_set": 656850081914,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 157,
+   "action": "on",
+   "t_decide": 658150166778,
+   "t_eval": 658150218351,
+   "t_set": 658150263277,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 157,
+   "action": "off",
+   "t_decide": 659450335400,
+   "t_eval": 659450398770,
+   "t_set": 659450406789,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 158,
+   "action": "on",
+   "t_decide": 660750489505,
+   "t_eval": 660750541282,
+   "t_set": 660750583912,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 158,
+   "action": "off",
+   "t_decide": 662050656221,
+   "t_eval": 662050709943,
+   "t_set": 662050717832,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 159,
+   "action": "on",
+   "t_decide": 663350791326,
+   "t_eval": 663350843196,
+   "t_set": 663350887677,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 159,
+   "action": "off",
+   "t_decide": 664650957672,
+   "t_eval": 664651009913,
+   "t_set": 664651017524,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 160,
+   "action": "on",
+   "t_decide": 665951092537,
+   "t_eval": 665951145574,
+   "t_set": 665951190407,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 160,
+   "action": "off",
+   "t_decide": 667251263551,
+   "t_eval": 667251316143,
+   "t_set": 667251323995,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 161,
+   "action": "on",
+   "t_decide": 668551451546,
+   "t_eval": 668551518861,
+   "t_set": 668551563620,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 161,
+   "action": "off",
+   "t_decide": 669851637597,
+   "t_eval": 669851693449,
+   "t_set": 669851701578,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 162,
+   "action": "on",
+   "t_decide": 671151777093,
+   "t_eval": 671151829723,
+   "t_set": 671151875056,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 162,
+   "action": "off",
+   "t_decide": 672451943219,
+   "t_eval": 672451983460,
+   "t_set": 672451989922,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 163,
+   "action": "on",
+   "t_decide": 673752009975,
+   "t_eval": 673752049419,
+   "t_set": 673752082808,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 163,
+   "action": "off",
+   "t_decide": 675052146749,
+   "t_eval": 675052186860,
+   "t_set": 675052193360,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 164,
+   "action": "on",
+   "t_decide": 676352259543,
+   "t_eval": 676352298487,
+   "t_set": 676352332005,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 164,
+   "action": "off",
+   "t_decide": 677652401077,
+   "t_eval": 677652453595,
+   "t_set": 677652461706,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 165,
+   "action": "on",
+   "t_decide": 678952534019,
+   "t_eval": 678952584723,
+   "t_set": 678952627482,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 165,
+   "action": "off",
+   "t_decide": 680252698498,
+   "t_eval": 680252749350,
+   "t_set": 680252756998,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 166,
+   "action": "on",
+   "t_decide": 681552829367,
+   "t_eval": 681552890107,
+   "t_set": 681552944644,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 166,
+   "action": "off",
+   "t_decide": 682853026698,
+   "t_eval": 682853081920,
+   "t_set": 682853090124,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 167,
+   "action": "on",
+   "t_decide": 684153166715,
+   "t_eval": 684153219974,
+   "t_set": 684153263363,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 167,
+   "action": "off",
+   "t_decide": 685453336695,
+   "t_eval": 685453386769,
+   "t_set": 685453394677,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 168,
+   "action": "on",
+   "t_decide": 686753466972,
+   "t_eval": 686753515879,
+   "t_set": 686753591824,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 686757348307,
+   "settled_ns": 686757780842,
+   "edges_in_window": 16,
+   "decide_to_contact_ms": 3.881335,
+   "decide_to_gpio_ms": 0.124852,
+   "evaluate_us": 48.907,
+   "bounce_ms": 0.432535
+  },
+  {
+   "cycle": 168,
+   "action": "off",
+   "t_decide": 688053663416,
+   "t_eval": 688053713434,
+   "t_set": 688053786860,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 688057264715,
+   "settled_ns": 688057317659,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.601299,
+   "decide_to_gpio_ms": 0.123444,
+   "evaluate_us": 50.018,
+   "bounce_ms": 0.052944
+  },
+  {
+   "cycle": 169,
+   "action": "on",
+   "t_decide": 689353860396,
+   "t_eval": 689353910452,
+   "t_set": 689353992618,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 689357726953,
+   "settled_ns": 689358100840,
+   "edges_in_window": 9,
+   "decide_to_contact_ms": 3.866557,
+   "decide_to_gpio_ms": 0.132222,
+   "evaluate_us": 50.056,
+   "bounce_ms": 0.373887
+  },
+  {
+   "cycle": 169,
+   "action": "off",
+   "t_decide": 690654063285,
+   "t_eval": 690654111321,
+   "t_set": 690654183988,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 690657655250,
+   "settled_ns": 690657705120,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.591965,
+   "decide_to_gpio_ms": 0.120703,
+   "evaluate_us": 48.036,
+   "bounce_ms": 0.04987
+  },
+  {
+   "cycle": 170,
+   "action": "on",
+   "t_decide": 691954257747,
+   "t_eval": 691954309340,
+   "t_set": 691954387099,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 691958131378,
+   "settled_ns": 691958598598,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.873631,
+   "decide_to_gpio_ms": 0.129352,
+   "evaluate_us": 51.593,
+   "bounce_ms": 0.46722
+  },
+  {
+   "cycle": 170,
+   "action": "off",
+   "t_decide": 693254472766,
+   "t_eval": 693254530136,
+   "t_set": 693254600802,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 693258066916,
+   "settled_ns": 693258117675,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.59415,
+   "decide_to_gpio_ms": 0.128036,
+   "evaluate_us": 57.37,
+   "bounce_ms": 0.050759
+  },
+  {
+   "cycle": 171,
+   "action": "on",
+   "t_decide": 694554672321,
+   "t_eval": 694554752487,
+   "t_set": 694554830506,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 694558608248,
+   "settled_ns": 694559040987,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.935927,
+   "decide_to_gpio_ms": 0.158185,
+   "evaluate_us": 80.166,
+   "bounce_ms": 0.432739
+  },
+  {
+   "cycle": 171,
+   "action": "off",
+   "t_decide": 695854903580,
+   "t_eval": 695854956765,
+   "t_set": 695855029765,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 695858493842,
+   "settled_ns": 695858543101,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.590262,
+   "decide_to_gpio_ms": 0.126185,
+   "evaluate_us": 53.185,
+   "bounce_ms": 0.049259
+  },
+  {
+   "cycle": 172,
+   "action": "on",
+   "t_decide": 697155104784,
+   "t_eval": 697155155358,
+   "t_set": 697155234821,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 697159013267,
+   "settled_ns": 697159183525,
+   "edges_in_window": 5,
+   "decide_to_contact_ms": 3.908483,
+   "decide_to_gpio_ms": 0.130037,
+   "evaluate_us": 50.574,
+   "bounce_ms": 0.170258
+  },
+  {
+   "cycle": 172,
+   "action": "off",
+   "t_decide": 698455307062,
+   "t_eval": 698455357155,
+   "t_set": 698455440006,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 698458902713,
+   "settled_ns": 698458949435,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.595651,
+   "decide_to_gpio_ms": 0.132944,
+   "evaluate_us": 50.093,
+   "bounce_ms": 0.046722
+  },
+  {
+   "cycle": 173,
+   "action": "on",
+   "t_decide": 699755511989,
+   "t_eval": 699755561766,
+   "t_set": 699755639007,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 699759418175,
+   "settled_ns": 699759765044,
+   "edges_in_window": 7,
+   "decide_to_contact_ms": 3.906186,
+   "decide_to_gpio_ms": 0.127018,
+   "evaluate_us": 49.777,
+   "bounce_ms": 0.346869
+  },
+  {
+   "cycle": 173,
+   "action": "off",
+   "t_decide": 701055711934,
+   "t_eval": 701055762508,
+   "t_set": 701055833859,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 701059292214,
+   "settled_ns": 701059340825,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.58028,
+   "decide_to_gpio_ms": 0.121925,
+   "evaluate_us": 50.574,
+   "bounce_ms": 0.048611
+  },
+  {
+   "cycle": 174,
+   "action": "on",
+   "t_decide": 702355906527,
+   "t_eval": 702355958916,
+   "t_set": 702356052471,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 702359829380,
+   "settled_ns": 702360235175,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.922853,
+   "decide_to_gpio_ms": 0.145944,
+   "evaluate_us": 52.389,
+   "bounce_ms": 0.405795
+  },
+  {
+   "cycle": 174,
+   "action": "off",
+   "t_decide": 703656124417,
+   "t_eval": 703656172528,
+   "t_set": 703656243676,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 703659702420,
+   "settled_ns": 703659747975,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.578003,
+   "decide_to_gpio_ms": 0.119259,
+   "evaluate_us": 48.111,
+   "bounce_ms": 0.045555
+  },
+  {
+   "cycle": 175,
+   "action": "on",
+   "t_decide": 704956316734,
+   "t_eval": 704956369511,
+   "t_set": 704956450251,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 704960205827,
+   "settled_ns": 704960661251,
+   "edges_in_window": 8,
+   "decide_to_contact_ms": 3.889093,
+   "decide_to_gpio_ms": 0.133517,
+   "evaluate_us": 52.777,
+   "bounce_ms": 0.455424
+  },
+  {
+   "cycle": 175,
+   "action": "off",
+   "t_decide": 706256521624,
+   "t_eval": 706256570587,
+   "t_set": 706256650327,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 706260109349,
+   "settled_ns": 706260152015,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.587725,
+   "decide_to_gpio_ms": 0.128703,
+   "evaluate_us": 48.963,
+   "bounce_ms": 0.042666
+  },
+  {
+   "cycle": 176,
+   "action": "on",
+   "t_decide": 707556724940,
+   "t_eval": 707556775125,
+   "t_set": 707556852977,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 707560607293,
+   "settled_ns": 707561041384,
+   "edges_in_window": 9,
+   "decide_to_contact_ms": 3.882353,
+   "decide_to_gpio_ms": 0.128037,
+   "evaluate_us": 50.185,
+   "bounce_ms": 0.434091
+  },
+  {
+   "cycle": 176,
+   "action": "off",
+   "t_decide": 708856926868,
+   "t_eval": 708856980442,
+   "t_set": 708857054831,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 708860506149,
+   "settled_ns": 708860552926,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579281,
+   "decide_to_gpio_ms": 0.127963,
+   "evaluate_us": 53.574,
+   "bounce_ms": 0.046777
+  },
+  {
+   "cycle": 177,
+   "action": "on",
+   "t_decide": 710157126148,
+   "t_eval": 710157176185,
+   "t_set": 710157259999,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 710161018149,
+   "settled_ns": 710161482980,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.892001,
+   "decide_to_gpio_ms": 0.133851,
+   "evaluate_us": 50.037,
+   "bounce_ms": 0.464831
+  },
+  {
+   "cycle": 177,
+   "action": "off",
+   "t_decide": 711457332520,
+   "t_eval": 711457382705,
+   "t_set": 711457454187,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 711460906653,
+   "settled_ns": 711460952190,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.574133,
+   "decide_to_gpio_ms": 0.121667,
+   "evaluate_us": 50.185,
+   "bounce_ms": 0.045537
+  },
+  {
+   "cycle": 178,
+   "action": "on",
+   "t_decide": 712757527597,
+   "t_eval": 712757579041,
+   "t_set": 712757835392,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 34 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 178,
+   "action": "off",
+   "t_decide": 714057910524,
+   "t_eval": 714057966246,
+   "t_set": 714057974024,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 179,
+   "action": "on",
+   "t_decide": 715358049324,
+   "t_eval": 715358100805,
+   "t_set": 715358144101,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 31 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 179,
+   "action": "off",
+   "t_decide": 716658214512,
+   "t_eval": 716658263234,
+   "t_set": 716658271160,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 180,
+   "action": "on",
+   "t_decide": 717958345885,
+   "t_eval": 717958396459,
+   "t_set": 717958439459,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 29 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 180,
+   "action": "off",
+   "t_decide": 719258511018,
+   "t_eval": 719258581536,
+   "t_set": 719258589407,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 181,
+   "action": "on",
+   "t_decide": 720558715225,
+   "t_eval": 720558764447,
+   "t_set": 720558807447,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 26 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 181,
+   "action": "off",
+   "t_decide": 721858879821,
+   "t_eval": 721858943765,
+   "t_set": 721858951525,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 182,
+   "action": "on",
+   "t_decide": 723159024714,
+   "t_eval": 723159076066,
+   "t_set": 723159119954,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 24 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 182,
+   "action": "off",
+   "t_decide": 724459189144,
+   "t_eval": 724459238958,
+   "t_set": 724459247088,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 183,
+   "action": "on",
+   "t_decide": 725759321370,
+   "t_eval": 725759371092,
+   "t_set": 725759414036,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 21 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 183,
+   "action": "off",
+   "t_decide": 727059483207,
+   "t_eval": 727059533596,
+   "t_set": 727059540985,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 184,
+   "action": "on",
+   "t_decide": 728359615008,
+   "t_eval": 728359666526,
+   "t_set": 728359710766,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 18 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 184,
+   "action": "off",
+   "t_decide": 729659781752,
+   "t_eval": 729659832956,
+   "t_set": 729659841067,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 185,
+   "action": "on",
+   "t_decide": 730959914145,
+   "t_eval": 730959965960,
+   "t_set": 730960022164,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 16 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 185,
+   "action": "off",
+   "t_decide": 732260094742,
+   "t_eval": 732260146131,
+   "t_set": 732260153872,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 186,
+   "action": "on",
+   "t_decide": 733560227747,
+   "t_eval": 733560277710,
+   "t_set": 733560319857,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 13 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 186,
+   "action": "off",
+   "t_decide": 734860392233,
+   "t_eval": 734860447658,
+   "t_set": 734860455418,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 187,
+   "action": "on",
+   "t_decide": 736160528515,
+   "t_eval": 736160579071,
+   "t_set": 736160631848,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 11 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 187,
+   "action": "off",
+   "t_decide": 737460703816,
+   "t_eval": 737460756131,
+   "t_set": 737460764353,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 188,
+   "action": "on",
+   "t_decide": 738760839303,
+   "t_eval": 738760896562,
+   "t_set": 738760943024,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 8 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 188,
+   "action": "off",
+   "t_decide": 740061014937,
+   "t_eval": 740061065122,
+   "t_set": 740061072640,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 189,
+   "action": "on",
+   "t_decide": 741361155423,
+   "t_eval": 741361206127,
+   "t_set": 741361249812,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 5 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 189,
+   "action": "off",
+   "t_decide": 742664036528,
+   "t_eval": 742664093287,
+   "t_set": 742664103342,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 190,
+   "action": "on",
+   "t_decide": 743964173644,
+   "t_eval": 743964214570,
+   "t_set": 743964249829,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 3 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 190,
+   "action": "off",
+   "t_decide": 745264314464,
+   "t_eval": 745264362482,
+   "t_set": 745264368834,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 191,
+   "action": "on",
+   "t_decide": 746564434432,
+   "t_eval": 746564473117,
+   "t_set": 746564507395,
+   "issued": [
+    "on"
+   ],
+   "ok": false,
+   "reason": "Fan switched on 10 times in the last minute; held back for 0 s to protect the hardware",
+   "contact_ns": null
+  },
+  {
+   "cycle": 191,
+   "action": "off",
+   "t_decide": 747864576901,
+   "t_eval": 747864632567,
+   "t_set": 747864640734,
+   "issued": [
+    "off"
+   ],
+   "ok": false,
+   "reason": "no action issued",
+   "contact_ns": null
+  },
+  {
+   "cycle": 192,
+   "action": "on",
+   "t_decide": 749164713129,
+   "t_eval": 749164763388,
+   "t_set": 749164842943,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 749168570371,
+   "settled_ns": 749169043461,
+   "edges_in_window": 16,
+   "decide_to_contact_ms": 3.857242,
+   "decide_to_gpio_ms": 0.129814,
+   "evaluate_us": 50.259,
+   "bounce_ms": 0.47309
+  },
+  {
+   "cycle": 192,
+   "action": "off",
+   "t_decide": 750464921449,
+   "t_eval": 750464971578,
+   "t_set": 750465047522,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 750468525192,
+   "settled_ns": 750468572118,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.603743,
+   "decide_to_gpio_ms": 0.126073,
+   "evaluate_us": 50.129,
+   "bounce_ms": 0.046926
+  },
+  {
+   "cycle": 193,
+   "action": "on",
+   "t_decide": 751765118751,
+   "t_eval": 751765167843,
+   "t_set": 751765247509,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 751768984567,
+   "settled_ns": 751769453269,
+   "edges_in_window": 17,
+   "decide_to_contact_ms": 3.865816,
+   "decide_to_gpio_ms": 0.128758,
+   "evaluate_us": 49.092,
+   "bounce_ms": 0.468702
+  },
+  {
+   "cycle": 193,
+   "action": "off",
+   "t_decide": 753065318219,
+   "t_eval": 753065371441,
+   "t_set": 753065444256,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 753068918037,
+   "settled_ns": 753068964425,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.599818,
+   "decide_to_gpio_ms": 0.126037,
+   "evaluate_us": 53.222,
+   "bounce_ms": 0.046388
+  },
+  {
+   "cycle": 194,
+   "action": "on",
+   "t_decide": 754365515299,
+   "t_eval": 754365565169,
+   "t_set": 754365643261,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 754369385449,
+   "settled_ns": 754369845502,
+   "edges_in_window": 16,
+   "decide_to_contact_ms": 3.87015,
+   "decide_to_gpio_ms": 0.127962,
+   "evaluate_us": 49.87,
+   "bounce_ms": 0.460053
+  },
+  {
+   "cycle": 194,
+   "action": "off",
+   "t_decide": 755665711416,
+   "t_eval": 755665759731,
+   "t_set": 755665831804,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 755669298956,
+   "settled_ns": 755669349863,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.58754,
+   "decide_to_gpio_ms": 0.120388,
+   "evaluate_us": 48.315,
+   "bounce_ms": 0.050907
+  },
+  {
+   "cycle": 195,
+   "action": "on",
+   "t_decide": 756965907107,
+   "t_eval": 756965957681,
+   "t_set": 756966036477,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 756969814423,
+   "settled_ns": 756970249699,
+   "edges_in_window": 10,
+   "decide_to_contact_ms": 3.907316,
+   "decide_to_gpio_ms": 0.12937,
+   "evaluate_us": 50.574,
+   "bounce_ms": 0.435276
+  },
+  {
+   "cycle": 195,
+   "action": "off",
+   "t_decide": 758266107150,
+   "t_eval": 758266156853,
+   "t_set": 758266228483,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 758269695190,
+   "settled_ns": 758269741949,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.58804,
+   "decide_to_gpio_ms": 0.121333,
+   "evaluate_us": 49.703,
+   "bounce_ms": 0.046759
+  },
+  {
+   "cycle": 196,
+   "action": "on",
+   "t_decide": 759566301952,
+   "t_eval": 759566352045,
+   "t_set": 759566431507,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 759570188972,
+   "settled_ns": 759570646748,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.88702,
+   "decide_to_gpio_ms": 0.129555,
+   "evaluate_us": 50.093,
+   "bounce_ms": 0.457776
+  },
+  {
+   "cycle": 196,
+   "action": "off",
+   "t_decide": 760866505977,
+   "t_eval": 760866559699,
+   "t_set": 760866637088,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 760870100072,
+   "settled_ns": 760870146887,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.594095,
+   "decide_to_gpio_ms": 0.131111,
+   "evaluate_us": 53.722,
+   "bounce_ms": 0.046815
+  },
+  {
+   "cycle": 197,
+   "action": "on",
+   "t_decide": 762166709816,
+   "t_eval": 762166761335,
+   "t_set": 762166841334,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 762170592725,
+   "settled_ns": 762171059927,
+   "edges_in_window": 14,
+   "decide_to_contact_ms": 3.882909,
+   "decide_to_gpio_ms": 0.131518,
+   "evaluate_us": 51.519,
+   "bounce_ms": 0.467202
+  },
+  {
+   "cycle": 197,
+   "action": "off",
+   "t_decide": 763466912656,
+   "t_eval": 763466963619,
+   "t_set": 763467037859,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 763470492473,
+   "settled_ns": 763470545436,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579817,
+   "decide_to_gpio_ms": 0.125203,
+   "evaluate_us": 50.963,
+   "bounce_ms": 0.052963
+  },
+  {
+   "cycle": 198,
+   "action": "on",
+   "t_decide": 764767112162,
+   "t_eval": 764767165255,
+   "t_set": 764767246791,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 764771029108,
+   "settled_ns": 764771433125,
+   "edges_in_window": 11,
+   "decide_to_contact_ms": 3.916946,
+   "decide_to_gpio_ms": 0.134629,
+   "evaluate_us": 53.093,
+   "bounce_ms": 0.404017
+  },
+  {
+   "cycle": 198,
+   "action": "off",
+   "t_decide": 766067318946,
+   "t_eval": 766067368131,
+   "t_set": 766067442316,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 766070898671,
+   "settled_ns": 766070946393,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.579725,
+   "decide_to_gpio_ms": 0.12337,
+   "evaluate_us": 49.185,
+   "bounce_ms": 0.047722
+  },
+  {
+   "cycle": 199,
+   "action": "on",
+   "t_decide": 767367515916,
+   "t_eval": 767367594989,
+   "t_set": 767367675359,
+   "issued": [
+    "on"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 767371431472,
+   "settled_ns": 767371898230,
+   "edges_in_window": 13,
+   "decide_to_contact_ms": 3.915556,
+   "decide_to_gpio_ms": 0.159443,
+   "evaluate_us": 79.073,
+   "bounce_ms": 0.466758
+  },
+  {
+   "cycle": 199,
+   "action": "off",
+   "t_decide": 768667745237,
+   "t_eval": 768667794329,
+   "t_set": 768667866829,
+   "issued": [
+    "off"
+   ],
+   "ok": true,
+   "reason": "",
+   "contact_ns": 768671321258,
+   "settled_ns": 768671368554,
+   "edges_in_window": 3,
+   "decide_to_contact_ms": 3.576021,
+   "decide_to_gpio_ms": 0.121592,
+   "evaluate_us": 49.092,
+   "bounce_ms": 0.047296
+  }
+ ],
+ "all_edges": 1380,
+ "meta": {
+  "written_at": "2026-11-05T23:41:07+0530",
+  "host": "ai",
+  "machine": "aarch64",
+  "python": "3.11.2"
+ }
+}

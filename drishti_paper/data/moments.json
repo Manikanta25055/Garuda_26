@@ -1,0 +1,108 @@
+{
+ "ticks": 172800,
+ "switching_moments": 19,
+ "sampled": 59,
+ "bases": {
+  "deployed": {
+   "right_at_switching_moments": 15,
+   "wrong_moments": [
+    {
+     "t": 25200.0,
+     "want": [
+      [
+       "lamp",
+       "on"
+      ]
+     ],
+     "got": [
+      [
+       "fan",
+       "on"
+      ],
+      [
+       "lamp",
+       "on"
+      ]
+     ]
+    },
+    {
+     "t": 31680.0,
+     "want": [
+      [
+       "lamp",
+       "off"
+      ]
+     ],
+     "got": []
+    },
+    {
+     "t": 38304.0,
+     "want": [
+      [
+       "fan",
+       "on"
+      ]
+     ],
+     "got": []
+    },
+    {
+     "t": 75600.0,
+     "want": [
+      [
+       "lamp",
+       "off"
+      ]
+     ],
+     "got": []
+    }
+   ],
+   "spurious_ticks_whole_day": 3,
+   "sampled_right": 55,
+   "sampled_right_at_switching": 15,
+   "sampled_spurious_at_quiet": 0,
+   "model_right": 48,
+   "only_rules_right": 9,
+   "only_model_right": 2,
+   "mcnemar_p": 0.0654296875
+  },
+  "ultra": {
+   "right_at_switching_moments": 17,
+   "wrong_moments": [
+    {
+     "t": 31680.0,
+     "want": [
+      [
+       "lamp",
+       "off"
+      ]
+     ],
+     "got": []
+    },
+    {
+     "t": 38304.0,
+     "want": [
+      [
+       "fan",
+       "on"
+      ]
+     ],
+     "got": []
+    }
+   ],
+   "spurious_ticks_whole_day": 3,
+   "sampled_right": 57,
+   "sampled_right_at_switching": 17,
+   "sampled_spurious_at_quiet": 0,
+   "model_right": 48,
+   "only_rules_right": 10,
+   "only_model_right": 1,
+   "mcnemar_p": 0.01171875
+  }
+ },
+ "meta": {
+  "written_at": "2026-11-10T12:45:27+0530",
+  "host": "ai",
+  "machine": "aarch64",
+  "python": "3.11.2"
+ }
+}

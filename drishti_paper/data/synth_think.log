@@ -1,0 +1,91 @@
+0 c01 correct exact 2.8s 1176 
+0 c02 correct exact 6.5s 1545 
+0 c03 correct exact 3.4s 1342 
+0 c04 correct threshold 12.8s 2973 
+0 c05 valid_but_wrong wrong 2.8s 1102 
+0 c06 correct exact 3.1s 1120 
+0 c07 correct exact 4.5s 1664 
+0 c08 correct exact 7.2s 1696 
+0 c09 correct exact 2.9s 1220 
+0 c10 model_declined  11.8s 2518 no ambient_luma threshold specified for 'bright enough'
+0 c11 correct exact 3.1s 1287 
+0 c12 correct exact 3.3s 1334 
+0 c13 correct exact 3.2s 1246 
+0 c14 unparseable  23.6s 4851 the rule service ran out of room before it finished
+0 c15 correct exact 5.4s 1982 
+0 c16 model_declined  27.2s 3857 unspecified temperature threshold for 'cool'
+0 c17 unparseable  22.6s 4869 the rule service ran out of room before it finished
+0 c18 correct exact 4.1s 1536 
+0 c19 correct exact 5.5s 1606 
+0 c20 correct threshold 9.2s 2197 
+0 c21 correct exact 4.0s 1588 
+0 c22 unparseable  26.0s 4929 the rule service ran out of room before it finished
+0 c23 correct exact 4.9s 1669 
+0 c24 correct exact 6.4s 1485 
+0 c25 correct threshold 12.6s 3388 
+0 c26 correct exact 2.4s 1299 
+0 c27 correct exact 8.7s 2375 
+0 c28 model_declined  25.6s 4543 unspecified temperature threshold for 'warm'
+0 c29 unparseable  30.5s 5001 the rule service ran out of room before it finished
+0 c30 correct exact 5.3s 1554 
+1 c01 correct exact 3.6s 1182 
+1 c02 correct exact 5.1s 1405 
+1 c03 correct exact 3.8s 1401 
+1 c04 unparseable  27.8s 4731 the rule service ran out of room before it finished
+1 c05 valid_but_wrong wrong 6.0s 1647 
+1 c06 correct exact 3.4s 1092 
+1 c07 correct exact 9.8s 1930 
+1 c08 correct exact 5.1s 1544 
+1 c09 correct exact 3.7s 1156 
+1 c10 model_declined  15.7s 2421 no brightness threshold specified
+1 c11 correct exact 5.5s 1386 
+1 c12 correct exact 4.1s 1272 
+1 c13 correct exact 3.9s 1362 
+1 c14 unparseable  32.8s 4835 the rule service ran out of room before it finished
+1 c15 correct exact 6.1s 1860 
+1 c16 model_declined  15.0s 3030 no temperature threshold specified for 'cool'
+1 c17 model_declined  22.4s 3697 no numeric threshold given for ambient_luma
+1 c18 correct exact 3.9s 1340 
+1 c19 correct exact 7.2s 1608 
+1 c20 correct threshold 5.9s 1739 
+1 c21 correct exact 5.1s 1563 
+1 c22 correct exact 15.9s 2917 
+1 c23 correct exact 3.0s 1418 
+1 c24 correct exact 3.1s 1294 
+1 c25 model_declined  10.5s 2548 no numeric thresholds given for bright and daytime
+1 c26 correct exact 2.7s 1359 
+1 c27 correct exact 10.7s 2818 
+1 c28 model_declined  17.5s 4281 unspecified temperature threshold for 'warm'
+1 c29 valid_but_wrong wrong 26.0s 3844 
+1 c30 correct exact 4.5s 1597 
+2 c01 correct exact 4.7s 1285 
+2 c02 correct exact 4.0s 1372 
+2 c03 correct exact 3.3s 1273 
+2 c04 correct threshold 23.4s 4258 
+2 c05 unparseable  29.2s 4742 the rule service ran out of room before it finished
+2 c06 correct exact 3.5s 1136 
+2 c07 correct exact 6.4s 1524 
+2 c08 correct exact 5.3s 1631 
+2 c09 correct exact 8.5s 1106 
+2 c10 model_declined  10.0s 2513 ambient_luma threshold not specified
+2 c11 correct exact 4.1s 1217 
+2 c12 correct exact 3.4s 1303 
+2 c13 correct exact 2.8s 1098 
+2 c14 correct threshold 18.2s 3658 
+2 c15 correct exact 7.6s 1662 
+2 c16 unparseable  28.6s 4868 the rule service ran out of room before it finished
+2 c17 unparseable  33.0s 4873 the rule service ran out of room before it finished
+2 c18 correct exact 3.4s 1384 
+2 c19 correct exact 7.8s 1605 
+2 c20 correct threshold 11.4s 2061 
+2 c21 correct exact 4.0s 1580 
+2 c22 unparseable  36.8s 4933 the rule service ran out of room before it finished
+2 c23 correct exact 5.1s 1603 
+2 c24 correct exact 3.2s 1318 
+2 c25 model_declined  11.7s 2860 missing numeric thresholds for bright (ambient_luma) and daytime (hour
+2 c26 correct exact 2.8s 1293 
+2 c27 correct exact 11.1s 2843 
+2 c28 model_declined  18.0s 4146 unspecified temperature threshold for 'warm'
+2 c29 unparseable  26.5s 4992 the rule service ran out of room before it finished
+2 c30 correct exact 4.8s 1466 
+wrote /home/manikanta/Projects/Garuda_26/.claude/worktrees/ieee-paper-draft-a4315e/evaluation/out/narada_rs/synthesis_think.json

@@ -1,0 +1,31 @@
+0 c01 correct exact 2.3s 1032 
+0 c02 correct exact 4.2s 1394 
+0 c03 correct exact 4.5s 1260 
+0 c04 unparseable  12.5s 2683 the rule service ran out of room before it finished
+0 c05 valid_but_wrong wrong 3.4s 1244 
+0 c06 correct exact 6.0s 1519 
+0 c07 correct exact 6.5s 2069 
+0 c08 correct exact 5.6s 1670 
+0 c09 correct exact 3.4s 1185 
+0 c10 model_declined  13.7s 2704 missing ambient light threshold
+0 c11 correct exact 2.9s 1152 
+0 c12 correct exact 7.2s 1608 
+0 c13 correct exact 10.0s 1879 
+0 c14 unparseable  24.8s 2787 the rule service ran out of room before it finished
+0 c15 correct exact 4.6s 1554 
+0 c16 unparseable  21.2s 2800 the rule service ran out of room before it finished
+0 c17 unparseable  14.0s 2805 the rule service ran out of room before it finished
+0 c18 correct exact 3.1s 1271 
+0 c19 correct exact 6.2s 1669 
+0 c20 correct threshold 10.2s 1938 
+0 c21 correct exact 15.7s 1577 
+0 c22 unparseable  15.9s 2865 the rule service ran out of room before it finished
+0 c23 correct exact 6.5s 1441 
+0 c24 correct exact 4.7s 1422 
+0 c25 unparseable  15.5s 2894 the rule service ran out of room before it finished
+0 c26 correct exact 10.4s 1333 
+0 c27 correct exact 36.5s 2418 
+0 c28 unparseable  12.6s 2927 the rule service ran out of room before it finished
+0 c29 unparseable  14.2s 2924 the rule service ran out of room before it finished
+0 c30 correct exact 4.9s 1623 
+1 c01 correct exact 3.1s 969 

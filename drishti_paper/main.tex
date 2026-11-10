@@ -1,0 +1,568 @@
+% Drishti conference paper. Built on the official IEEEtran conference template
+% (IEEEtran.cls v1.8b, IEEEtran.bst v1.14, CTAN 2015/08/26); bare_conf.tex in template/.
+% Build: python3 scripts/numbers.py && pdflatex main && bibtex main && pdflatex main && pdflatex main
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,arrows.meta,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\graphicspath{{figures/}}
+
+% Drafting marker; removed before submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\input{numbers}
+\newcommand{\hcell}[1]{\begin{tabular}[b]{@{}c@{}}#1\end{tabular}}
+
+\begin{document}
+
+\title{Compile Once, Act Locally: Keeping a Cloud Language Model off the
+Actuation Path of an Edge Home-Automation System}
+
+\author{%
+\IEEEauthorblockN{Veera Manikanta}
+\IEEEauthorblockA{\textit{School of Electrical Engineering}\\
+\textit{Manipal Institute of Technology}\\
+\textit{Manipal Academy of Higher Education}\\
+Manipal, India\\
+\todo{email}}
+\and
+\IEEEauthorblockN{Sumir Subash Balakrishnan}
+\IEEEauthorblockA{\textit{School of Electrical Engineering}\\
+\textit{Manipal Institute of Technology}\\
+\textit{Manipal Academy of Higher Education}\\
+Manipal, India\\
+\todo{email}}
+}
+
+\maketitle
+
+\begin{abstract}
+Home assistants built on large language models (LLMs) usually either keep the
+model in the decision loop, paying a cloud call and seconds of delay for each
+switch, or turn a sentence into an automation rule and evaluate only the
+generated rule. We present and measure, end to end, an edge system in which a
+cloud model compiles an instruction into a typed rule once, an on-device gate
+checks it against the house's own device registry before a person confirms it,
+and a local evaluator fires it with no model and no network. On a Raspberry
+Pi~5 with a camera-derived room state and a two-channel relay, the deployed
+compiler produced a correct rule for \synDepTrialCorrect{} of \synDepTrialN{}
+requests with a median round trip of \synDepRtMed{}~s, and no malformed rule
+reached the store. Turning the model's reasoning phase off was decisive: with it
+on, \synThinkRejected{} of 90 compilations ran out of tokens before the rule was
+written and correct rules fell to \synThinkTrialCorrect{} of 30. At
+\blN{} moments of a scripted day, the compiled rules made the right switching
+decision \momRules{} times and the same model deciding live \blCorrect{}
+times (\momRulesEdge{} against \blEdgeCorrect{} of the \blEdges{} moments that
+called for a switch), and \blSlow{} live decisions outlasted the tick. A firing
+decision reached the relay contact in \relayOnMed{}~ms, so reaction time is set
+by the 0.5~s evaluation tick, and with the network removed for \offSeconds{}~s
+the live system switched \offSwitches{} times, each by its rule.
+\end{abstract}
+
+\begin{IEEEkeywords}
+edge computing, home automation, large language models, trigger-action
+programming, structured output, offline operation
+\end{IEEEkeywords}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}\label{sec:intro}
+
+A home assistant built on a large language model (LLM) understands requests
+that no fixed grammar anticipates: ``turn the fan off once the room has been
+empty for five minutes'' needs no template. The obvious way to use such a model
+is to ask it what to do whenever something changes. That places a cloud call,
+seconds of variable delay and a per-call cost on every switching decision, and
+it stops the house when the network does. The alternative, already explored by
+several systems~\cite{chatiot,giudici,autoiot,farm}, is to let the model write
+a rule that a conventional runtime executes. Those systems are evaluated at the
+point of generation: whether the rule parses, whether the platform accepts it,
+how many tokens it costs. What happens after the rule is stored, how fast it
+acts, whether it still acts without a network, and how many rules pass every
+check yet mean something other than what was said, is rarely reported.
+
+We report it for one complete system. A cloud model compiles an instruction
+into a typed rule over a small vocabulary of room-state fields. The rule passes
+an on-device gate derived from the house's device registry, is shown to a
+person for confirmation, and is then evaluated twice a second against a state
+vector built from a camera on the same board. No model and no network sit
+between a state change and a relay. Authoring a new rule still needs the cloud; running the rules already stored
+does not. Immediate commands (``fan off now'') also go to the model, with a
+small on-device router as fallback; we treat that lane as context and measure
+the rule lane.
+
+We ask three questions. \textit{RQ1}: how often does a cloud compiler produce
+a rule that is well-formed but means something else, and what controls that
+rate? \textit{RQ2}: once rules are stored, how fast and how faithfully do they
+act, with and without a network? \textit{RQ3}: what would the same model have
+done in the decision loop instead? Our contributions follow.
+\begin{itemize}
+\item A two-lane architecture that keeps a cloud LLM off the firing path of
+standing rules, with a registry-derived gate, an edge-triggered evaluator and a
+switch guard in front of the relays (Section~\ref{sec:design}).
+\item An end-to-end measurement of the gate for four model settings, with a
+three-way outcome (correct, valid but wrong, rejected): the reasoning phase,
+not model size, decides compilation quality, and the residue the gate cannot
+see is off-by-one thresholds (Section~\ref{sec:compile}).
+\item A measurement of the firing path on real hardware: decision-to-contact
+time on a relay, a physical test with the network removed, a 24-hour replay,
+and the same day decided by the model in the loop
+(Sections~\ref{sec:latency}--\ref{sec:offline}).
+\item An audit of what each lane sends to the cloud, and a negative result for
+similarity-based request reuse in a narrow command domain
+(Sections~\ref{sec:egress} and~\ref{sec:reuse}).
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\section{Related Work}\label{sec:related}
+
+\textit{Model in the loop.} Sasha~\cite{sasha} answers vague goals with a
+multi-step LLM pipeline; IoTGPT~\cite{iotgpt} decomposes commands into reusable
+subtasks over SmartThings and reports lower command-generation latency and cost
+than earlier agents. SAGE~\cite{sage} lets the model write condition code that
+is polled, then hands control back to the model to plan the action. Local
+variants run a small model on the device~\cite{birkmose,harmony,homellama,adahome},
+trading model capability for privacy; the model still decides each command.
+
+\textit{One-time synthesis.} ChatIoT~\cite{chatiot} generates trigger-action
+programs for a runtime from conversation; Giudici et al.~\cite{giudici} generate
+Home Assistant automations and time the LLM call; AutoIoT~\cite{autoiot} adds
+formal verification to detect and repair conflicts among generated rules;
+FARM~\cite{farm} maps instructions to IFTTT-style applets; LLMind~\cite{llmind}
+stores generated control scripts for reuse; the similarly named
+AutoIOT~\cite{autoiot_nl} and GPIoT~\cite{gpiot} synthesise sensing programs
+that then run locally. Their evaluations end at generation
+(Table~\ref{tab:related}): none of those we could read in full reports how the
+stored rules behave over time, offline, or against the same task done with the
+model in the loop.
+
+\textit{Rule safety and reuse.} Conflict and interaction analysis of
+trigger-action rules predates LLMs~\cite{iruler,autotap}; LLMs are weaker than
+static analysis at threats that span several rules~\cite{quantrill}. Our
+conflict check is deliberately simple and we do not claim it as new. Semantic
+caches skip a model call when a request resembles an earlier one and report
+wrong hits alongside savings~\cite{gptcache,meancache}. Constrained decoding
+holds generation to a grammar or JSON schema~\cite{outlines,xgrammar}, and its
+effect varies widely across schemas and engines~\cite{jsonschemabench}.
+
+\begin{table}[t]
+\caption{Where the model sits and what is measured after generation}
+\label{tab:related}
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+System & Stored & \hcell{Model\\at firing} & \hcell{Offline\\tested} & \hcell{Actuation\\timed}\\
+\midrule
+SAGE~\cite{sage} & condition code & yes & no & no\\
+IoTGPT~\cite{iotgpt} & subtasks & yes & no & no\\
+On-device~\cite{birkmose,homellama} & no & local & n.r. & n.r.\\
+ChatIoT~\cite{chatiot} & TAP program & no & n.r. & n.r.\\
+Giudici~\cite{giudici} & automation & no & no & no\\
+AutoIoT~\cite{autoiot} & verified rule & no & no & no\\
+This work & typed rule & no & \offSeconds~s & \relayOnMed~ms\\
+\bottomrule
+\end{tabular}\\[2pt]
+\raggedright\scriptsize n.r.: not reported in the source available to us (full
+text for SAGE, IoTGPT, Giudici et al.\ and AutoIoT; abstract otherwise).
+\end{table}
+
+% ---------------------------------------------------------------------------
+\section{System Design}\label{sec:design}
+
+Figure~\ref{fig:arch} shows the two lanes. Everything below the dashed line
+runs on a Raspberry Pi~5 (16~GB) with a Hailo-8L neural accelerator, a Camera
+Module~3 and a two-channel relay board whose channels drive indicator loads
+standing in for a lamp and a fan; the cloud side is NVIDIA's hosted
+\texttt{nemotron-3.5-super-vl-120b} with \texttt{nemotron-3-ultra-550b} as
+fallback.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\scriptsize,
+  box/.style={draw, rounded corners=1.5pt, align=center, inner sep=2pt, minimum height=6.5mm, minimum width=15mm},
+  cloud/.style={box, dashed},
+  arr/.style={-{Stealth[length=1.5mm]}, semithick},
+  imm/.style={arr, densely dotted}]
+\node[cloud] (A) at (2.2,0) {Assistant turn\\(cloud LLM)};
+\node[cloud] (C) at (6.1,0) {Rule compiler\\(cloud LLM)};
+\node[box]   (P) at (0.1,-1.6) {Person};
+\node[box, fill=black!5] (R) at (2.2,-1.6) {Device control\\(tool call or\\local router)};
+\node[box]   (G) at (6.1,-1.6) {Gate: shape, keys,\\registry, conflict};
+\node[box]   (S) at (4.0,-2.9) {Rule store};
+\node[box]   (K) at (6.1,-2.9) {Person\\confirms};
+\node[box]   (W) at (0.1,-4.2) {Relays};
+\node[box]   (U) at (2.2,-4.2) {Switch guard};
+\node[box]   (E) at (4.0,-4.2) {Evaluator\\2 Hz, edge};
+\node[box]   (M) at (6.1,-4.2) {Camera\\+ NPU state};
+\draw[arr] (P) -- node[left, pos=0.8]{say} (A);
+\draw[arr] (A) -- node[above]{rule request} (C);
+\draw[arr] (C) -- (G);
+\draw[arr] (G) -- (K);
+\draw[arr] (K) -- (S);
+\draw[arr] (S) -- (E);
+\draw[arr] (M) -- (E);
+\draw[arr] (E) -- (U);
+\draw[arr] (U) -- (W);
+\draw[imm] (A) -- (R);
+\draw[imm] (P) -- (R);
+\draw[imm] (R) -- (U);
+\draw[densely dashed, black!50] (-0.75,-0.75) -- (7.15,-0.75);
+\node[anchor=south west, black!60, inner sep=1pt] at (-0.75,-0.75) {cloud};
+\node[anchor=north west, black!60, inner sep=1pt] at (-0.75,-0.75) {device};
+\end{tikzpicture}
+\caption{Two lanes. Solid: a standing rule is compiled once in the cloud, gated
+and confirmed on the device, then fired locally with no model or network.
+Dotted: an immediate command is decided by the model, or by an on-device router
+when the model is unreachable.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{State and rules}
+Each half second the device builds a state vector from the camera and the
+house: occupancy, person count, dwell time, the zone and posture of the largest
+person box, ambient light from the image, hour of day, owner presence, optional
+sensor readings and the state of every registered device. The rule vocabulary
+is generated from that schema and from the device registry, so a device added
+by the user becomes a legal action without code changes. A rule is a JSON
+object with one combinator (\texttt{all} or \texttt{any}) over conditions of the
+form \textit{field op value}, a list of device actions and a cooldown. The
+request ``turn the fan on when someone is in the room and it is warmer than
+thirty degrees'' compiled to:
+\begin{center}\scriptsize
+\begin{tabular}{@{}l@{}}
+\texttt{\{"when":\{"all":[}\\
+\texttt{\ \ \{"field":"occupancy","op":"==","value":"occupied"\},}\\
+\texttt{\ \ \{"field":"temperature\_c","op":">","value":30\}]\},}\\
+\texttt{\ "then":[\{"device":"fan","action":"on"\}],"cooldown\_s":0\}}
+\end{tabular}
+\end{center}
+
+\subsection{The gate}
+Compilation sends the model the field schema, the device list, the utterances
+of existing rules and the instruction; never a current reading. The request
+carries the rule's JSON schema as a structured-output constraint and disables
+the model's reasoning phase (Section~\ref{sec:compile} explains both choices).
+What comes back passes four checks on the device before anything is stored:
+(i) only the keys a rule is made of are kept, so the model cannot supply an
+identifier or run counters; (ii) every field, operator, value range, device and
+action is checked against the schema and registry; (iii) a conflict check flags
+an existing rule that drives a shared device the opposite way unless the two
+conditions are provably disjoint field by field; (iv) the rule becomes a
+proposal that a person confirms or discards, with the conflict, if any, shown.
+
+\subsection{Firing}
+The evaluator runs every 0.5~s over at most 64 rules. A rule acts when its
+condition becomes true and stays quiet until the condition has been false;
+at start-up the conditions already true are taken as acted on, so a restart is
+not mistaken for an arrival. Every switch, from any source, passes a guard that
+never refuses ``off'' but refuses ``on'' within 1~s of the device's last change
+or after ten ``on'' switches in a minute, which bounds relay chatter from rules
+that undo each other.
+
+\subsection{Immediate commands}
+Commands meant to act now are answered by the model through tool calls, with
+the current house state attached to the turn. When the cloud is unreachable, a
+pruned multilingual MiniLM~\cite{minilm,multilingual} (int8, ONNX) points at
+the intended device, scene and action and acts only above a confidence
+threshold. This lane is outside our main claim; we report its router alongside
+the matcher it replaced (Section~\ref{sec:reuse}).
+
+% ---------------------------------------------------------------------------
+\section{Evaluation Method}\label{sec:method}
+
+\textit{Corpus.} Thirty rule requests for one room with a lamp and a fan, each
+with three paraphrases, were written before any model output was seen. For
+each request the authors wrote a reference rule; where the request gives no
+number (``dark'', ``warm''), the threshold is marked vague and not held against
+the model.
+
+\textit{Scoring.} A compiled rule is \textit{correct} when it fires on the same
+states as its reference over a grid built from every constant either rule
+mentions, one step either side, restricted to physically consistent states;
+\textit{valid but wrong} when it passes the gate but disagrees; and
+\textit{rejected} when the gate or the parser refuses it. Each setting ran three
+trials of 30 requests at temperature~0.1. Settings are compared request by
+request with an exact two-sided McNemar test on the first trial.
+
+\textit{Replay.} A scripted 24-hour day (\replayTicks{} ticks at 2~Hz) drives
+the production evaluator and guard, with device states fed back from its own
+actions, once with the network and once inside a Linux network namespace with
+no interfaces.
+
+\textit{Hardware.} For decision-to-contact time, relay channel~2 was wired as a
+dry contact (common to ground, normally-open to a GPIO input with pull-up);
+the decision timestamp and the contact edge come from the same monotonic clock,
+the edge from the kernel's GPIO event. For the physical offline test, a system
+unit switched the Pi's only network (Wi-Fi) off for 600~s and restored it
+itself, while one author walked in and out of the camera's view under four
+temporary rules.
+
+\textit{Baseline.} The same 30 instructions were given to the model as text;
+at \blN{} sampled moments of the scripted day (all \blEdges{} moments at which
+the reference rules switched a device, and quiet moments) it was shown the
+previous and current state, with the reference's device states, and asked
+which devices to switch, with a JSON
+schema and reasoning off, as in the deployed compiler; with reasoning on, its
+median compile time (Table~\ref{tab:compile}) already exceeds the tick
+tenfold. Models were queried
+through NVIDIA's hosted endpoints on 4 November 2026; the harness, data and
+scripts that produce every number here are in the artifact.
+
+% ---------------------------------------------------------------------------
+\section{Results}\label{sec:results}
+
+\subsection{Compilation}\label{sec:compile}
+
+\begin{table}[t]
+\caption{Compilation outcomes, 30 requests $\times$ 3 trials}
+\label{tab:compile}
+\centering\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Setting & Correct & \hcell{Valid\\wrong} & \hcell{Rejected,\\cut off} & Declined & \hcell{Median\\(p95) s}\\
+\midrule
+Deployed (3.5, schema) & \synDepCorrect & \synDepWrong & \synDepRejected & \synDepDeclined & \synDepRtMed{} (\synDepRtNinetyFive)\\
+No schema & \synFreeCorrect & \synFreeWrong & \synFreeRejected & \synFreeDeclined & \synFreeRtMed{} (\synFreeRtNinetyFive)\\
+Reasoning on & \synThinkCorrect & \synThinkWrong & \synThinkRejected & \synThinkDeclined & \synThinkRtMed{} (\synThinkRtNinetyFive)\\
+Ultra, deployed & \synUltraCorrect & \synUltraWrong & \synUltraRejected & \synUltraDeclined & \synUltraRtMed{} (\synUltraRtNinetyFive)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:compile} gives the outcomes. The deployed setting was
+stable: every request had the same outcome in all three trials (three or four
+rules per trial differed in form), \synDepTrialCorrect{} of \synDepTrialN{}
+correct (95\% Wilson interval \synDepTrialCI\%), so we count it as one sample
+of 30 rather than 90. No compilation in any setting stored a malformed rule;
+the gate turned every syntactic failure into a refusal.
+
+Reasoning was the only setting whose effect is statistically clear. With
+reasoning on and a 4096-token budget, \synThinkRejected{} of 90 compilations
+were cut off and the median round trip rose to \synThinkRtMed~s: the model
+spent its budget deliberating before writing the rule. Per request, the
+deployed setting was right where reasoning was wrong \synThinkOnlyDep{} times
+and never the reverse ($p=\synThinkP$). This was the production default when
+the study started: with its 2048-token budget, \oldBudgetCut{} of the first
+\oldBudgetN{} compilations were cut off. Without the schema, the model twice
+wrote a condition as \texttt{\{"field": "humidity\_pct", ">": 60\}}, dropping
+the operator key, and once returned no parsable rule; with the schema, neither
+happened. The schema's value is thus in removing malformed output; its effect
+on correct rules (\synFreeOnlyDep{} requests, $p=\synFreeP$) is too small to
+resolve with 30 requests. The larger model was correct on all 30, fixing the
+\synUltraOnlyOther{} off-by-one rules below ($p=\synUltraP$), at about
+\synUltraRtMed~s instead of \synDepRtMed~s; since a rule is compiled once, that
+trade is cheap; the smaller model stays primary for its steadier round trip
+(maximum \synDepRtMax~s against \synUltraRtMax~s).
+
+The two valid-but-wrong rules (\synDepWrong{} over three trials) are the
+residue the gate cannot see:
+``after nine'' compiled as \texttt{hour~>~21} and ``after eleven'' as
+\texttt{hour~>~23}, which can never hold because the hour stops at 23. Both are
+well-typed and plausible, which is why a person confirms every rule; whether
+people catch such errors at the confirmation step we did not measure. Each compilation cost about
+\synDepTokens{} tokens and a \synDepBytes~kB request.
+
+\subsection{Firing latency}\label{sec:latency}
+
+\begin{figure}[t]
+\centering
+\input{figures/latency_labels}
+\begin{tikzpicture}
+\begin{axis}[
+  scale only axis, width=46mm, height=34mm, xmode=log,
+  xmin=0.02, xmax=40000, ymin=-0.6, ymax=5.6,
+  ytick={0,...,5}, yticklabels/.expand once=\latencylabels,
+  yticklabel style={font=\scriptsize}, xticklabel style={font=\scriptsize},
+  xlabel={time (ms, log scale)}, xlabel style={font=\scriptsize},
+  xmajorgrids, grid style={black!12}, axis line style={black!60},
+  legend style={font=\scriptsize, at={(0.02,0.03)}, anchor=south west, draw=black!30},
+  xtick={0.1,1,10,100,1000,10000}, xticklabels={0.1,1,10,100,1000,10000},
+  tick align=outside, tick pos=left, log basis x=10, clip=false]
+\addplot[black, thick, forget plot] coordinates {(500,-0.6) (500,5.6)};
+\node[font=\scriptsize, anchor=south, black!70] at (axis cs:500,5.6) {tick};
+\addplot[only marks, mark=*, mark size=1.8pt, black,
+  error bars/.cd, x dir=plus, x explicit, error mark=|]
+  table[x=med, y=y, x error expr=\thisrow{max}-\thisrow{med},
+        restrict expr to domain={\thisrow{y}}{3:5}] {figures/latency.dat};
+\addlegendentry{on device}
+\addplot[only marks, mark=o, mark size=1.8pt, black,
+  error bars/.cd, x dir=plus, x explicit, error mark=|]
+  table[x=med, y=y, x error expr=\thisrow{max}-\thisrow{med},
+        restrict expr to domain={\thisrow{y}}{0:2}] {figures/latency.dat};
+\addlegendentry{cloud}
+\addplot[only marks, mark=diamond*, mark size=1.6pt, black!55, forget plot]
+  table[x=p95, y=y] {figures/latency.dat};
+\end{axis}
+\end{tikzpicture}
+\caption{Median (circle), 95th percentile (diamond) and maximum (bar end) of
+each step. A standing rule's reaction time is the 0.5~s tick plus the
+on-device steps; the cloud steps are paid once per rule or, in the baseline,
+once per decision.}
+\label{fig:latency}
+\end{figure}
+
+Figure~\ref{fig:latency} places every measured step on one axis. Evaluating 30
+rules took a median of \evalThirtyMed~\textmu s (p99 \evalThirtyNinetyNine~\textmu s)
+with the camera pipeline running; 64 rules took \evalSixtyFourMed~\textmu s.
+Over \relayOnN{} switching cycles on the relay, a firing decision reached the
+GPIO line in \relayOnGpio~ms and closed the contact in \relayOnMed~ms (p99
+\relayOnNinetyNine, max \relayOnMax); release took \relayOffMed~ms. Every
+contact bounced, for about \relayOnBounce~ms on closing. Software is thus a few
+percent of actuation time. From the moment the state vector changes, a rule
+waits up to one 0.5~s tick (0.25~s on average) before it is evaluated, so a
+standing rule's reaction is bounded by about 0.5~s plus 4~ms; the camera
+pipeline's own detection delay comes before that and was not measured here. The guard refused \relayHeld{} of \relayRequestedOn{}
+``on'' requests in this test, which asked faster than its limit; all
+\relayEdges{} contact edges fell inside switches that happened, none during a
+refusal.
+
+The model in the loop answered in \blMed~s at the median but \blNinetyFive~s at
+the 95th percentile and \blMax~s at worst; \blSlow{} of \blN{} decisions took
+longer than one tick. It was right at \blCorrect{} of \blN{} moments overall but
+at only \blEdgeCorrect{} of \blEdges{} moments that called for a switch, most
+often switching both devices when one instruction named one, and it switched
+\blSpurious{} times at the \blQuiet{} moments when nothing should have changed.
+Scored the same way, with the same reference device states before each
+moment, the rules the same model had compiled once were right at \momRules{}
+of the \blN{} moments: \momRulesEdge{} of the \blEdges{} switching moments
+and all \blQuiet{} quiet ones. The rules were right where the live model was
+wrong \momRulesOnly{} times and the reverse \momRulesOnlyModel{} times
+($p=\momRulesP$), so this sample suggests an accuracy gap without settling
+it; for the larger model's rules the count is \momUltra{} of \blN{}
+($p=\momUltraP$). Of the rules' \momRulesMissed{} misses, one is the ``after
+nine'' rule of Section~\ref{sec:compile} and the others fall at thresholds the
+request left open. The live model's task is harder, since it must
+read all 30 instructions at every call, and that is the point: compilation
+lets the model see one instruction at a time, once, with a person checking
+the result. Each decision cost about \blTokens{} tokens. Even a model called only when a
+non-clock field of the state changes would have been called \blEvents{} times
+in the scripted day (about \blEventTokens{} million tokens), each call paying
+the latency above, and none of them can be made offline.
+
+\subsection{Without the network}\label{sec:offline}
+
+The scripted day produced the same switching log, byte for byte (\replaySameHash{}
+SHA-256 digests), with and without a network interface. Identity is expected by
+design; the check is that no logging, configuration or model call on the
+firing path waits for the network. Against the reference
+rule base, rule by rule, the deployed rules matched \replayAllMatched{} of
+\replayAllRef{} firing edges (a rule's condition becoming true; several rules
+can share one switch). On the \replayStatedRules{} rules with a stated
+threshold they matched \replayStatedMatched{}, added \replayStatedFalse{} and
+missed \replayStatedMissed{}; on the vague rules the model's own thresholds
+added \replayVagueFalse{} and missed \replayVagueMissed{}. Because a rule acts only on the
+change of its condition, one early disagreement persists: the lamp's state
+agreed with the reference for \replayLampAgree\% of the day and the fan's for
+\replayFanAgree\%.
+
+In the physical test, all \offChecks{} reachability checks during the
+\offSeconds~s window failed. The house switched \offSwitches{} times in that
+window, each logged with the rule that caused it and matched by the relay drive
+line within one 0.2~s poll. Unlike the replay, this exercised the live service,
+camera and relays.
+
+\subsection{What leaves the house}\label{sec:egress}
+We placed canary readings (a person count of 7, a temperature of 27.83~\textdegree C)
+in the live state and authored all 30 rules through the assistant. None of the
+\egCompileReq{} compile requests (\egCompileKb~kB median) contained a reading.
+All \egAgentReq{} assistant requests (\egAgentKb~kB) did: the assistant's turn
+carries device states, occupancy and person count so that it can answer
+questions about the house. The rule compiler's boundary is therefore narrow and
+auditable, but the conversational front end is not, and a privacy claim for
+the whole system would be false. In \egProposals{} of \egTurns{} turns the
+assistant drafted a rule; it routed three purely time-based requests to the
+schedule feature, declined one that needed a missing sensor, and in one turn
+claimed a draft it never made, for which we have since written a reply check.
+
+\subsection{Conflicts and request reuse}\label{sec:reuse}
+Among the 30 reference rules, \cfPairs{} pairs drive a device in opposite
+directions and \cfReal{} of them can hold together. The check flagged
+\cfFlagged{} pairs: recall \cfRecall\%, precision \cfPrecision\%, because a
+field-by-field test cannot see that ``room empty'' excludes ``two people at the
+desk''. Added one at a time, \cfPrompts{} of 30 rules raised a conflict prompt,
+\cfPromptsReal{} of them for a real overlap. With two devices conflicts are the
+normal case, but a prompt on most new rules invites people to stop reading
+it; a few implications between fields (an empty room has no person count, no
+zone and no posture) would remove the false pairs we saw.
+
+Before the router, a sentence-embedding matcher tried to skip the cloud for
+requests resembling an earlier one. On the 90 paraphrases it matched
+\mEmbCorrect{} correctly but \mEmbWrong{} to the wrong rule, and it treated
+\mEmbNovel{} of \mEmbNovelN{} new requests as known: in a narrow domain every
+request looks like ``turn the fan off when\ldots'', so similarity does not
+separate five minutes from an hour. For immediate commands, the trained
+router that replaced it and the earlier hand-coded offline matcher were scored
+on whether the whole decision (device, scene and action) was right. The router
+got \rtHand{} of \rtHandN{} hand-written commands and \rtHeld{} of \rtHeldN{}
+held-out model-written ones right, in \rtHandMs~ms; the hand-coded matcher got
+\rtLitHand{} and \rtLitHeld.
+
+% ---------------------------------------------------------------------------
+\section{Discussion}\label{sec:discussion}
+\textit{Compilation is a structured-output task.} The model's reasoning phase
+hurt more than it helped: it consumed the token budget and the latency, and
+every request it declined was one with an unstated threshold (``warm'',
+``bright''), which the confirmation step handles anyway by showing the
+threshold chosen. A schema plus no reasoning gave a stable,
+second-scale compiler, and a larger model fixed the two remaining rules. Thirty requests cannot separate the smaller effects.
+
+\textit{Compile once against deciding live.} The model in the loop missed
+the tick in \blSlow{} of \blN{} decisions, pays a call for every state change
+and cannot act at all offline. It was also right less often than its own
+rules, though \blN{} moments do not settle that. The cost of compiling is that a wrong rule is wrong
+every time it fires, which is why the confirmation step and the gate matter.
+
+\textit{Edge triggering trades repetition for persistence.} Acting only on a
+condition's change stops a rule from undoing a manual switch twice a second,
+but it lets one wrong edge persist until the next one, which is why state
+agreement in the replay is lower than edge agreement.
+
+\textit{Privacy has to be claimed per lane.} A compile request can be held to a
+fixed, auditable shape; a conversational turn that answers questions about the
+house cannot. Systems that report a privacy boundary should say which requests
+it covers.
+
+\section{Limitations}\label{sec:limits}
+One room, two devices and indicator loads behind the relays. The corpus and
+reference rules are the authors' (written before any model output was seen);
+the 30 requests are not a user study, and differences of one or two requests
+between settings are not significant. The
+replay's states are scripted, and lamp state does not feed back into the light
+reading. Two models from one provider were tested. The in-loop baseline
+used one untuned prompt at \blN{} moments of one day. The physical test
+was a single 10-minute session, and its contact-level record was lost to a
+wiring fault, so contact timing rests on the bench measurement. The router was
+evaluated on its own command sets, not on the rule corpus. Detection delay in
+the camera pipeline, and whether people catch wrong rules when confirming, were
+not measured.
+
+\section{Conclusion}\label{sec:conclusion}
+A cloud language model can author home-automation rules without sitting on the
+path that switches the house. Held to a schema and kept from deliberating, it
+compiled \synDepTrialCorrect{} of \synDepTrialN{} requests correctly in about a
+second, and the on-device gate kept every malformed rule out. Once stored, the
+rules were right at \momRules{} of \blN{} sampled moments of a day where the
+same model deciding live was right at \blCorrect{}, reached the relay contact
+\relayOnMed~ms after a decision, and kept switching the house with the network
+removed. The measurements that matter most were the ones taken after the rule
+was stored, and we suggest that systems in this area report them. \todo{artifact link}
+
+\section*{Acknowledgment}
+\todo{Funding, if any. AI-use disclosure as the venue requires: an AI assistant
+(Claude) was used for code, measurement scripts and drafting; all results were
+produced by the scripts in the artifact and checked by the authors.}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
