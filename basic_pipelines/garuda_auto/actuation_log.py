@@ -7,8 +7,18 @@ Newline-delimited JSON so an append is one write and a partial line cannot
 corrupt what came before it.
 """
 import json
+import logging
 import os
+import threading
 import time
+
+log = logging.getLogger(__name__)
+
+# The rule loop, the home loop and every request thread write here. Without
+# this, a trim (read all, rewrite, rename) threw away whatever another thread
+# appended meanwhile, and two trims shared one temp file.
+_write_lock = threading.Lock()
+_warned_at = 0.0
 
 MAX_LINES = 20_000
 # The file itself had no limit: only the read was capped, and every read
@@ -34,11 +44,27 @@ def record(path, *, device, action, rule_id, matched, ok, reason="", clock=time.
         entry["source"] = source
     if actor:
         entry["actor"] = actor
-    directory = os.path.dirname(path) or "."
-    os.makedirs(directory, exist_ok=True)
-    with open(path, "a", encoding="utf-8") as fh:
-        fh.write(json.dumps(entry) + "\n")
-    _trim(path)
+    # The switch has already happened by the time it is written down. A full
+    # disk or a read-only card must not turn that into an exception: it used
+    # to end the rule loop's tick halfway and answer a button press with an
+    # error after the lamp had come on. Returns whether the line was written.
+    global _warned_at
+    try:
+        line = json.dumps(entry, default=str) + "\n"
+        with _write_lock:
+            directory = os.path.dirname(path) or "."
+            os.makedirs(directory, exist_ok=True)
+            with open(path, "a", encoding="utf-8") as fh:
+                fh.write(line)
+            _trim(path)
+        return True
+    except (OSError, ValueError, TypeError) as exc:
+        now = time.monotonic()
+        if now - _warned_at >= 60 or not _warned_at:
+            _warned_at = now
+            log.error("activity log %s could not be written: %s: %s",
+                      path, type(exc).__name__, exc)
+        return False
 
 
 def _trim(path):
@@ -64,9 +90,16 @@ def _read(path):
     entries = []
     for line in lines:
         try:
-            entries.append(json.loads(line))
+            entry = json.loads(line)
         except ValueError:
             continue
+        # Every reader takes these as given (the Activity page, usage, habits,
+        # Narada); one line without them made each of those fail for as long
+        # as the line stayed in the file.
+        if (isinstance(entry, dict) and isinstance(entry.get("device"), str)
+                and isinstance(entry.get("action"), str) and "ok" in entry
+                and isinstance(entry.get("ts"), (int, float)) and not isinstance(entry.get("ts"), bool)):
+            entries.append(entry)
     return entries
 
 

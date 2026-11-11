@@ -5,13 +5,14 @@ from the catalogue and a transport; its capabilities are derived, never
 entered. Relay devices name a channel, not a pin -- a user who could enter a
 BCM pin could drive one the Hailo HAT, camera or I2C bus is using.
 """
-import json
-import os
+import logging
 import re
-import tempfile
 import threading
 
+from . import jsonfile
 from .device_types import TYPES, TRANSPORTS, is_actuator
+
+log = logging.getLogger(__name__)
 
 MAX_DEVICES = 32
 MAX_WATTS = 5000
@@ -80,35 +81,33 @@ class DeviceRegistry:
         self.load()
 
     def load(self):
-        try:
-            with open(self.path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, ValueError):
-            self.devices = []
-            return
-        if not isinstance(data, list):
-            self.devices = []
-            return
-        kept, seen = [], set()
+        data = jsonfile.load(self.path, [])
+        kept, seen, channels, dropped = [], set(), set(), []
         for entry in data:
-            ok, _ = validate_device(entry, seen, self.relay_channels)
+            ok, reason = validate_device(entry, seen, self.relay_channels)
+            if ok and entry["transport"]["kind"] == "relay":
+                # add() refuses a second device on a channel; a file edited by
+                # hand did not, and two devices then fought over one pin.
+                channel = entry["transport"]["channel"]
+                if channel in channels:
+                    ok, reason = False, f"channel {channel} is already in use"
+                else:
+                    channels.add(channel)
             if ok:
                 kept.append(entry)
                 seen.add(entry["id"])
+            else:
+                dropped.append(reason)
+        if dropped:
+            # The next save writes only what was kept. Keep the file as it was,
+            # so a device dropped here can be put back by a person.
+            jsonfile.quarantine(self.path, f"holding {len(dropped)} unusable device(s)")
+            for reason in dropped:
+                log.warning("device dropped from %s: %s", self.path, reason)
         self.devices = kept
 
     def save(self):
-        directory = os.path.dirname(self.path) or "."
-        os.makedirs(directory, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(self.devices, fh, indent=2)
-            os.replace(tmp, self.path)
-        except BaseException:
-            if os.path.exists(tmp):
-                os.unlink(tmp)
-            raise
+        jsonfile.save(self.path, self.devices)
 
     def _channel_taken(self, channel):
         return any(d["transport"].get("channel") == channel

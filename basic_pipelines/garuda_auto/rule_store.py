@@ -5,13 +5,12 @@ They must also survive a device being removed. A rule that no longer
 validates because its device is gone is still knowledge the user gave us, so
 it is retained and marked orphaned rather than deleted.
 """
-import json
-import os
+import copy
 import re
-import tempfile
 import threading
 import time
 
+from . import jsonfile
 from .rule_schema import MAX_RULES
 from .validator import validate_rule
 
@@ -60,7 +59,8 @@ class RuleStore:
     def __init__(self, path, schema):
         self.path = path
         self.schema = schema
-        self._lock = threading.Lock()
+        # Re-entrant: add(), delete() and rebind() save while holding it.
+        self._lock = threading.RLock()
         self.rules = []
         self.orphaned = []
         self.load()
@@ -86,31 +86,29 @@ class RuleStore:
         return active, orphaned
 
     def load(self):
-        try:
-            with open(self.path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, ValueError):
-            # Missing or corrupt store is not fatal -- start empty rather than
-            # taking the whole voice loop down.
-            self.rules, self.orphaned = [], []
-            return
-        if not isinstance(data, list):
-            self.rules, self.orphaned = [], []
-            return
+        # A missing or damaged store is not fatal -- start empty rather than
+        # taking the whole voice loop down. A damaged one is copied aside
+        # first (jsonfile.quarantine): the next save would otherwise write the
+        # empty rule base over everything the house had learned.
+        data = jsonfile.load(self.path, [])
         self.rules, self.orphaned = self._partition(data)
 
     def save(self):
-        directory = os.path.dirname(self.path) or "."
-        os.makedirs(directory, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(self.rules + self.orphaned, fh, indent=2)
-            os.replace(tmp, self.path)
-        except BaseException:
-            if os.path.exists(tmp):
-                os.unlink(tmp)
-            raise
+        # Under the lock, and from a copy: the rule loop adds fire counters to
+        # these dicts, and a dict that grows while json.dump walks it raises.
+        with self._lock:
+            snapshot = copy.deepcopy(self.rules + self.orphaned)
+        jsonfile.save(self.path, snapshot)
+
+    def record_fire(self, rule_id, now):
+        """Count one fire on the rule itself, so its card can show it."""
+        with self._lock:
+            for rule in self.rules:
+                if rule.get("id") == rule_id:
+                    rule["fired_count"] = rule.get("fired_count", 0) + 1
+                    rule["last_fired"] = int(now)
+                    return True
+        return False
 
     def rebind(self, schema):
         """Re-partition against a new schema, after the registry changed."""

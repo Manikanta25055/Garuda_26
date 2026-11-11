@@ -467,16 +467,32 @@ def steps_hash(shortcut):
     return hashlib.sha256(json.dumps(shortcut.get("steps"), sort_keys=True).encode()).hexdigest()[:16]
 
 
+def _well_formed(entry):
+    """True for a saved shortcut the store and the engine can read without raising."""
+    return (isinstance(entry, dict) and isinstance(entry.get("id"), str)
+            and isinstance(entry.get("name"), str) and isinstance(entry.get("steps"), list)
+            and isinstance(entry.get("trigger"), dict)
+            and isinstance(entry["trigger"].get("type"), str))
+
+
 class ShortcutStore:
     def __init__(self, path, clock=time.time, waits_path=None):
         self._path = path
         self._clock = clock
         self._lock = threading.RLock()
-        self.items = jsonfile.load(path, []) if path else []
+        loaded = jsonfile.load(path, []) if path else []
+        self.items = [s for s in loaded if _well_formed(s)]
+        if len(self.items) != len(loaded):
+            # get(), find() and the trigger loop read these fields on every
+            # pass; an entry without them raised there for ever.
+            jsonfile.quarantine(path, f"holding {len(loaded) - len(self.items)} unusable shortcut(s)")
         if waits_path is None and path:
             waits_path = path[:-5] + "_waits.json" if path.endswith(".json") else path + ".waits"
         self._waits_path = waits_path
-        self._waits = jsonfile.load(waits_path, {}) if waits_path else {}
+        waits = jsonfile.load(waits_path, {}) if waits_path else {}
+        self._waits = {k: v for k, v in waits.items()
+                       if isinstance(v, dict) and isinstance(v.get("by"), str)
+                       and isinstance(v.get("cursor"), list)}
 
     # Runs in the middle of a wait: shortcut id -> where they are (see the module note).
     def set_wait(self, shortcut_id, record):
@@ -617,6 +633,7 @@ class ShortcutEngine:
         self._last_minute = ""
         self._seen_when = set()     # when-triggers this run of the service has looked at
         self._facts_ok = True
+        self._tick_warned = set()   # shortcuts whose check has already been logged as failing
         self._thread = None
         self.last_error = ""
 
@@ -653,57 +670,72 @@ class ShortcutEngine:
         minute = time.strftime("%Y-%m-%d %H:%M", time.localtime(now))
         new_minute, self._last_minute = minute != self._last_minute, minute
         for shortcut in self.store.all():
-            sid, trigger = shortcut["id"], shortcut["trigger"]
-            if not shortcut.get("enabled", True) or trigger["type"] == "manual":
-                continue
-            due = False
-            if trigger["type"] == "time":
-                due = (new_minute and facts["time"] == trigger["at"]
-                       and facts["weekday"] in trigger["days"]
-                       # Restarted inside its minute, having already run in it.
-                       and not self._ran_this_minute(shortcut, now))
-            elif trigger["type"] == "sun":
-                at = facts.get(trigger["event"])
-                due = (new_minute and isinstance(at, str)
-                       and facts["time"] == sun.shift(at, trigger.get("offset_minutes", 0))
-                       and facts["weekday"] in trigger.get("days", range(7))
-                       and not self._ran_this_minute(shortcut, now))
-            elif trigger["type"] == "every":
-                last = self._last_auto.get(sid)
-                if last is None:
-                    self._last_auto[sid] = now      # counted from start-up, not run at once
-                else:
-                    due = now - last >= trigger["minutes"] * 60
-            elif trigger["type"] in ("when", "alert"):
-                condition = trigger_condition(trigger)
-                first_look = (sid, json.dumps(trigger, sort_keys=True)) not in self._seen_when
-                self._seen_when.add((sid, json.dumps(trigger, sort_keys=True)))
-                if first_look and shortcut.get("last_run") and holds(condition, facts):
-                    # The service has just started and the condition already
-                    # holds for a shortcut that has run before: that stretch is
-                    # not new. Without this every restart ran it again ("when I
-                    # am away, turn everything off", each time the Pi restarted).
-                    self._true_since[sid] = now
-                    self._fired[sid] = True
-                if holds(condition, facts):
-                    since = self._true_since.setdefault(sid, now)
-                    if not self._fired.get(sid) and now - since >= trigger.get("for_minutes", 0) * 60:
-                        due = self._fired[sid] = True
-                else:
-                    self._true_since.pop(sid, None)
-                    self._fired.pop(sid, None)
-            if not due:
-                continue
+            # Each shortcut by itself: one whose trigger could not be read
+            # (a fact the house no longer reports, a value of the wrong kind)
+            # raised here on every pass, and no shortcut listed after it was
+            # ever looked at again.
+            try:
+                self._consider(shortcut, now, facts, new_minute)
+            except Exception as exc:
+                self.last_error = f"{shortcut.get('name', '?')}: {type(exc).__name__}: {exc}"
+                key = shortcut.get("id")
+                if key not in self._tick_warned:
+                    self._tick_warned.add(key)
+                    log.exception("shortcut %s could not be checked", key)
+
+    def _consider(self, shortcut, now, facts, new_minute):
+        """One shortcut's trigger, looked at once; runs it when it is due."""
+        sid, trigger = shortcut["id"], shortcut["trigger"]
+        if not shortcut.get("enabled", True) or trigger["type"] == "manual":
+            return
+        due = False
+        if trigger["type"] == "time":
+            due = (new_minute and facts["time"] == trigger["at"]
+                   and facts["weekday"] in trigger["days"]
+                   # Restarted inside its minute, having already run in it.
+                   and not self._ran_this_minute(shortcut, now))
+        elif trigger["type"] == "sun":
+            at = facts.get(trigger["event"])
+            due = (new_minute and isinstance(at, str)
+                   and facts["time"] == sun.shift(at, trigger.get("offset_minutes", 0))
+                   and facts["weekday"] in trigger.get("days", range(7))
+                   and not self._ran_this_minute(shortcut, now))
+        elif trigger["type"] == "every":
             last = self._last_auto.get(sid)
-            if trigger["type"] in ("when", "alert") and last is not None \
-                    and now - last < shortcut.get("cooldown_s", 60):
-                continue
-            if trigger["type"] == "every":
-                self._last_auto[sid] = now      # the interval passes whether or not it runs
-            if shortcut.get("conditions") and not holds(shortcut["conditions"], facts):
-                continue
-            self._last_auto[sid] = now
-            self.run(sid, by=shortcut.get("created_by", ""), cause=trigger["type"])
+            if last is None:
+                self._last_auto[sid] = now      # counted from start-up, not run at once
+            else:
+                due = now - last >= trigger["minutes"] * 60
+        elif trigger["type"] in ("when", "alert"):
+            condition = trigger_condition(trigger)
+            first_look = (sid, json.dumps(trigger, sort_keys=True)) not in self._seen_when
+            self._seen_when.add((sid, json.dumps(trigger, sort_keys=True)))
+            if first_look and shortcut.get("last_run") and holds(condition, facts):
+                # The service has just started and the condition already
+                # holds for a shortcut that has run before: that stretch is
+                # not new. Without this every restart ran it again ("when I
+                # am away, turn everything off", each time the Pi restarted).
+                self._true_since[sid] = now
+                self._fired[sid] = True
+            if holds(condition, facts):
+                since = self._true_since.setdefault(sid, now)
+                if not self._fired.get(sid) and now - since >= trigger.get("for_minutes", 0) * 60:
+                    due = self._fired[sid] = True
+            else:
+                self._true_since.pop(sid, None)
+                self._fired.pop(sid, None)
+        if not due:
+            return
+        last = self._last_auto.get(sid)
+        if trigger["type"] in ("when", "alert") and last is not None \
+                and now - last < shortcut.get("cooldown_s", 60):
+            return
+        if trigger["type"] == "every":
+            self._last_auto[sid] = now      # the interval passes whether or not it runs
+        if shortcut.get("conditions") and not holds(shortcut["conditions"], facts):
+            return
+        self._last_auto[sid] = now
+        self.run(sid, by=shortcut.get("created_by", ""), cause=trigger["type"])
 
     @staticmethod
     def _ran_this_minute(shortcut, now):
@@ -745,8 +777,15 @@ class ShortcutEngine:
         if wait:
             self._carry_out(shortcut, progress, by, role, depth)
         else:
-            threading.Thread(target=self._carry_out, args=(shortcut, progress, by, role, depth),
-                             daemon=True, name=f"shortcut-{shortcut_id}").start()
+            try:
+                threading.Thread(target=self._carry_out, args=(shortcut, progress, by, role, depth),
+                                 daemon=True, name=f"shortcut-{shortcut_id}").start()
+            except RuntimeError as exc:
+                # No thread could be started: without this the shortcut stayed
+                # listed as running, and "it is already running" for good.
+                with self._lock:
+                    self._running.pop(shortcut_id, None)
+                return False, f"could not start: {exc}", None
         return True, "", progress["id"]
 
     def cancel(self, shortcut_id):

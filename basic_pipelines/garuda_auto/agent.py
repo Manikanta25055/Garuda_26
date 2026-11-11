@@ -1243,6 +1243,8 @@ class HomeAgent:
             else:
                 try:
                     hh, mm = map(int, str(args["time"]).split(":"))
+                    if not (0 <= hh <= 23 and 0 <= mm <= 59):
+                        raise ValueError        # mktime would turn 25:00 into tomorrow 01:00
                     lt = time.localtime(now)
                     at = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, hh, mm, 0, 0, 0, -1))
                 except (ValueError, OverflowError):

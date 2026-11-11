@@ -6,6 +6,8 @@ live module, handed over once by bind(). Garuda_web imports these functions
 back under the same names.
 """
 import datetime
+import os
+import threading
 import time
 
 core = None
@@ -26,8 +28,9 @@ def _check_connectivity() -> bool:
     """Quick connectivity check — try to resolve DNS."""
     import socket
     try:
-        socket.create_connection(("1.1.1.1", 53), timeout=3)
-        return True
+        # Closed here: one socket every 30 s was left for the collector.
+        with socket.create_connection(("1.1.1.1", 53), timeout=3):
+            return True
     except OSError:
         return False
 
@@ -83,6 +86,67 @@ def _deadman_monitor():
                 core._send_mail("TAMPER ALERT: Garuda heartbeat missed", body)
             except Exception as e:
                 core.log_system_update(f"[TAMPER] Failed to send alert email: {e}")
+
+
+# The camera watch. A lens that is covered is noticed (the picture goes
+# uniform); a camera that stops sending pictures was not: no frame means no
+# detection, no blindness check and no alert, and the only sign was a line on
+# the System page. For a security camera that is the failure that matters most.
+CAMERA_STALL_S = 30.0        # frames were arriving and have stopped for this long
+CAMERA_START_S = 120.0       # no frame at all this long after the service started
+CAMERA_REALERT_S = 3600.0    # at most one email an hour
+
+
+def camera_stall(frame_ts, started, now):
+    """Seconds the camera has been silent when that is too long, else 0."""
+    if frame_ts:
+        age = now - frame_ts
+        return age if age > CAMERA_STALL_S else 0.0
+    age = now - started
+    return age if age > CAMERA_START_S else 0.0
+
+
+def _camera_stopped_email(seconds):
+    if not (core.STATE.config.email_sender and core.STATE.config.email_recipients):
+        return
+    stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        core._send_mail(
+            "CRITICAL: Garuda camera has stopped",
+            f"No picture has arrived from the camera for {seconds} seconds (noticed at {stamp}).\n"
+            "Nothing is being detected until it is back: the cable, the camera or the\n"
+            "detector may have failed. Check the System page, or restart the Pi.")
+        core.log_system_update("[CAMERA] Camera-stopped email sent.")
+    except Exception as exc:
+        core.log_system_update(f"[CAMERA] Camera-stopped email failed: {exc}")
+
+
+def camera_watch(every=5.0, sleep=time.sleep, clock=time.time, rounds=None):
+    """Background thread: say so, once, when the camera stops delivering frames,
+    and again when it is back. GARUDA_CAMERA_STALL_ALERT=0 turns it off."""
+    if os.environ.get("GARUDA_CAMERA_STALL_ALERT", "1") == "0":
+        return
+    started, stalled, last_mail = clock(), False, None
+    while rounds is None or rounds > 0:
+        now = clock()
+        silent = camera_stall(core.STATE.camera.frame_ts, started, now)
+        if silent and not stalled:
+            stalled = True
+            core.log_system_update(f"[CAMERA] No frames for {int(silent)} s -- the camera or the "
+                                   "detector has stopped; nothing is being watched.")
+            core._append_detection_perm("TAMPER", "camera_stopped", 0.0, "no frames from the camera")
+            core.push_urgent_ws()
+            if last_mail is None or now - last_mail >= CAMERA_REALERT_S:
+                last_mail = now
+                threading.Thread(target=_camera_stopped_email, args=(int(silent),),
+                                 daemon=True, name="camera-stopped-mail").start()
+        elif not silent and stalled:
+            stalled = False
+            core.log_system_update("[CAMERA] Frames are arriving again.")
+            core.push_urgent_ws()
+        if rounds is not None:
+            rounds -= 1
+        sleep(every)
 
 
 def _schedule_monitor():

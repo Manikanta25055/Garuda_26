@@ -596,14 +596,22 @@ async def _lifespan(app):
     heartbeat_task.cancel()
     busy_task.cancel()
     busy_stop.set()
-    SHORTCUTS.stop()
-    HOME.stop()
-    DRISHTI_RUNTIME.stop()
+    # Each step by itself: one that raised used to end the shutdown there, and
+    # the relays below it were never switched off.
+    def _shutdown_step(name, step):
+        try:
+            step()
+        except Exception as exc:
+            _syslog.error("shutdown: %s failed: %s: %s", name, type(exc).__name__, exc)
+
+    _shutdown_step("shortcuts", lambda: SHORTCUTS.stop())
+    _shutdown_step("home loop", lambda: HOME.stop())
+    _shutdown_step("rule loop", lambda: DRISHTI_RUNTIME.stop())
     # A stopped service leaves no load switched on behind it.
-    DRISHTI_CTX.relay_bank.close()
+    _shutdown_step("relays", lambda: DRISHTI_CTX.relay_bank.shutdown())
     # Flush any remaining buffered log lines before exit
-    _do_flush_logs()
-    _save_refresh_tokens()
+    _shutdown_step("log flush", lambda: _do_flush_logs())
+    _shutdown_step("refresh tokens", lambda: _save_refresh_tokens())
     if STATE.system.ws_broadcaster_task is not None:
         STATE.system.ws_broadcaster_task.cancel()
         await asyncio.gather(STATE.system.ws_broadcaster_task, return_exceptions=True)
@@ -1017,6 +1025,9 @@ def run_web_app(args):
 
     # Start pipeline thread (restarts automatically on failure)
     SUPERVISOR.spawn("camera-pipeline", _run_pipeline, critical=True)
+    # The pipeline can stay up and deliver nothing (a cable, the detector);
+    # this says so in the log and by email (garuda_services/monitors.py).
+    SUPERVISOR.spawn("camera-watch", _svc_monitors.camera_watch)
 
     # A daily archive of accounts, settings, keys, devices and rules.
     SUPERVISOR.spawn("state-backup", BACKUPS.run_forever)

@@ -79,6 +79,8 @@ def build_shortcuts_router(core):
         _own_or_admin(shortcut_id, session)
         clean = _checked(data.program, session, self_id=shortcut_id)
         entry = core.SHORTCUTS.store.replace(shortcut_id, clean)
+        if entry is None:               # deleted between the check and the save
+            raise HTTPException(404, "no such shortcut")
         core.log_system_update(f"Shortcut changed: {entry['name']} by {session['username']}")
         return {"ok": True, "shortcut": _view(entry)}
 

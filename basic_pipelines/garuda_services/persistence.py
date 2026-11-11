@@ -12,8 +12,10 @@ import os
 
 try:
     from ..garuda_auto import sun as _sun
+    from ..garuda_auto import jsonfile as _jsonfile
 except ImportError:      # loaded as a top-level package (Garuda_web run as a script)
     from basic_pipelines.garuda_auto import sun as _sun
+    from basic_pipelines.garuda_auto import jsonfile as _jsonfile
 
 core = None
 
@@ -54,8 +56,13 @@ def load_users():
                             udata["history"] = {"logins": [], "narada_activity": []}
                     core.STATE.auth.users = data
                     return
+                if not isinstance(data, dict):
+                    _jsonfile.quarantine(path, "not a table of accounts")
             except Exception as e:
                 print(f"Warning: failed to load users from {path}: {e}")
+                # The service starts with no accounts, and the first account
+                # saved after that replaces this file: keep what was there.
+                _jsonfile.quarantine(path, f"unreadable ({type(e).__name__})")
 
 
 def save_users():
@@ -65,6 +72,30 @@ def save_users():
         core.log_system_update(f"Failed to save users: {e}")
 
 
+def _typed(cfg, key, current):
+    """cfg[key] when it is the kind of value `current` is, else `current`.
+
+    config.json is written by the service but can be edited by hand. A string
+    where a number belongs was loaded as it stood and failed later, somewhere
+    else: an email cooldown of "60" raised inside the alert email, on every
+    alert. A value of the wrong kind is now left at what the service had.
+    """
+    if key not in cfg:
+        return current
+    value = cfg[key]
+    number = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
+    if number(current):
+        ok = number(value)
+    elif current is None:
+        ok = True
+    else:
+        ok = isinstance(value, type(current))
+    if not ok:
+        print(f"Warning: config {key!r} has the wrong type ({type(value).__name__}); keeping the current value")
+        return current
+    return value
+
+
 def load_config():
     # NOTE: EMAIL_SENDER_PASS is NOT loaded from config.json —
     # it lives exclusively in .env / environment variables for security.
@@ -72,20 +103,22 @@ def load_config():
         try:
             with open(core.CONFIG_FILE) as f:
                 cfg = json.load(f)
-            core.STATE.config.custom_voice_commands = cfg.get("custom_voice_commands", core.STATE.config.custom_voice_commands)
-            core.STATE.modes.custom = cfg.get("custom_modes", core.STATE.modes.custom)
-            core.STATE.config.email_recipients = cfg.get("email_recipients", core.STATE.config.email_recipients)
-            core.STATE.config.email_cooldown = cfg.get("email_cooldown", core.STATE.config.email_cooldown)
-            core.STATE.config.email_sender = cfg.get("email_sender", core.STATE.config.email_sender)
-            core.STATE.config.detection_threshold = cfg.get("detection_threshold", core.STATE.config.detection_threshold)
-            core.STATE.config.known_devices = cfg.get("known_devices", core.STATE.config.known_devices)
-            core.STATE.config.watch_labels = cfg.get("watch_labels", core.STATE.config.watch_labels)
+            if not isinstance(cfg, dict):
+                raise ValueError("config.json is not an object")
+            core.STATE.config.custom_voice_commands = _typed(cfg, "custom_voice_commands", core.STATE.config.custom_voice_commands)
+            core.STATE.modes.custom = _typed(cfg, "custom_modes", core.STATE.modes.custom)
+            core.STATE.config.email_recipients = _typed(cfg, "email_recipients", core.STATE.config.email_recipients)
+            core.STATE.config.email_cooldown = _typed(cfg, "email_cooldown", core.STATE.config.email_cooldown)
+            core.STATE.config.email_sender = _typed(cfg, "email_sender", core.STATE.config.email_sender)
+            core.STATE.config.detection_threshold = _typed(cfg, "detection_threshold", core.STATE.config.detection_threshold)
+            core.STATE.config.known_devices = _typed(cfg, "known_devices", core.STATE.config.known_devices)
+            core.STATE.config.watch_labels = _typed(cfg, "watch_labels", core.STATE.config.watch_labels)
             # Support both legacy "danger_label" (str) and new "danger_labels" (list)
-            if "danger_labels" in cfg:
-                core.STATE.config.danger_labels = cfg["danger_labels"]
-            elif "danger_label" in cfg:
+            if isinstance(cfg.get("danger_labels"), list):
+                core.STATE.config.danger_labels = [l for l in cfg["danger_labels"] if isinstance(l, str)]
+            elif isinstance(cfg.get("danger_label"), str):
                 core.STATE.config.danger_labels = [cfg["danger_label"]]
-            core.STATE.config.night_presence_window = cfg.get("night_presence_window", core.STATE.config.night_presence_window)
+            core.STATE.config.night_presence_window = _typed(cfg, "night_presence_window", core.STATE.config.night_presence_window)
             loc = cfg.get("location") or {}
             if isinstance(loc, dict) and _sun.valid_location(loc.get("lat"), loc.get("lon")):
                 core.STATE.config.location = {"lat": loc["lat"], "lon": loc["lon"]}
@@ -97,9 +130,12 @@ def load_config():
             core.STATE.modes.night     = bool(modes.get("night",     core.STATE.modes.night))
             core.STATE.modes.emergency = bool(modes.get("emergency", core.STATE.modes.emergency))
             core.STATE.modes.privacy   = bool(modes.get("privacy",   core.STATE.modes.privacy))
-            core.STATE.modes.schedule  = cfg.get("mode_schedule", core.STATE.modes.schedule)
+            core.STATE.modes.schedule  = _typed(cfg, "mode_schedule", core.STATE.modes.schedule)
         except Exception as e:
             print(f"Warning: failed to load config: {e}")
+            # Defaults are in force now and the next settings change saves
+            # them over this file: keep what was there.
+            _jsonfile.quarantine(core.CONFIG_FILE, f"unreadable ({type(e).__name__})")
 
 
 def _load_alert_history():

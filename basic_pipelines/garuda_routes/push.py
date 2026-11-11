@@ -14,10 +14,11 @@ cannot read it), so the phone shows it without reaching back to the Pi.
 "Silence 30 min" on the notification stops pushes for half an hour.
 """
 import asyncio
-import json
+import ipaddress
 import os
 import threading
 import time
+import urllib.parse
 
 import cv2
 import requests
@@ -26,13 +27,52 @@ from pydantic import BaseModel
 
 try:
     from ..garuda_core import webpush
+    from ..garuda_auto import jsonfile
 except ImportError:                                # script mode (python Garuda_web.py)
     from basic_pipelines.garuda_core import webpush
+    from basic_pipelines.garuda_auto import jsonfile
 
 KINDS = ("alert", "presence", "tamper")
 TITLES = {"alert": "Danger detected", "presence": "Person seen", "tamper": "Camera covered"}
 THUMB_BYTES = 2400                 # leaves room in the 4 KB message for the words
 SILENCE_S = 30 * 60
+MAX_SUBS = 100                     # phones in all
+MAX_SUBS_PER_USER = 10
+_INSIDE_NAMES = (".local", ".lan", ".internal", ".home", ".arpa", ".localhost", ".localdomain")
+
+
+def endpoint_ok(url):
+    """True for an address a browser's push service could have: https, a public
+    host name, the standard port.
+
+    The Pi sends a request to this address on every alert. Any signed-in
+    person could subscribe with one that pointed at the router or another
+    machine in the house, and the Pi would post to it from inside the network.
+    """
+    if not isinstance(url, str) or len(url) > 1024:
+        return False
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host, port = (parts.hostname or "").lower(), parts.port
+    except ValueError:
+        return False
+    if parts.scheme != "https" or not host or parts.username or parts.password:
+        return False
+    if port not in (None, 443):
+        return False
+    try:
+        ipaddress.ip_address(host)
+        return False                               # a bare address, never a push service
+    except ValueError:
+        pass
+    return "." in host and host != "localhost" and not host.endswith(_INSIDE_NAMES)
+
+
+def _usable(entry):
+    """True for a saved subscription send() can read without raising."""
+    sub = entry.get("sub") if isinstance(entry, dict) else None
+    return (isinstance(sub, dict) and endpoint_ok(sub.get("endpoint"))
+            and isinstance(sub.get("keys"), dict) and isinstance(entry.get("kinds", []), list))
 
 
 class PushStore:
@@ -43,25 +83,29 @@ class PushStore:
         self.lock = threading.Lock()
         self.subs = {}
         self.silenced_until = 0.0
-        try:
-            with open(path) as f:
-                saved = json.load(f)
-            self.subs = saved.get("subs", {}) if isinstance(saved, dict) else {}
-        except (OSError, ValueError):
-            pass
+        saved = jsonfile.load(path, {}).get("subs")
+        if isinstance(saved, dict):
+            self.subs = {k: v for k, v in saved.items() if _usable(v)}
 
     def _save(self):
-        tmp = self.path + ".tmp"
-        fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(fd, "w") as f:
-            json.dump({"subs": self.subs}, f)
-        os.replace(tmp, self.path)
+        jsonfile.save(self.path, {"subs": self.subs})      # the temp file is made 0600
+        try:
+            os.chmod(self.path, 0o600)
+        except OSError:
+            pass
 
     def add(self, sub, username, kinds):
+        """Keep one phone's subscription. Returns "" or why it was refused."""
         with self.lock:
+            if sub["endpoint"] not in self.subs:
+                if len(self.subs) >= MAX_SUBS:
+                    return "Too many phones are subscribed already."
+                if sum(1 for v in self.subs.values() if v.get("user") == username) >= MAX_SUBS_PER_USER:
+                    return "You have too many phones subscribed; turn one off first."
             self.subs[sub["endpoint"]] = {"sub": sub, "user": username, "kinds": list(kinds),
                                           "added": time.time()}
             self._save()
+        return ""
 
     def remove(self, endpoint):
         with self.lock:
@@ -174,12 +218,18 @@ def build_push_router(core, store, vapid):
     async def subscribe(data: SubscribeRequest, session=Depends(core.require_session)):
         _ready()
         sub = data.subscription
-        keys = sub.get("keys") or {}
-        if not str(sub.get("endpoint", "")).startswith("https://") or not keys.get("p256dh") or not keys.get("auth"):
+        keys = sub.get("keys")
+        keys = keys if isinstance(keys, dict) else {}
+        p256dh, auth = keys.get("p256dh"), keys.get("auth")
+        if (not endpoint_ok(sub.get("endpoint"))
+                or not isinstance(p256dh, str) or not 0 < len(p256dh) <= 256
+                or not isinstance(auth, str) or not 0 < len(auth) <= 128):
             raise HTTPException(400, "That is not a push subscription.")
-        kinds = [k for k in data.kinds if k in KINDS] or list(KINDS)
-        store.add({"endpoint": sub["endpoint"], "keys": {"p256dh": keys["p256dh"], "auth": keys["auth"]}},
-                  session["username"], kinds)
+        kinds = [k for k in data.kinds if isinstance(k, str) and k in KINDS] or list(KINDS)
+        refused = store.add({"endpoint": sub["endpoint"], "keys": {"p256dh": p256dh, "auth": auth}},
+                            session["username"], kinds)
+        if refused:
+            raise HTTPException(400, refused)
         core.log_system_update(f"[PUSH] phone alerts on for {session['username']}")
         return {"ok": True, "kinds": kinds}
 

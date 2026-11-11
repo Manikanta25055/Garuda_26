@@ -6,12 +6,11 @@ so nothing enters the rule base until a person agrees it is right.
 
 Separate file from the rule store: a proposal is not something the house knows.
 """
-import json
-import os
-import tempfile
 import threading
 import time
 import uuid
+
+from . import jsonfile
 
 MAX_PENDING = 8
 TTL_S = 900
@@ -26,25 +25,18 @@ class PendingStore:
         self.load()
 
     def load(self):
-        try:
-            with open(self.path, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
-            self._items = data if isinstance(data, list) else []
-        except (OSError, ValueError):
-            self._items = []
+        # Only well-formed proposals are kept: one entry without a time made
+        # every later read of the store raise.
+        self._items = [
+            item for item in jsonfile.load(self.path, [])
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+            and isinstance(item.get("rule"), dict)
+            and isinstance(item.get("created_at"), (int, float))
+            and not isinstance(item.get("created_at"), bool)
+        ]
 
     def save(self):
-        directory = os.path.dirname(self.path) or "."
-        os.makedirs(directory, exist_ok=True)
-        fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(self._items, fh, indent=2)
-            os.replace(tmp, self.path)
-        except BaseException:
-            if os.path.exists(tmp):
-                os.unlink(tmp)
-            raise
+        jsonfile.save(self.path, self._items)
 
     def _drop_expired(self):
         cutoff = self._clock() - TTL_S

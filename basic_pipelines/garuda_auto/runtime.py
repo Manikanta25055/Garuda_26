@@ -95,6 +95,9 @@ class DrishtiRuntime:
 
     def _record_fire(self, rule_id):
         """Count the fire on the rule itself so the card can show it."""
+        record = getattr(self.ctx.store, "record_fire", None)
+        if record is not None:
+            return record(rule_id, self._clock())      # under the store's lock
         for rule in self.ctx.store.rules:
             if rule.get("id") == rule_id:
                 rule["fired_count"] = rule.get("fired_count", 0) + 1
@@ -137,12 +140,18 @@ class DrishtiRuntime:
         if not actions:
             return []
 
-        performed, touched = [], set()
+        performed, touched, succeeded, failed = [], set(), set(), set()
         for action in actions:
             if self.ctx.device_router.state(action["device"]) == action["action"]:
                 # Already so: nothing to switch, nothing to log.
                 continue
-            ok, reason = self.ctx.device_router.set(action["device"], action["action"])
+            try:
+                ok, reason = self.ctx.device_router.set(action["device"], action["action"])
+            except Exception as exc:
+                # One device that throws must not cost the other actions of
+                # this tick, nor go unrecorded.
+                ok, reason = False, f"{type(exc).__name__}: {exc}"
+            (succeeded if ok else failed).add(action["rule_id"])
             if ok:
                 # The rule base can now see what it just did, so a rule that
                 # reads lamp_state stops fighting the one that writes it.
@@ -164,10 +173,19 @@ class DrishtiRuntime:
             performed.append({**action, "ok": ok, "reason": reason})
 
         self.fires += len(performed)
+        for rule_id in failed:
+            # The device did not switch: the rule is tried again after a
+            # growing pause instead of waiting for its condition to go false
+            # and true again (rule_engine.release).
+            self.engine.release(rule_id)
         if touched:
             # Fires are rate-limited by each rule's cooldown, so this is not a
-            # per-tick write.
-            self.ctx.store.save()
+            # per-tick write. A disk that refuses the write costs the counter,
+            # not the switching that has already happened.
+            try:
+                self.ctx.store.save()
+            except Exception as exc:
+                self.last_error = f"store: {type(exc).__name__}: {exc}"
         return performed
 
     # ── registry changes ──────────────────────────────────────────────────────

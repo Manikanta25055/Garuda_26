@@ -39,12 +39,39 @@ def validate_target(target, registry, scenes):
     return True, ""
 
 
+def _well_formed(entry):
+    """True for an entry due() and next_run() can read without raising."""
+    if not isinstance(entry, dict) or not isinstance(entry.get("id"), str):
+        return False
+    target = entry.get("target")
+    if not isinstance(target, dict):
+        return False
+    if "scene" not in target and not (isinstance(target.get("device"), str)
+                                      and isinstance(target.get("action"), str)):
+        return False
+    if entry.get("kind") == "once":
+        at = entry.get("at")
+        return (not isinstance(at, bool) and isinstance(at, (int, float))
+                and math.isfinite(at))
+    if entry.get("kind") == "daily":
+        days = entry.get("days")
+        return (isinstance(entry.get("time"), str) and bool(_HHMM.match(entry["time"]))
+                and isinstance(days, list)
+                and all(not isinstance(d, bool) and d in ALL_DAYS for d in days))
+    return False
+
+
 class ScheduleStore:
     def __init__(self, path, clock=time.time):
         self.path = path
         self._clock = clock
         self._lock = threading.Lock()
-        self.entries = jsonfile.load(path, [])
+        loaded = jsonfile.load(path, [])
+        self.entries = [e for e in loaded if _well_formed(e)]
+        if len(self.entries) != len(loaded):
+            # due() reads these fields on every pass of the home loop; one
+            # entry without them stopped every schedule in the house.
+            jsonfile.quarantine(path, f"holding {len(loaded) - len(self.entries)} unusable schedule(s)")
 
     def save(self):
         jsonfile.save(self.path, self.entries)

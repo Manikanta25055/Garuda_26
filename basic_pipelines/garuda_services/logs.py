@@ -11,6 +11,9 @@ import time
 
 core = None
 
+# Log lines kept in memory, per file, while the disk refuses them.
+_UNWRITTEN_MAX = 5000
+
 
 def bind(module):
     """Called by Garuda_web with itself, before anything here runs."""
@@ -77,10 +80,15 @@ def _do_flush_logs():
             except FileNotFoundError:
                 pass
             with open(path, "a", encoding="utf-8") as f:
-                for line in lines:
-                    f.write(line + "\n")
+                f.write("".join(line + "\n" for line in lines))
         except Exception:
-            pass
+            # A full or read-only card: these lines used to be dropped, so the
+            # log of the very hours something was wrong had a hole in it. They
+            # wait for the next flush instead, newest kept if it goes on long.
+            with core._log_buffer_lock:
+                buf = core._log_buffer[path]
+                buf[:0] = lines
+                del buf[:-_UNWRITTEN_MAX]
 
 
 def _flush_log_thread():

@@ -49,6 +49,7 @@ def trigger_software_alert():
         core.push_urgent_ws()
 
 
+EMAIL_RETRY_S = 15  # after a failed alert email, how soon the next alert may try again
 RECHECK_S = 20      # a held email is looked at again if the detector still sees it after this
 
 
@@ -89,7 +90,8 @@ def send_email_alert(note="", label=None):
         return
     with core.STATE.alerts.email_lock:
         current_time = time.time()
-        if (current_time - core.STATE.alerts.last_email_sent_time) < core.STATE.config.email_cooldown:
+        previous_sent = core.STATE.alerts.last_email_sent_time
+        if (current_time - previous_sent) < core.STATE.config.email_cooldown:
             return
         core.STATE.alerts.last_email_sent_time = current_time
     now_str = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -110,6 +112,15 @@ def send_email_alert(note="", label=None):
         core.log_system_update("Email alert sent.")
     except Exception as e:
         core.log_system_update(f"Failed sending email alert: {e}")
+        # Nothing was sent, so the cooldown must not run as if it had been:
+        # one mail-server hiccup used to silence every alert email for the
+        # whole cooldown. The next alert may try again after a short pause
+        # (not at once: a server that is down is not asked on every alert).
+        with core.STATE.alerts.email_lock:
+            if core.STATE.alerts.last_email_sent_time == current_time:
+                cooldown = core.STATE.config.email_cooldown
+                core.STATE.alerts.last_email_sent_time = max(
+                    previous_sent, current_time - cooldown + min(cooldown, EMAIL_RETRY_S))
 
 
 def log_scissors_detection(label: str = "danger"):

@@ -51,7 +51,36 @@ def _check_night_presence():
             core.STATE.alerts.night_presence_end_time = time.time() + 10
 
 
+_callback_failures = {"count": 0, "logged_at": 0.0}
+
+
 def app_callback(pad, info, user_data):
+    """The pad probe. Whatever happens inside, the buffer is passed on.
+
+    An exception that leaves a probe is printed by GStreamer's Python binding
+    and the probe's answer becomes 0, which is "drop this buffer". One bad
+    value in a rule or a zone then failed the same way on every frame: the
+    picture froze, nothing was detected, and the only trace was a traceback
+    per frame on stderr. It is now counted, logged once a minute, and the
+    frame goes on.
+    """
+    try:
+        return _process_frame(pad, info, user_data)
+    except Exception as exc:
+        _callback_failures["count"] += 1
+        now = time.time()
+        if now - _callback_failures["logged_at"] >= 60:
+            _callback_failures["logged_at"] = now
+            try:
+                core.log_system_update(
+                    f"[CAMERA] frame callback failed ({_callback_failures['count']} so far): "
+                    f"{type(exc).__name__}: {exc}")
+            except Exception:
+                pass
+        return core.Gst.PadProbeReturn.OK
+
+
+def _process_frame(pad, info, user_data):
     buffer = info.get_buffer()
     if buffer is None:
         return core.Gst.PadProbeReturn.OK

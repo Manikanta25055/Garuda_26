@@ -44,12 +44,23 @@ def validate_scene(name, actions, registry):
     return True, ""
 
 
+def _well_formed(scene):
+    """True for a scene get(), find() and run_scene() can read without raising."""
+    return (isinstance(scene, dict) and isinstance(scene.get("id"), str)
+            and isinstance(scene.get("name"), str) and isinstance(scene.get("actions"), list)
+            and all(isinstance(a, dict) and isinstance(a.get("device"), str)
+                    and isinstance(a.get("action"), str) for a in scene["actions"]))
+
+
 class SceneStore:
     def __init__(self, path, registry):
         self.path = path
         self.registry = registry
         self._lock = threading.Lock()
-        self.scenes = jsonfile.load(path, [])
+        loaded = jsonfile.load(path, [])
+        self.scenes = [s for s in loaded if _well_formed(s)]
+        if len(self.scenes) != len(loaded):
+            jsonfile.quarantine(path, f"holding {len(loaded) - len(self.scenes)} unusable scene(s)")
 
     def save(self):
         jsonfile.save(self.path, self.scenes)

@@ -19,12 +19,16 @@ arms Away, and when it comes back an Away that auto-arm set returns to Home.
 An arm state a person chose by hand is never undone by it.
 """
 import json
-import os
 import threading
 import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+try:
+    from ..garuda_auto import jsonfile
+except ImportError:                                # script mode (python Garuda_web.py)
+    from basic_pipelines.garuda_auto import jsonfile
 
 
 STATES = ("off", "home", "night", "away")
@@ -61,10 +65,7 @@ class ArmStore:
             pass
 
     def save(self):
-        tmp = self.path + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(self.data, f)
-        os.replace(tmp, self.path)
+        jsonfile.save(self.path, self.data)      # flushed to the card before the rename
 
     def update(self, **fields):
         with self.lock:

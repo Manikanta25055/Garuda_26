@@ -21,7 +21,10 @@ log = logging.getLogger(__name__)
 # Small, precious, and not derivable from anything else.
 STATE_FILES = ("users.json", "config.json", "master_keys.json", "devices.json", "rules.json",
                "schedules.json", "scenes.json", "home_settings.json", "alert_history.json",
-               "feedback.json", "narada_memory.json", "shortcuts.json")
+               "feedback.json", "narada_memory.json", "shortcuts.json",
+               # Added later and never listed here: the arm state, the zones
+               # drawn on the picture and each phone's alert subscription.
+               "arm.json", "detection_rules.json", "push_subscriptions.json")
 PREFIX = "garuda-state-"
 
 

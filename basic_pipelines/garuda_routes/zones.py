@@ -14,8 +14,6 @@ With nothing saved the answer is what it was before: the danger labels
 alert, everything else is logged. Off is the arm switch's own business (it
 silences alerts further down), so rules cover Home, Night and Away.
 """
-import json
-import os
 import threading
 import time
 import uuid
@@ -25,8 +23,10 @@ from pydantic import BaseModel
 
 try:
     from .arm import current as arm_current
+    from ..garuda_auto import jsonfile
 except ImportError:                                # script mode (python Garuda_web.py)
     from basic_pipelines.garuda_routes.arm import current as arm_current
+    from basic_pipelines.garuda_auto import jsonfile
 
 ACTIONS = ("alert", "log", "ignore")
 RANK = {"ignore": 0, "log": 1, "alert": 2}
@@ -70,20 +70,20 @@ class ZoneStore:
         self.path = path
         self.lock = threading.Lock()
         self.data = {"rules": {}, "zones": []}
-        try:
-            with open(path) as f:
-                saved = json.load(f)
-            if isinstance(saved, dict):
-                self.data["rules"] = dict(saved.get("rules") or {})
-                self.data["zones"] = list(saved.get("zones") or [])
-        except (OSError, ValueError):
-            pass
+        # What is on disk goes through the same checks as what the page sends.
+        # decide() runs on every camera frame and takes a zone's rectangle and
+        # mode as given: one zone without them, in a file edited by hand, made
+        # the frame callback raise on every frame with something in view.
+        saved = jsonfile.load(path, {})
+        rules = saved.get("rules")
+        zones = saved.get("zones")
+        self.data["rules"] = _clean_rules(rules) if isinstance(rules, dict) else {}
+        self.data["zones"], dropped = _zones_from_disk(zones)
+        if dropped or (rules and not isinstance(rules, dict)):
+            jsonfile.quarantine(path, "holding rules or zones that cannot be used")
 
     def _save(self):
-        tmp = self.path + ".tmp"
-        with open(tmp, "w") as f:
-            json.dump(self.data, f)
-        os.replace(tmp, self.path)
+        jsonfile.save(self.path, self.data)
 
     def replace(self, rules=None, zones=None):
         """Swap in new rules and/or zones as a whole (readers never see half)."""
@@ -113,6 +113,8 @@ def _clean_rules(raw):
 def _clean_zones(raw):
     zones = []
     for z in (raw or [])[:MAX_ZONES]:
+        if not isinstance(z, dict):
+            raise HTTPException(400, "Each zone needs a rectangle: four numbers from 0 to 1.")
         try:
             x1, y1, x2, y2 = (min(1.0, max(0.0, float(v))) for v in z["rect"])
         except (KeyError, TypeError, ValueError):
@@ -130,6 +132,17 @@ def _clean_zones(raw):
                       "rect": [round(v, 4) for v in (x1, y1, x2, y2)],
                       "mode": mode, "labels": labels})
     return zones
+
+
+def _zones_from_disk(raw):
+    """(zones that pass _clean_zones, how many did not). Never raises."""
+    zones, dropped = [], 0
+    for z in raw if isinstance(raw, list) else []:
+        try:
+            zones.extend(_clean_zones([z]))
+        except Exception:
+            dropped += 1
+    return zones[:MAX_ZONES], dropped
 
 
 class RulesRequest(BaseModel):

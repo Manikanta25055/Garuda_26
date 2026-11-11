@@ -36,7 +36,8 @@ class ArtifactStore:
         self._memory = {}                       # used when there is no directory
         if directory:
             os.makedirs(directory, exist_ok=True)
-        self.index = jsonfile.load(self._index_path, []) if directory else []
+        self.index = [e for e in (jsonfile.load(self._index_path, []) if directory else [])
+                      if isinstance(e, dict) and all(isinstance(e.get(k), str) for k in ("id", "key", "by"))]
 
     @property
     def _index_path(self):

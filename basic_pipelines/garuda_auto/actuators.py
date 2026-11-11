@@ -49,6 +49,9 @@ class RelayBank:
         # The API, the rule loop, the home loop and the assistant all switch
         # relays. Two first uses at once would each open the same pin.
         self._lock = threading.RLock()
+        # Set by shutdown(): the service is stopping, and nothing may energise
+        # a relay after that. settle() (the service starting) clears it.
+        self._closed = False
         if not GPIO_AVAILABLE:
             log.warning("gpiozero unavailable -- relay bank running in no-op mode")
 
@@ -83,6 +86,14 @@ class RelayBank:
         if action not in ("on", "off"):
             log.warning("refusing unknown action: %s", action)
             return False
+        if self._closed:
+            # A loop that outlived the shutdown used to reopen the pin and switch
+            # the load back on behind a service that had already stopped.
+            if action == "on":
+                log.warning("refusing to switch %s on: the relay bank is shut down", device)
+                return False
+            self._state[device] = "off"
+            return True
         output = self._output(device)
         if output is not None:
             output.on() if action == "on" else output.off()
@@ -100,6 +111,7 @@ class RelayBank:
         """
         failed = []
         with self._lock:
+            self._closed = False
             for device in self.pin_map:
                 try:
                     self._set(device, "off")
@@ -112,11 +124,22 @@ class RelayBank:
         # Only drive pins this bank has already opened. A pin it never touched
         # is not energised by us, and opening it here just to write the value
         # it already has would claim it for no reason.
-        for device in self.pin_map:
-            output = self._outputs.get(device)
-            if output is not None:
-                output.off()
-            self._state[device] = "off"
+        # Every pin is tried: this is what the shutdown and the emergency
+        # stop end in, and one pin that raised used to leave every relay
+        # after it switched on. Returns the devices that could not be driven.
+        failed = []
+        with self._lock:
+            for device in self.pin_map:
+                output = self._outputs.get(device)
+                if output is not None:
+                    try:
+                        output.off()
+                    except Exception as exc:
+                        log.error("could not switch %s off: %s", device, exc)
+                        failed.append(device)
+                        continue
+                self._state[device] = "off"
+        return failed
 
     def rebind(self, pin_map):
         """Adopt a new device -> pin map without touching unchanged devices.
@@ -141,11 +164,20 @@ class RelayBank:
             for device in pin_map:
                 self._state.setdefault(device, "off")
 
+    def shutdown(self):
+        """close(), for good: every relay off, every pin released, and any
+        "on" that arrives afterwards refused. Called when the service stops;
+        close() alone only gives the pins back and the bank can be used again."""
+        with self._lock:
+            self._closed = True
+            self.close()
+
     def close(self):
-        self.all_off()
-        for output in self._outputs.values():
-            try:
-                output.close()
-            except Exception:
-                pass
-        self._outputs.clear()
+        with self._lock:
+            self.all_off()
+            for output in self._outputs.values():
+                try:
+                    output.close()
+                except Exception:
+                    pass
+            self._outputs.clear()

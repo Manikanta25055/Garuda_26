@@ -175,12 +175,20 @@ class DeviceRouter:
             held = self.guard.check(device_id, action, previous)
             if held:
                 return False, f"{device.get('name') or device_id} {held}"
-            if device["transport"]["kind"] == "relay":
-                done = self._relays.set(device_id, action)
-                why = f"relay refused {device_id!r}"
-            else:
-                done = self._mqtt.set(device_id, action)
-                why = f"device {device_id!r} is unreachable"
+            try:
+                if device["transport"]["kind"] == "relay":
+                    done = self._relays.set(device_id, action)
+                    why = f"relay refused {device_id!r}"
+                else:
+                    done = self._mqtt.set(device_id, action)
+                    why = f"device {device_id!r} is unreachable"
+            except Exception as exc:
+                # A pin another process holds, a GPIO chip that went away: the
+                # caller is a button, a rule loop or a schedule, and each of
+                # them expects an answer, not an exception.
+                log.warning("switching %s %s failed: %s: %s", device_id, action,
+                            type(exc).__name__, exc)
+                done, why = False, f"could not switch {device_id!r}: {type(exc).__name__}: {exc}"
             if not done:
                 return False, why
             self.guard.record(device_id, action, previous)

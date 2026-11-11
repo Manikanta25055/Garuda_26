@@ -287,17 +287,41 @@ class HomeServices:
     # ── background loop ───────────────────────────────────────────────────────
 
     def tick(self):
+        """One pass of everything time-driven. Each part stands alone: a
+        schedule that raised used to end the pass there, every second, so the
+        away check, the left-on watchdog and vacation lighting stopped with it.
+        The first failure is raised again once every part has had its turn."""
         now = self._clock()
-        for entry in self.schedules.due(now):
-            ok, reason = self.run_target(entry["target"], source=f"schedule:{entry['id']}",
-                                         actor=entry.get("created_by", ""))
-            if not ok:
-                self.notice("schedule", f"Scheduled {self.describe_target(entry['target'])} "
-                                        f"failed: {reason}")
-        self._check_presence(now)
-        self._check_left_on(now)
-        self._vacation(now)
-        self._digest(now)
+        errors = []
+
+        def step(name, fn, *args):
+            try:
+                fn(*args)
+            except Exception as exc:
+                errors.append((name, exc))
+
+        try:
+            due = self.schedules.due(now)
+        except Exception as exc:
+            errors.append(("schedules", exc))
+            due = []
+        for entry in due:
+            step("schedule", self._run_due, entry)
+        step("presence", self._check_presence, now)
+        step("left-on", self._check_left_on, now)
+        step("vacation", self._vacation, now)
+        step("digest", self._digest, now)
+        if errors:
+            name, exc = errors[0]
+            self.last_error = f"{name}: {type(exc).__name__}: {exc}"
+            raise exc
+
+    def _run_due(self, entry):
+        ok, reason = self.run_target(entry["target"], source=f"schedule:{entry['id']}",
+                                     actor=entry.get("created_by", ""))
+        if not ok:
+            self.notice("schedule", f"Scheduled {self.describe_target(entry['target'])} "
+                                    f"failed: {reason}")
 
     def _check_presence(self, now):
         if self.presence_fn is None:
