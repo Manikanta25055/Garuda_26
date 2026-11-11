@@ -93,12 +93,11 @@ def _read(path):
             entry = json.loads(line)
         except ValueError:
             continue
-        # Every reader takes these as given (the Activity page, usage, habits,
-        # Narada); one line without them made each of those fail for as long
-        # as the line stayed in the file.
-        if (isinstance(entry, dict) and isinstance(entry.get("device"), str)
-                and isinstance(entry.get("action"), str) and "ok" in entry
-                and isinstance(entry.get("ts"), (int, float)) and not isinstance(entry.get("ts"), bool)):
+        # Every reader takes an entry to be an object that names its device
+        # (the Activity page, usage, habits, Narada); a line that was valid
+        # JSON but not that made each of them fail for as long as it stayed
+        # in the file.
+        if isinstance(entry, dict) and isinstance(entry.get("device"), str):
             entries.append(entry)
     return entries
 

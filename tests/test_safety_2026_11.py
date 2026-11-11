@@ -511,7 +511,7 @@ def test_push_store_limits_and_ignores_bad_saved_entries(tmp_path):
 
 def test_activity_log_readers_skip_lines_they_cannot_use(tmp_path):
     path = tmp_path / "activity.jsonl"
-    path.write_text('5\n{"device": "lamp"}\n"text"\n[1]\n')
+    path.write_text('5\n{"device": 7}\n"text"\n[1]\n{"action": "on"}\n')
     actuation_log.record(str(path), device="lamp", action="on", rule_id="", matched=[], ok=True)
     assert [e["device"] for e in actuation_log.recent(str(path))] == ["lamp"]
     assert actuation_log.last_for(str(path), "lamp")["action"] == "on"       # used to raise on the 5
